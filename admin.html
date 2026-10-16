@@ -29,7 +29,7 @@
 <div class="field"><label for="autoStart">Starting episode number</label><input id="autoStart" inputmode="numeric" value="1"></div>
 <div class="toolbar"><button class="btn" id="previewAuto" type="button">Generate episode draft preview</button><button class="btn" id="saveAuto" type="button">Import episodes</button><button class="btn secondary" id="clearAuto" type="button">Clear</button></div><div class="preview" id="autoPreview">Generated episode rows will appear here. Not saved.</div></section>
 
-<section class="card section" id="library"><h2>Media Library</h2><p class="muted">Search, filter, edit, delete, publish status, newest-first ordering and duplicate detection belong here. The current API is read-only; no edit/delete/publish actions are active.</p><div class="two"><div class="field"><label for="librarySearch">Search title</label><input id="librarySearch" placeholder="Search catalog response"></div><div class="field"><label for="libraryFilter">Filter type</label><select id="libraryFilter"><option>All types</option><option>Movie</option><option>Drama</option><option>Episode</option><option>Reel</option></select></div></div><button class="btn secondary" id="libraryLoad" type="button">Load read-only catalog</button><div id="libraryRows" class="preview">Catalog has not been loaded.</div></section>
+<section class="card section" id="library"><h2>Media Library</h2><p class="muted">Search, filter, edit, delete, publish status, newest-first ordering and duplicate detection belong here. The current API is read-only; no edit/delete/publish actions are active.</p><div class="two"><div class="field"><label for="librarySearch">Search title</label><input id="librarySearch" placeholder="Search catalog response"></div><div class="field"><label for="libraryFilter">Filter type</label><select id="libraryFilter"><option>All types</option><option>Movie</option><option>Drama</option><option>Episode</option><option>Reel</option></select></div></div><button class="btn secondary" id="libraryLoad" type="button">Load admin catalog</button><div id="libraryRows" class="preview">Sign in, then load catalog records. Media source URLs are returned only to authenticated admins.</div></section>
 <section class="card section" id="reels"><h2>Reels</h2><p class="muted">Short-video upload, caption, cover, visibility, ordering and publish controls. Reels can be drafted above, but persistent upload/publish is not connected yet.</p></section>
 <section class="card section" id="broadcasts"><h2>Broadcasts / Announcements</h2><div class="field"><label for="broadcastText">Announcement text</label><textarea id="broadcastText" placeholder="Write a site announcement…"></textarea></div><button class="btn secondary" id="previewBroadcast" type="button">Preview announcement</button><div id="broadcastPreview" class="preview">Preview only; no broadcast sent.</div></section>
 <section class="card section" id="telegram"><h2>Telegram integration</h2><p class="muted">Bot connection status, channel destination, notification templates and delivery logs should be wired here. Tokens must be stored as Cloudflare secrets, never in this page or Git.</p><span class="tag">Not connected in this scaffold</span></section>
@@ -50,5 +50,21 @@ $("#logoutButton").addEventListener("click",async()=>{try{await api("/api/admin/
 const result=$("#result");$("#loadCatalog").addEventListener("click",async()=>{result.textContent="Checking /api/catalog…";try{const d=await api("/api/catalog");result.textContent=JSON.stringify(d,null,2);if(Array.isArray(d.items))$("#catalogCount").textContent=d.items.length}catch(e){result.textContent="Catalog API is unavailable: "+e.message}});
 $("#clear").addEventListener("click",()=>result.textContent="Result cleared.");
 $("#countUrls").addEventListener("click",()=>{const urls=$("#bulkUrls").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);const invalid=urls.filter(x=>{try{return new URL(x).protocol!=="https:"}catch{return true}});$("#draftResult").textContent=urls.length+" URL(s) entered; "+invalid.length+" invalid or non-HTTPS URL(s). Draft only — nothing saved."});
+
+const libraryRows=$("#libraryRows"), librarySearch=$("#librarySearch"), libraryFilter=$("#libraryFilter");
+async function loadAdminCatalog(){
+  libraryRows.textContent="Loading authenticated catalog…";
+  try{
+    const params=new URLSearchParams({limit:"100"});
+    if(librarySearch.value.trim())params.set("q",librarySearch.value.trim());
+    if(libraryFilter.value!=="All types")params.set("type",libraryFilter.value);
+    const data=await api("/api/admin/catalog?"+params.toString());
+    libraryRows.textContent=data.count+" record(s) loaded.\\n\\n"+JSON.stringify(data.items,null,2);
+  }catch(error){libraryRows.textContent="Could not load admin catalog: "+error.message;}
+}
+$("#libraryLoad").addEventListener("click",loadAdminCatalog);
+librarySearch.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();loadAdminCatalog();}});
+libraryFilter.addEventListener("change",loadAdminCatalog);
+
 checkSession();
 </script></body></html>
