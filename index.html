@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090b12">
+  <meta name="description" content="MaseNet — discover movies, dramas and episodes.">
+  <title>MaseNet — Movies, Dramas & More</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090b12;--panel:#141824;--text:#f7f8fc;--muted:#a9afc0;--accent:#8b5cf6;--line:#272c3c}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#1a1830 0,var(--bg) 52%);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+    header{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:18px;padding:14px clamp(16px,4vw,48px);background:#090b12dd;backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+    .brand{font-size:1.35rem;font-weight:850;letter-spacing:-.04em}.brand span{color:#b69cff}
+    nav{display:flex;gap:16px;flex:1}a{color:inherit;text-decoration:none}nav a{color:var(--muted);font-size:.92rem}
+    .search{width:min(260px,38vw);background:#171b28;border:1px solid var(--line);border-radius:999px;padding:10px 14px;color:var(--text)}
+    main{max-width:1200px;margin:auto;padding:28px 20px 64px}.hero{min-height:300px;display:flex;align-items:end;padding:clamp(24px,5vw,56px);border:1px solid #ffffff18;border-radius:28px;background:linear-gradient(90deg,#17152beF,#17152b88),radial-gradient(circle at 78% 28%,#8b5cf6 0,transparent 36%),linear-gradient(135deg,#242b50,#10131d);box-shadow:0 24px 70px #0005}
+    .eyebrow{color:#c4b5fd;text-transform:uppercase;letter-spacing:.16em;font-size:.75rem;font-weight:750}.hero h1{font-size:clamp(2rem,6vw,4.2rem);line-height:1.03;letter-spacing:-.05em;margin:10px 0}.hero p{max-width:560px;color:#d1d5e2}
+    .btn{display:inline-block;background:var(--accent);color:white;border:0;border-radius:999px;padding:11px 18px;font-weight:750;cursor:pointer}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:32px 0 14px}.section-head h2{margin:0;font-size:1.2rem}.muted{color:var(--muted)}
+    .filters{display:flex;gap:8px;flex-wrap:wrap}.filters button{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:8px 13px;border-radius:999px;cursor:pointer}.filters button[aria-pressed=true]{background:#34265b;border-color:#8b5cf6}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.tile{min-height:170px;display:flex;align-items:end;padding:16px;border-radius:18px;border:1px solid #ffffff12;background:linear-gradient(145deg,#282c46,#151824 75%);position:relative;overflow:hidden}.tile:before{content:"";position:absolute;width:130px;height:130px;border-radius:50%;background:#8b5cf633;filter:blur(1px);top:-45px;right:-35px}.tile div{position:relative}.tile h3{margin:0 0 4px;font-size:1rem}.tile p{margin:0;color:var(--muted);font-size:.85rem}.empty{padding:26px;text-align:center;border:1px dashed var(--line);border-radius:18px;color:var(--muted);grid-column:1/-1}
+    footer{border-top:1px solid var(--line);padding:24px 20px;text-align:center;color:var(--muted);font-size:.88rem}
+    @media(max-width:760px){nav{display:none}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{min-height:270px}.search{margin-left:auto}}
+    @media(max-width:380px){.grid{grid-template-columns:1fr}.tile{min-height:130px}}
+  </style>
+</head>
+<body>
+<header><a class="brand" href="#" aria-label="MaseNet home">Mase<span>Net</span></a><nav aria-label="Main navigation"><a href="#discover">Discover</a><a href="#movies">Movies</a><a href="#dramas">Dramas</a><a href="#reels">Reels</a></nav><input id="search" class="search" type="search" placeholder="Search titles…" aria-label="Search titles"></header>
+<main>
+  <section class="hero"><div><div class="eyebrow">Your entertainment hub</div><h1>Stories worth<br>staying up for.</h1><p>Explore movies, dramas and episodes in one place. Your MaseNet library starts here.</p><a class="btn" href="#discover">Explore library ↓</a></div></section>
+  <section id="discover"><div class="section-head"><h2>Discover</h2><span class="muted" id="count">Starter catalog</span></div><div class="filters" aria-label="Filter catalog"><button data-filter="All" aria-pressed="true">All</button><button data-filter="Movie" aria-pressed="false">Movies</button><button data-filter="Drama" aria-pressed="false">Dramas</button><button data-filter="Reel" aria-pressed="false">Reels</button></div>
+  <div class="grid" id="catalog" style="margin-top:14px">
+    <article class="tile" data-kind="Movie"><div><h3>Featured Movies</h3><p>Movie collection</p></div></article>
+    <article class="tile" data-kind="Drama"><div><h3>Drama Library</h3><p>Series and episodes</p></div></article>
+    <article class="tile" data-kind="Reel"><div><h3>Short Reels</h3><p>Quick entertainment</p></div></article>
+    <article class="tile" data-kind="Drama"><div><h3>Continue Watching</h3><p>Your next episode</p></div></article>
+  </div><p class="muted" style="font-size:.88rem;margin-top:16px">Demo content only. No video files or streaming URLs are included in this starter page.</p></section>
+</main>
+<footer>© <span id="year"></span> MaseNet · Use only media and streaming links you are authorized to publish.</footer>
+<script>
+  const search=document.querySelector('#search'),cards=[...document.querySelectorAll('.tile')],buttons=[...document.querySelectorAll('[data-filter]')];let filter='All';
+  function render(){let visible=0;for(const card of cards){const matchesFilter=filter==='All'||card.dataset.kind===filter;const matchesText=card.innerText.toLowerCase().includes(search.value.trim().toLowerCase());card.hidden=!(matchesFilter&&matchesText);if(!card.hidden)visible++}document.querySelector('#count').textContent=visible+' items';}
+  buttons.forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.filter;buttons.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));render()}));search.addEventListener('input',render);document.querySelector('#year').textContent=new Date().getFullYear();render();
+</script>
+</body>
+</html>
