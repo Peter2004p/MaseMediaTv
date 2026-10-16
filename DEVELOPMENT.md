@@ -9,6 +9,7 @@
 - `functions/api/admin/me.js`: current session check.
 - `functions/api/admin/logout.js`: session revocation.\n- `functions/api/admin/import.js`: authenticated bulk/single-item import with URL validation, per-row results, and duplicate media URL checks.
 - `functions/api/admin/catalog.js`: authenticated, read-only admin catalog search that includes source and subtitle URLs only after a valid admin session.
+- `functions/api/admin/item/[id].js`: authenticated single-item update (`PATCH`/`PUT`) and delete (`DELETE`) endpoint with type, title, HTTPS URL, year, and episode validation.
 
 ## Verified D1 schema (read-only inspection)
 - `admins`: `id INTEGER PRIMARY KEY CHECK(id=1)`, `salt TEXT NOT NULL`, `password_hash TEXT NOT NULL`, `created_at TEXT DEFAULT CURRENT_TIMESTAMP`.
@@ -18,7 +19,7 @@
 A read-only inspection found one admin row, two session rows, and one catalog row. No SQL rows were changed during inspection.
 
 ## Admin feature status
-The admin page now includes separate Normal Bulk URLs and Automatic Bulk URLs forms. Both validate and preview rows, and submit to `/api/admin/import` when an authenticated session is present. The Media Library search/filter now calls `/api/admin/catalog`, which returns private source/subtitle URLs only after session validation. The endpoint validates each row, skips existing media URLs, and returns per-row status. It is not deployed or production-tested. The Automatic tool generates sequential episode-number drafts from one URL per line. Movie/drama metadata, library filters, reel, broadcast, Telegram, homepage, user, and settings sections are present at varying scaffold levels; most require backend APIs before they are functional.
+The admin page now includes separate Normal Bulk URLs and Automatic Bulk URLs forms. Both validate and preview rows, and submit to `/api/admin/import` when an authenticated session is present. The Media Library search/filter now calls `/api/admin/catalog`, which returns private source/subtitle URLs only after session validation. A protected `/api/admin/item/:id` endpoint has been added for updating and deleting catalog items, but the page UI does not yet expose edit/delete controls. The endpoint validates each row, skips existing media URLs, and returns per-row status. It is not deployed or production-tested. The Automatic tool generates sequential episode-number drafts from one URL per line. Movie/drama metadata, library filters, reel, broadcast, Telegram, homepage, user, and settings sections are present at varying scaffold levels; most require backend APIs before they are functional.
 
 The public `/api/catalog` endpoint intentionally returns only public metadata fields and must never use `SELECT *`, because `video_url` and `subtitle_url` are private source fields. A future authenticated admin catalog endpoint is needed for editing and private media management.
 
