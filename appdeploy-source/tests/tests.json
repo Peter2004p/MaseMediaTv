@@ -1,0 +1,140 @@
+[
+  {
+    "name": "Customize motion, density and glass effects",
+    "viewport": "mobile",
+    "covers": ["saved motion profiles", "compact library density", "glass intensity controls", "reduced-motion accessibility"],
+    "description": "Checks the new visual personalization controls change the library appearance and persist across reloads.",
+    "steps": ["Open Customize", "Choose High-refresh smooth, Compact browsing and Strong glass", "Close Customize and inspect the library", "Reload and reopen Customize"],
+    "expected": "The selected motion, density and glass preferences remain selected and visibly affect controls/cards without overriding reduced-motion preferences or promising a hardware refresh rate."
+  },
+  {
+    "name": "Open VideoGram and browse available library links",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": ["VideoGram route and navigation", "library-linked video feed", "responsive native video controls", "empty state when no stream URLs exist"],
+    "description": "Checks VideoGram is reachable from navigation and shows video-linked titles or a useful empty state.",
+    "steps": ["Tap VideoGram in the top navigation", "If clips are listed, test native play controls and mute", "Use Open series or return to Library", "If no stream URLs exist, inspect the empty state"],
+    "expected": "VideoGram opens, lists available episode stream URLs with native video controls and series context, or clearly explains that links must be added; navigation back to the library works."
+  },
+  {
+    "name": "Drag and restore the AI assistant bubble",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "draggable AI launcher",
+      "persistent assistant position",
+      "AI panel opening"
+    ],
+    "description": "Checks the assistant can be dragged, stays within the viewport and opens when tapped without dragging.",
+    "steps": [
+      "Drag the floating AI bubble to another visible corner",
+      "Release, then tap the bubble without moving it",
+      "Reload MaseTv"
+    ],
+    "expected": "The bubble stays at its saved position after reload, and a normal tap opens the assistant."
+  },
+  {
+    "name": "Choose independent AI chat themes",
+    "viewport": "mobile",
+    "covers": [
+      "independent AI chat themes",
+      "Aurora Ocean Candy chat styles",
+      "chat style persistence"
+    ],
+    "description": "Checks new chat-board styles can be selected without changing the website palette.",
+    "steps": [
+      "Open Customize",
+      "Choose Aurora, Ocean or Candy for the AI chat board",
+      "Open the AI assistant and choose another style from its palette menu"
+    ],
+    "expected": "The chosen chat-board style is applied independently of the website theme and remains selected after reload."
+  },
+  {
+    "name": "Enable seasonal website themes",
+    "viewport": "desktop",
+    "covers": [
+      "special-day theme selection",
+      "automatic event theme toggle",
+      "website theme customization"
+    ],
+    "description": "Checks seasonal theme automation can be enabled or disabled from Customize.",
+    "steps": [
+      "Open Customize",
+      "Enable automatic event themes",
+      "Disable automatic event themes"
+    ],
+    "expected": "The setting can be switched on and off, and seasonal themes only auto-apply while the setting is enabled."
+  },
+  {
+    "name": "Apply a local weather theme with consent",
+    "viewport": "mobile",
+    "covers": [
+      "opt-in local weather theme",
+      "geolocation permission",
+      "weather API failure feedback"
+    ],
+    "description": "Checks local weather is requested only after a user action and a visible status is shown.",
+    "steps": [
+      "Open Customize",
+      "Tap Use my local weather and grant location permission",
+      "If weather cannot load, retry or deny permission"
+    ],
+    "expected": "A weather palette is applied only after a successful weather lookup; permission denial or lookup failure shows a clear message."
+  },
+  {
+    "name": "AI applies requested event theme",
+    "viewport": "desktop",
+    "covers": [
+      "AI theme commands",
+      "event-specific website palette",
+      "user-visible AI confirmation"
+    ],
+    "description": "Checks supported event-theme requests apply a matching palette and return an acknowledgement.",
+    "steps": [
+      "Open MaseTv AI",
+      "Ask it to switch to a Christmas theme",
+      "Ask it to switch to a New Year theme"
+    ],
+    "expected": "Christmas applies the emerald palette and New Year applies the sunset palette, with a confirmation in chat."
+  },
+  {
+    "name": "Double-tap to customize the AI companion",
+    "viewport": "mobile",
+    "covers": ["double-tap customization", "avatar choices", "animation and shape preferences", "local preference persistence"],
+    "description": "Checks that the floating assistant opens its customization studio on a double tap and offers personal appearance controls.",
+    "steps": ["Double-tap the floating AI button", "Choose a different avatar", "Choose an animation and bubble shape", "Reload the website"],
+    "expected": "The AI button studio opens, the selected avatar/animation/shape are applied, and preferences remain selected after reload."
+  },
+  {
+    "name": "Use pill-shaped navigation and homepage actions on mobile",
+    "viewport": "mobile",
+    "covers": ["responsive pill navigation", "homepage primary and secondary actions", "search and customization controls", "AI companion styling remains distinct"],
+    "description": "Verifies the refreshed iOS-inspired pill controls remain usable on a narrow mobile viewport without replacing the separate AI companion button.",
+    "steps": ["Open MaseTv on a mobile viewport", "Use Home, search and Customize controls", "Open the homepage and activate a primary or secondary action"],
+    "expected": "Navigation and homepage actions appear as rounded pill controls, remain reachable without horizontal page overflow, and the AI companion retains its distinct floating orb design."
+  },
+  {
+    "name": "Join Channel stays floating and shrinks on scroll",
+    "viewport": "mobile",
+    "covers": ["fixed floating Join Channel action", "compact scrolled Telegram promo", "mobile reachability"],
+    "description": "Checks the Telegram channel join action remains reachable while scrolling and becomes a smaller pill after the page moves.",
+    "steps": ["Open MaseTv on mobile", "Scroll down the homepage", "Inspect the floating Join Channel pill and tap it"],
+    "expected": "The Join Channel action stays fixed near the bottom-left, shrinks to a compact pill while scrolling, and remains tappable without covering the page excessively."
+  },
+  {
+    "name": "Customize sheet scrolls on a phone and modes change layout",
+    "viewport": "mobile",
+    "covers": ["scrollable long Customize panel", "safe-area aware settings sheet", "distinct experience mode layouts"],
+    "description": "Verifies a long Customize panel can scroll independently on mobile and each experience mode applies a visible browsing layout.",
+    "steps": ["Open Customize on a mobile viewport", "Scroll down through all website color and customization options", "Select Samsung One UI, iPhone Liquid Glass, then Cinema Pro and return Home after each selection"],
+    "expected": "The Customize panel scrolls to its lower controls without trapping them off-screen, and the selected experience mode visibly changes the home layout while remaining selected after reload."
+  },
+  {
+    "name": "Switch experience modes and use smart library filters",
+    "viewport": "mobile",
+    "covers": ["persistent experience mode selection", "Samsung One UI Brief dashboard", "iOS Spotlight-style search labels", "movie drama and My List filters", "episode-aware search"],
+    "description": "Checks the new experience modes change the app layout and that the library categories filter titles without relying on title-name keywords.",
+    "steps": ["Open Customize and choose Samsung One UI", "Return Home and inspect MaseTv Brief and its quick actions", "Choose Movies, Chinese Drama and My List filters", "Choose iPhone Liquid Glass, open search, and search for an episode title or episode number", "Reload MaseTv"],
+    "expected": "The selected experience mode remains active after reload, One UI shows the Brief dashboard, category filters show matching library items, and search can find episode metadata."
+  }
+]
