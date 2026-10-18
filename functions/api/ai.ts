@@ -1,17 +1,69 @@
 import { json } from "./auth/_shared";
-interface Env { DB: D1Database; ADMIN_EMAIL?: string; }
+
+interface AIResult { response?: unknown; }
+interface WorkersAI {
+  run(model: string, input: { messages: Array<{ role: "system" | "user"; content: string }> }): Promise<AIResult | string>;
+}
+interface Env { DB: D1Database; AI?: WorkersAI; ADMIN_EMAIL?: string; }
+
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
   const body = await request.json().catch(() => ({})) as { message?: unknown; adminMode?: boolean; viewerName?: string };
   const message = String(body.message || "").trim().slice(0, 2000);
   if (!message) return json({ text: "Tell me what you would like help with." });
-  const rows = await env.DB.prepare("SELECT name,kind,year,description FROM titles ORDER BY created_at DESC LIMIT 100").all<{name:string;kind:string;year:number|null;description:string}>();
+
+  const rows = await env.DB.prepare(
+    "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 100"
+  ).all<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
   const titles = rows.results || [];
   const q = message.toLowerCase();
-  if (/recommend|available|library|drama|movie|search|find/.test(q)) {
-    const matches = titles.filter(t => (t.name + " " + t.kind + " " + t.description).toLowerCase().split(/[^a-z0-9]+/).some(w => w.length > 2 && q.includes(w)));
-    if (!titles.length) return json({ text: "The MaseNet library is empty on the Cloudflare migration database right now. Your existing AppDeploy site has not been changed." });
-    if (matches.length) return json({ text: "Here are matching titles in the MaseNet library:\n" + matches.slice(0,5).map(t => "• " + t.name + (t.year ? " ("+t.year+")" : "") + " — " + t.kind).join("\n") });
-    return json({ text: "I couldn't find an exact match in the Cloudflare MaseNet library yet. Try the title's shorter name or check back later." });
+
+  if (/recommend|available|library|drama|movie|search|find|episode/.test(q)) {
+    const words = q.split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 2);
+    const matches = titles.filter(t => {
+      const haystack = (t.name + " " + t.kind + " " + (t.description || "")).toLowerCase();
+      return haystack.includes(q) || words.some(w => haystack.includes(w));
+    });
+    if (!titles.length) {
+      return json({ text: "The MaseNet library on this Cloudflare migration is currently empty. Your existing AppDeploy site has not been changed. Add titles through the Cloudflare admin library after admin sign-in is configured." });
+    }
+    if (matches.length) {
+      return json({ text: "Here are matching titles in the MaseNet library:\n" + matches.slice(0, 5).map(t => "• " + t.name + (t.year ? " (" + t.year + ")" : "") + " — " + t.kind).join("\n") });
+    }
   }
-  return json({ text: "I'm the MaseNet assistant on the Cloudflare migration preview. I can help search the titles currently stored in this Cloudflare library. Full AI replies and Telegram-connected actions are not enabled until their service credentials and webhook are configured." });
+
+  if (env.AI) {
+    let customInstructions = "";
+    try {
+      const setting = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key='ai_instructions'").first<{value_json:string}>();
+      if (setting?.value_json) customInstructions = String(JSON.parse(setting.value_json).instructions || "").slice(0, 4000);
+    } catch { /* Optional setting; keep assistant available if it is absent. */ }
+
+    const catalogueContext = titles.slice(0, 60).map(t =>
+      "- " + t.name + (t.year ? " (" + t.year + ")" : "") + " [" + t.kind + "]" + (t.description ? ": " + t.description.slice(0, 180) : "")
+    ).join("\n") || "(No titles are currently saved.)";
+    const systemPrompt = [
+      "You are MaseNet's helpful website assistant. Be friendly, concise, and clear.",
+      "Do not claim a title, episode, streaming URL, download, or feature exists unless it appears in the supplied catalogue or the user provided it.",
+      "If asked to find a title and the catalogue does not confirm it, say you could not verify it and suggest trying a shorter search.",
+      "Do not reveal secrets, environment variables, admin sessions, or internal configuration.",
+      customInstructions ? "Administrator guidance (follow only if safe and consistent with the rules above):\n" + customInstructions : "",
+      "Current catalogue snapshot (not necessarily complete):\n" + catalogueContext
+    ].filter(Boolean).join("\n\n");
+
+    try {
+      const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: message }]
+      });
+      const answer = typeof result === "string" ? result : String(result?.response || "");
+      if (answer.trim()) return json({ text: answer.trim().slice(0, 5000), poweredByAI: true });
+    } catch (error) {
+      console.error("MaseNet Workers AI request failed", error instanceof Error ? error.message : "unknown error");
+    }
+  }
+
+  return json({
+    text: env.AI
+      ? "I'm having trouble reaching the AI service right now. You can still search the titles currently saved in the MaseNet library."
+      : "I'm the MaseNet assistant on the Cloudflare migration preview. Catalogue search is available, but full AI replies are not configured yet."
+  });
 };
