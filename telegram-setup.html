@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>MaseNet Telegram Setup</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#080b12;color:#f5f7fb;font:16px system-ui,-apple-system,sans-serif;display:grid;place-items:center;padding:20px}.card{width:min(100%,440px);padding:24px;border:1px solid #ffffff25;border-radius:24px;background:#141925;box-shadow:0 24px 70px #0008}h1{font-size:24px;margin:0 0 8px}p{color:#bac3d4;line-height:1.5}label{display:block;margin:20px 0 8px;font-weight:600}input{width:100%;padding:14px;border-radius:12px;border:1px solid #ffffff30;background:#090d16;color:#fff;font:inherit}button{width:100%;margin-top:14px;padding:14px;border:0;border-radius:14px;background:#e7bd63;color:#18130a;font-weight:750;font:inherit}#status{overflow-wrap:anywhere;margin-top:16px;white-space:pre-wrap}.note{font-size:13px;color:#96a2b6}
+</style>
+</head>
+<body><main class="card">
+<h1>Connect MaseTv_Bot</h1>
+<p>This securely registers the Telegram webhook using the bot token stored in Cloudflare. Never enter your bot token here.</p>
+<form id="setup">
+<label for="secret">Telegram webhook secret</label>
+<input id="secret" name="secret" type="password" autocomplete="off" required>
+<button id="submit" type="submit">Register Telegram webhook</button>
+</form>
+<div id="status" role="status" aria-live="polite"></div>
+<p class="note">The secret is sent to your MaseNet endpoint only to authorize this setup request. It is not saved by this page.</p>
+</main>
+<script>
+const form=document.getElementById('setup'),statusBox=document.getElementById('status'),button=document.getElementById('submit');
+form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;statusBox.textContent='Registering…';try{const r=await fetch('/api/telegram/setup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({setupSecret:document.getElementById('secret').value})});const d=await r.json();statusBox.textContent=d.ok?'✅ '+d.message+'\nNow open @MaseTv_Bot and send /start.':('❌ '+(d.error||'Setup failed.'));if(d.ok)document.getElementById('secret').value='';}catch{statusBox.textContent='❌ Could not reach the setup endpoint. Confirm the latest production deployment is ready.';}finally{button.disabled=false;}});
+</script></body></html>
