@@ -47,7 +47,7 @@ export default function Player({ episode, onProgress }: { episode: Episode; onPr
     const isMkv = /\.mkv(?:$|[?#])/i.test(originalSource) || /matroska/i.test(episode.mimeType || '');
     // Use the proxy for HLS manifests and MKV sources; play normal MP4/WebM/MOV URLs directly.
     // The proxy does not transcode codecs, so unsupported MKV codecs still need a server-side transcoder.
-    const source = isMkv ? '/api/media/convert?episodeId=' + encodeURIComponent(episode.id) : isHls ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) : originalSource;
+    const source = isMkv ? '/api/media/convert?episodeId=' + encodeURIComponent(episode.id) : isHls ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(originalSource) : originalSource;
     const fail = () => {
       if (video.error && !disposed) {
         setLoading(false);
