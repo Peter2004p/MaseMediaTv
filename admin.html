@@ -65,6 +65,73 @@ async function loadAdminCatalog(){
 $("#libraryLoad").addEventListener("click",loadAdminCatalog);
 librarySearch.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();loadAdminCatalog();}});
 libraryFilter.addEventListener("change",loadAdminCatalog);
+\n
+function splitHttpsLines(id){
+  return $(id).value.split(/\\r?\\n/).map(v=>v.trim()).filter(Boolean).map((url,index)=>{
+    try { const u=new URL(url); if(u.protocol!=="https:"||!u.hostname) throw new Error(); return {url,index}; }
+    catch { return {url,index,error:"Only valid HTTPS URLs are accepted."}; }
+  });
+}
+function showDraft(target,rows){
+  $(target).textContent=rows.length ? rows.map(r=>(r.error?"REJECT":"READY")+" · "+(r.title||"")+" · "+r.url).join("\\n") : "Paste at least one URL.";
+}
+async function submitMediaRows(rows,target){
+  const valid=rows.filter(r=>!r.error);
+  if(!valid.length){$(target).textContent="No valid rows to import.";return;}
+  if(valid.length>100){$(target).textContent="Import up to 100 rows at a time.";return;}
+  $(target).textContent="Importing "+valid.length+" row(s)…";
+  try{
+    const result=await api("/api/admin/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:valid.map(r=>r.item)})});
+    const lines=(result.results||[]).map(x=>"Row "+x.row+": "+x.status+(x.error?" — "+x.error:x.reason?" — "+x.reason:""));
+    $(target).textContent="Import finished. Inserted: "+(result.inserted||0)+"; skipped/rejected: "+((result.results||[]).length-(result.inserted||0))+".\\n"+lines.join("\\n");
+    if(typeof loadAdminCatalog==="function") await loadAdminCatalog();
+  }catch(error){$(target).textContent="Import failed: "+error.message;}
+}
+function normalRows(){
+  const title=$("#normalTitle").value.trim();
+  const kind=$("#normalType").value;
+  const urls=splitHttpsLines("#normalUrls");
+  return urls.map(({url,index,error})=>{
+    const episode=kind==="Drama episode";
+    const reel=kind==="Reel";
+    const quality=$("#normalQuality").value;
+    const label=title || (reel?"Reel "+(index+1):"Movie "+(index+1));
+    return {url,title:label,error,...{item:{
+      type:reel?"Reel":episode?"Episode":"Movie",
+      title:label+(urls.length>1&&!episode?" ("+quality+")":""),
+      description:"",
+      poster:"",
+      category:quality==="Auto"?"":quality,
+      year:null,
+      rating:"",
+      video_url:url,
+      subtitle_url:"",
+      episode_of:episode?label:null,
+      episode_number:episode?index+1:null
+    }}};
+  });
+}
+$("#previewNormal").addEventListener("click",()=>showDraft("#normalPreview",normalRows()));
+$("#saveNormal").addEventListener("click",()=>submitMediaRows(normalRows(),"#normalPreview"));
+$("#clearNormal").addEventListener("click",()=>{$("#normalUrls").value="";$("#normalPreview").textContent="URL rows will appear here.";});
+function autoRows(){
+  const series=$("#autoDrama").value.trim();
+  const seasonRaw=$("#autoSeason").value.trim().replace(/^season\\s*/i,"");
+  const season=Number(seasonRaw||1);
+  const start=Number($("#autoStart").value||1);
+  const yearText=$("#autoYear").value.trim();
+  const year=yearText?Number(yearText):null;
+  const urls=splitHttpsLines("#autoUrls");
+  return urls.map(({url,index,error})=>{
+    const ep=start+index;
+    const title=(series||"Untitled Drama")+" - S"+season+"E"+ep;
+    const rowError=error||(!series?"Enter the series name.":!Number.isInteger(season)||season<1||season>1000?"Season must be a positive number.":!Number.isInteger(start)||start<1||start>10000?"Starting episode must be a positive number.":year!==null&&(!Number.isInteger(year)||year<1888||year>new Date().getUTCFullYear()+5)?"Release year is invalid.":"");
+    return {url,title,error:rowError,item:{type:"Episode",title,description:$("#autoDescription").value.trim(),poster:$("#autoPoster").value.trim(),category:$("#autoQuality").value,year,rating:"",video_url:url,subtitle_url:"",episode_of:series,episode_number:ep}};
+  });
+}
+$("#previewAuto").addEventListener("click",()=>showDraft("#autoPreview",autoRows()));
+$("#saveAuto").addEventListener("click",()=>submitMediaRows(autoRows(),"#autoPreview"));
+$("#clearAuto").addEventListener("click",()=>{$("#autoUrls").value="";$("#autoPreview").textContent="Generated episode rows will appear here. Not saved.";});
 
 checkSession();
 </script></body></html>
