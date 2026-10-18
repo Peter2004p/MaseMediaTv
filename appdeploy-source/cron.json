@@ -1,0 +1,8 @@
+[
+  {
+    "name": "telegram-fallback",
+    "cron": "*/5 * * * *",
+    "handler": "telegramFallbackHandler",
+    "timezone": "UTC"
+  }
+]
