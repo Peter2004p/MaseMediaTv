@@ -1,4 +1,4 @@
-import { json, originAllowed, ensureTables, createSession, sessionCookie } from "./_helpers.js";
+import { json, originAllowed, ensureTables, createSession, sessionCookie, passwordHash } from "./_helpers.js";
 export async function onRequestPost({request,env}) {
  if(!env.DB)return json({error:"Account database is unavailable."},503);
  if(!originAllowed(request))return json({error:"Request origin rejected."},403);
@@ -20,7 +20,6 @@ export async function onRequestPost({request,env}) {
    // Google-verified accounts do not use a local password; the random hash cannot be used to sign in with a chosen password.
    const salt=[...crypto.getRandomValues(new Uint8Array(24))].map(v=>v.toString(16).padStart(2,"0")).join("");
    const randomPassword=[...crypto.getRandomValues(new Uint8Array(48))].map(v=>v.toString(16).padStart(2,"0")).join("");
-   const { passwordHash }=await import("./_helpers.js");
    const hash=await passwordHash(randomPassword,salt);
    await env.DB.prepare("INSERT INTO users (id,email,password_salt,password_hash,created_at) VALUES (?,?,?,?,?)").bind(id,email,salt,hash,now).run();
    user={id,email,created_at:now};
