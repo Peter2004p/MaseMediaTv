@@ -114,13 +114,13 @@ librarySearch.addEventListener("keydown",event=>{if(event.key==="Enter"){event.p
 libraryFilter.addEventListener("change",loadAdminCatalog);
 \n
 function splitHttpsLines(id){
-  return $(id).value.split(/\\r?\\n/).map(v=>v.trim()).filter(Boolean).map((url,index)=>{
+  return $(id).value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean).map((url,index)=>{
     try { const u=new URL(url); if(u.protocol!=="https:"||!u.hostname) throw new Error(); return {url,index}; }
     catch { return {url,index,error:"Only valid HTTPS URLs are accepted."}; }
   });
 }
 function showDraft(target,rows){
-  $(target).textContent=rows.length ? rows.map(r=>(r.error?"REJECT":"READY")+" · "+(r.title||"")+" · "+r.url).join("\\n") : "Paste at least one URL.";
+  $(target).textContent=rows.length ? rows.map(r=>(r.error?"REJECT":"READY")+" · "+(r.title||"")+" · "+r.url).join("\n") : "Paste at least one URL.";
 }
 async function submitMediaRows(rows,target){
   const valid=rows.filter(r=>!r.error);
@@ -130,7 +130,7 @@ async function submitMediaRows(rows,target){
   try{
     const result=await api("/api/admin/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:valid.map(r=>r.item)})});
     const lines=(result.results||[]).map(x=>"Row "+x.row+": "+x.status+(x.error?" — "+x.error:x.reason?" — "+x.reason:""));
-    $(target).textContent="Import finished. Inserted: "+(result.inserted||0)+"; skipped/rejected: "+((result.results||[]).length-(result.inserted||0))+".\\n"+lines.join("\\n");
+    $(target).textContent="Import finished. Inserted: "+(result.inserted||0)+"; skipped/rejected: "+((result.results||[]).length-(result.inserted||0))+".\n"+lines.join("\n");
     if(typeof loadAdminCatalog==="function") await loadAdminCatalog();
   }catch(error){$(target).textContent="Import failed: "+error.message;}
 }
@@ -163,7 +163,7 @@ $("#saveNormal").addEventListener("click",()=>submitMediaRows(normalRows(),"#nor
 $("#clearNormal").addEventListener("click",()=>{$("#normalUrls").value="";$("#normalPreview").textContent="URL rows will appear here.";});
 function autoRows(){
   const series=$("#autoDrama").value.trim();
-  const seasonRaw=$("#autoSeason").value.trim().replace(/^season\\s*/i,"");
+  const seasonRaw=$("#autoSeason").value.trim().replace(/^season\s*/i,"");
   const season=Number(seasonRaw||1);
   const start=Number($("#autoStart").value||1);
   const yearText=$("#autoYear").value.trim();
