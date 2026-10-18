@@ -13,7 +13,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const body = await request.json() as Record<string, unknown>;
   if (typeof body.name !== "string" || !body.name.trim()) return json({ error: "A title name is required." }, 400);
   const id = typeof body.id === "string" && body.id ? body.id : crypto.randomUUID();
-  const title = { ...body, id };
+  const title: Record<string, unknown> = { ...body, id };
   const kind = title.type === "Drama" ? "drama" : "movie";
   await env.DB.prepare("INSERT INTO titles (id,name,kind,metadata_json) VALUES (?,?,?,?)").bind(id, title.name, kind, JSON.stringify(title)).run();
   return json({ title }, 201);
