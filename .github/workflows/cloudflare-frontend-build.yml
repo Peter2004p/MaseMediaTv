@@ -1,0 +1,17 @@
+name: Cloudflare migration frontend build
+on:
+  push:
+    branches: [cloudflare-migration]
+  pull_request:
+    branches: [cloudflare-migration]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - run: npm run build
