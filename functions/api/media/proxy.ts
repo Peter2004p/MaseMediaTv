@@ -39,7 +39,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  try { upstream=await fetch(upstreamUrl,{headers,redirect:"follow"}); } catch { return json({error:"The video source could not be reached"},502); }
  if(!upstream.ok && upstream.status!==206) return json({error:"The video source returned HTTP "+upstream.status},502);
  const contentType=upstream.headers.get("content-type")||"";
- const isPlaylist=/mpegurl|vnd\\.apple\\.mpegurl/i.test(contentType)||/\\.m3u8(?:$|[?#])/i.test(upstreamUrl)||/\\.m3u8(?:$|[?#])/i.test(upstream.url||"");
+ const isPlaylist=/mpegurl|vnd\.apple\.mpegurl/i.test(contentType)||/\.m3u8(?:$|[?#])/i.test(upstreamUrl)||/\.m3u8(?:$|[?#])/i.test(upstream.url||"");
  if(isPlaylist) {
   // Relative HLS segment URLs must resolve against the final URL after redirects,
   // not the original URL entered by the admin.
