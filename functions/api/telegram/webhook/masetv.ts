@@ -1,6 +1,6 @@
 import { json } from "../../auth/_shared";
 
-interface Env { DB: D1Database; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; }
+interface Env { DB: D1Database; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; }
 type Episode = { title?: string; season?: number | string; episode?: number | string; name?: string };
 type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; year?: number | string; description?: string; episodes?: Episode[] };
 
@@ -48,7 +48,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         const titleAndNumberMatch = !!titleQuery && normalize(name).includes(titleQuery)
           && (!queryEpisode || queryEpisode === episodeNumber)
           && (!querySeason || querySeason === seasonNumber);
-        if (searchable.includes(needle) || (normalize(epName).includes(needle)) || titleAndNumberMatch) {
+        if (searchable.includes(needle) || normalize(epName).includes(needle) || titleAndNumberMatch) {
           episodeMatches.push("• " + name + (item.year ? " (" + item.year + ")" : "") + (label ? " — " + label : "") + (epName ? " " + epName : ""));
         }
       }
@@ -60,10 +60,19 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       : "I couldn't find that movie, drama, or episode in the MaseTv library yet. Try a shorter title or check again later.";
   }
 
+  const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || "").trim();
+  const replyMarkup = miniAppUrl.startsWith("https://")
+    ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] }
+    : undefined;
   const send = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text: reply.slice(0, 3900), disable_web_page_preview: true })
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: reply.slice(0, 3900),
+      disable_web_page_preview: true,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {})
+    })
   });
   if (!send.ok) return json({ ok: false, error: "Telegram could not deliver the search reply." }, 502);
   return json({ ok: true });
