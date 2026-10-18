@@ -25,7 +25,11 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  if(!isPublicHttps(upstreamUrl)) return json({error:"This video source is not an allowed HTTPS URL"},400);
  if(!requested && !allowed.includes(upstreamUrl)) return json({error:"The requested source does not belong to this episode"},403);
  if(requested) {
-  try { const u=new URL(requested); const bases=allowed.map(x=>new URL(x)); if(!bases.some(b=>b.origin===u.origin)) return json({error:"HLS resource host does not match the registered stream host"},403); }
+  // HLS playlists commonly load variants, keys, and media segments from separate
+  // CDN hostnames. Permit those playlist-referenced HTTPS resources while still
+  // rejecting credentials, local/private literal addresses, and non-HTTPS URLs.
+  // The episode must exist in D1 before any resource can be proxied.
+  try { const u=new URL(requested); if(!isPublicHttps(u.toString())) return json({error:"Invalid HLS resource URL"},400); }
   catch { return json({error:"Invalid HLS resource URL"},400); }
  }
  const headers=new Headers();
