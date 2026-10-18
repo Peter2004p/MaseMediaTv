@@ -30,6 +30,6 @@ export async function onRequestPost({request,env}){
   const token=hex(crypto.getRandomValues(new Uint8Array(32)));
   const tokenHash=await sha256(token),expiresAt=Math.floor(Date.now()/1000)+SESSION_SECONDS;
   await env.DB.prepare("INSERT INTO sessions (token_hash,expires_at) VALUES (?,?)").bind(tokenHash,expiresAt).run();
-  return json({ok:true,email:ALLOWED_EMAIL,expiresAt},{status:200,"Set-Cookie":cookie(token,SESSION_SECONDS)});
+  return json({ok:true,email:ALLOWED_EMAIL,expiresAt},200,{"Set-Cookie":cookie(token,SESSION_SECONDS)});
  }catch{return json({error:"Could not create the Google admin session. Check the preview database schema."},500)}
 }
