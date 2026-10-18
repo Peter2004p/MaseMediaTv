@@ -11,20 +11,20 @@ export function originAllowed(request) {
   return !origin || origin === new URL(request.url).origin;
 }
 export async function ensureTables(DB) {
-  await DB.prepare(`CREATE TABLE IF NOT EXISTS users (
+  await DB.prepare(\`CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT NOT NULL UNIQUE COLLATE NOCASE,
     password_salt TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     created_at INTEGER NOT NULL
-  )`).run();
-  await DB.prepare(`CREATE TABLE IF NOT EXISTS user_sessions (
+  )\`).run();
+  await DB.prepare(\`CREATE TABLE IF NOT EXISTS user_sessions (
     token_hash TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     expires_at INTEGER NOT NULL,
     created_at INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  )`).run();
+  )\`).run();
 }
 export async function passwordHash(password, saltHex) {
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -35,10 +35,10 @@ export async function sha256(value) {
   return hex(await crypto.subtle.digest("SHA-256", encoder.encode(value)));
 }
 export function sessionCookie(token) {
-  return `${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_SECONDS}`;
+  return \`${COOKIE}=\${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=\${SESSION_SECONDS}\`;
 }
 export function clearCookie() {
-  return `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+  return \`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0\`;
 }
 export function cookieToken(request) {
   const raw = request.headers.get("Cookie") || "";
