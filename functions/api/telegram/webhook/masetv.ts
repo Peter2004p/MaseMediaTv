@@ -36,13 +36,19 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       if (normalize(name).includes(needle) || normalize(item.description || row.description).includes(needle)) {
         titleMatches.push("• " + name + (item.year ? " (" + item.year + ")" : "") + " — " + (item.type || item.kind || row.kind || "Title"));
       }
+      const queryEpisode = needle.match(/\b(?:episode|ep|e)\s*(\d+)\b/)?.[1];
+      const querySeason = needle.match(/\b(?:season|s)\s*(\d+)\b/)?.[1];
+      const titleQuery = needle.replace(/\b(?:season|episode|ep|s|e)\s*\d+\b/g, " ").replace(/\b\d+\b/g, " ").trim();
       for (const ep of (Array.isArray(item.episodes) ? item.episodes : [])) {
         const epName = ep.title || ep.name || "";
-        const season = ep.season == null ? "" : "S" + String(ep.season).replace(/^S/i, "");
-        const episodeNo = ep.episode == null ? "" : "E" + String(ep.episode).replace(/^E/i, "");
-        const label = [season, episodeNo].filter(Boolean).join("");
-        const searchable = normalize([name, epName, label, "season " + ep.season, "episode " + ep.episode].join(" "));
-        if (searchable.includes(needle) || (normalize(name).includes(needle) && (needle.includes(" episode ") || needle.includes(" ep ")))) {
+        const seasonNumber = String(ep.season ?? "").match(/\d+/)?.[0] || "";
+        const episodeNumber = String(ep.episode ?? "").match(/\d+/)?.[0] || "";
+        const label = (seasonNumber ? "S" + seasonNumber : "") + (episodeNumber ? "E" + episodeNumber : "");
+        const searchable = normalize([name, epName, label, "season " + seasonNumber, "episode " + episodeNumber].join(" "));
+        const titleAndNumberMatch = !!titleQuery && normalize(name).includes(titleQuery)
+          && (!queryEpisode || queryEpisode === episodeNumber)
+          && (!querySeason || querySeason === seasonNumber);
+        if (searchable.includes(needle) || (normalize(epName).includes(needle)) || titleAndNumberMatch) {
           episodeMatches.push("• " + name + (item.year ? " (" + item.year + ")" : "") + (label ? " — " + label : "") + (epName ? " " + epName : ""));
         }
       }
