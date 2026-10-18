@@ -18,7 +18,7 @@ export async function onRequestPost({request,env}){
   if(!verify.ok)return json({error:"Google could not verify this sign-in. Please try again."},401);
   claims=await verify.json();
  }catch{return json({error:"Could not reach Google's verification service. Try again."},502)}
- if(claims.aud!==clientId||claims.email_verified!== "true"||String(claims.email||"").toLowerCase()!==ALLOWED_EMAIL)return json({error:"This Google account is not authorized for MaseNet admin access."},403);
+ if(claims.aud!==clientId||String(claims.email_verified)!=="true"||String(claims.email||"").toLowerCase()!==ALLOWED_EMAIL)return json({error:"This Google account is not authorized for MaseNet admin access."},403);
  try{
   const existing=await env.DB.prepare("SELECT id FROM admins WHERE id=1 LIMIT 1").first();
   if(existing)return json({error:"An admin already exists in this preview database. Google sign-in bootstrap is one-time; do not reset the existing admin. Sign in with the existing admin password."},409);
