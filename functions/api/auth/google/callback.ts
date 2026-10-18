@@ -1,4 +1,4 @@
-import { Env, json, sha256 } from "../../_shared";
+import { Env, json, sha256 } from "../_shared";
 type AuthEnv = Env & { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string };
 const randomHex = () => { const b = new Uint8Array(32); crypto.getRandomValues(b); return [...b].map(x => x.toString(16).padStart(2,"0")).join(""); };
 export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => {
