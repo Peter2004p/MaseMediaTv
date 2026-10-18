@@ -2,7 +2,8 @@ import { json } from "../../auth/_shared";
 interface Env { DB: D1Database; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; }
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
   if (!env.TELEGRAM_BOT_TOKEN) return json({ ok:false, error:"Bot token not configured" }, 503);
-  if (env.TELEGRAM_WEBHOOK_SECRET && request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TELEGRAM_WEBHOOK_SECRET) return json({ ok:false }, 401);
+  if (!env.TELEGRAM_WEBHOOK_SECRET) return json({ ok:false, error:"Webhook secret is not configured" }, 503);
+  if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TELEGRAM_WEBHOOK_SECRET) return json({ ok:false }, 401);
   const update = await request.json().catch(() => ({})) as any;
   const msg = update.message || update.edited_message;
   const chatId = msg?.chat?.id;
