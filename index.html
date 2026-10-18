@@ -17,7 +17,7 @@
     .eyebrow{color:#c4b5fd;text-transform:uppercase;letter-spacing:.16em;font-size:.75rem;font-weight:750}.hero h1{font-size:clamp(2rem,6vw,4.2rem);line-height:1.03;letter-spacing:-.05em;margin:10px 0}.hero p{max-width:560px;color:#d1d5e2}
     .btn{display:inline-block;background:var(--accent);color:white;border:0;border-radius:999px;padding:11px 18px;font-weight:750;cursor:pointer}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:32px 0 14px}.section-head h2{margin:0;font-size:1.2rem}.muted{color:var(--muted)}
     .filters{display:flex;gap:8px;flex-wrap:wrap}.filters button{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:8px 13px;border-radius:999px;cursor:pointer}.filters button[aria-pressed=true]{background:#34265b;border-color:#8b5cf6}
-    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.tile{min-height:170px;display:flex;align-items:end;padding:16px;border-radius:18px;border:1px solid #ffffff12;background:linear-gradient(145deg,#282c46,#151824 75%);position:relative;overflow:hidden}.tile:before{content:"";position:absolute;width:130px;height:130px;border-radius:50%;background:#8b5cf633;filter:blur(1px);top:-45px;right:-35px}.tile div{position:relative}.tile h3{margin:0 0 4px;font-size:1rem}.tile p{margin:0;color:var(--muted);font-size:.85rem}.empty{padding:26px;text-align:center;border:1px dashed var(--line);border-radius:18px;color:var(--muted);grid-column:1/-1}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.tile{min-height:250px;display:flex;align-items:end;padding:16px;border-radius:18px;border:1px solid #ffffff12;background:linear-gradient(145deg,#282c46,#151824 75%);position:relative;overflow:hidden;isolation:isolate}.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}.tile:after{content:'';position:absolute;inset:0;background:linear-gradient(0deg,#070912f2 0%,#07091260 60%,transparent);z-index:-1}.tile:before{z-index:-1}.tile:before{content:"";position:absolute;width:130px;height:130px;border-radius:50%;background:#8b5cf633;filter:blur(1px);top:-45px;right:-35px}.tile div{position:relative}.tile h3{margin:0 0 4px;font-size:1rem}.tile .meta{font-size:.78rem;color:#d7d9e5;margin-bottom:6px}.tile[hidden]{display:none}.tile p{margin:0;color:var(--muted);font-size:.85rem}.empty{padding:26px;text-align:center;border:1px dashed var(--line);border-radius:18px;color:var(--muted);grid-column:1/-1}.tile{cursor:pointer;transition:transform .2s,border-color .2s}.tile:hover{transform:translateY(-3px);border-color:#b69cff66}.tile:focus-visible{outline:2px solid #b69cff;outline-offset:3px}
     footer{border-top:1px solid var(--line);padding:24px 20px;text-align:center;color:var(--muted);font-size:.88rem}
     @media(max-width:760px){nav{display:none}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{min-height:270px}.search{margin-left:auto}}
     @media(max-width:380px){.grid{grid-template-columns:1fr}.tile{min-height:130px}}
@@ -28,18 +28,32 @@
 <main>
   <section class="hero"><div><div class="eyebrow">Your entertainment hub</div><h1>Stories worth<br>staying up for.</h1><p>Explore movies, dramas and episodes in one place. Your MaseNet library starts here.</p><a class="btn" href="#discover">Explore library ↓</a></div></section>
   <section id="discover"><div class="section-head"><h2>Discover</h2><span class="muted" id="count">Starter catalog</span></div><div class="filters" aria-label="Filter catalog"><button data-filter="All" aria-pressed="true">All</button><button data-filter="Movie" aria-pressed="false">Movies</button><button data-filter="Drama" aria-pressed="false">Dramas</button><button data-filter="Reel" aria-pressed="false">Reels</button></div>
-  <div class="grid" id="catalog" style="margin-top:14px">
-    <article class="tile" data-kind="Movie"><div><h3>Featured Movies</h3><p>Movie collection</p></div></article>
-    <article class="tile" data-kind="Drama"><div><h3>Drama Library</h3><p>Series and episodes</p></div></article>
-    <article class="tile" data-kind="Reel"><div><h3>Short Reels</h3><p>Quick entertainment</p></div></article>
-    <article class="tile" data-kind="Drama"><div><h3>Continue Watching</h3><p>Your next episode</p></div></article>
-  </div><p class="muted" style="font-size:.88rem;margin-top:16px">Demo content only. No video files or streaming URLs are included in this starter page.</p></section>
+  <div class="grid" id="catalog" style="margin-top:14px"><div class="empty">Loading your MaseNet library…</div></div><div id="detail" class="empty" hidden></div></div><p class="muted" style="font-size:.88rem;margin-top:16px">Demo content only. No video files or streaming URLs are included in this starter page.</p></section>
 </main>
 <footer>© <span id="year"></span> MaseNet · Use only media and streaming links you are authorized to publish.</footer>
 <script>
-  const search=document.querySelector('#search'),cards=[...document.querySelectorAll('.tile')],buttons=[...document.querySelectorAll('[data-filter]')];let filter='All';
-  function render(){let visible=0;for(const card of cards){const matchesFilter=filter==='All'||card.dataset.kind===filter;const matchesText=card.innerText.toLowerCase().includes(search.value.trim().toLowerCase());card.hidden=!(matchesFilter&&matchesText);if(!card.hidden)visible++}document.querySelector('#count').textContent=visible+' items';}
-  buttons.forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.filter;buttons.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));render()}));search.addEventListener('input',render);document.querySelector('#year').textContent=new Date().getFullYear();render();
+  const search=document.querySelector('#search'),catalog=document.querySelector('#catalog'),buttons=[...document.querySelectorAll('[data-filter]')];let filter='All',items=[];
+  const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  function kindOf(item){return item.type==='Episode'?'Drama':item.type}
+  function render(){
+    const q=search.value.trim().toLowerCase();
+    const visible=items.filter(item=>(filter==='All'||kindOf(item)===filter)&&[item.title,item.description,item.episode_of,item.category].some(v=>String(v||'').toLowerCase().includes(q)));
+    document.querySelector('#count').textContent=items.length+' library item'+(items.length===1?'':'s');
+    if(!visible.length){catalog.innerHTML='<div class="empty">'+(items.length?'No titles match your search.':'Your library is ready for its first published title.')+'</div>';return}
+    catalog.innerHTML=visible.map((item,index)=>'<article class="tile" tabindex="0" role="button" data-item="'+index+'" aria-label="View '+esc(item.title)+'">'+(item.poster?'<img loading="lazy" src="'+esc(item.poster)+'" alt="" onerror="this.remove()">':'')+'<div><div class="meta">'+esc(kindOf(item))+(item.year?' · '+esc(item.year):'')+(item.category?' · '+esc(item.category):'')+'</div><h3>'+esc(item.title)+'</h3><p>'+esc(item.episode_of?item.episode_of+(item.episode_number?' · Episode '+item.episode_number:''):item.description||'Open details')+'</p></div></article>').join('');
+    catalog.querySelectorAll('[data-item]').forEach((el,i)=>{const open=()=>showDetails(visible[i]);el.addEventListener('click',open);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}})});
+  }
+  function showDetails(item){
+    const detail=document.querySelector('#detail');detail.hidden=false;detail.className='empty';detail.innerHTML='<div style="text-align:left;max-width:700px;margin:auto">'+(item.poster?'<img src="'+esc(item.poster)+'" alt="" style="width:min(100%,260px);max-height:360px;object-fit:cover;border-radius:16px;margin-bottom:16px">':'')+'<p class="eyebrow">'+esc(kindOf(item))+'</p><h2>'+esc(item.title)+'</h2><p>'+esc(item.description||'More details will appear as the library is expanded.')+'</p><p class="muted">'+esc([item.year,item.episode_of,item.episode_number?'Episode '+item.episode_number:'',item.category].filter(Boolean).join(' · '))+'</p><p class="muted">Playback will be available when the protected media delivery endpoint is connected.</p><button class="btn" id="closeDetail" type="button">Close details</button></div>';
+    document.querySelector('#closeDetail').addEventListener('click',()=>{detail.hidden=true;detail.innerHTML=''});
+    detail.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+  }
+  async function loadCatalog(){
+    try{const response=await fetch('/api/catalog?limit=100',{headers:{Accept:'application/json'},cache:'no-store'});if(!response.ok)throw new Error('Catalog API unavailable');const data=await response.json();items=Array.isArray(data.items)?data.items:[];render()}
+    catch{catalog.innerHTML='<div class="empty">We could not load the library right now. Please refresh in a moment.</div>';document.querySelector('#count').textContent='Library temporarily unavailable'}
+  }
+  buttons.forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.filter;buttons.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));render()}));
+  search.addEventListener('input',render);document.querySelector('#year').textContent=new Date().getFullYear();loadCatalog();
 </script>
 </body>
 </html>
