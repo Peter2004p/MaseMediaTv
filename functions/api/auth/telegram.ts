@@ -14,7 +14,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const authDate = Number(params.get("auth_date") || 0);
   if (!hash || !authDate || Math.abs(Date.now()/1000-authDate) > 86400) return json({ error:"Expired or invalid Telegram session" }, 401);
   const check = [...params.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+"="+v).join("\n");
-  const secret = await hmac(new TextEncoder().encode(env.TELEGRAM_BOT_TOKEN), "WebAppData");
+  const secret = await hmac(new TextEncoder().encode("WebAppData"), env.TELEGRAM_BOT_TOKEN);
   const sig = await hmac(secret, check);
   const expected = [...sig].map(x=>x.toString(16).padStart(2,"0")).join("");
   if (expected !== hash) return json({ error:"Telegram signature validation failed" }, 401);
