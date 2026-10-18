@@ -4,10 +4,11 @@ type EpisodeLike = { id?:string; streamUrl?:string; qualities?:{streamUrl?:strin
 const isPublicHttps = (value:string) => {
  try {
   const u=new URL(value);
-  const h=u.hostname.toLowerCase();
+  const h=u.hostname.toLowerCase().replace(/^\[|\]$/g,"");
   if(u.protocol!=="https:" || u.username || u.password) return false;
   if(h==="localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal") || h==="metadata.google.internal") return false;
-  if(/^127\.|^10\.|^192\.168\.|^169\.254\.|^0\.|^172\.(1[6-9]|2\d|3[01])\./.test(h) || h==="::1" || h.startsWith("fc") || h.startsWith("fd") || h.startsWith("fe80:")) return false;
+  if(/^127\.|^10\.|^192\.168\.|^169\.254\.|^0\.|^172\.(1[6-9]|2\d|3[01])\./.test(h)) return false;
+  if(h==="::1" || h==="::" || /^f[cd][0-9a-f]{2}:/i.test(h) || /^fe[89ab][0-9a-f]:/i.test(h) || /^::ffff:(127\.|10\.|192\.168\.|169\.254\.)/i.test(h)) return false;
   return true;
  } catch { return false; }
 };
