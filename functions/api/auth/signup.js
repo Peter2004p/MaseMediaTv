@@ -5,7 +5,7 @@ export async function onRequestPost({request,env}) {
  let body;try{body=await request.json()}catch{return json({error:"Please submit valid account details."},400)}
  const email=typeof body?.email==="string"?body.email.trim().toLowerCase():"";
  const password=typeof body?.password==="string"?body.password:"";
- if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254)return json({error:"Enter a valid email address."},400);
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return json({error:"Enter a valid email address."},400);
  if(password.length<10||password.length>1024)return json({error:"Use a password between 10 and 1024 characters."},400);
  try{
   await ensureTables(env.DB);
