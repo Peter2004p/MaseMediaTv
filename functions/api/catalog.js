@@ -19,9 +19,8 @@ export async function onRequestGet({ request, env }) {
     let sql = "SELECT " + columns + " FROM catalog";
     const params = [];
     if (search) {
-      sql += " WHERE title LIKE ? ESCAPE '\\\\' OR description LIKE ? ESCAPE '\\\\'";
-      const term = "%" + search.replace(/[\\\\%_]/g, "\\\\$&") + "%";
-      params.push(term, term);
+      sql += " WHERE instr(lower(title), lower(?)) > 0 OR instr(lower(description), lower(?)) > 0";
+      params.push(search, search);
     }
     sql += " ORDER BY created_at DESC LIMIT ?";
     params.push(limit);
