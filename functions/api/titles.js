@@ -19,9 +19,8 @@ export async function onRequestGet({ request, env }) {
     let stmt = "SELECT id,name,type,year,quality,poster_url,description,featured,payload_json FROM masetv_titles";
     const params = [];
     if (q) {
-      stmt += " WHERE name LIKE ? ESCAPE '\\\\' OR description LIKE ? ESCAPE '\\\\'";
-      const term = "%" + q.replace(/[\\\\%_]/g, "\\\\$&") + "%";
-      params.push(term, term);
+      stmt += " WHERE instr(lower(name), lower(?)) > 0 OR instr(lower(description), lower(?)) > 0";
+      params.push(q, q);
     }
     stmt += " ORDER BY featured DESC, created_at DESC LIMIT ?";
     params.push(limit);
