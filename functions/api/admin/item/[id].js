@@ -51,6 +51,7 @@ export async function onRequest({ request, env, params }) {
   if (!title) return json({ error: "Title is required." }, 400);
   if (!validHttps(videoUrl)) return json({ error: "A valid HTTPS media URL is required." }, 400);
   if (!validHttps(subtitleUrl, true)) return json({ error: "Subtitle URL must be HTTPS." }, 400);
+  if (!validHttps(body?.poster == null ? "" : String(body.poster).trim(), true)) return json({ error: "Poster URL must be HTTPS." }, 400);
   const yearRaw = body?.year == null || body.year === "" ? null : Number(body.year);
   if (yearRaw !== null && (!Number.isInteger(yearRaw) || yearRaw < 1888 || yearRaw > new Date().getUTCFullYear() + 5)) return json({ error: "Release year is invalid." }, 400);
   const epRaw = body?.episode_number == null || body.episode_number === "" ? null : Number(body.episode_number);

@@ -14,14 +14,13 @@ export async function onRequestGet({ request, env }) {
   const search = (url.searchParams.get("q") || "").trim().slice(0, 100);
 
   // Keep this allowlist public-safe. Do not replace it with SELECT *.
-  const columns = "id, type, title, description, poster, category, year, rating, episode_of, episode_number, created_at";
+  const columns = "id, type, title, description, poster, category, year, rating, episode_of, episode_number, created_at, CASE WHEN subtitle_url IS NOT NULL AND subtitle_url <> '' THEN 1 ELSE 0 END AS has_subtitles";
   try {
     let sql = "SELECT " + columns + " FROM catalog";
     const params = [];
     if (search) {
-      sql += " WHERE title LIKE ? ESCAPE '\\\\' OR description LIKE ? ESCAPE '\\\\'";
-      const term = "%" + search.replace(/[\\\\%_]/g, "\\\\$&") + "%";
-      params.push(term, term);
+      sql += " WHERE instr(lower(title), lower(?)) > 0 OR instr(lower(description), lower(?)) > 0";
+      params.push(search, search);
     }
     sql += " ORDER BY created_at DESC LIMIT ?";
     params.push(limit);

@@ -1,13 +1,17 @@
 # MaseNet / Mase Media TV
 
-Starter source repository for the MaseNet entertainment catalog.
+Cloudflare migration branch for the MaseNet entertainment catalog and admin studio.
 
-## Safety status
+## Current status
 
-- This repository is separate from the currently deployed Cloudflare Pages project.
-- These commits do not deploy or modify the live site.
-- Do not add API keys, admin passwords, session secrets, or other credentials to Git.
+- This branch is a migration and preview build; it is not yet the full production streaming application.
+- The public catalog and separate normal/automatic bulk URL import workflows are wired to Cloudflare Pages Functions.
+- Admin login still requires verification against the original password provisioning logic before production use.
+- Playback delivery, real file uploads, Telegram delivery, homepage settings, and other studio sections remain incomplete.
+- Never apply the draft additive migration to the production D1 database without a reviewed migration and rollback plan.
 
-## Current starter
+## Safety
 
-`index.html` is a static responsive landing-page scaffold. It is not the full production streaming/admin application. Before enabling Cloudflare deployment, review the source, configure any required backend bindings and secrets, and test in a separate preview project.
+- Keep admin passwords, API tokens, Telegram bot tokens, and other credentials out of Git.
+- Preview deployments should use a separate D1 database from production.
+- Do not reset the existing production admin or catalog to test this branch.
