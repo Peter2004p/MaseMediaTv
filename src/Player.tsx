@@ -95,6 +95,11 @@ export default function Player({ episode, onProgress }: { episode: Episode; onPr
     } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = source;
       video.load();
+    } else if (isHls) {
+      // Do not silently assign an HLS playlist to a browser that cannot decode it.
+      // hls.js handles Chromium browsers; native HLS handles Safari/iOS browsers.
+      setLoading(false);
+      setError('HLS playback is not supported by this browser. Open MaseNet in an up-to-date Chrome or Safari browser, or ask the admin for a direct MP4 source.');
     } else {
       video.src = source;
       video.load();
