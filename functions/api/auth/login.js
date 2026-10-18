@@ -8,7 +8,7 @@ export async function onRequestPost({request,env}) {
  if(!email||!password||password.length>1024)return json({error:"Enter your email and password."},400);
  try{
   await ensureTables(env.DB);
-  const user=await env.DB.prepare("SELECT id,email,password_salt,password_hash,created_at FROM users WHERE email=? LIMIT 1").bind(email).first();
+  const user=await env.DB.prepare("SELECT id,email,password_salt,password_hash,created_at FROM masenet_account_users WHERE email=? LIMIT 1").bind(email).first();
   if(!user)return json({error:"Email or password is incorrect."},401);
   const candidate=await passwordHash(password,user.password_salt);
   if(!equal(candidate,user.password_hash))return json({error:"Email or password is incorrect."},401);
