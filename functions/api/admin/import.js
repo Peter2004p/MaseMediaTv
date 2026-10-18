@@ -43,6 +43,7 @@ function validateRow(row, index) {
   if (!title) return { error: "Title is required." };
   if (!isHttpsUrl(videoUrl)) return { error: "A valid HTTPS media URL is required." };
   if (!isHttpsUrl(subtitleUrl, true)) return { error: "Subtitle URL must be HTTPS." };
+  if (!isHttpsUrl(row.poster == null ? "" : String(row.poster).trim(), true)) return { error: "Poster URL must be HTTPS." };
   const yearText = row.year == null || row.year === "" ? "" : String(row.year).trim();
   const year = yearText ? Number(yearText) : null;
   if (year !== null && (!Number.isInteger(year) || year < 1888 || year > new Date().getUTCFullYear() + 5)) return { error: "Release year is invalid." };
