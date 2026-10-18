@@ -59,7 +59,38 @@ async function loadAdminCatalog(){
     if(librarySearch.value.trim())params.set("q",librarySearch.value.trim());
     if(libraryFilter.value!=="All types")params.set("type",libraryFilter.value);
     const data=await api("/api/admin/catalog?"+params.toString());
-    libraryRows.textContent=data.count+" record(s) loaded.\\n\\n"+JSON.stringify(data.items,null,2);
+    libraryRows.replaceChildren();
+    const summary=document.createElement("p");summary.className="muted";summary.textContent=data.count+" record(s) loaded. Source URLs are private admin data.";libraryRows.append(summary);
+    for(const item of (data.items||[])){
+      const card=document.createElement("div");card.className="card";card.style.marginTop="10px";
+      const heading=document.createElement("div");heading.className="row";
+      const title=document.createElement("strong");title.textContent=item.title||"(untitled)";
+      const type=document.createElement("span");type.className="tag";type.textContent=item.type||"Media";
+      heading.append(title,type);card.append(heading);
+      const meta=document.createElement("p");meta.className="muted";meta.textContent=[item.episode_of,item.episode_number?"Episode "+item.episode_number:"",item.year||""].filter(Boolean).join(" · ");card.append(meta);
+      const url=document.createElement("p");url.style.overflowWrap="anywhere";url.textContent="Media URL: "+(item.video_url||"");card.append(url);
+      if(item.subtitle_url){const sub=document.createElement("p");sub.style.overflowWrap="anywhere";sub.textContent="Subtitle: "+item.subtitle_url;card.append(sub);}
+      const actions=document.createElement("div");actions.className="toolbar";
+      const edit=document.createElement("button");edit.className="btn secondary";edit.type="button";edit.textContent="Edit metadata";
+      edit.addEventListener("click",async()=>{
+        const nextTitle=window.prompt("Media title",item.title||"");if(nextTitle===null)return;
+        const titleValue=nextTitle.trim();if(!titleValue){window.alert("Title cannot be empty.");return;}
+        const nextDescription=window.prompt("Description",item.description||"");if(nextDescription===null)return;
+        const nextPoster=window.prompt("Poster image URL (HTTPS)",item.poster||"");if(nextPoster===null)return;
+        const nextCategory=window.prompt("Category / quality label",item.category||"");if(nextCategory===null)return;
+        const payload={type:item.type,title:titleValue,description:nextDescription,poster:nextPoster,category:nextCategory,year:item.year,rating:item.rating,video_url:item.video_url,subtitle_url:item.subtitle_url,episode_of:item.episode_of,episode_number:item.episode_number};
+        try{await api("/api/admin/item/"+encodeURIComponent(item.id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});await loadAdminCatalog();}
+        catch(error){window.alert("Update failed: "+error.message);}
+      });
+      const remove=document.createElement("button");remove.className="btn secondary";remove.type="button";remove.textContent="Delete";
+      remove.addEventListener("click",async()=>{
+        if(!window.confirm("Permanently delete this catalog record? This cannot be undone."))return;
+        try{await api("/api/admin/item/"+encodeURIComponent(item.id),{method:"DELETE"});await loadAdminCatalog();}
+        catch(error){window.alert("Delete failed: "+error.message);}
+      });
+      actions.append(edit,remove);card.append(actions);libraryRows.append(card);
+    }
+    if(!(data.items||[]).length){const empty=document.createElement("p");empty.textContent="No matching records.";libraryRows.append(empty);}
   }catch(error){libraryRows.textContent="Could not load admin catalog: "+error.message;}
 }
 $("#libraryLoad").addEventListener("click",loadAdminCatalog);
