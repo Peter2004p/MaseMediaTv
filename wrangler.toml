@@ -1,0 +1,6 @@
+# MaseTv Cloudflare Pages configuration (migration workspace)
+name = "masetv-cloudflare-migration"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-18"
+
+# Add D1/R2 bindings only after their resources are created and IDs verified.
