@@ -3,4 +3,8 @@ name = "masetv-cloudflare-migration"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-10-18"
 
-# Add D1/R2 bindings only after their resources are created and IDs verified.
+[[d1_databases]]
+binding = "DB"
+database_name = "masetv-cloudflare-migration"
+database_id = "2ac7a9cc-868f-4346-9f6d-bafcd44a4ad4"
+migrations_dir = "migrations"
