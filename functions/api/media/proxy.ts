@@ -36,16 +36,19 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  const contentType=upstream.headers.get("content-type")||"";
  const isPlaylist=/mpegurl|vnd\.apple\.mpegurl/i.test(contentType)||/\.m3u8(?:$|[?#])/i.test(upstreamUrl);
  if(isPlaylist) {
+  // Relative HLS segment URLs must resolve against the final URL after redirects,
+  // not the original URL entered by the admin.
+  const playlistBase=upstream.url || upstreamUrl;
   const body=await upstream.text();
   const rewritten=body.split(/\r?\n/).map(line=>{
    const trimmed=line.trim();
    if(!trimmed || trimmed.startsWith("#")) {
     return trimmed.replace(/URI="([^"]+)"/g,(_m,uri:string)=>{
-     const absolute=new URL(uri,upstreamUrl).toString();
+     const absolute=new URL(uri,playlistBase).toString();
      return 'URI="'+new URL("/api/media/proxy",reqUrl.origin).toString()+'?episodeId='+encodeURIComponent(episodeId)+'&resource='+encodeURIComponent(absolute)+'"';
     });
    }
-   try { const absolute=new URL(trimmed,upstreamUrl).toString(); return new URL("/api/media/proxy",reqUrl.origin).toString()+"?episodeId="+encodeURIComponent(episodeId)+"&resource="+encodeURIComponent(absolute); } catch { return trimmed; }
+   try { const absolute=new URL(trimmed,playlistBase).toString(); return new URL("/api/media/proxy",reqUrl.origin).toString()+"?episodeId="+encodeURIComponent(episodeId)+"&resource="+encodeURIComponent(absolute); } catch { return trimmed; }
   }).join("\n");
   return new Response(rewritten,{status:200,headers:{"content-type":"application/vnd.apple.mpegurl","cache-control":"no-store","access-control-allow-origin":"*","x-content-type-options":"nosniff"}});
  }
