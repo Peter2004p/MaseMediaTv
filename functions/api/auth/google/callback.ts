@@ -5,7 +5,7 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   const url = new URL(request.url);
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return json({ error: "Google sign-in is not configured." }, 503);
   const code = url.searchParams.get("code"), state = url.searchParams.get("state");
-  const match = request.headers.get("Cookie")?.match(/(?:^|;\s*)masetv_oauth_state=([^;]+)/);
+  const match = request.headers.get("Cookie")?.match(/(?:^|;\\s*)masetv_oauth_state=([^;]+)/);
   if (!code || !state || !match || decodeURIComponent(match[1]) !== state) return json({ error: "Sign-in state expired. Please try again." }, 400);
   const redirectUri = url.origin + "/api/auth/google/callback";
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: redirectUri, grant_type: "authorization_code" }) });
@@ -23,5 +23,8 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   if (!admin) return json({ error: "Admin session could not be created." }, 500);
   const session = randomHex(), sessionHash = await sha256(session);
   await env.DB.prepare("INSERT INTO admin_sessions (id_hash,admin_id,expires_at) VALUES (?,?,datetime('now','+7 days'))").bind(sessionHash, admin.id).run();
-  return new Response(null, { status: 302, headers: { "Location": url.origin + "/#/home", "Set-Cookie": ["masetv_session=" + session + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800", "masetv_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google; Max-Age=0"].join(", ") } });
+  const headers = new Headers({ Location: url.origin + "/#/home" });
+  headers.append("Set-Cookie", "masetv_session=" + session + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800");
+  headers.append("Set-Cookie", "masetv_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google; Max-Age=0");
+  return new Response(null, { status: 302, headers });
 };
