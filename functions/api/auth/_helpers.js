@@ -11,8 +11,8 @@ export function originAllowed(request) {
   return !origin || origin === new URL(request.url).origin;
 }
 export async function ensureTables(DB) {
-  await DB.prepare("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE COLLATE NOCASE, password_salt TEXT NOT NULL, password_hash TEXT NOT NULL, created_at INTEGER NOT NULL)").run();
-  await DB.prepare("CREATE TABLE IF NOT EXISTS user_sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)").run();
+  await DB.prepare("CREATE TABLE IF NOT EXISTS masenet_account_users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE COLLATE NOCASE, password_salt TEXT NOT NULL, password_hash TEXT NOT NULL, created_at INTEGER NOT NULL)").run();
+  await DB.prepare("CREATE TABLE IF NOT EXISTS masenet_account_sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES masenet_account_users(id) ON DELETE CASCADE)").run();
 }
 export async function passwordHash(password, saltHex) {
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -38,7 +38,7 @@ export async function createSession(DB, userId) {
   const tokenHash = await sha256(token);
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + SESSION_SECONDS;
-  await DB.prepare("INSERT INTO user_sessions (token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)").bind(tokenHash,userId,expiresAt,now).run();
+  await DB.prepare("INSERT INTO masenet_account_sessions (token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)").bind(tokenHash,userId,expiresAt,now).run();
   return { token, expiresAt };
 }
 export async function currentUser(DB, request) {
@@ -46,6 +46,6 @@ export async function currentUser(DB, request) {
   if (!token) return null;
   const tokenHash = await sha256(token);
   const now = Math.floor(Date.now() / 1000);
-  const row = await DB.prepare("SELECT u.id,u.email,u.created_at,s.expires_at FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? LIMIT 1").bind(tokenHash,now).first();
+  const row = await DB.prepare("SELECT u.id,u.email,u.created_at,s.expires_at FROM masenet_account_sessions s JOIN masenet_account_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? LIMIT 1").bind(tokenHash,now).first();
   return row || null;
 }

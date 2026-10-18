@@ -14,14 +14,14 @@ export async function onRequestPost({request,env}) {
  if(claims.aud!==clientId||String(claims.email_verified)!=="true"||!email)return json({error:"Google account verification failed. Check the OAuth configuration and try again."},401);
  try{
   await ensureTables(env.DB);
-  let user=await env.DB.prepare("SELECT id,email,created_at FROM users WHERE email=? LIMIT 1").bind(email).first();
+  let user=await env.DB.prepare("SELECT id,email,created_at FROM masenet_account_users WHERE email=? LIMIT 1").bind(email).first();
   if(!user){
    const id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);
    // Google-verified accounts do not use a local password; the random hash cannot be used to sign in with a chosen password.
    const salt=[...crypto.getRandomValues(new Uint8Array(24))].map(v=>v.toString(16).padStart(2,"0")).join("");
    const randomPassword=[...crypto.getRandomValues(new Uint8Array(48))].map(v=>v.toString(16).padStart(2,"0")).join("");
    const hash=await passwordHash(randomPassword,salt);
-   await env.DB.prepare("INSERT INTO users (id,email,password_salt,password_hash,created_at) VALUES (?,?,?,?,?)").bind(id,email,salt,hash,now).run();
+   await env.DB.prepare("INSERT INTO masenet_account_users (id,email,password_salt,password_hash,created_at) VALUES (?,?,?,?,?)").bind(id,email,salt,hash,now).run();
    user={id,email,created_at:now};
   }
   const session=await createSession(env.DB,user.id);
