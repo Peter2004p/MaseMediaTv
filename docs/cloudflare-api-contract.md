@@ -1,13 +1,13 @@
 # Cloudflare migration status and API contract
 
-This is a staged migration branch. The live AppDeploy site has not been changed and Cloudflare Pages automatic deployment remains disabled.
+This is a staged migration branch. The live AppDeploy site has not been changed. Cloudflare Pages is configured for preview deployments from non-production branches only; production deployments remain disabled.
 
 ## Implemented in the migration branch
 - `GET /api/titles` and admin-only create/update/delete routes store the full frontend title object in D1 metadata.
 - `GET/POST /api/broadcasts`, `GET/POST /api/homepage-settings`, and `GET/POST /api/site-theme`.
 - Google OAuth admin login routes and server-side session checks; requires Cloudflare secrets and a matching Google OAuth redirect URI.
 - Telegram Mini App `initData` signature validation; requires `TELEGRAM_BOT_TOKEN`.
-- Telegram bot webhook title search and admin-only webhook setup; both require `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET`.
+- Telegram bot webhook title and episode search (including season/episode-number queries) and admin-only webhook setup; both require `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET`.
 - AI assistant route currently provides Cloudflare-library search/fallback replies. It is not connected to a model provider yet.
 - Admin-only media upload route and media retrieval routes are implemented against an optional `MEDIA_BUCKET` R2 binding.
 - `GET /api/media/convert` now returns an explicit `501 TRANSCODER_NOT_CONFIGURED` response for registered episodes instead of a missing-route error. It does not transcode MKV files.
