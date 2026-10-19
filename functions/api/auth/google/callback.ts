@@ -5,7 +5,7 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   const url = new URL(request.url);
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return json({ error: "Google sign-in is not configured." }, 503);
   const code = url.searchParams.get("code"), state = url.searchParams.get("state");
-  const match = request.headers.get("Cookie")?.match(/(?:^|;\\s*)masetv_oauth_state=([^;]+)/);
+  const match = request.headers.get("Cookie")?.match(/(?:^|;\s*)masetv_oauth_state=([^;]+)/);
   if (!code || !state || !match || decodeURIComponent(match[1]) !== state) return json({ error: "Sign-in state expired. Please try again." }, 400);
   const redirectUri = url.origin + "/api/auth/google/callback";
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: redirectUri, grant_type: "authorization_code" }) });
