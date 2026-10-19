@@ -46,10 +46,10 @@ export default function App(){
  const myList=titles.filter(t=>saved.includes(t.id));
  const featured=titles.find(t=>t.featured)||titles[0];
 
- async function createTitle(t:Title){const r=await api.post('/api/titles',t);setTitles(p=>[r.data.title||t,...p]);go('#/home')}
+ async function createTitle(t:Title){const r=await api.post('/api/titles',t);const saved=(r.data?.title||t) as Title;setTitles(p=>[saved,...p.filter(x=>x.id!==saved.id)]);}
  async function deleteTitle(id:string){if(!window.confirm('Delete this movie/drama and all its episodes? This cannot be undone.'))return;try{await api.delete('/api/titles/'+id);setTitles(p=>p.filter(x=>x.id!==id));if(route.includes(id))go('#/home')}catch(e){window.alert(e instanceof Error?e.message:'MaseTv could not delete this title. Please retry or check admin access.')}}
  async function updateTitle(t:Title){await api.put('/api/titles/'+t.id,t);setTitles(p=>p.map(x=>x.id===t.id?t:x))}
- async function saveRows(){await api.post('/api/homepage-settings',{rows:homepageRows}).catch(()=>{});}
+ async function saveRows(){await api.post('/api/homepage-settings',{rows:homepageRows});}
  async function googleLogin(){if(authBusy)return;setAuthBusy(true);setAuthError('');try{const r=await auth.signIn();setViewer({...r.user,provider:'google'})}catch(e){const code=(e as {code?:string})?.code;if(code==='popup_blocked')setAuthError('Your browser blocked the Google sign-in window. Allow popups for MaseTv, then try again.');else if(code==='popup_closed')setAuthError('Google sign-in was cancelled. Tap Continue with Google to try again.');else if(code==='auth_error')setAuthError('Google authentication could not be completed. Please retry once or check that Google sign-in is allowed in your browser.');else setAuthError('MaseTv could not reach the Google sign-in service. Check your connection, then try again.')}finally{setAuthBusy(false)}}
  async function signOut(){try{await auth.signOut()}catch{}setViewer(null)}
 
