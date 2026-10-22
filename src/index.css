@@ -304,3 +304,7 @@ button{transition:transform .22s cubic-bezier(.22,1,.36,1),opacity .22s ease,bac
 .app .brandLogo{display:block;width:38px;height:38px;object-fit:contain;flex:none;border-radius:10px;filter:drop-shadow(0 0 8px rgba(94,151,255,.22))}
 .app .brandName{font-weight:800;letter-spacing:-.035em;background:linear-gradient(95deg,#33d8ff 0%,#bc62ff 42%,#ff4ca8 68%,#ffb638 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 @media(max-width:560px){.app .brandLogo{width:29px;height:29px}.app .brandName{font-size:11px}}
+
+/* Replace the floating Home label with the MaseNet brand icon */
+.app .homeFloat{width:54px;height:54px;padding:4px;display:grid;place-items:center;border-radius:18px;overflow:hidden;}
+.app .homeFloat img{display:block;width:100%;height:100%;object-fit:contain;border-radius:13px;}
