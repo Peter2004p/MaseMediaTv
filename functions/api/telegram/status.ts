@@ -49,7 +49,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
       webhookMatchesThisDeployment: urlMatches,
       webhookRecordedInDatabase: recorded,
       secretConfigured: Boolean(env.TELEGRAM_WEBHOOK_SECRET),
-      miniAppUrlConfigured: Boolean(env.TELEGRAM_MINI_APP_URL && env.TELEGRAM_MINI_APP_URL.startsWith("https://")),
+      miniAppUrlConfigured: Boolean(((env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim()).startsWith("https://")),
       pendingUpdateCount: info.pending_update_count ?? 0,
       lastErrorDate: info.last_error_date ?? null,
       lastErrorMessage: info.last_error_message ?? null,
