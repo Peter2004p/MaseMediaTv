@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MaseNet · Telegram Bot Setup</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#080b12;color:#f5f7fb}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(ellipse at top,#27314a 0,transparent 55%),#080b12}
+main{width:min(100%,520px);padding:26px;border:1px solid #ffffff26;border-radius:24px;background:#ffffff0b;box-shadow:0 24px 80px #0008;backdrop-filter:blur(22px)}
+h1{font-size:clamp(24px,6vw,34px);margin:0 0 8px}p{color:#b9c1d2;line-height:1.55}.eyebrow{color:#f1c977;font-size:12px;font-weight:800;letter-spacing:.16em}
+button{width:100%;border:0;border-radius:14px;padding:15px 18px;font-size:16px;font-weight:750;color:#17120a;background:linear-gradient(135deg,#ffe5a0,#d6a84e);cursor:pointer;margin-top:12px}
+button:disabled{opacity:.55;cursor:wait}.secondary{background:#ffffff12;color:#fff;border:1px solid #ffffff20}
+#result{margin-top:18px;padding:14px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;display:none;line-height:1.5}#result.ok{display:block;background:#123a2b;color:#c8ffe3}#result.bad{display:block;background:#451c24;color:#ffd5dc}
+small{color:#aab3c4;display:block;margin-top:16px;line-height:1.5}a{color:#f1c977}
+</style></head>
+<body><main>
+<div class="eyebrow">MASETNET · TELEGRAM</div>
+<h1>Connect the bot</h1>
+<p>This secure setup page registers the deployed MaseNet webhook with Telegram using your existing admin session. It never asks you to enter or reveal your bot token.</p>
+<p><b>First:</b> sign in to MaseNet as the administrator in this same browser. Then return to this page and tap the button below.</p>
+<button id="setup">Register Telegram webhook</button>
+<button id="check" class="secondary">Check registration result</button>
+<div id="result" role="status" aria-live="polite"></div>
+<small>If setup says you are not signed in, open <a href="/#/home">MaseNet</a>, sign in with the admin account, and return here. Do not share tokens or secrets in chat.</small>
+</main>
+<script>
+const result=document.getElementById('result'),setup=document.getElementById('setup'),check=document.getElementById('check');
+function show(ok,text){result.className=ok?'ok':'bad';result.textContent=text}
+async function run(){setup.disabled=true;check.disabled=true;show(true,'Registering webhook with Telegram…');try{const r=await fetch('/api/telegram/setup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok){show(false,'Setup failed ('+r.status+'): '+(d.error||d.message||'The server did not confirm registration.')+'\n\nYour database was not reset.');return}show(true,'Telegram accepted the webhook registration.\n\nWebhook: '+d.webhookUrl+'\n\nNow open @MaseTv_Bot in Telegram and press Start.');}catch(e){show(false,'Could not reach the setup endpoint. Check that the latest Cloudflare deployment is live, then retry.')}finally{setup.disabled=false;check.disabled=false}}
+setup.addEventListener('click',run);
+check.addEventListener('click',async()=>{check.disabled=true;try{const r=await fetch('/api/telegram/status',{credentials:'same-origin',cache:'no-store'});const d=await r.json().catch(()=>({}));show(!!r.ok,JSON.stringify(d,null,2));if(!r.ok)show(false,'Status endpoint returned '+r.status+'. '+(d.error||''))}catch(e){show(false,'Could not read bot status from the server.')}finally{check.disabled=false}});
+</script></body></html>
