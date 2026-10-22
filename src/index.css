@@ -324,3 +324,14 @@ button{transition:transform .22s cubic-bezier(.22,1,.36,1),opacity .22s ease,bac
 .app .aiSpeak{margin-top:7px;padding:4px 8px;font-size:11px;opacity:.8}
 @keyframes masenetVoicePulse{50%{box-shadow:0 0 0 5px rgba(255,68,112,.12)}}
 @media(prefers-reduced-motion:reduce){.app .aiVoice.listening{animation:none}}
+
+
+/* MaseNet assistant polish: friendly suggestion bubble, clear identity, and live response scrolling. */
+.aiSuggestionBubble{position:fixed;right:18px;bottom:146px;z-index:47;display:grid;gap:4px;max-width:230px;padding:13px 16px;border-radius:20px 20px 5px 20px;border:1px solid color-mix(in srgb,var(--glow,#d2ad60) 42%,rgba(255,255,255,.2));background:color-mix(in srgb,var(--bg,#0b0d14) 72%,transparent);color:var(--text,#fff);text-align:left;box-shadow:0 12px 32px rgba(0,0,0,.3),0 0 24px color-mix(in srgb,var(--glow,#d2ad60) 20%,transparent);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);animation:aiSuggestionIn .55s cubic-bezier(.2,1.3,.4,1) both}
+.aiSuggestionBubble span{font-size:11px;opacity:.7}
+@keyframes aiSuggestionIn{from{opacity:0;transform:translateY(12px) scale(.86)}to{opacity:1;transform:translateY(0) scale(1)}}
+.aiMessages{scroll-behavior:smooth;overscroll-behavior:contain}
+.ai.ai-speaking .aiHeader .aiAvatar{animation:masenetVoicePulse 1.2s ease-in-out infinite}
+.ai.ai-busy .aiMessages{max-height:46vh}
+@media(max-width:560px){.aiSuggestionBubble{right:12px;bottom:137px;max-width:205px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){.aiSuggestionBubble{animation:none!important}.ai.ai-speaking .aiHeader .aiAvatar{animation:none!important}}
