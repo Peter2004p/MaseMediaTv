@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+<defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#00cfff"/><stop offset=".34" stop-color="#a54cff"/><stop offset=".62" stop-color="#ff3eab"/><stop offset=".82" stop-color="#ff7c28"/><stop offset="1" stop-color="#ffe34d"/></linearGradient><filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="600" height="600" rx="90" fill="#05050b"/>
+<g fill="none" stroke="url(#g)" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+<path d="M166 171 C211 101 289 110 359 150 L447 201 C500 233 501 290 449 323 L280 428 C224 462 159 426 159 363 L159 234 C159 208 160 188 166 171Z" stroke-width="17"/>
+<path d="M191 203 C215 164 252 169 291 192 L389 249 L229 350 L229 231" stroke-width="13"/>
+<path d="M210 225 L210 351 Q211 385 242 365 L387 274 Q413 258 387 243 L267 174 Q229 153 210 190Z" stroke-width="10"/>
+</g>
+<text x="300" y="514" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="56" font-weight="700" fill="url(#g)">MaseMediaTv</text>
+</svg>
