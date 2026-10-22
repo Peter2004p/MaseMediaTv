@@ -308,3 +308,11 @@ button{transition:transform .22s cubic-bezier(.22,1,.36,1),opacity .22s ease,bac
 /* Replace the floating Home label with the MaseNet brand icon */
 .app .homeFloat{width:54px;height:54px;padding:4px;display:grid;place-items:center;border-radius:18px;overflow:hidden;}
 .app .homeFloat img{display:block;width:100%;height:100%;object-fit:contain;border-radius:13px;}
+
+/* Minimal, non-obstructive home logo and custom Reels R */
+.app .homeFloat{position:fixed;z-index:38;left:12px;top:12px;width:38px;height:38px;padding:0;border:0!important;border-radius:50%;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;display:grid;place-items:center;opacity:.82;transition:opacity .18s,transform .18s}
+.app .homeFloat:hover{opacity:1;transform:scale(1.06)}
+.app .homeFloat img{width:100%;height:100%;object-fit:contain;border-radius:50%;background:transparent}
+.app .reelsNavButton{display:inline-flex;align-items:center;gap:7px}
+.app .reelsR{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:9px;font-size:17px;font-weight:950;font-style:italic;line-height:1;color:#fff;background:linear-gradient(135deg,#00d5ff 0%,#8d4cff 38%,#ff3e9d 70%,#ff9c28 100%);box-shadow:0 0 14px rgba(184,75,255,.25)}
+@media(max-width:560px){.app .homeFloat{left:8px;top:8px;width:30px;height:30px}.app .reelsR{width:23px;height:23px}}
