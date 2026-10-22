@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, auth, image } from './cloudflare-client';
 import Player from './Player';
-import { Search, UserRound, SlidersHorizontal, Play, Download, Plus, X, Send, ShieldCheck, Check, ArrowLeft, Upload, Link2, Bot, Trash2, ChevronRight, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Subtitles, RotateCcw, RotateCw, ImagePlus, LogOut, Save, Eye, EyeOff, Film, LayoutDashboard, Paperclip, Palette } from 'lucide-react';
+import { Search, UserRound, SlidersHorizontal, Play, Download, Plus, X, Send, ShieldCheck, Check, ArrowLeft, Upload, Link2, Bot, Trash2, ChevronRight, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Subtitles, RotateCcw, RotateCw, ImagePlus, LogOut, Save, Eye, EyeOff, Film, LayoutDashboard, Paperclip, Palette, Mic } from 'lucide-react';
 
 type Quality = '480p'|'720p'|'1080p';
 type StreamVariant = { quality:Quality; streamUrl:string; streamPath?:string; mimeType?:string; downloadUrl?:string; downloadPath?:string; subtitleTracks?:{label:string;url:string;path?:string;lang?:string;mimeType?:string}[] };
