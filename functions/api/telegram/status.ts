@@ -6,6 +6,7 @@ interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   TELEGRAM_MINI_APP_URL?: string;
+  TELEGRAM_WEBAPP_URL?: string;
 }
 
 export const onRequestGet = async ({ request, env }: { request: Request; env: Env }) => {
