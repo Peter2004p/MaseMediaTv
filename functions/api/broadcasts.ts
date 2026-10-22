@@ -14,5 +14,23 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const expiresAt = typeof body.expiresAt === "string" ? body.expiresAt : null;
   if (!mediaUrl || !/^https:\/\//i.test(mediaUrl)) return json({ error: "A valid HTTPS media URL is required." }, 400);
   await env.DB.prepare("INSERT INTO broadcasts (id,title,description,media_url,target,expires_at) VALUES (?,?,?,?,?,?)").bind(id,title,description,mediaUrl,target,expiresAt).run();
-  return json({ post:{id,title,heading:title,description:plainDescription,heading,mediaType:body.mediaType === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl) ? "video" : body.mediaType === "gif" || /\.gif(\?|$)/i.test(mediaUrl) ? "gif" : "image",mediaUrl,caption:description,destination:target,expiresAt,createdAt:new Date().toISOString()} },201);
+  const telegram = { attempted: target !== "website", delivered: 0, failed: 0 };
+  const config = env as Env & { TELEGRAM_BOT_TOKEN?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string };
+  if (telegram.attempted) {
+    if (!config.TELEGRAM_BOT_TOKEN) telegram.failed = 2;
+    else {
+      const appUrl = (config.TELEGRAM_MINI_APP_URL || config.TELEGRAM_WEBAPP_URL || "").trim();
+      const message = [heading || title, plainDescription, mediaUrl, appUrl.startsWith("https://") ? "Open MaseNet: " + appUrl : ""].filter(Boolean).join("\n\n").slice(0, 3900);
+      for (const chatId of ["@MaseMediaTv", "@MoonDramaC"]) {
+        try {
+          const sent = await fetch("https://api.telegram.org/bot" + config.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ chat_id: chatId, text: message, disable_web_page_preview: false })
+          });
+          if (sent.ok) telegram.delivered++; else telegram.failed++;
+        } catch { telegram.failed++; }
+      }
+    }
+  }
+  return json({ post:{id,title,heading:title,description:plainDescription,heading,mediaType:body.mediaType === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl) ? "video" : body.mediaType === "gif" || /\.gif(\?|$)/i.test(mediaUrl) ? "gif" : "image",mediaUrl,caption:description,destination:target,expiresAt,createdAt:new Date().toISOString()} , telegram },201);
 };
