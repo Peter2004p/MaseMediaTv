@@ -29,7 +29,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const dataCheckString = [...params.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}=${v}`).join("\n");
   const secretKey = await hmac(new TextEncoder().encode("WebAppData"), env.TELEGRAM_BOT_TOKEN);
   const expected = hex(await hmac(secretKey, dataCheckString));
-  if (expected.length !== suppliedHash.length || !crypto.subtle.timingSafeEqual)
+  if (expected.length !== suppliedHash.length)
     return json({ error: "Telegram signature verification failed." }, 401);
   let mismatch = 0;
   for (let i = 0; i < expected.length; i++) mismatch |= expected.charCodeAt(i) ^ suppliedHash.charCodeAt(i);
