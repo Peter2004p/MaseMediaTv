@@ -36,7 +36,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
   }).map(t => ({ ...t, url: String(t.url || t.path).trim() }));
   const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');
   const isMkvSource = /\.mkv(?:$|[?#])/i.test(rawSrc) || /matroska|x-matroska/i.test(selected?.mimeType || episode.mimeType || '');
-  const vlcIntent = 'intent://' + rawSrc.replace(/^https?:\/\//i, '') + '#Intent;scheme=https;package=org.videolan.vlc;type=video/x-matroska;end';
+  const vlcIntent = '';
   const src = isHlsSource ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc) : rawSrc;
 
   useEffect(() => { setQuality(''); setSubtitle('off'); }, [episode.id]);
@@ -51,7 +51,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
       const hls = new Hls({ enableWorker: true, backBufferLength: 30 }); hlsRef.current = hls;
       hls.loadSource(src); hls.attachMedia(video);
       hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => { setHlsSubtitleTracks(hls.subtitleTracks.map(t => ({name:t.name,lang:t.lang}))); if (hls.subtitleTracks.length && subtitle.startsWith('hls-')) hls.subtitleTrack = Number(subtitle.slice(4)); });
-      hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { setBuffering(false); setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Stream network error. Tap Retry to reconnect.' : 'The stream format could not be decoded. Try another quality.'); hls.destroy(); hlsRef.current = null; } });
+      hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { setBuffering(false); setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Stream network error. Tap Retry to reconnect.' : 'This browser cannot decode this stream format. Embedded MKV subtitles need an in-browser MKV decoder or a compatible MP4/HLS source.'); hls.destroy(); hlsRef.current = null; } });
     } else { video.src = src; video.load(); }
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [src, rawSrc, embed, isHlsSource, selected?.mimeType, episode.mimeType, retry]);
@@ -62,7 +62,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
     const tick = () => { setTime(v.currentTime || 0); if (v.duration > 0 && Number.isFinite(v.duration)) onProgress?.(Math.round(v.currentTime / v.duration * 100)); };
     const play = () => { setPlaying(true); setBuffering(false); setError(''); }; const pause = () => setPlaying(false);
     const wait = () => setBuffering(true); const ready = () => { setBuffering(false); setError(''); };
-    const fail = () => { setBuffering(false); if (v.error) setError(({2:'Network error loading this video. Check the URL.',3:'Unsupported video codec. Try an MP4 or WebM source.',4:'This URL is not a directly playable video. Use MP4/WebM, HLS, or a supported YouTube/Vimeo link.'} as Record<number,string>)[v.error.code] || 'Video playback failed. Check the source URL or retry.'); };
+    const fail = () => { setBuffering(false); if (v.error) setError(({2:'Network error loading this video. Check the URL.',3:'Unsupported container or video codec. Embedded MKV subtitles are not exposed by the browser; use an MP4/HLS source or add an in-browser decoder.',4:'This URL is not a directly playable video. Use MP4/WebM, HLS, or a supported YouTube/Vimeo link.'} as Record<number,string>)[v.error.code] || 'Video playback failed. Check the source URL or retry.'); };
     v.addEventListener('loadedmetadata', metadata); v.addEventListener('timeupdate', tick); v.addEventListener('play', play); v.addEventListener('pause', pause); v.addEventListener('waiting', wait); v.addEventListener('canplay', ready); v.addEventListener('error', fail);
     return () => { v.removeEventListener('loadedmetadata', metadata); v.removeEventListener('timeupdate', tick); v.removeEventListener('play', play); v.removeEventListener('pause', pause); v.removeEventListener('waiting', wait); v.removeEventListener('canplay', ready); v.removeEventListener('error', fail); };
   }, [onProgress]);
@@ -75,12 +75,12 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
 
   return <div className="flootStylePlayer">
     <div className="flootStyleFrame">
-      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : isMkvSource ? <div className="fspMkvNotice"><div className="fspMkvIcon">CC</div><strong>Embedded subtitles are inside this MKV stream</strong><p>Android browsers cannot reliably read or select subtitle tracks embedded inside MKV files. Open this same stream in VLC to choose its built-in subtitle languages.</p><a href={vlcIntent} className="fspVlcButton">Open in VLC</a><a href={rawSrc} target="_blank" rel="noreferrer" className="fspDirectLink">Open original stream</a><small>VLC must be installed. If it does not open automatically, open the original stream and choose VLC from Android's app picker.</small></div> : <video ref={videoRef} playsInline preload="metadata" controls={false}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
+      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls={false}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {buffering && <div className="fspStatus">⏳ Buffering…</div>}
       {error && <div className="fspError" role="alert"><strong>Playback issue</strong><span>{error}</span><button onClick={retrySource}>Retry</button></div>}
       {!embed && !playing && !error && <button className="fspBigPlay" onClick={playPause} aria-label="Play video">▶</button>}
     </div>
-    {!embed && !isMkvSource && <div className="fspControls">
+    {!embed && <div className="fspControls">
       <div className="fspRow"><button onClick={playPause} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Ⅱ' : '▶'}</button><button onClick={() => seek(-10)} aria-label="Back 10 seconds">↶ 10s</button><button onClick={() => seek(10)} aria-label="Forward 10 seconds">10s ↷</button><span className="fspTime">{timeLabel(time)} / {timeLabel(duration)}</span><button onClick={fullscreen} aria-label="Fullscreen">⛶</button></div>
       <input className="fspSeek" aria-label="Seek video" type="range" min={0} max={duration || 0} step="0.1" value={Math.min(time, duration || 0)} onChange={e => { const n = Number(e.target.value); if (videoRef.current) videoRef.current.currentTime = n; setTime(n); }} />
       <div className="fspRow fspOptions">
