@@ -94,7 +94,6 @@ function Home(p:{titles:Title[];all:Title[];featured?:Title;movies:Title[];drama
 function Reels({titles,go}:{titles:Title[];go:(r:string)=>void}){
  const clips=titles.flatMap(t=>t.episodes.filter(e=>Boolean(e.streamUrl||e.qualities?.some(q=>q.streamUrl))).map(e=>({title:t,episode:e})));
  const [liked,setLiked]=useState<string[]>([]);
- const telegramWebView=typeof window!=='undefined'&&(/Telegram/i.test(navigator.userAgent)||Boolean((window as Window&{Telegram?:{WebApp?:unknown}}).Telegram?.WebApp));
  const toggleLike=(id:string)=>setLiked(old=>old.includes(id)?old.filter(x=>x!==id):[...old,id]);
  const share=async(title:string)=>{const url=window.location.origin+'/#/reels';try{const nav=navigator as Navigator&{share?:(data:{title:string;text:string;url:string})=>Promise<void>};if(nav.share)await nav.share({title,text:'Watch on MaseNet',url});else if(navigator.clipboard)await navigator.clipboard.writeText(url)}catch{}};
  return <main className="fbReelsPage"><header className="fbReelsTop"><button onClick={()=>go('#/home')} aria-label="Back to library"><ArrowLeft size={19}/></button><div><b>Reels</b><small>Short videos · Browse at your pace</small></div></header>
