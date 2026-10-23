@@ -708,3 +708,27 @@ button,a,input,textarea,select{touch-action:manipulation}
 .reelsEmpty{width:min(920px,calc(100% - 28px));margin:0 auto}
 @media(max-width:680px){.fbReelsIntro{margin:18px auto 14px}.fbReelsFeed{gap:15px}.fbReel{grid-template-columns:minmax(0,1fr);border-radius:16px}.fbReelMedia{width:100%;aspect-ratio:16/9}.fbReelVideo{width:100%;height:auto;max-height:300px;aspect-ratio:16/9;object-fit:contain}.fbReelDetails{padding:13px 14px;gap:10px}.fbReelCopy h2{font-size:19px}.fbReelCopy small{-webkit-line-clamp:3}.fbReelActions{margin-top:2px;gap:18px}.fbReelOpen{width:100%}}
 @media(prefers-reduced-motion:reduce){.fbReel,.fbReelVideo{scroll-behavior:auto}}
+
+
+/* Compact animated AI hint bubble: one message, then it closes automatically. */
+.app .aiSuggestionBubble{z-index:80;display:flex;align-items:center;gap:4px;width:max-content;max-width:min(218px,calc(100vw - 78px));padding:5px;border:1px solid rgba(165,205,255,.32);border-radius:18px 18px 5px 18px;background:linear-gradient(145deg,rgba(25,39,61,.97),rgba(11,18,31,.98));box-shadow:0 12px 32px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.12);backdrop-filter:blur(20px) saturate(145%);-webkit-backdrop-filter:blur(20px) saturate(145%);transform-origin:bottom right;animation:aiHintPop .42s cubic-bezier(.2,.9,.25,1.2) both;touch-action:pan-y}
+.app .aiSuggestionOpen{display:flex;align-items:center;gap:8px;min-width:0;padding:5px 7px;border:0;background:transparent;color:#f4f7ff;text-align:left}
+.app .aiSuggestionOrb{width:27px;height:27px;flex:0 0 27px;display:grid;place-items:center;border-radius:50%;color:#10243e;background:linear-gradient(140deg,#d7f1ff,#79b9ff 65%,#b5a5ff);box-shadow:0 0 15px #75b8ff3b;animation:aiHintOrb 2.8s ease-in-out infinite}
+.app .aiSuggestionCopy{display:grid;gap:2px;min-width:0}.app .aiSuggestionCopy strong{font-size:10px;letter-spacing:.02em;color:#d9eaff}.app .aiSuggestionCopy>span{font-size:10px;line-height:1.35;white-space:normal;overflow-wrap:anywhere;color:#fff}
+.app .aiSuggestionClose{width:20px;height:20px;flex:0 0 20px;display:grid;place-items:center;border:0;border-radius:50%;background:#ffffff12;color:#d7e5f7;font-size:16px}
+@keyframes aiHintPop{0%{opacity:0;transform:translate(8px,9px) scale(.82)}70%{opacity:1;transform:translate(0,-2px) scale(1.025)}100%{opacity:1;transform:translate(0,0) scale(1)}}
+@keyframes aiHintOrb{0%,100%{transform:translateY(0);box-shadow:0 0 0 0 #75b8ff00}50%{transform:translateY(-2px);box-shadow:0 0 0 4px #75b8ff18}}
+/* Premium streaming billboard; selected style, theme, shape and size classes remain active. */
+.homepageBroadcasts{width:min(1180px,calc(100% - 28px));margin:18px auto 26px;gap:0}
+.homepageBroadcast{min-height:190px;border-radius:25px;border-color:rgba(255,255,255,.2);box-shadow:0 24px 54px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.22);transition:transform .28s ease,box-shadow .28s ease,border-color .28s ease}
+.homepageBroadcast:hover{transform:translateY(-3px);box-shadow:0 28px 62px rgba(0,0,0,.36),inset 0 1px rgba(255,255,255,.25);border-color:rgba(255,255,255,.34)}
+.homepageBroadcast.billboard-classic{background:linear-gradient(115deg,#111827,#263b5d 56%,#182b3d)}
+.homepageBroadcast.billboard-cinema{background:radial-gradient(ellipse at 85% 20%,rgba(211,167,91,.2),transparent 45%),linear-gradient(115deg,#090b11,#24202a 58%,#19130f)}
+.homepageBroadcastCopy{padding:clamp(17px,3vw,30px)}
+.homepageBroadcastEyebrow{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #ffffff24;border-radius:999px;background:#ffffff0b;color:#d9e7ff;font-size:9px;letter-spacing:.15em}
+.homepageBroadcast h2{max-width:650px;font-size:clamp(21px,3.8vw,38px);line-height:1.02;letter-spacing:-.045em;text-wrap:balance;text-shadow:0 3px 22px #0005}
+.homepageBroadcast p{max-width:650px;font-size:clamp(12px,1.3vw,14px);line-height:1.6;color:#f0f2f8}
+.homepageBroadcastMedia,.homepageBroadcastVideo{align-self:stretch;max-height:360px;min-height:100%;object-fit:cover;filter:saturate(1.08)}
+.homepageBroadcastAction{padding:11px 17px;background:linear-gradient(135deg,#f4dfa4,#d5ad5d);color:#20180b;border:0;box-shadow:0 5px 18px #0003;font-weight:850}
+@media(max-width:620px){.homepageBroadcast{grid-template-columns:minmax(0,1fr) 34%;min-height:148px}.homepageBroadcast.size-large{grid-template-columns:minmax(0,1fr) 32%;min-height:176px}.homepageBroadcastCopy{padding:15px 13px}.homepageBroadcast h2{font-size:20px}.homepageBroadcast p{font-size:11px;line-height:1.4}.homepageBroadcastMedia,.homepageBroadcastVideo{max-height:230px}.homepageBroadcastAction{padding:8px 11px;font-size:10px}}
+@media(prefers-reduced-motion:reduce){.app .aiSuggestionBubble,.app .aiSuggestionOrb{animation:none!important}.homepageBroadcast{transition:none!important}}
