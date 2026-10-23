@@ -5,20 +5,20 @@ type Quality = '480p' | '720p' | '1080p';
 type Track = { label?: string; url: string; path?: string; lang?: string; mimeType?: string };
 type Variant = { quality: Quality; streamUrl: string; mimeType?: string; subtitleTracks?: Track[] };
 type Episode = { id: string; title: string; quality: Quality; streamUrl: string; mimeType?: string; subtitleTracks?: Track[]; qualities?: Variant[] };
-type Props = { episode: Episode; onProgress?: (percent: number) => void };
+type Props = { episode: Episode; onProgress?: (percent: number) => void; autoPlay?: boolean; muted?: boolean; reelMode?: boolean };
 
-const embedFor = (raw: string) => {
+const embedFor = (raw: string, autoplay = false) => {
   try {
     const u = new URL(raw); const host = u.hostname.toLowerCase().replace(/^www\./, '');
-    if (host === 'youtu.be') return 'https://www.youtube.com/embed/' + u.pathname.slice(1).split('/')[0] + '?rel=0';
-    if (host.endsWith('youtube.com')) { const id = u.searchParams.get('v') || u.pathname.match(/\/(?:embed|shorts)\/([^/?]+)/)?.[1]; return id ? 'https://www.youtube.com/embed/' + id + '?rel=0' : null; }
+    if (host === 'youtu.be') return 'https://www.youtube.com/embed/' + u.pathname.slice(1).split('/')[0] + '?rel=0' + (autoplay ? '&autoplay=1&mute=1&playsinline=1' : '');
+    if (host.endsWith('youtube.com')) { const id = u.searchParams.get('v') || u.pathname.match(/\/(?:embed|shorts)\/([^/?]+)/)?.[1]; return id ? 'https://www.youtube.com/embed/' + id + '?rel=0' + (autoplay ? '&autoplay=1&mute=1&playsinline=1' : '') : null; }
     if (host === 'vimeo.com' || host === 'player.vimeo.com') { const id = u.pathname.match(/(?:video\/)?(\d+)/)?.[1]; return id ? 'https://player.vimeo.com/video/' + id : null; }
   } catch { /* invalid URL */ }
   return null;
 };
 const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value / 60) + ':' + String(Math.floor(value % 60)).padStart(2, '0') : '0:00';
 
-export default function FlootPlayer({ episode, onProgress }: Props) {
+export default function FlootPlayer({ episode, onProgress, autoPlay = false, muted = false, reelMode = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
@@ -29,7 +29,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
   }, [episode]);
   const selected = variants.find(v => v.quality === quality) || variants[0];
   const rawSrc = selected?.streamUrl || episode.streamUrl || ''; 
-  const embed = embedFor(rawSrc);
+  const embed = embedFor(rawSrc, autoPlay);
   const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => {
     const value = String(t.url || t.path || '').trim();
     return /^https?:\/\//i.test(value) && /\.(?:vtt|srt|ass|ssa)(?:$|[?#])/i.test(value);
@@ -70,14 +70,15 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
   }, [onProgress, isMkvSource, isHlsSource, rawSrc, episode.id, telegramWebView]);
 
   useEffect(() => { const v = videoRef.current; if (v) v.volume = volume; }, [volume]);
+  useEffect(() => { const v = videoRef.current; if (!v) return; v.muted = Boolean(muted); if (!autoPlay) { v.pause(); return; } const attempt = () => { if (autoPlay) void v.play().catch(() => {}); }; if (v.readyState >= 2) attempt(); else v.addEventListener('canplay', attempt, { once: true }); return () => v.removeEventListener('canplay', attempt); }, [autoPlay, muted, src, retry]);
   const playPause = async () => { const v = videoRef.current; if (!v) return; setError(''); try { if (v.paused) await v.play(); else v.pause(); } catch { setError('Playback was blocked or the video URL is not playable. Tap Retry or choose another quality.'); } };
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
   const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
   const retrySource = () => { setError(''); setRetry(x => x + 1); };
 
-  return <div className="flootStylePlayer">
+  return <div className={`flootStylePlayer${reelMode ? ' reelMode' : ''}`}>
     <div className="flootStyleFrame">
-      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
+      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload={autoPlay ? "auto" : "metadata"} autoPlay={autoPlay} muted={muted} controls>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {buffering && <div className="fspStatus">⏳ Buffering…</div>}
       {error && <div className="fspError" role="alert"><strong>Playback issue</strong><span>{error}</span><button onClick={retrySource}>Retry</button></div>}
       {!embed && !playing && !error && <button className="fspBigPlay" onClick={playPause} aria-label="Play video">▶</button>}
@@ -96,7 +97,15 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
 .fspSubtitleControl{position:relative;display:inline-flex;align-items:center}
 .fspSubtitleButton{border:1px solid rgba(255,255,255,.24);border-radius:9px;background:rgba(255,255,255,.08);color:#fff;padding:7px 10px;min-height:34px;font-size:12px;font-weight:700}
 .fspSubtitleMenu{position:absolute;z-index:30;left:0;bottom:calc(100% + 8px);width:min(260px,78vw);max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid rgba(255,255,255,.17);border-radius:13px;background:rgba(13,15,21,.98);box-shadow:0 15px 40px #0009;backdrop-filter:blur(18px)}
-.fspSubtitleMenu strong{font-size:12px;padding:2px 4px 6px}.fspSubtitleMenu button{width:100%;text-align:left;border:1px solid transparent;border-radius:8px;padding:8px 9px;background:#ffffff0a;color:#f6f6f8;font-size:12px}.fspSubtitleMenu button.selected{border-color:#dfbf74;background:#dfbf7420;color:#f4d891}.fspSubtitleMenu p,.fspSubtitleMenu small{font-size:11px;line-height:1.45;color:#c9ccd5;margin:5px 3px}`}
+.fspSubtitleMenu strong{font-size:12px;padding:2px 4px 6px}.fspSubtitleMenu button{width:100%;text-align:left;border:1px solid transparent;border-radius:8px;padding:8px 9px;background:#ffffff0a;color:#f6f6f8;font-size:12px}.fspSubtitleMenu button.selected{border-color:#dfbf74;background:#dfbf7420;color:#f4d891}.fspSubtitleMenu p,.fspSubtitleMenu small{font-size:11px;line-height:1.45;color:#c9ccd5;margin:5px 3px}
+.reelMode{height:100%;border:0!important;border-radius:0!important;background:#000!important;box-shadow:none!important;display:flex;flex-direction:column}
+.reelMode .flootStyleFrame{aspect-ratio:9/16;min-height:0;height:100%;max-height:100%;flex:1;background:#000}
+.reelMode .flootStyleFrame video,.reelMode .flootStyleFrame iframe{object-fit:cover}
+.reelMode .fspControls{display:none!important}
+.reelMode .fspBigPlay{width:58px;height:58px}
+.reelMode .fspStatus{z-index:3;top:50%}
+.reelMode .fspError{z-index:5}
+`}
 </style>
   </div>;
 }
