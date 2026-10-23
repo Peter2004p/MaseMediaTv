@@ -606,3 +606,45 @@ button,a,input,textarea,select{touch-action:manipulation}
 .billboardStudioPreview.anim-float{animation:billboardFloat 5s ease-in-out infinite}.billboardStudioPreview.anim-glow{animation:billboardGlow 3.8s ease-in-out infinite}.billboardStudioPreview.anim-shimmer{background-size:200% 100%;animation:billboardShimmer 5s ease-in-out infinite}.billboardStudioPreview.anim-slide{animation:billboardSlide .6s ease-out both}
 @media(max-width:600px){.broadcastStudio{grid-template-columns:1fr;padding:12px}.broadcastStudio>label,.broadcastStudioHead,.billboardStudioPreview{grid-column:1}.billboardPreviewCopy{padding:13px}.billboardPreviewCopy b{font-size:17px}}
 @media(prefers-reduced-motion:reduce){.billboardStudioPreview{animation:none!important}}
+
+
+/* MaseNet compact, draggable AI companion + administrator studio */
+.app .aiDock{top:auto;right:14px;bottom:92px;left:auto;transform:none;width:46px;height:46px;padding:0;border-radius:50%;border:1px solid rgba(159,204,255,.42);background:linear-gradient(145deg,rgba(35,53,83,.96),rgba(17,26,44,.97));color:#fff;box-shadow:0 7px 22px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.19);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow:visible;transition:box-shadow .18s ease,border-color .18s ease}
+.app .aiDock:active{cursor:grabbing}
+.app .aiDock .aiCartoon{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:17px;line-height:1;background:linear-gradient(145deg,#b7e7ff,#669dff 68%,#8775ed);border:1px solid rgba(255,255,255,.45);box-shadow:inset 0 1px 3px rgba(255,255,255,.65),0 3px 9px rgba(36,104,210,.23);animation:none}
+.app .aiDock .aiDockOnline{width:8px;height:8px;right:0;bottom:1px;border-width:1px}
+.app .aiDock.ai-size-small{width:42px;height:42px}.app .aiDock.ai-size-small .aiCartoon{width:27px;height:27px;font-size:15px}
+.app .aiDock.ai-size-large{width:56px;height:56px}.app .aiDock.ai-size-large .aiCartoon{width:38px;height:38px;font-size:21px}
+.app .aiDock.ai-shape-orb{border-radius:50%;background:radial-gradient(circle at 35% 22%,#a9e8ff,#4b75db 58%,#382f76)}
+.app .aiDock.ai-shape-cloud{border-radius:42% 58% 53% 47% / 52% 43% 57% 48%}
+.app .aiDock.ai-shape-star{border-radius:35% 50% 35% 50%;clip-path:polygon(50% 0,63% 24%,94% 18%,80% 49%,100% 72%,67% 77%,50% 100%,33% 77%,0 72%,20% 49%,6% 18%,37% 24%)}
+.app .aiDock.ai-motion-float{animation:aiDockFloat 4s ease-in-out infinite}
+.app .aiDock.ai-motion-orbit{animation:aiDockOrbit 5s ease-in-out infinite}
+.app .aiDock.ai-motion-pulse{animation:aiDockPulse 3.4s ease-in-out infinite}
+.app .aiDock.ai-motion-still{animation:none}
+.app .aiDock.ai-effect-none .aiBubbleSpark{display:none}
+.app .aiDock.ai-effect-sparkles .aiBubbleSpark{position:absolute;right:-2px;top:-5px;color:#d7f0ff;font-size:17px;filter:drop-shadow(0 0 5px #83baff)}
+.app .aiDock.ai-effect-bubbles .aiBubbleSpark{position:absolute;right:-3px;top:-6px;display:grid;place-items:center;width:12px;height:12px;border-radius:50%;background:rgba(134,206,255,.8);color:#fff;font-size:13px;line-height:1}
+@keyframes aiDockFloat{0%,100%{translate:0 0}50%{translate:0 -3px}}
+@keyframes aiDockOrbit{0%,100%{rotate:-5deg}50%{rotate:5deg}}
+@keyframes aiDockPulse{0%,100%{box-shadow:0 7px 22px rgba(0,0,0,.28),0 0 0 0 rgba(100,168,255,0)}50%{box-shadow:0 7px 22px rgba(0,0,0,.28),0 0 0 5px rgba(100,168,255,.1)}}
+.app .aiDock.ai-avatar-robot .aiCartoon,.app .aiDock.ai-avatar-cat .aiCartoon,.app .aiDock.ai-avatar-panda .aiCartoon,.app .aiDock.ai-avatar-moon .aiCartoon,.app .aiDock.ai-avatar-bubble .aiCartoon{background:linear-gradient(145deg,rgba(248,252,255,.98),rgba(164,207,255,.94));color:#172d50}
+
+/* The chat is a compact floating window; the library remains visible and interactive. */
+.app .backdrop.aiBackdrop{position:fixed;inset:0;z-index:49;display:block;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;pointer-events:none}
+.app .backdrop.aiBackdrop>.aiSide{pointer-events:auto;position:fixed;right:12px;bottom:148px;top:auto;left:auto;margin:0;padding:0;width:min(340px,calc(100vw - 24px));height:min(390px,50dvh);min-height:260px;max-height:calc(100dvh - 170px);border-radius:20px;border:1px solid rgba(159,199,255,.2);background:rgba(14,22,37,.97);box-shadow:0 16px 44px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.1);animation:aiCompactEnter .18s ease-out both}
+.app .backdrop.aiBackdrop>.aiSide.ai-size-compact{width:min(310px,calc(100vw - 24px));height:min(330px,43dvh);min-height:245px;bottom:144px}
+.app .backdrop.aiBackdrop>.aiSide.ai-size-comfortable{width:min(360px,calc(100vw - 24px));height:min(430px,55dvh);min-height:275px;bottom:146px}
+.app .backdrop.aiBackdrop>.aiSide.ai-size-large{width:min(410px,calc(100vw - 24px));height:min(520px,65dvh);min-height:300px;bottom:148px}
+.app .aiSide .aiHeader{padding:9px 11px;margin:0 -10px 0}
+.app .aiSide .aiAvatar{width:31px;height:31px;flex-basis:31px;border-radius:10px}
+.app .aiSide .aiHeader .aiHeaderIdentity b{font-size:13px}
+.app .aiSide .aiMessages{padding:10px 2px;gap:8px}
+.app .aiSide .aiWelcome{margin:10px auto;padding:12px;max-width:230px;font-size:11px}
+.app .aiSide .aiBubble{padding:7px 9px;font-size:11px;line-height:1.4}
+.app .aiSide .aiComposer{margin-top:4px;padding:4px;border-radius:12px}
+.app .aiSide .aiHeader .aiHeaderIdentity small{font-size:9px}
+.app .aiSide .ai{padding:0 10px 9px}
+@keyframes aiCompactEnter{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
+@media(max-width:560px){.app .aiDock{right:12px;bottom:84px}.app .backdrop.aiBackdrop>.aiSide,.app .backdrop.aiBackdrop>.aiSide.ai-size-compact{right:8px;bottom:138px;width:min(320px,calc(100vw - 16px));height:min(350px,46dvh);min-height:245px}.app .backdrop.aiBackdrop>.aiSide.ai-size-comfortable{right:8px;bottom:140px;width:min(350px,calc(100vw - 16px));height:min(420px,54dvh);min-height:270px}.app .backdrop.aiBackdrop>.aiSide.ai-size-large{right:8px;bottom:140px;width:min(390px,calc(100vw - 16px));height:min(500px,64dvh);min-height:290px}}
+@media(prefers-reduced-motion:reduce){.app .aiDock,.app .backdrop.aiBackdrop>.aiSide{animation:none!important;transition:none!important}}
