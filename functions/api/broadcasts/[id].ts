@@ -40,7 +40,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
   const heading = typeof body.heading === "string" ? body.heading.trim() : previous.heading;
   const metadata = {
     heading,
-    mediaType: body.mediaType || previous.meta.mediaType || (/\\.(mp4|webm|mov)(\\?|$)/i.test(mediaUrl) ? "video" : /\\.gif(\\?|$)/i.test(mediaUrl) ? "gif" : "image"),
+    mediaType: body.mediaType || previous.meta.mediaType || (/\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl) ? "video" : /\.gif(\?|$)/i.test(mediaUrl) ? "gif" : "image"),
     billboardStyle: body.billboardStyle || previous.meta.billboardStyle,
     billboardSize: body.billboardSize || previous.meta.billboardSize,
     billboardShape: body.billboardShape || previous.meta.billboardShape,
