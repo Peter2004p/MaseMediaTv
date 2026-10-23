@@ -772,3 +772,35 @@ button,a,input,textarea,select{touch-action:manipulation}
 .ttReelsEmpty .primary{margin-top:8px}
 @media(min-width:700px){.ttReelsPage{background:#090a0e}.ttReelsTop{padding-left:calc((100% - 520px)/2 + 14px);padding-right:calc((100% - 520px)/2 + 14px)}.ttReelCard{width:min(100%,520px);margin:0 auto;border-left:1px solid #ffffff10;border-right:1px solid #ffffff10}.ttReelInfo{left:16px}.ttReelActions{right:12px}}
 @media(prefers-reduced-motion:reduce){.ttReelsFeed{scroll-behavior:auto}}
+
+/* Screenshot-matched Reels: black canvas, landscape video window, side actions and bottom comment composer. */
+.ttReelsPage{background:#000!important}
+.ttReelsTop{height:58px;min-height:58px;background:#000;border-bottom:0}
+.ttReelsFeed{background:#000}
+.ttReelCard{height:calc(100dvh - 58px);min-height:calc(100svh - 58px);background:#000;display:block}
+.ttReelVideo{position:absolute;left:0;right:0;top:34%;width:100%;height:auto;max-height:32dvh;margin:0;background:#000;overflow:visible;display:flex;align-items:center;justify-content:center}
+.ttReelVideo>.flootStylePlayer{width:100%;height:auto;max-width:100%;margin:0}
+.ttReelVideo .flootStyleFrame{width:100%;height:auto;aspect-ratio:16/9!important;min-height:0!important;max-height:32dvh!important;flex:none;background:#000}
+.ttReelVideo .flootStyleFrame video,.ttReelVideo .flootStyleFrame iframe{width:100%;height:100%;object-fit:contain!important;background:#000}
+.ttReelShade{inset:0;background:linear-gradient(180deg,transparent 0%,transparent 68%,rgba(0,0,0,.72) 100%);z-index:1}
+.ttReelInfo{left:18px;right:82px;bottom:calc(58px + env(safe-area-inset-bottom));gap:6px}
+.ttReelActions{right:12px;bottom:calc(112px + env(safe-area-inset-bottom));gap:17px}
+.ttReelActions button>span{font-size:29px}
+.ttReelCommentBar{position:absolute;z-index:6;left:0;right:0;bottom:0;min-height:58px;padding:9px 18px calc(9px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px;background:#000;border-top:1px solid #ffffff35}
+.ttReelCommentBar input{flex:1;min-width:0;height:42px;padding:0 16px;border:1px solid #e8e8e8;border-radius:999px;background:transparent;color:#fff;outline:none;font-size:13px}
+.ttReelCommentBar input::placeholder{color:#b7b7bd}
+.ttReelCommentBar button{flex:0 0 auto;border:0;background:transparent;color:#fff;font-weight:700;font-size:20px;padding:3px}
+.ttReelCommentBar button:last-child{font-size:13px;border:1px solid #aaa;border-radius:5px;padding:3px 5px}
+.ttReelTapHint{z-index:2}
+.reelMode{height:auto!important;min-height:0!important;width:100%;border:0!important;border-radius:0!important;background:#000!important;box-shadow:none!important;display:block!important;overflow:visible!important}
+.reelMode .flootStyleFrame{aspect-ratio:16/9!important;min-height:0!important;height:auto!important;max-height:32dvh!important;flex:none!important}
+.reelMode .flootStyleFrame video,.reelMode .flootStyleFrame iframe{object-fit:contain!important}
+.reelMode .fspBigPlay{width:54px;height:54px}
+.reelMode .fspError{max-height:100%;overflow:auto}
+@media(min-width:700px){
+ .ttReelCard{width:100%;margin:0 auto;border:0}
+ .ttReelVideo{top:31%;left:50%;right:auto;transform:translateX(-50%);width:min(100%,760px);max-height:38dvh}
+ .ttReelVideo .flootStyleFrame{max-height:38dvh!important}
+ .ttReelInfo{left:max(18px,calc((100% - 760px)/2 + 18px))}
+ .ttReelActions{right:max(12px,calc((100% - 760px)/2 + 12px))}
+}
