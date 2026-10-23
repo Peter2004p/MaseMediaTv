@@ -42,6 +42,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     heading,
     mediaType: body.mediaType || previous.meta.mediaType || (/\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl) ? "video" : /\.gif(\?|$)/i.test(mediaUrl) ? "gif" : "image"),
     billboardStyle: body.billboardStyle || previous.meta.billboardStyle,
+    billboardTheme: body.billboardTheme || previous.meta.billboardTheme,
     billboardSize: body.billboardSize || previous.meta.billboardSize,
     billboardShape: body.billboardShape || previous.meta.billboardShape,
     billboardAnimation: body.billboardAnimation || previous.meta.billboardAnimation,
@@ -52,6 +53,6 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
   const stored = META + JSON.stringify(metadata) + "\\n" + description;
   await env.DB.prepare("UPDATE broadcasts SET title = ?, description = ?, media_url = ?, target = ?, expires_at = ? WHERE id = ?")
     .bind(title, stored, mediaUrl, destination, expiresAt, id).run();
-  const post = { id, title, heading, description, caption: description, mediaType: metadata.mediaType, mediaUrl, destination, expiresAt, createdAt: existing.created_at, billboardStyle: metadata.billboardStyle, billboardSize: metadata.billboardSize, billboardShape: metadata.billboardShape, billboardAnimation: metadata.billboardAnimation, buttonLabel: metadata.buttonLabel, buttonUrl: metadata.buttonUrl, bubbleMessage: metadata.bubbleMessage };
+  const post = { id, title, heading, description, caption: description, mediaType: metadata.mediaType, mediaUrl, destination, expiresAt, createdAt: existing.created_at, billboardStyle: metadata.billboardStyle, billboardTheme: metadata.billboardTheme, billboardSize: metadata.billboardSize, billboardShape: metadata.billboardShape, billboardAnimation: metadata.billboardAnimation, buttonLabel: metadata.buttonLabel, buttonUrl: metadata.buttonUrl, bubbleMessage: metadata.bubbleMessage };
   return json({ success: true, post });
 };
