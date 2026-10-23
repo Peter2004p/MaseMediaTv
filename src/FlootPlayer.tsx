@@ -19,7 +19,7 @@ const embedFor = (raw: string) => {
 const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value / 60) + ':' + String(Math.floor(value % 60)).padStart(2, '0') : '0:00';
 
 export default function FlootPlayer({ episode, onProgress }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1); const [speed, setSpeed] = useState(1); const [retry, setRetry] = useState(0);
@@ -43,7 +43,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
-    setError(''); setHlsSubtitleTracks([]); setBuffering(false); setTime(0); setDuration(0); setPlaying(false);
+    setError(''); setHlsSubtitleTracks([]); setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = false;
     hlsRef.current?.destroy(); hlsRef.current = null;
     if (!src || embed) return;
     if (isHlsSource && !video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -62,7 +62,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
     const tick = () => { setTime(v.currentTime || 0); if (v.duration > 0 && Number.isFinite(v.duration)) onProgress?.(Math.round(v.currentTime / v.duration * 100)); };
     const play = () => { setPlaying(true); setBuffering(false); setError(''); }; const pause = () => setPlaying(false);
     const wait = () => setBuffering(true); const ready = () => { setBuffering(false); setError(''); };
-    const fail = () => { setBuffering(false); if (v.error) setError((({2:'Network error loading this video. The source may be offline, expired, or blocking playback.',3:'This browser cannot decode this video or audio codec. Try another quality or a browser-compatible MP4/HLS source.',4:'This URL is not a directly playable video. Use a direct MP4/WebM/MOV URL, an HLS stream, or a supported YouTube/Vimeo link.'} as Record<number,string>)[v.error.code] || 'Video playback failed. Check the source URL or retry.')); };
+    const fail = () => { setBuffering(false); if (!v.error) return; if (v.error.code === 4 && !isHlsSource && !proxiedFallbackRef.current && rawSrc && /^https:\/\//i.test(rawSrc)) { proxiedFallbackRef.current = true; setError('Trying the stream through MaseNet…'); v.src = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc); v.load(); return; } setError((({2:'Network error loading this video. The source may be offline, expired, or blocking playback.',3:'This browser cannot decode this video or audio codec. The link may work in VLC but use a format or codec this browser does not support.',4:'The browser rejected this stream format. The link may be a streaming endpoint or MKV source rather than a browser-compatible video. MaseNet tried a same-site stream fallback; if it still fails, this source needs a browser-compatible MP4/HLS version.'} as Record<number,string>)[v.error.code] || 'Video playback failed. Check the source URL or retry.')); };
     v.addEventListener('loadedmetadata', metadata); v.addEventListener('timeupdate', tick); v.addEventListener('play', play); v.addEventListener('pause', pause); v.addEventListener('waiting', wait); v.addEventListener('canplay', ready); v.addEventListener('error', fail);
     return () => { v.removeEventListener('loadedmetadata', metadata); v.removeEventListener('timeupdate', tick); v.removeEventListener('play', play); v.removeEventListener('pause', pause); v.removeEventListener('waiting', wait); v.removeEventListener('canplay', ready); v.removeEventListener('error', fail); };
   }, [onProgress, isMkvSource]);
