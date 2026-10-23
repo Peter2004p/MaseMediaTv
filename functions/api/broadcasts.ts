@@ -1,14 +1,24 @@
 import { Env, json, requireAdmin } from "./auth/_shared";
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const rows = await env.DB.prepare("SELECT id,title,description,media_url,target,expires_at,created_at FROM broadcasts WHERE expires_at IS NULL OR expires_at > datetime('now') ORDER BY created_at DESC").all<Record<string,unknown>>();
-  const posts = (rows.results || []).map(r => { const raw=String(r.description||""); const marker="[[MASETNET_HEADING]]"; const split=raw.indexOf(marker); const heading=split>=0?raw.slice(split+marker.length,raw.indexOf("\\n",split)>=0?raw.indexOf("\\n",split):undefined):String(r.title||""); const description=split>=0?raw.slice(raw.indexOf("\\n",split)+1):raw; return ({ id:r.id, title:r.title, heading, description, mediaType: String(r.media_url||"").match(/\.(mp4|webm|mov)(\?|$)/i) ? "video" : String(r.media_url||"").match(/\.gif(\?|$)/i) ? "gif" : "image", mediaUrl:r.media_url, caption:r.description, destination:r.target, expiresAt:r.expires_at, createdAt:r.created_at }); });
+  const posts = (rows.results || []).map(r => {
+    const raw=String(r.description||""); let meta:Record<string,unknown>={}; let description=raw; let heading=String(r.title||"");
+    const metaMarker="[[MASETNET_BROADCAST_META]]";
+    if(raw.startsWith(metaMarker)){const split=raw.indexOf("\\n");try{meta=JSON.parse(raw.slice(metaMarker.length,split>=0?split:undefined)) as Record<string,unknown>}catch{} description=split>=0?raw.slice(split+1):""; heading=String(meta.heading||heading);}
+    else {const marker="[[MASETNET_HEADING]]";const split=raw.indexOf(marker);if(split>=0){const rest=raw.slice(split+marker.length);const divider=rest.indexOf("\\\\n");heading=divider>=0?rest.slice(0,divider):rest;description=divider>=0?rest.slice(divider+3):"";}}
+    const mediaUrl=String(r.media_url||"");
+    return {id:r.id,title:r.title,heading,description,caption:description,mediaType:(meta.mediaType as string)||(/\\.(mp4|webm|mov)(\\?|$)/i.test(mediaUrl)?"video":/\\.gif(\\?|$)/i.test(mediaUrl)?"gif":"image"),mediaUrl,destination:r.target,expiresAt:r.expires_at,createdAt:r.created_at,billboardStyle:meta.billboardStyle,billboardSize:meta.billboardSize,billboardShape:meta.billboardShape,billboardAnimation:meta.billboardAnimation,buttonLabel:meta.buttonLabel,buttonUrl:meta.buttonUrl,bubbleMessage:meta.bubbleMessage};
+  });
   return json({ posts });
 };
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const gate = await requireAdmin(request, env); if (gate.response) return gate.response;
   const body = await request.json() as Record<string,unknown>;
   const id = crypto.randomUUID(), title = typeof body.title === "string" ? body.title.trim() : "";
-  const plainDescription = typeof body.caption === "string" ? body.caption : typeof body.description === "string" ? body.description : ""; const heading = typeof body.heading === "string" ? body.heading.trim() : ""; const description = heading ? "[[MASETNET_HEADING]]"+heading+"\\n"+plainDescription : plainDescription;
+  const plainDescription = typeof body.caption === "string" ? body.caption : typeof body.description === "string" ? body.description : "";
+  const heading = typeof body.heading === "string" ? body.heading.trim() : "";
+  const metadata = {heading,mediaType:body.mediaType,billboardStyle:body.billboardStyle,billboardSize:body.billboardSize,billboardShape:body.billboardShape,billboardAnimation:body.billboardAnimation,buttonLabel:body.buttonLabel,buttonUrl:body.buttonUrl,bubbleMessage:body.bubbleMessage};
+  const description = "[[MASETNET_BROADCAST_META]]"+JSON.stringify(metadata)+"\\n"+plainDescription;
   const mediaUrl = typeof body.mediaUrl === "string" ? body.mediaUrl : "";
   const target = ["website","telegram","both"].includes(String(body.destination)) ? String(body.destination) : "website";
   const expiresAt = typeof body.expiresAt === "string" ? body.expiresAt : null;
