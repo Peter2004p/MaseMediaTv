@@ -46,14 +46,13 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
     setError(''); setHlsSubtitleTracks([]); setBuffering(false); setTime(0); setDuration(0); setPlaying(false);
     hlsRef.current?.destroy(); hlsRef.current = null;
     if (!src || embed) return;
-    if (isMkvSource) { setError('This source is an MKV file. The MaseNet player can play browser-supported video formats, but browsers do not expose subtitle tracks embedded inside MKV files. Embedded subtitle extraction/decoding is not yet available in this build.'); return; }
-    if (/\.m3u8(?:$|[?#])/i.test(src) && !video.canPlayType('application/vnd.apple.mpegurl')) {
+    if (isHlsSource && !video.canPlayType('application/vnd.apple.mpegurl')) {
       if (!Hls.isSupported()) { setError('This browser cannot play HLS streams. Try another quality or a direct MP4 URL.'); return; }
       const hls = new Hls({ enableWorker: true, backBufferLength: 30 }); hlsRef.current = hls;
       hls.loadSource(src); hls.attachMedia(video);
       hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => { setHlsSubtitleTracks(hls.subtitleTracks.map(t => ({name:t.name,lang:t.lang}))); if (hls.subtitleTracks.length && subtitle.startsWith('hls-')) hls.subtitleTrack = Number(subtitle.slice(4)); });
-      hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { setBuffering(false); setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Stream network error. Tap Retry to reconnect.' : 'This browser cannot decode this stream format. Embedded MKV subtitles need an in-browser MKV decoder or a compatible MP4/HLS source.'); hls.destroy(); hlsRef.current = null; } });
-    } else { video.src = src; video.load(); }
+      hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { setBuffering(false); setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Stream network error. The source may be offline or blocking playback. Tap Retry to reconnect.' : 'This browser cannot decode this stream. Try another quality or a browser-compatible MP4/HLS source.'); hls.destroy(); hlsRef.current = null; } });
+    } else { video.src = isHlsSource ? src : rawSrc; video.load(); }
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [src, rawSrc, embed, isHlsSource, isMkvSource, selected?.mimeType, episode.mimeType, retry]);
 
@@ -63,7 +62,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
     const tick = () => { setTime(v.currentTime || 0); if (v.duration > 0 && Number.isFinite(v.duration)) onProgress?.(Math.round(v.currentTime / v.duration * 100)); };
     const play = () => { setPlaying(true); setBuffering(false); setError(''); }; const pause = () => setPlaying(false);
     const wait = () => setBuffering(true); const ready = () => { setBuffering(false); setError(''); };
-    const fail = () => { setBuffering(false); if (v.error) setError(isMkvSource ? 'This MKV source is not supported by this browser player. Embedded MKV subtitle tracks cannot be read by the native HTML video element.' : (({2:'Network error loading this video. Check the URL.',3:'Unsupported container or video codec. Use a browser-compatible MP4/HLS source or a compatible in-browser decoder.',4:'This URL is not a directly playable video. Use MP4/WebM, HLS, or a supported YouTube/Vimeo link.'} as Record<number,string>)[v.error.code] || 'Video playback failed. Check the source URL or retry.')); };
+    const fail = () => { setBuffering(false); if (v.error) setError((({2:'Network error loading this video. The source may be offline, expired, or blocking playback.',3:'This browser cannot decode this video or audio codec. Try another quality or a browser-compatible MP4/HLS source.',4:'This URL is not a directly playable video. Use a direct MP4/WebM/MOV URL, an HLS stream, or a supported YouTube/Vimeo link.'} as Record<number,string>)[v.error.code] || 'Video playback failed. Check the source URL or retry.')); };
     v.addEventListener('loadedmetadata', metadata); v.addEventListener('timeupdate', tick); v.addEventListener('play', play); v.addEventListener('pause', pause); v.addEventListener('waiting', wait); v.addEventListener('canplay', ready); v.addEventListener('error', fail);
     return () => { v.removeEventListener('loadedmetadata', metadata); v.removeEventListener('timeupdate', tick); v.removeEventListener('play', play); v.removeEventListener('pause', pause); v.removeEventListener('waiting', wait); v.removeEventListener('canplay', ready); v.removeEventListener('error', fail); };
   }, [onProgress, isMkvSource]);
