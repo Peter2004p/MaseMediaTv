@@ -100,13 +100,13 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       // Keep the assistant useful when the optional Workers AI binding or model is unavailable.
       // This is a transparent local fallback, not a fabricated AI-generated answer.
       const lower = prompt.toLocaleLowerCase();
-      if (/\\b(hi|hello|hey|good morning|good afternoon|good evening)\\b/.test(lower)) {
+      if (/\b(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(lower)) {
         answer = "Hey! 👋 I’m MaseNet Assistant. I can help you find movies and dramas, search for episodes, and use the MaseNet website. Send me a title to search, or try /help for commands.";
-      } else if (/\\b(how are you|what's up|whats up)\\b/.test(lower)) {
+      } else if (/\b(how are you|what's up|whats up)\b/.test(lower)) {
         answer = "I’m here and ready to help 😊 What movie or drama are you looking for today? Send its title and I’ll check the MaseNet catalog.";
-      } else if (/\\b(who are you|what can you do|help me|help)\\b/.test(lower)) {
+      } else if (/\b(who are you|what can you do|help me|help)\b/.test(lower)) {
         answer = "I’m MaseNet Assistant 🎬 I can help you search the catalog and find episodes. Send a movie/drama title, use /search title, or ask me a question. If you’re looking for an episode, include its season and episode number.";
-      } else if (/\\b(thank you|thanks)\\b/.test(lower)) {
+      } else if (/\b(thank you|thanks)\b/.test(lower)) {
         answer = "You’re welcome! 😊 I’m here whenever you need help finding a movie, drama, or episode on MaseNet.";
       } else {
         answer = "I can help with MaseNet and finding movies or drama episodes. I’m having trouble generating a full AI response right now, but you can send a title to search or use /search title. For episodes, include the season and episode number.";
