@@ -30,7 +30,10 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
   const selected = variants.find(v => v.quality === quality) || variants[0];
   const rawSrc = selected?.streamUrl || episode.streamUrl || ''; 
   const embed = embedFor(rawSrc);
-  const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => typeof (t.url || t.path) === 'string' && /^https?:\\/\\//i.test(String(t.url || t.path)));
+  const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => {
+    const value = String(t.url || t.path || '').trim();
+    return /^https?:\/\//i.test(value) && /\.(?:vtt|srt|ass|ssa)(?:$|[?#])/i.test(value);
+  }).map(t => ({ ...t, url: String(t.url || t.path).trim() }));
   const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');
   const src = isHlsSource ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc) : rawSrc;
 
@@ -70,7 +73,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
 
   return <div className="flootStylePlayer">
     <div className="flootStyleFrame">
-      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls={false}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={String(t.url || t.path)} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
+      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls={false}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {buffering && <div className="fspStatus">⏳ Buffering…</div>}
       {error && <div className="fspError" role="alert"><strong>Playback issue</strong><span>{error}</span><button onClick={retrySource}>Retry</button></div>}
       {!embed && !playing && !error && <button className="fspBigPlay" onClick={playPause} aria-label="Play video">▶</button>}
