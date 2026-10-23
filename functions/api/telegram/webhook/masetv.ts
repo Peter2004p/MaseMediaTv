@@ -79,9 +79,13 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
           const data = result as { response?: string; choices?: Array<{ message?: { content?: string } }> };
           answer = String(data.response || data.choices?.[0]?.message?.content || "").trim();
         }
-      } catch { /* Graceful fallback below. */ }
+      } catch (error) {
+        console.error("MaseNet Telegram AI inference failed:", error instanceof Error ? error.message : String(error));
+      }
+    } else {
+      console.error("MaseNet Telegram AI binding is missing from this deployment.");
     }
-    if (!answer) answer = "😅 Sorry, my AI brain is temporarily unavailable. Please try again shortly. You can still search the catalog with /search followed by a title.";
+    if (!answer) answer = "😅 Sorry, my AI service is temporarily unavailable. Please try again shortly. You can still search the catalog by sending /search followed by a title.";
     const finalText = answer.slice(0, 3900);
     let delivered = false;
     if (thinkingMessageId) {
