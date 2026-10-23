@@ -22,32 +22,32 @@ h2{font-size:1.05rem;margin:0 0 12px}.features{display:flex;flex-wrap:wrap;gap:8
 <body>
 <main>
   <div class="brand">Mase<span>Net</span> Player</div>
-  <p class="sub">MKV-enabled browser player prototype · mobile-first controls</p>
+  <p class="sub">MKV browser player · embedded tracks · mobile-first controls</p>
   <section class="panel">
     <h2>Open a streaming URL</h2>
     <label for="source">Direct media URL</label>
     <div class="row"><input id="source" type="url" placeholder="https://example.com/video.mkv" autocomplete="url"><button class="primary" id="open">Play URL</button></div>
     <div class="row" style="margin-top:10px"><label class="filelabel">Choose local video / MKV<input id="local" type="file" accept="video/*,.mkv,.mp4,.webm,.mov,.avi,.ts"></label><button id="clear">Clear player</button></div>
-    <p class="status" id="status" role="status" aria-live="polite">Loading MKV-capable playback engine…</p>
+    <p class="status" id="status" role="status" aria-live="polite">Loading player engine…</p>
   </section>
   <section class="panel">
-    <div class="stage"><movi-player id="player" engine="wasm" crossorigin="anonymous" controls playsinline></movi-player></div>
-    <div class="features" style="margin-top:12px"><span class="chip">MKV / MP4 / WebM</span><span class="chip">Embedded audio & subtitles</span><span class="chip">Seeking & speed</span><span class="chip">Fullscreen</span></div>
+    <div class="stage"><movi-player id="player" engine="wasm native" fallback="native" controls playsinline></movi-player></div>
+    <div class="features" style="margin-top:12px"><span class="chip">MKV / MP4 / WebM</span><span class="chip">Embedded audio & subtitles when supported</span><span class="chip">Seeking & speed</span><span class="chip">Fullscreen</span></div>
   </section>
   <section class="panel">
-    <h2>Important</h2>
-    <div class="warn">This player uses an MKV-capable engine, not the browser's basic video player. Online URLs still depend on the source server allowing cross-origin requests (CORS) and providing readable media bytes. A website cannot override a source server that blocks those requests or requires unsupported authentication.</div>
-    <p class="status">If an online link fails, try the same MKV using “Choose local video / MKV”. If local playback works but the URL fails, the problem is likely the remote host's access/response headers or an expired link—not the MKV file itself.</p>
+    <h2>How this version handles errors</h2>
+    <div class="warn">The WASM engine attempts MKV playback first. Version 0.4.1 can hand a source to native browser playback when the WASM fetch path fails. Native fallback may play a cross-origin file that lacks CORS headers, but native browser playback usually cannot decode MKV or expose its embedded tracks. The source server must allow browser-readable requests for full MKV track support.</div>
+    <p class="status">If the link still fails, it may be expired, require special headers, or the host may block browser requests. This lab does not proxy media or change your production website.</p>
   </section>
 </main>
 <script type="module">
-import "https://cdn.jsdelivr.net/npm/movi-player/dist/element.js";
+import "https://cdn.jsdelivr.net/npm/movi-player@0.4.1/dist/element.js";
 const player=document.querySelector("#player");
 const source=document.querySelector("#source");
 const status=document.querySelector("#status");
 let localObjectUrl=null;
 function setStatus(message){status.textContent=message}
-customElements.whenDefined("movi-player").then(()=>setStatus("MKV player engine ready. Choose a local MKV or paste a direct streaming URL."));
+customElements.whenDefined("movi-player").then(()=>setStatus("Player engine ready. Test a local MKV first, then an online URL."));
 function clearPreviousSource(){
   if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
   player.removeAttribute("src");
@@ -59,38 +59,26 @@ function loadUrl(raw){
   try{parsed=new URL(value)}catch{setStatus("That URL is not valid.");return}
   if(!["http:","https:"].includes(parsed.protocol)){setStatus("Use an HTTP or HTTPS media URL.");return}
   clearPreviousSource();
-  // The player API accepts a URL string. The WASM engine handles the MKV container.
   player.src=value;
-  setStatus("Loading MKV stream with the WASM engine… Waiting for the source to respond.");
+  setStatus("Trying MKV-capable playback. If the host blocks CORS, the player will attempt native browser fallback.");
 }
 document.querySelector("#open").addEventListener("click",()=>loadUrl(source.value));
 source.addEventListener("keydown",e=>{if(e.key==="Enter")loadUrl(source.value)});
 document.querySelector("#local").addEventListener("change",e=>{
  const file=e.target.files?.[0];if(!file)return;
  clearPreviousSource();
- try{
-   player.src=file;
-   setStatus("Opening local file: "+file.name+". The player should expose embedded audio/subtitle tracks in its settings menu when supported.");
- }catch(error){
-   localObjectUrl=URL.createObjectURL(file);
-   player.src=localObjectUrl;
-   setStatus("Opening local file through browser file URL: "+file.name);
- }
+ player.src=file;
+ setStatus("Opening local file: "+file.name+". Embedded tracks depend on the file's codec and the player engine.");
 });
-player.addEventListener("trackschange",()=>{
- try{
-   const audio=player.player?.getAudioTracks?.().length??0;
-   const subs=player.player?.getSubtitleTracks?.().length??0;
-   setStatus("Media loaded. Audio tracks: "+audio+" · Subtitle tracks: "+subs+". Open the player settings menu to select a track.");
- }catch{setStatus("Media track information updated. Open the player settings menu for audio and subtitles.")}
-});
+player.addEventListener("nativefallback",()=>setStatus("MKV engine could not read the remote source; trying browser-native playback. Native playback may not support MKV or embedded tracks."));
+player.addEventListener("loadedmetadata",()=>setStatus("Media metadata loaded. Start playback and check the player menu for available tracks."));
 player.addEventListener("error",event=>{
  const detail=event?.detail;
- setStatus("Playback error. For online links, verify the link is still valid and the host permits CORS/range reads. For local files, the codec/container may be unsupported."+(detail?.message?" Details: "+detail.message:""));
+ setStatus("Playback failed after available fallback. The source may be expired, require authentication, block browser requests, or use unsupported media."+(detail?.message?" Details: "+detail.message:""));
 });
 window.addEventListener("unhandledrejection",event=>{
  const reason=event?.reason;
- setStatus("Media engine request failed: "+(reason?.message||"network, CORS, source URL, or codec error")+". Try a local MKV to separate file compatibility from remote-host access.");
+ setStatus("Media engine request failed: "+(reason?.message||"network, CORS, source URL, or codec error")+". Try a local MKV to check whether the engine itself loads.");
 });
 document.querySelector("#clear").addEventListener("click",()=>{
  try{player.pause();player.removeAttribute("src");player.src=""}catch{}
