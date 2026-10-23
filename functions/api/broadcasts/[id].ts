@@ -34,7 +34,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
   const destination = ["website", "telegram", "both"].includes(String(body.destination)) ? String(body.destination) : String(existing.target || "website");
   const expiresAt = body.expiresAt === null || body.expiresAt === "" ? null : typeof body.expiresAt === "string" ? body.expiresAt : existing.expires_at as string | null;
   if (!title) return json({ error: "A broadcast title is required." }, 400);
-  if (!mediaUrl || !/^https:\\/\\//i.test(mediaUrl)) return json({ error: "A valid HTTPS media URL is required." }, 400);
+  if (!mediaUrl || !mediaUrl.startsWith("https://")) return json({ error: "A valid HTTPS media URL is required." }, 400);
   const previous = unpack(String(existing.description || ""), title);
   const description = typeof body.caption === "string" ? body.caption : typeof body.description === "string" ? body.description : previous.description;
   const heading = typeof body.heading === "string" ? body.heading.trim() : previous.heading;
