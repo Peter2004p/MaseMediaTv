@@ -115,7 +115,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     }
   }
 
-  const fallback = /hello|hi\\b|hey\\b|good morning|good evening/i.test(message)
+  const fallback = /hello|hi\b|hey\b|good morning|good evening/i.test(message)
     ? "Hi! I’m MaseNet Assistant. I can help you find movies and dramas, locate episodes, explain how to use the site, or help with playback problems. What would you like to do?"
     : /subtitle|caption/i.test(message)
       ? "Open a title, start the episode, then tap Subtitles. Browser-playable WebVTT/HLS tracks can be selected there. Some VLC-only embedded formats are not readable by web browsers and need a compatible subtitle track."
