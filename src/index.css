@@ -449,3 +449,45 @@ button,a,input,textarea,select{touch-action:manipulation}
 @media(prefers-reduced-motion:reduce){
  .aiDock,.aiDock *,.aiDockHalo{animation:none!important;transition:none!important}
 }
+
+
+/* MaseNet Assistant — iOS Telegram-inspired chat dashboard */
+.aiPanel{min-height:0;height:100%;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:25px;background:linear-gradient(180deg,rgba(21,28,42,.97),rgba(10,14,24,.98));box-shadow:0 24px 65px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.08);backdrop-filter:blur(24px)}
+.ai{position:relative;min-height:0;height:100%;gap:0;padding:0 12px 10px;background:radial-gradient(ellipse at 12% 42%,rgba(58,104,151,.12),transparent 46%),radial-gradient(ellipse at 92% 75%,rgba(38,88,130,.1),transparent 42%),linear-gradient(180deg,#111a29 0%,#0c1420 100%);border-radius:inherit;overflow:hidden}
+.ai:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;background-image:radial-gradient(circle at 20% 20%,rgba(151,193,228,.18) 0 1px,transparent 1.5px),radial-gradient(circle at 75% 65%,rgba(151,193,228,.13) 0 1px,transparent 1.5px);background-size:38px 38px,53px 53px;mask-image:linear-gradient(180deg,transparent,#000 20%,#000 80%,transparent)}
+.ai>*{position:relative;z-index:1}
+.aiHeader{flex:0 0 auto;display:flex;align-items:center;gap:9px;margin:0 -12px;padding:12px 13px;background:rgba(24,36,53,.96);border-bottom:1px solid rgba(255,255,255,.075);box-shadow:0 5px 18px rgba(0,0,0,.12)}
+.aiBack{display:grid;place-items:center;flex:0 0 30px;width:30px;height:34px;padding:0;border:0;border-radius:10px;background:transparent;color:#65b9ef}
+.aiBack:active{background:rgba(255,255,255,.08)}
+.aiAvatar{position:relative;flex:0 0 40px;width:40px;height:40px;border-radius:50%;background:linear-gradient(145deg,#5fc9ff,#2189ce 58%,#1a5b9b);color:#fff;border:1px solid rgba(255,255,255,.3);box-shadow:0 4px 15px rgba(24,143,214,.22);display:grid;place-items:center}
+.aiAvatar i{position:absolute;right:0;bottom:0;width:10px;height:10px;border:2px solid #182435;border-radius:50%;background:#48d89b}
+.aiHeader .aiHeaderIdentity{min-width:0;flex:1;display:grid;gap:4px}
+.aiHeader .aiHeaderIdentity b{font-size:14px;letter-spacing:-.02em;color:#f5f8fc;font-weight:750}
+.aiHeader .aiHeaderIdentity small{display:flex;align-items:center;gap:5px;color:#77c7f3;font-size:10px}
+.aiHeader .aiHeaderIdentity small i{width:5px;height:5px;border-radius:50%;background:#47d99b;box-shadow:0 0 7px #47d99b}
+.aiCustomize{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.055);color:#a8c7df}
+.aiStyleMenu{position:absolute;z-index:8;top:61px;right:10px;width:min(230px,calc(100% - 24px));padding:8px;border:1px solid rgba(255,255,255,.13);border-radius:16px;background:rgba(21,31,46,.98);box-shadow:0 16px 45px rgba(0,0,0,.4);backdrop-filter:blur(20px)}
+.aiMessages{position:relative;flex:1 1 auto;min-height:120px;max-height:none;gap:10px;padding:16px 2px 12px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(137,176,206,.25) transparent}
+.aiWelcome{max-width:250px;margin:auto;padding:15px 18px;border:1px solid rgba(255,255,255,.09);border-radius:19px;background:rgba(23,38,53,.78);color:#d4e0ed;box-shadow:0 10px 26px rgba(0,0,0,.12);font-size:12px;line-height:1.55}
+.aiWelcome b{font-size:15px;color:#fff}
+.aiBubble{position:relative;max-width:86%;padding:9px 12px 7px;border:1px solid rgba(255,255,255,.045);border-radius:17px;gap:5px;font-size:13px;line-height:1.48;overflow-wrap:anywhere;box-shadow:0 3px 9px rgba(0,0,0,.1);animation:telegramMessageIn .2s cubic-bezier(.22,1,.36,1) both}
+.aiBubble.user{align-self:flex-end;background:linear-gradient(145deg,#299edb,#2088c7);color:#fff;border-color:rgba(118,207,255,.2);border-bottom-right-radius:5px}
+.aiBubble.assistant{align-self:flex-start;background:linear-gradient(145deg,rgba(39,54,70,.98),rgba(29,43,58,.98));color:#eef5fb;border-color:rgba(255,255,255,.055);border-bottom-left-radius:5px}
+.aiBubble time{font-size:9px;line-height:1;text-align:right;color:rgba(230,242,252,.66);font-variant-numeric:tabular-nums}
+.aiBubble.assistant time{color:#8fa9bd}
+.aiSpeak{justify-self:start;display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid rgba(151,197,226,.16);border-radius:999px;background:rgba(255,255,255,.055);color:#b9dcf4;font-size:10px}
+.aiTyping{align-self:flex-start;background:#263849;border:1px solid rgba(255,255,255,.06);border-radius:17px 17px 17px 5px;padding:11px 13px}
+.aiTyping i{width:6px;height:6px;background:#9abbd3}
+.aiAttachment{margin-top:6px;border:1px solid rgba(109,188,235,.18);border-radius:12px;background:rgba(39,145,207,.12);color:#d9efff}
+.aiComposer{flex:0 0 auto;display:flex;align-items:center;gap:5px;margin-top:5px;padding:5px 6px;border:1px solid rgba(167,200,225,.15);border-radius:25px;background:rgba(28,42,57,.96);box-shadow:0 7px 22px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.035)}
+.aiAttach,.aiVoice{flex:0 0 33px;width:33px;height:34px;border:0;border-radius:50%;display:grid;place-items:center;color:#8db8d5;background:transparent}
+.aiVoice.listening{color:#fff;background:#df5d6b;box-shadow:0 0 0 4px rgba(223,93,107,.12)}
+.aiComposer input[type=text],.aiComposer>input{font-size:13px;padding:9px 5px;color:#f3f8fd}
+.aiComposer input::placeholder{color:#8ba0b4}
+.aiSend{flex:0 0 35px;width:35px;height:35px;border-radius:50%;background:linear-gradient(145deg,#42b9f4,#1686ca);color:white;box-shadow:0 4px 12px rgba(23,148,214,.22)}
+.aiSend:disabled{opacity:.48;box-shadow:none}
+.aiHint{flex:0 0 auto;color:#71899d;font-size:9px;line-height:1.4;padding:7px 5px 0;text-align:center}
+.aiGlass .aiBubble.user{background:linear-gradient(145deg,#299edb,#2088c7);color:#fff}
+@keyframes telegramMessageIn{from{opacity:0;transform:translateY(5px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:560px){.aiPanel{border-radius:22px}.ai{padding:0 9px 8px}.aiHeader{margin:0 -9px;padding:10px 8px;gap:6px}.aiBack{flex-basis:25px;width:25px}.aiAvatar{flex-basis:37px;width:37px;height:37px}.aiHeader .aiHeaderIdentity b{font-size:13px}.aiMessages{padding:13px 1px 10px}.aiBubble{max-width:90%;font-size:13px}.aiComposer{gap:3px;padding:4px}.aiAttach,.aiVoice{flex-basis:30px;width:30px;height:32px}.aiSend{flex-basis:33px;width:33px;height:33px}.aiHint{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.aiBubble{animation:none!important}.aiTyping i{animation:none!important}}
