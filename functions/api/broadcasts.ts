@@ -1,6 +1,6 @@
 import { Env, json, requireAdmin } from "./auth/_shared";
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
-  const rows = await env.DB.prepare("SELECT id,title,description,media_url,target,expires_at,created_at FROM broadcasts ORDER BY created_at DESC").all<Record<string,unknown>>();
+  const rows = await env.DB.prepare("SELECT id,title,description,media_url,target,expires_at,created_at FROM broadcasts ORDER BY created_at DESC, rowid DESC").all<Record<string,unknown>>();
   const posts = (rows.results || []).map(r => {
     const raw=String(r.description||""); let meta:Record<string,unknown>={}; let description=raw; let heading=String(r.title||"");
     const metaMarker="[[MASETNET_BROADCAST_META]]";
