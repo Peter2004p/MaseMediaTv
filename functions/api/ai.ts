@@ -13,10 +13,16 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const message = String(body.message || "").trim().slice(0, 2000);
   if (!message) return json({ text: "Tell me what you would like help with." });
 
-  const rows = await env.DB.prepare(
-    "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 100"
-  ).all<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
-  const titles = rows.results || [];
+  // A catalog/schema mismatch should never crash the entire assistant.
+  let titles: Array<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}> = [];
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 100"
+    ).all<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
+    titles = rows.results || [];
+  } catch (error) {
+    console.error("MaseNet AI catalogue lookup failed", error instanceof Error ? error.message : "unknown error");
+  }
   const q = message.toLowerCase();
 
   if (/recommend|available|library|drama|movie|search|find|episode/.test(q)) {
@@ -109,9 +115,16 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     }
   }
 
-  return json({
-    text: env.AI
-      ? "I'm having trouble reaching the AI service right now. You can still search the titles currently saved in the MaseNet library."
-      : "I'm the MaseNet assistant on the Cloudflare migration preview. Catalogue search is available, but full AI replies are not configured yet."
-  });
+  const fallback = /hello|hi\\b|hey\\b|good morning|good evening/i.test(message)
+    ? "Hi! I’m MaseNet Assistant. I can help you find movies and dramas, locate episodes, explain how to use the site, or help with playback problems. What would you like to do?"
+    : /subtitle|caption/i.test(message)
+      ? "Open a title, start the episode, then tap Subtitles. Browser-playable WebVTT/HLS tracks can be selected there. Some VLC-only embedded formats are not readable by web browsers and need a compatible subtitle track."
+      : /play|video|buffer|stream|reels/i.test(message)
+        ? "For playback, open the title page and choose an episode. If it fails, try another quality or refresh the page. Reels uses the same stream links, so a source must be browser-compatible MP4 or HLS; a VLC-only codec may not play in a browser."
+        : /custom|theme|appearance|billboard|broadcast/i.test(message)
+          ? "You can change the site theme from Customize. Admins can edit the billboard in Admin → Broadcasts; publishing a new website broadcast replaces the current homepage billboard."
+          : titles.length
+            ? "I can help with the MaseNet library, playback, subtitles, Reels, themes, and site navigation. Tell me the title or task and I’ll help."
+            : "I’m MaseNet Assistant. I can help with playback, subtitles, Reels, themes, and navigation. The current Cloudflare library has no titles available to search yet.";
+  return json({ text: fallback });
 };
