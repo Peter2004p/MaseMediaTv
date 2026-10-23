@@ -6,7 +6,7 @@ function unpack(raw: string, title: string) {
     const split = raw.indexOf("\\n");
     let meta: Record<string, unknown> = {};
     try { meta = JSON.parse(raw.slice(META.length, split >= 0 ? split : undefined)) as Record<string, unknown>; } catch {}
-    return { meta, description: split >= 0 ? raw.slice(split + 1) : "", heading: String(meta.heading || title) };
+    return { meta, description: split >= 0 ? raw.slice(split + 2) : "", heading: String(meta.heading || title) };
   }
   const marker = "[[MASETNET_HEADING]]";
   const at = raw.indexOf(marker);
