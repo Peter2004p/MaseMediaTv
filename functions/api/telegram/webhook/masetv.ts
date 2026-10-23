@@ -1,6 +1,6 @@
 import { json } from "../../auth/_shared";
 
-interface Env { DB: D1Database; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; }
+interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; }
 type Episode = { title?: string; season?: number | string; episode?: number | string; name?: string };
 type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; year?: number | string; description?: string; episodes?: Episode[] };
 
@@ -19,6 +19,36 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const chatId = msg?.chat?.id;
   const incoming = String(msg?.text || "").trim();
   if (!chatId || !incoming) return json({ ok: true });
+
+  const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
+  const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
+  const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim();
+  const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
+
+  if (["/help", "/commands"].includes(command)) {
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: "MaseNet Assistant\\n\\nSend a movie/drama/episode name to search.\\n/search title — search the catalog.\\n/ai question — ask the AI assistant.\\n/start — welcome message.", ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }) });
+    return sent.ok ? json({ ok: true }) : json({ ok: false, error: "Telegram could not deliver the help reply." }, 502);
+  }
+
+  if (command === "/ai" || command === "/ask") {
+    const prompt = commandText || "Introduce yourself as the MaseNet Telegram AI assistant.";
+    let answer = "";
+    if (env.AI) {
+      try {
+        const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", { messages: [
+          { role: "system", content: "You are MaseNet's friendly Telegram AI assistant. Help with movie/drama discovery, episode search instructions, and general questions. Never claim catalog availability unless confirmed by search. Never reveal secrets or private admin data. Be concise and safe." },
+          { role: "user", content: prompt.slice(0, 3000) }
+        ], max_tokens: 700 });
+        if (result && typeof result === "object") {
+          const data = result as { response?: string; choices?: Array<{ message?: { content?: string } }> };
+          answer = String(data.response || data.choices?.[0]?.message?.content || "").trim();
+        }
+      } catch { /* Graceful fallback below. */ }
+    }
+    if (!answer) answer = "I'm MaseNet's assistant. Send a title to search movies, dramas, and episodes, or use /search title. The AI service is temporarily unavailable; catalog search still works.";
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: answer.slice(0, 3900), disable_web_page_preview: true, ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }) });
+    return sent.ok ? json({ ok: true }) : json({ ok: false, error: "Telegram could not deliver the AI reply." }, 502);
+  }
 
   const query = incoming.replace(/^\/start(?:\s+\S+)?/i, "").replace(/^\/search\s*/i, "").trim();
   let reply = "Welcome to MaseTv! Send a movie, drama, or episode name to search the library.";
@@ -60,10 +90,6 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       : "I couldn't find that movie, drama, or episode in the MaseTv library yet. Try a shorter title or check again later.";
   }
 
-  const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim();
-  const replyMarkup = miniAppUrl.startsWith("https://")
-    ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] }
-    : undefined;
   const send = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
     method: "POST",
     headers: { "content-type": "application/json" },
