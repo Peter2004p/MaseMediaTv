@@ -732,3 +732,8 @@ button,a,input,textarea,select{touch-action:manipulation}
 .homepageBroadcastAction{padding:11px 17px;background:linear-gradient(135deg,#f4dfa4,#d5ad5d);color:#20180b;border:0;box-shadow:0 5px 18px #0003;font-weight:850}
 @media(max-width:620px){.homepageBroadcast{grid-template-columns:minmax(0,1fr) 34%;min-height:148px}.homepageBroadcast.size-large{grid-template-columns:minmax(0,1fr) 32%;min-height:176px}.homepageBroadcastCopy{padding:15px 13px}.homepageBroadcast h2{font-size:20px}.homepageBroadcast p{font-size:11px;line-height:1.4}.homepageBroadcastMedia,.homepageBroadcastVideo{max-height:230px}.homepageBroadcastAction{padding:8px 11px;font-size:10px}}
 @media(prefers-reduced-motion:reduce){.app .aiSuggestionBubble,.app .aiSuggestionOrb{animation:none!important}.homepageBroadcast{transition:none!important}}
+
+/* The shared player includes its own control strip; never crop it inside a 16:9-only wrapper. */
+.fbReelMedia{aspect-ratio:auto!important;overflow:visible!important;align-self:start;min-width:0}
+.fbReelMedia>.flootStylePlayer{width:100%;max-width:100%;margin:0}
+.fbReelMedia .flootStyleFrame{aspect-ratio:16/9}
