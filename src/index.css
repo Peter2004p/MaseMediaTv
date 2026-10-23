@@ -678,3 +678,11 @@ button,a,input,textarea,select{touch-action:manipulation}
 .broadcastItemActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.broadcastItemActions button{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:8px 11px}.broadcastItemActions .danger{color:#ff8c9a;border-color:rgba(255,90,115,.25)}
 @media(max-width:600px){.fbReelsTop{padding:0 10px}.fbReel{height:calc(100dvh - 58px);min-height:430px}.fbReelVideo{object-fit:cover}.fbReelInfo{left:14px;right:72px;bottom:24px;gap:8px}.fbReelActions{right:8px;bottom:72px;gap:17px}.fbReelActions button span{font-size:29px}.fbReelOpen{padding:10px 12px}}
 @media(prefers-reduced-motion:reduce){.broadcastDots button,.fbReelBottomProgress span{transition:none}}
+
+/* Broadcast palette presets */
+.homepageBroadcast.theme-iqiyi,.billboardStudioPreview.theme-iqiyi{background:linear-gradient(118deg,rgba(5,42,32,.98),rgba(6,93,63,.94) 55%,rgba(18,45,39,.96));border-color:rgba(81,240,170,.35)}
+.homepageBroadcast.theme-iqiyi:before,.billboardStudioPreview.theme-iqiyi:before{background:radial-gradient(ellipse at 0 0,rgba(67,255,167,.26),transparent 52%),linear-gradient(110deg,transparent 25%,rgba(255,255,255,.08),transparent 75%)}
+.homepageBroadcast.theme-gold,.billboardStudioPreview.theme-gold{background:linear-gradient(118deg,#18140c,#59401b 55%,#19140d);border-color:rgba(239,193,113,.42)}
+.homepageBroadcast.theme-ocean,.billboardStudioPreview.theme-ocean{background:linear-gradient(118deg,#081c35,#135a78 55%,#10233e);border-color:rgba(90,202,255,.36)}
+.homepageBroadcast.theme-neon,.billboardStudioPreview.theme-neon{background:linear-gradient(118deg,#1d0b35,#51216f 55%,#160e31);border-color:rgba(205,125,255,.38)}
+.homepageBroadcast.theme-rose,.billboardStudioPreview.theme-rose{background:linear-gradient(118deg,#300d20,#84284a 55%,#27112b);border-color:rgba(255,138,184,.36)}
