@@ -77,7 +77,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
 
   return <div className="flootStylePlayer">
     <div className="flootStyleFrame">
-      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls={telegramWebView}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
+      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {buffering && <div className="fspStatus">⏳ Buffering…</div>}
       {error && <div className="fspError" role="alert"><strong>Playback issue</strong><span>{error}</span><button onClick={retrySource}>Retry</button></div>}
       {!embed && !playing && !error && <button className="fspBigPlay" onClick={playPause} aria-label="Play video">▶</button>}
