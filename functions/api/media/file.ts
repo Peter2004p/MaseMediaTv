@@ -7,7 +7,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
  const ifRange=request.headers.get("if-range");
  const meta=await env.MEDIA_BUCKET.head(path);
  if(!meta) return new Response("Media not found",{status:404});
- const etag='"'+meta.httpEtag+'"';
+ const etag=meta.httpEtag;
  const headers=new Headers();
  meta.writeHttpMetadata(headers);
  headers.set("etag",etag);
@@ -17,7 +17,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
  const useRange=!!rangeHeader && (!ifRange || ifRange===etag || ifRange===meta.httpEtag);
  if(useRange) {
   const match=/^bytes=(\d*)-(\d*)$/.exec(rangeHeader!.trim());
-  if(!match || rangeHeader!.includes(",")) return new Response(null,{status:416,headers:{"content-range":"bytes */"+meta.size,"accept-ranges":"bytes"}});
+  if(!match || (!match[1] && !match[2]) || rangeHeader!.includes(",")) return new Response(null,{status:416,headers:{"content-range":"bytes */"+meta.size,"accept-ranges":"bytes"}});
   const startText=match[1],endText=match[2];
   let start:number,end:number;
   if(!startText && endText) {
