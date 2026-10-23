@@ -38,9 +38,27 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  let upstream:Response;
  try { upstream=await fetch(upstreamUrl,{headers,redirect:"follow"}); } catch { return json({error:"The video source could not be reached"},502); }
  if(!upstream.ok && upstream.status!==206) return json({error:"The video source returned HTTP "+upstream.status},502);
- const contentType=upstream.headers.get("content-type")||"";
- const isPlaylist=/mpegurl|vnd\.apple\.mpegurl/i.test(contentType)||/\.m3u8(?:$|[?#])/i.test(upstreamUrl)||/\.m3u8(?:$|[?#])/i.test(upstream.url||"");
- if(isPlaylist) {
+ let contentType=upstream.headers.get("content-type")||"";
+ let detectedPlaylist=/mpegurl|vnd\.apple\.mpegurl/i.test(contentType)||/\.m3u8(?:$|[?#])/i.test(upstreamUrl)||/\.m3u8(?:$|[?#])/i.test(upstream.url||"");
+ // Some streaming providers expose an HLS playlist or MP4 through an extensionless
+ // endpoint and label it as application/octet-stream. Peek at a bounded clone of the
+ // response so we can identify the container without buffering the actual video.
+ if(!detectedPlaylist && !request.headers.has("range") && /^(?:application\/octet-stream|binary\/octet-stream|text\/plain|application\/x-download)(?:\s*;|$)/i.test(contentType) && upstream.body) {
+  try {
+   const reader=upstream.clone().body?.getReader();
+   if(reader) {
+    const first=await reader.read();
+    const bytes=first.value ? Array.from(first.value.slice(0,4096)) : [];
+    await reader.cancel();
+    const prefix=new TextDecoder().decode(new Uint8Array(bytes)).replace(/^\\uFEFF/,"").trimStart();
+    if(prefix.startsWith("#EXTM3U")) { detectedPlaylist=true; contentType="application/vnd.apple.mpegurl"; }
+    else if(bytes.length>=8 && String.fromCharCode(...bytes.slice(4,8))==="ftyp") contentType="video/mp4";
+    else if(bytes.length>=4 && bytes[0]===0x1a && bytes[1]===0x45 && bytes[2]===0xdf && bytes[3]===0xa3) contentType="video/x-matroska";
+    else if(bytes.length>=4 && bytes[0]===0x47 && bytes[188]===0x47) contentType="video/mp2t";
+   }
+  } catch { /* Keep the upstream content type if sniffing is unavailable. */ }
+ }
+ if(detectedPlaylist) {
   // Relative HLS segment URLs must resolve against the final URL after redirects,
   // not the original URL entered by the admin.
   const playlistBase=upstream.url || upstreamUrl;
@@ -58,7 +76,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   return new Response(rewritten,{status:200,headers:{"content-type":"application/vnd.apple.mpegurl","cache-control":"no-store","access-control-allow-origin":"*","x-content-type-options":"nosniff"}});
  }
  const outHeaders=new Headers();
- for(const key of ["content-type","content-length","content-range","accept-ranges","last-modified","etag"]) { const value=upstream.headers.get(key); if(value) outHeaders.set(key,value); }
+ for(const key of ["content-length","content-range","accept-ranges","last-modified","etag"]) { const value=upstream.headers.get(key); if(value) outHeaders.set(key,value); } outHeaders.set("content-type",contentType || "application/octet-stream");
  outHeaders.set("cache-control","no-store"); outHeaders.set("access-control-allow-origin","*"); outHeaders.set("x-content-type-options","nosniff");
  return new Response(upstream.body,{status:upstream.status,headers:outHeaders});
 };
