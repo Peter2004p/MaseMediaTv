@@ -28,7 +28,11 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
   }, [episode]);
   const selected = variants.find(v => v.quality === quality) || variants[0];
-  const rawSrc = selected?.streamUrl || episode.streamUrl || ''; const embed = embedFor(rawSrc); const tracks = selected?.subtitleTracks || episode.subtitleTracks || [];\n  const isHlsSource = /\\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');\n  const src = isHlsSource ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc) : rawSrc;
+  const rawSrc = selected?.streamUrl || episode.streamUrl || ''; 
+  const embed = embedFor(rawSrc);
+  const tracks = selected?.subtitleTracks || episode.subtitleTracks || [];
+  const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');
+  const src = isHlsSource ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc) : rawSrc;
 
   useEffect(() => { setQuality(''); setSubtitle('off'); }, [episode.id]);
 
