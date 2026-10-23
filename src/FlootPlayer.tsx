@@ -20,7 +20,7 @@ const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value /
 
 export default function FlootPlayer({ episode, onProgress }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null);
-  const [quality, setQuality] = useState(''); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
+  const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1); const [speed, setSpeed] = useState(1); const [retry, setRetry] = useState(0);
   const variants = useMemo<Variant[]>(() => {
@@ -28,9 +28,9 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
   }, [episode]);
   const selected = variants.find(v => v.quality === quality) || variants[0];
-  const src = selected?.streamUrl || episode.streamUrl || ''; const embed = embedFor(src); const tracks = selected?.subtitleTracks || episode.subtitleTracks || [];
+  const rawSrc = selected?.streamUrl || episode.streamUrl || ''; const embed = embedFor(rawSrc); const tracks = selected?.subtitleTracks || episode.subtitleTracks || [];\n  const isHlsSource = /\\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');\n  const src = isHlsSource ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc) : rawSrc;
 
-  useEffect(() => { setSelectedQuality(''); setSubtitle('off'); }, [episode.id]);
+  useEffect(() => { setQuality(''); setSubtitle('off'); }, [episode.id]);
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
@@ -44,7 +44,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
       hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { setBuffering(false); setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Stream network error. Tap Retry to reconnect.' : 'The stream format could not be decoded. Try another quality.'); hls.destroy(); hlsRef.current = null; } });
     } else { video.src = src; video.load(); }
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
-  }, [src, embed, retry]);
+  }, [src, rawSrc, embed, isHlsSource, selected?.mimeType, episode.mimeType, retry]);
 
   useEffect(() => {
     const v = videoRef.current; if (!v) return;
