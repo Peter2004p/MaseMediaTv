@@ -16,7 +16,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
  headers.set("x-content-type-options","nosniff");
  const useRange=!!rangeHeader && (!ifRange || ifRange===etag || ifRange===meta.httpEtag);
  if(useRange) {
-  const match=/^bytes=(\\d*)-(\\d*)$/.exec(rangeHeader!.trim());
+  const match=/^bytes=(\d*)-(\d*)$/.exec(rangeHeader!.trim());
   if(!match || rangeHeader!.includes(",")) return new Response(null,{status:416,headers:{"content-range":"bytes */"+meta.size,"accept-ranges":"bytes"}});
   const startText=match[1],endText=match[2];
   let start:number,end:number;
