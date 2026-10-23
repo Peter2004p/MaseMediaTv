@@ -491,3 +491,80 @@ button,a,input,textarea,select{touch-action:manipulation}
 @keyframes telegramMessageIn{from{opacity:0;transform:translateY(5px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:560px){.aiPanel{border-radius:22px}.ai{padding:0 9px 8px}.aiHeader{margin:0 -9px;padding:10px 8px;gap:6px}.aiBack{flex-basis:25px;width:25px}.aiAvatar{flex-basis:37px;width:37px;height:37px}.aiHeader .aiHeaderIdentity b{font-size:13px}.aiMessages{padding:13px 1px 10px}.aiBubble{max-width:90%;font-size:13px}.aiComposer{gap:3px;padding:4px}.aiAttach,.aiVoice{flex-basis:30px;width:30px;height:32px}.aiSend{flex-basis:33px;width:33px;height:33px}.aiHint{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.aiBubble{animation:none!important}.aiTyping i{animation:none!important}}
+
+
+/* Quiet AI launcher + polished iOS Messages-inspired assistant */
+.aiDock{
+  position:fixed;z-index:35;right:16px;left:auto;top:auto;bottom:calc(16px + env(safe-area-inset-bottom));
+  width:50px;height:50px;min-width:50px;padding:0;transform:none;display:grid;place-items:center;
+  border-radius:50%;border:1px solid rgba(255,255,255,.26);
+  background:linear-gradient(145deg,rgba(53,164,255,.98),rgba(22,104,239,.98) 58%,rgba(90,73,226,.98));
+  color:#fff;box-shadow:0 7px 22px rgba(30,115,238,.28),inset 0 1px rgba(255,255,255,.36);
+  overflow:visible;touch-action:manipulation;transition:transform .18s ease,box-shadow .18s ease;
+}
+.aiDock:hover{width:50px;transform:translateY(-2px);box-shadow:0 9px 26px rgba(30,115,238,.34),inset 0 1px rgba(255,255,255,.36)}
+.aiDock:active{transform:scale(.94)}
+.aiDock::before,.aiDockHalo{display:none!important}
+.aiDock .aiCartoon{width:46px;height:46px;flex:0 0 46px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#fff;box-shadow:none;animation:none}
+.aiDock .aiCartoon svg{width:23px;height:23px;stroke-width:2.1}
+.aiDockOnline{position:absolute;right:0;bottom:0;width:12px;height:12px;border-radius:50%;background:#35d69a;border:2px solid #101522;box-shadow:0 0 0 1px rgba(255,255,255,.15)}
+.aiDockIdentity,.aiDockArrow,.aiBubbleSpark,.aiDockHint{display:none!important}
+.aiDock:focus-visible{outline:2px solid #91caff;outline-offset:3px}
+.aiSide{
+  width:min(430px,calc(100vw - 28px));height:min(760px,calc(100dvh - 28px));
+  min-height:360px;margin:auto 14px auto 0;padding:0;overflow:hidden;
+  border:1px solid rgba(255,255,255,.14);border-radius:29px;
+  background:#101827;box-shadow:0 26px 90px rgba(0,0,0,.52),inset 0 1px rgba(255,255,255,.12);
+}
+.aiSide>.sideHead{display:none}
+.backdrop:has(.aiSide){align-items:center;background:rgba(4,8,17,.48);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.aiSide .aiPanel{height:100%;min-height:0;border:0;border-radius:inherit;box-shadow:none;background:#101827}
+.aiSide .ai{height:100%;min-height:0;padding:0 15px 12px;border-radius:inherit;
+  background:radial-gradient(ellipse at 5% 0%,rgba(77,154,255,.2),transparent 38%),
+             radial-gradient(ellipse at 100% 55%,rgba(120,95,255,.11),transparent 42%),
+             linear-gradient(180deg,#182438 0%,#111a2a 48%,#0d1523 100%);
+}
+.aiSide .ai:before{opacity:.15;background-size:42px 42px,61px 61px}
+.aiSide .aiHeader{margin:0 -15px;padding:15px 16px;background:rgba(21,32,50,.94);border-bottom:1px solid rgba(255,255,255,.085);box-shadow:0 8px 24px rgba(0,0,0,.13)}
+.aiSide .aiBack{color:#6fc4ff}
+.aiSide .aiAvatar{width:43px;height:43px;flex-basis:43px;background:linear-gradient(145deg,#8bd8ff,#3699ff 50%,#6657e8);box-shadow:0 5px 18px rgba(59,146,255,.3)}
+.aiSide .aiHeader .aiHeaderIdentity b{font-size:15px;letter-spacing:-.035em}
+.aiSide .aiHeader .aiHeaderIdentity small{font-size:11px;color:#83d8b6}
+.aiSide .aiMessages{padding:22px 3px 18px;gap:13px;min-height:0;max-height:none;scrollbar-width:thin;scrollbar-color:rgba(139,177,225,.25) transparent}
+.aiSide .aiWelcome{max-width:280px;margin:24px auto;padding:20px 19px;border-radius:23px;
+  background:linear-gradient(145deg,rgba(48,70,105,.72),rgba(27,43,68,.72));
+  border:1px solid rgba(182,211,255,.13);box-shadow:0 14px 35px rgba(0,0,0,.17),inset 0 1px rgba(255,255,255,.07);
+  color:#cbd8ec;text-align:center;font-size:13px;line-height:1.65}
+.aiSide .aiWelcome b{display:block;margin-bottom:7px;font-size:21px;letter-spacing:-.04em;color:#fff}
+.aiSide .aiBubble{max-width:88%;padding:11px 14px 8px;border-radius:20px;font-size:14px;line-height:1.5;box-shadow:0 5px 16px rgba(0,0,0,.12)}
+.aiSide .aiBubble.user{border-bottom-right-radius:7px;background:linear-gradient(135deg,#268cff,#1672e8 75%,#3868df);border-color:rgba(190,221,255,.18)}
+.aiSide .aiBubble.assistant{border-bottom-left-radius:7px;background:linear-gradient(145deg,#303e54,#253248);border-color:rgba(255,255,255,.075);color:#f2f6ff}
+.aiSide .aiBubble time{display:block;margin-top:4px;font-size:10px;color:rgba(239,246,255,.58)}
+.aiSide .aiSpeak{margin-top:3px;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.1);color:#a8d9ff}
+.aiSide .aiTyping{padding:12px 15px;border-radius:20px 20px 20px 7px;background:#2a3b53}
+.aiSide .aiComposer{margin-top:8px;padding:6px 7px;border-radius:27px;gap:5px;
+  border:1px solid rgba(175,201,238,.19);background:rgba(30,45,67,.96);
+  box-shadow:0 8px 24px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.05)}
+.aiSide .aiAttach,.aiSide .aiVoice{width:36px;height:36px;flex-basis:36px;color:#9bb8db}
+.aiSide .aiComposer>input{font-size:14px;min-width:0;color:#f7f9ff}
+.aiSide .aiComposer input::placeholder{color:#91a1bc}
+.aiSide .aiSend{width:38px;height:38px;flex-basis:38px;background:linear-gradient(145deg,#55c2ff,#2589f4);box-shadow:0 4px 14px rgba(41,139,255,.28)}
+.aiSide .aiHint{padding:9px 6px 0;font-size:10px;color:#7e91ad}
+.aiSide .aiStyleMenu{top:72px;right:12px;background:rgba(24,37,58,.98);border-color:rgba(190,215,255,.16)}
+.aiSide .aiAttachment{padding:8px 12px;border-radius:14px}
+@media(max-width:560px){
+  .aiDock{right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:46px;height:46px;min-width:46px}
+  .aiDock .aiCartoon{width:42px;height:42px;flex-basis:42px}
+  .aiSide{width:calc(100vw - 12px);height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 12px);min-height:0;margin:calc(env(safe-area-inset-top) + 6px) 6px calc(env(safe-area-inset-bottom) + 6px);border-radius:25px}
+  .aiSide .ai{padding:0 10px 9px}
+  .aiSide .aiHeader{margin:0 -10px;padding:12px 10px;gap:8px}
+  .aiSide .aiBack{flex-basis:29px;width:29px}
+  .aiSide .aiAvatar{width:40px;height:40px;flex-basis:40px}
+  .aiSide .aiMessages{padding:18px 1px 13px}
+  .aiSide .aiBubble{max-width:91%;font-size:14px}
+  .aiSide .aiComposer{margin-top:6px}
+}
+@media(prefers-reduced-motion:reduce){
+  .aiDock,.aiDock *{animation:none!important;transition:none!important}
+  .aiSide .aiBubble{animation:none!important}
+}
