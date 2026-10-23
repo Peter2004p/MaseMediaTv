@@ -15,10 +15,10 @@ export const api={
  put:<T=any>(path:string,body?:unknown)=>request<T>("PUT",path,body),
  delete:<T=any>(path:string)=>request<T>("DELETE",path),
 };
-/** Auth intentionally fails closed until Google OAuth/session endpoints are implemented. */
+/** Cookie-backed Google and Telegram authentication. */
 export const auth={
  getUser:async()=>{const r=await request<{user?:any}>("GET","/api/auth/me");return r.data?.user||null;},
- signIn:async():Promise<any>=>{window.location.assign("/api/auth/google");throw new Error("Redirecting to Google sign-in");},
+ signIn:async():Promise<any>=>{window.location.assign("/api/auth/google");return await new Promise<any>(()=>{});},
  signOut:async()=>{await request("POST","/api/auth/logout");},
 };
 /** Keep image resizing local; the backend must validate uploads and store them in R2. */
