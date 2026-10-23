@@ -30,7 +30,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
   const selected = variants.find(v => v.quality === quality) || variants[0];
   const rawSrc = selected?.streamUrl || episode.streamUrl || ''; 
   const embed = embedFor(rawSrc);
-  const tracks = selected?.subtitleTracks || episode.subtitleTracks || [];
+  const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => typeof (t.url || t.path) === 'string' && /^https?:\\/\\//i.test(String(t.url || t.path)));
   const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');
   const src = isHlsSource ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc) : rawSrc;
 
@@ -45,6 +45,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
       if (!Hls.isSupported()) { setError('This browser cannot play HLS streams. Try another quality or a direct MP4 URL.'); return; }
       const hls = new Hls({ enableWorker: true, backBufferLength: 30 }); hlsRef.current = hls;
       hls.loadSource(src); hls.attachMedia(video);
+      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => { if (hls.subtitleTracks.length && subtitle !== 'off') hls.subtitleTrack = Number(subtitle); });
       hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { setBuffering(false); setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Stream network error. Tap Retry to reconnect.' : 'The stream format could not be decoded. Try another quality.'); hls.destroy(); hlsRef.current = null; } });
     } else { video.src = src; video.load(); }
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
@@ -69,7 +70,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
 
   return <div className="flootStylePlayer">
     <div className="flootStyleFrame">
-      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls={false}>{tracks.map((t, i) => <track key={t.url + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
+      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls={false}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={String(t.url || t.path)} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {buffering && <div className="fspStatus">⏳ Buffering…</div>}
       {error && <div className="fspError" role="alert"><strong>Playback issue</strong><span>{error}</span><button onClick={retrySource}>Retry</button></div>}
       {!embed && !playing && !error && <button className="fspBigPlay" onClick={playPause} aria-label="Play video">▶</button>}
@@ -79,7 +80,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
       <input className="fspSeek" aria-label="Seek video" type="range" min={0} max={duration || 0} step="0.1" value={Math.min(time, duration || 0)} onChange={e => { const n = Number(e.target.value); if (videoRef.current) videoRef.current.currentTime = n; setTime(n); }} />
       <div className="fspRow fspOptions">
         {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
-        {tracks.length > 0 && <label>Subtitles <select defaultValue="off" onChange={e => { const v = videoRef.current; if (!v) return; Array.from(v.textTracks).forEach((t, i) => t.mode = e.target.value !== 'off' && String(i) === e.target.value ? 'showing' : 'disabled'); }}>{<option value="off">Off</option>}{tracks.map((t, i) => <option key={t.url + i} value={String(i)}>{t.label || t.lang || 'Subtitle ' + (i + 1)}</option>)}</select></label>}
+        {(tracks.length > 0 || (isHlsSource && (hlsRef.current?.subtitleTracks.length || 0) > 0)) && <label>Subtitles <select value={subtitle} onChange={e => { const value = e.target.value; setSubtitle(value); const v = videoRef.current; if (v) Array.from(v.textTracks).forEach((t, i) => { t.mode = value === 'ext-' + i ? 'showing' : 'disabled'; }); if (hlsRef.current && isHlsSource) hlsRef.current.subtitleTrack = value.startsWith('hls-') ? Number(value.slice(4)) : -1; }}>{<option value="off">Off</option>}{tracks.map((t, i) => <option key={(t.url || t.path || '') + i} value={'ext-' + i}>{t.label || t.lang || 'Subtitle ' + (i + 1)}</option>)}{(isHlsSource ? (hlsRef.current?.subtitleTracks || []) : []).map((t, i) => <option key={'hls-' + i} value={'hls-' + i}>{t.name || t.lang || 'HLS subtitle ' + (i + 1)}</option>)}</select></label>}
         <label>Speed <select value={speed} onChange={e => { const n = Number(e.target.value); setSpeed(n); if (videoRef.current) videoRef.current.playbackRate = n; }}><option value={0.5}>0.5×</option><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option><option value={1.5}>1.5×</option><option value={2}>2×</option></select></label>
         <label>Volume <input type="range" min={0} max={1} step={0.05} value={volume} onChange={e => setVolume(Number(e.target.value))}/></label>
       </div>
