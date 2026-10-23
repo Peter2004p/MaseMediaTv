@@ -21,7 +21,7 @@ const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value /
 export default function FlootPlayer({ episode, onProgress }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
-  const [error, setError] = useState(''); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
+  const [error, setError] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1); const [speed, setSpeed] = useState(1); const [retry, setRetry] = useState(0);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
@@ -38,14 +38,14 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
-    setError(''); setBuffering(false); setTime(0); setDuration(0); setPlaying(false);
+    setError(''); setHlsSubtitleTracks([]); setBuffering(false); setTime(0); setDuration(0); setPlaying(false);
     hlsRef.current?.destroy(); hlsRef.current = null;
     if (!src || embed) return;
     if (/\.m3u8(?:$|[?#])/i.test(src) && !video.canPlayType('application/vnd.apple.mpegurl')) {
       if (!Hls.isSupported()) { setError('This browser cannot play HLS streams. Try another quality or a direct MP4 URL.'); return; }
       const hls = new Hls({ enableWorker: true, backBufferLength: 30 }); hlsRef.current = hls;
       hls.loadSource(src); hls.attachMedia(video);
-      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => { if (hls.subtitleTracks.length && subtitle !== 'off') hls.subtitleTrack = Number(subtitle); });
+      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => { setHlsSubtitleTracks(hls.subtitleTracks.map(t => ({name:t.name,lang:t.lang}))); if (hls.subtitleTracks.length && subtitle.startsWith('hls-')) hls.subtitleTrack = Number(subtitle.slice(4)); });
       hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { setBuffering(false); setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Stream network error. Tap Retry to reconnect.' : 'The stream format could not be decoded. Try another quality.'); hls.destroy(); hlsRef.current = null; } });
     } else { video.src = src; video.load(); }
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
@@ -80,7 +80,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
       <input className="fspSeek" aria-label="Seek video" type="range" min={0} max={duration || 0} step="0.1" value={Math.min(time, duration || 0)} onChange={e => { const n = Number(e.target.value); if (videoRef.current) videoRef.current.currentTime = n; setTime(n); }} />
       <div className="fspRow fspOptions">
         {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
-        {(tracks.length > 0 || (isHlsSource && (hlsRef.current?.subtitleTracks.length || 0) > 0)) && <label>Subtitles <select value={subtitle} onChange={e => { const value = e.target.value; setSubtitle(value); const v = videoRef.current; if (v) Array.from(v.textTracks).forEach((t, i) => { t.mode = value === 'ext-' + i ? 'showing' : 'disabled'; }); if (hlsRef.current && isHlsSource) hlsRef.current.subtitleTrack = value.startsWith('hls-') ? Number(value.slice(4)) : -1; }}>{<option value="off">Off</option>}{tracks.map((t, i) => <option key={(t.url || t.path || '') + i} value={'ext-' + i}>{t.label || t.lang || 'Subtitle ' + (i + 1)}</option>)}{(isHlsSource ? (hlsRef.current?.subtitleTracks || []) : []).map((t, i) => <option key={'hls-' + i} value={'hls-' + i}>{t.name || t.lang || 'HLS subtitle ' + (i + 1)}</option>)}</select></label>}
+        {(tracks.length > 0 || (isHlsSource && hlsSubtitleTracks.length > 0)) && <label>Subtitles <select value={subtitle} onChange={e => { const value = e.target.value; setSubtitle(value); const v = videoRef.current; if (v) Array.from(v.textTracks).forEach((t, i) => { t.mode = value === 'ext-' + i ? 'showing' : 'disabled'; }); if (hlsRef.current && isHlsSource) hlsRef.current.subtitleTrack = value.startsWith('hls-') ? Number(value.slice(4)) : -1; }}>{<option value="off">Off</option>}{tracks.map((t, i) => <option key={(t.url || t.path || '') + i} value={'ext-' + i}>{t.label || t.lang || 'Subtitle ' + (i + 1)}</option>)}{(isHlsSource ? hlsSubtitleTracks : []).map((t, i) => <option key={'hls-' + i} value={'hls-' + i}>{t.name || t.lang || 'HLS subtitle ' + (i + 1)}</option>)}</select></label>}
         <label>Speed <select value={speed} onChange={e => { const n = Number(e.target.value); setSpeed(n); if (videoRef.current) videoRef.current.playbackRate = n; }}><option value={0.5}>0.5×</option><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option><option value={1.5}>1.5×</option><option value={2}>2×</option></select></label>
         <label>Volume <input type="range" min={0} max={1} step={0.05} value={volume} onChange={e => setVolume(Number(e.target.value))}/></label>
       </div>
