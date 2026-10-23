@@ -737,3 +737,38 @@ button,a,input,textarea,select{touch-action:manipulation}
 .fbReelMedia{aspect-ratio:auto!important;overflow:visible!important;align-self:start;min-width:0}
 .fbReelMedia>.flootStylePlayer{width:100%;max-width:100%;margin:0}
 .fbReelMedia .flootStyleFrame{aspect-ratio:16/9}
+
+/* TikTok-style MaseNet Reels feed */
+.ttReelsPage{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;overflow:hidden;background:#050609;color:#fff}
+.ttReelsTop{height:58px;min-height:58px;display:flex;align-items:center;gap:12px;padding:0 14px;background:rgba(7,8,12,.94);border-bottom:1px solid #ffffff14;z-index:5}
+.ttReelsTop>button{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border:1px solid #ffffff1c;border-radius:50%;background:#ffffff0d;color:#fff}
+.ttReelsTop>div{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
+.ttReelsTop>div b{font-size:15px;letter-spacing:-.02em}
+.ttReelsTop>div small{font-size:11px;color:#a9aab2}
+.ttReelsFeed{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;scroll-behavior:smooth;overscroll-behavior-y:contain;scrollbar-width:none;background:#050609}
+.ttReelsFeed::-webkit-scrollbar{display:none}
+.ttReelCard{position:relative;isolation:isolate;width:100%;height:calc(100dvh - 58px);min-height:calc(100svh - 58px);scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
+.ttReelVideo{position:absolute;inset:0;width:min(100%,520px);height:100%;margin:0 auto;background:#000;overflow:hidden}
+.ttReelVideo>.flootStylePlayer{width:100%;height:100%}
+.ttReelShade{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.16),transparent 24%,transparent 52%,rgba(0,0,0,.78) 100%)}
+.ttReelInfo{position:absolute;z-index:3;left:max(16px,calc((100% - 520px)/2 + 16px));right:84px;bottom:22px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:7px;text-shadow:0 2px 9px #000}
+.ttReelHandle{display:flex;align-items:center;gap:8px;max-width:100%;font-size:14px}
+.ttReelHandle>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ttReelLogo{width:29px;height:29px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(135deg,#f0d68e,#a87a27);color:#15110a;font-weight:900;text-shadow:none}
+.ttReelTag{font-size:10px;padding:4px 7px;border:1px solid #ffffff5c;border-radius:999px;background:#ffffff1a}
+.ttReelInfo p{margin:0;color:#f2f2f5;font-size:12px;line-height:1.45}
+.ttReelInfo>small{max-width:100%;font-size:12px;line-height:1.45;color:#e0e0e5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ttReelMore{display:inline-flex;align-items:center;gap:4px;padding:7px 11px;border:1px solid #ffffff45;border-radius:999px;background:#ffffff1b;color:#fff;font-size:11px;font-weight:700;backdrop-filter:blur(12px)}
+.ttReelActions{position:absolute;z-index:4;right:max(12px,calc((100% - 520px)/2 + 12px));bottom:94px;display:flex;flex-direction:column;align-items:center;gap:20px}
+.ttReelActions button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:48px;min-height:49px;padding:5px 2px;border:0;background:transparent;color:#fff;text-shadow:0 2px 8px #000}
+.ttReelActions button>span{font-size:29px;line-height:1.1;font-weight:700;filter:drop-shadow(0 2px 6px #0009)}
+.ttReelActions button small{font-size:10px;font-weight:700}
+.ttReelActions button.isLiked>span{color:#ff4e77}
+.ttReelTapHint{position:absolute;inset:0;z-index:2;display:grid;place-items:center;color:#fff;pointer-events:none;text-shadow:0 3px 15px #000}
+.ttReelsEmpty{width:min(440px,calc(100% - 36px));margin:auto;text-align:center;padding:30px 22px;border:1px solid #ffffff1c;border-radius:24px;background:#ffffff08}
+.ttReelsEmpty>div{margin:0 auto 12px;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:#d2ad60;color:#17120b;font-size:22px}
+.ttReelsEmpty h2{margin:8px 0;font-size:21px}
+.ttReelsEmpty p{color:#b6b7c0;font-size:13px;line-height:1.6}
+.ttReelsEmpty .primary{margin-top:8px}
+@media(min-width:700px){.ttReelsPage{background:#090a0e}.ttReelsTop{padding-left:calc((100% - 520px)/2 + 14px);padding-right:calc((100% - 520px)/2 + 14px)}.ttReelCard{width:min(100%,520px);margin:0 auto;border-left:1px solid #ffffff10;border-right:1px solid #ffffff10}.ttReelInfo{left:16px}.ttReelActions{right:12px}}
+@media(prefers-reduced-motion:reduce){.ttReelsFeed{scroll-behavior:auto}}
