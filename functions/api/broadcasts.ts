@@ -1,10 +1,10 @@
 import { Env, json, requireAdmin } from "./auth/_shared";
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
-  const rows = await env.DB.prepare("SELECT id,title,description,media_url,target,expires_at,created_at FROM broadcasts WHERE expires_at IS NULL OR expires_at > datetime('now') ORDER BY created_at DESC").all<Record<string,unknown>>();
+  const rows = await env.DB.prepare("SELECT id,title,description,media_url,target,expires_at,created_at FROM broadcasts ORDER BY created_at DESC").all<Record<string,unknown>>();
   const posts = (rows.results || []).map(r => {
     const raw=String(r.description||""); let meta:Record<string,unknown>={}; let description=raw; let heading=String(r.title||"");
     const metaMarker="[[MASETNET_BROADCAST_META]]";
-    if(raw.startsWith(metaMarker)){const split=raw.indexOf("\\n");try{meta=JSON.parse(raw.slice(metaMarker.length,split>=0?split:undefined)) as Record<string,unknown>}catch{} description=split>=0?raw.slice(split+1):""; heading=String(meta.heading||heading);}
+    if(raw.startsWith(metaMarker)){const split=raw.indexOf("\\n");try{meta=JSON.parse(raw.slice(metaMarker.length,split>=0?split:undefined)) as Record<string,unknown>}catch{} description=split>=0?raw.slice(split+2):""; heading=String(meta.heading||heading);}
     else {const marker="[[MASETNET_HEADING]]";const split=raw.indexOf(marker);if(split>=0){const rest=raw.slice(split+marker.length);const divider=rest.indexOf("\\\\n");heading=divider>=0?rest.slice(0,divider):rest;description=divider>=0?rest.slice(divider+3):"";}}
     const mediaUrl=String(r.media_url||"");
     return {id:r.id,title:r.title,heading,description,caption:description,mediaType:(meta.mediaType as string)||(/\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl)?"video":/\.gif(\?|$)/i.test(mediaUrl)?"gif":"image"),mediaUrl,destination:r.target,expiresAt:r.expires_at,createdAt:r.created_at,billboardStyle:meta.billboardStyle,billboardTheme:meta.billboardTheme,billboardSize:meta.billboardSize,billboardShape:meta.billboardShape,billboardAnimation:meta.billboardAnimation,buttonLabel:meta.buttonLabel,buttonUrl:meta.buttonUrl,bubbleMessage:meta.bubbleMessage};
