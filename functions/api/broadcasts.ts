@@ -21,9 +21,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     else {
       const appUrl = (config.TELEGRAM_MINI_APP_URL || config.TELEGRAM_WEBAPP_URL || "").trim();
       const message = [heading || title, plainDescription, mediaUrl, appUrl.startsWith("https://") ? "Open MaseNet: " + appUrl : ""].filter(Boolean).join("\n\n").slice(0, 3900);
-      const mediaType = body.mediaType === "video" || /\\.(mp4|webm|mov)(\\?|$)/i.test(mediaUrl)
+      const mediaType = body.mediaType === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl)
         ? "video"
-        : body.mediaType === "gif" || /\\.gif(\\?|$)/i.test(mediaUrl)
+        : body.mediaType === "gif" || /\.gif(\?|$)/i.test(mediaUrl)
           ? "animation"
           : "photo";
       for (const chatId of ["@MaseMediaTv", "@MoonDramaC"]) {
