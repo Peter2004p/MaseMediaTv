@@ -3,8 +3,35 @@ type StoredTitle = { id: string; name: string; kind: string; metadata_json: stri
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json,created_at FROM titles ORDER BY created_at DESC").all<StoredTitle>();
   const titles = (rows.results || []).map((row) => {
-    try { return JSON.parse(row.metadata_json); }
-    catch { return { id: row.id, name: row.name, type: row.kind === "drama" ? "Drama" : "Movie", episodes: [] }; }
+    let metadata: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(row.metadata_json);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) metadata = parsed as Record<string, unknown>;
+    } catch { /* Fall back to the canonical database columns. */ }
+    // The database columns are authoritative for identity. A malformed or older
+    // metadata payload must not make a published card impossible to open.
+    const episodes = Array.isArray(metadata.episodes)
+      ? metadata.episodes.filter((episode): episode is Record<string, unknown> => !!episode && typeof episode === "object" && !Array.isArray(episode)).map((episode, index) => ({
+          ...episode,
+          id: String(episode.id || row.id + "-episode-" + (index + 1)),
+          title: String(episode.title || episode.name || ("Episode " + (index + 1))),
+          season: Number(episode.season) || 1,
+          episode: Number(episode.episode) || index + 1,
+          quality: String(episode.quality || metadata.quality || "720p"),
+          streamUrl: typeof episode.streamUrl === "string" ? episode.streamUrl : "",
+        }))
+      : [];
+    return {
+      ...metadata,
+      id: row.id,
+      name: String(metadata.name || row.name || "Untitled"),
+      type: metadata.type === "Drama" || row.kind === "drama" ? "Drama" : "Movie",
+      description: typeof metadata.description === "string" ? metadata.description : "",
+      year: String(metadata.year || ""),
+      posterUrl: typeof metadata.posterUrl === "string" ? metadata.posterUrl : "",
+      quality: String(metadata.quality || episodes[0]?.quality || "720p"),
+      episodes,
+    };
   });
   return json({ titles });
 };
