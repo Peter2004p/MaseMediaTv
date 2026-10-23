@@ -17,14 +17,26 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
     if (!profileRes.ok) return json({ error: "Google account could not be verified." }, 401);
     const profile = await profileRes.json() as { email?: string; verified_email?: boolean };
     const email = (profile.email || "").toLowerCase();
-    if (!profile.verified_email || email !== (env.ADMIN_EMAIL || "pb5089780@gmail.com").toLowerCase()) return json({ error: "This Google account is not authorized as MaseTv admin." }, 403);
-    const adminId = await sha256("masetv-google-admin:" + email);
-    await env.DB.prepare("INSERT INTO admins (id,email) VALUES (?,?) ON CONFLICT(email) DO NOTHING").bind(adminId, email).run();
-    const admin = await env.DB.prepare("SELECT id FROM admins WHERE email=?").bind(email).first<{id:string}>();
-    if (!admin) return json({ error: "Admin session could not be created." }, 500);
+    if (!profile.verified_email || !email) return json({ error: "Google could not verify this email address." }, 401);
+    const isAdmin = email === (env.ADMIN_EMAIL || "pb5089780@gmail.com").toLowerCase();
+    if (isAdmin) {
+      const adminId = await sha256("masetv-google-admin:" + email);
+      await env.DB.prepare("INSERT INTO admins (id,email) VALUES (?,?) ON CONFLICT(email) DO NOTHING").bind(adminId, email).run();
+      const admin = await env.DB.prepare("SELECT id FROM admins WHERE email=?").bind(email).first<{id:string}>();
+      if (!admin) return json({ error: "Admin session could not be created." }, 500);
+      const session = randomHex(), sessionHash = await sha256(session);
+      await env.DB.prepare("INSERT INTO admin_sessions (id_hash,admin_id,expires_at) VALUES (?,?,datetime('now','+7 days'))").bind(sessionHash, admin.id).run();
+      return new Response(null, { status: 302, headers: { "Location": url.origin + "/#/home", "Set-Cookie": "masetv_session=" + session + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800" } });
+    }
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS site_users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL DEFAULT '', picture TEXT NOT NULL DEFAULT '', provider TEXT NOT NULL DEFAULT 'google', created_at TEXT NOT NULL DEFAULT (datetime('now')), last_login_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS site_user_sessions (id_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES site_users(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
+    const userId = await sha256("masetv-user-google:" + email);
+    await env.DB.prepare("INSERT INTO site_users (id,email,name,picture,provider,last_login_at) VALUES (?,?,?,?, 'google',datetime('now')) ON CONFLICT(email) DO UPDATE SET name=excluded.name,picture=excluded.picture,last_login_at=datetime('now')").bind(userId,email,String((profile as {name?:string}).name||""),String((profile as {picture?:string}).picture||"")).run();
+    const user = await env.DB.prepare("SELECT id FROM site_users WHERE email=?").bind(email).first<{id:string}>();
+    if (!user) return json({ error: "Your MaseNet account could not be created." }, 500);
     const session = randomHex(), sessionHash = await sha256(session);
-    await env.DB.prepare("INSERT INTO admin_sessions (id_hash,admin_id,expires_at) VALUES (?,?,datetime('now','+7 days'))").bind(sessionHash, admin.id).run();
-    return new Response(null, { status: 302, headers: { "Location": url.origin + "/#/home", "Set-Cookie": "masetv_session=" + session + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800" } });
+    await env.DB.prepare("INSERT INTO site_user_sessions (id_hash,user_id,expires_at) VALUES (?,?,datetime('now','+30 days'))").bind(sessionHash,user.id).run();
+    return new Response(null, { status: 302, headers: { "Location": url.origin + "/#/home", "Set-Cookie": "masetv_user_session=" + session + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000" } });
   }
   const state = randomHex();
   const target = new URL("https://accounts.google.com/o/oauth2/v2/auth");
