@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080a10">
+<title>MaseNet Player Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#080a10;--panel:#121722;--line:#2a3140;--text:#f4f6fb;--muted:#a6afc1;--gold:#e7c16d}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#1c2030 0,var(--bg) 55%);color:var(--text);font:15px/1.5 system-ui,-apple-system,sans-serif;min-height:100vh}
+main{width:min(1080px,100%);margin:auto;padding:24px 16px 56px}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.4rem}.brand span{color:var(--gold)}.sub{color:var(--muted);margin:4px 0 22px}
+.panel{background:#111621d9;border:1px solid #ffffff1b;border-radius:22px;padding:16px;margin:14px 0;box-shadow:0 18px 60px #0005}
+label{display:block;font-weight:700;margin:0 0 8px}input{display:block;width:100%;min-width:0;background:#080c13;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:13px;font:inherit}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row input[type=text],.row input[type=url]{flex:1 1 260px}
+button,.filelabel{border:1px solid #ffffff24;border-radius:12px;background:#202737;color:var(--text);padding:12px 15px;font:700 14px system-ui;cursor:pointer}.primary{background:var(--gold);color:#19150b;border-color:transparent}.filelabel input{display:none}
+.stage{background:#000;border-radius:18px;overflow:hidden;min-height:180px}movi-player{display:block;width:100%;min-height:220px;aspect-ratio:16/9;background:#000;color:#fff}
+.status{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere;margin-top:10px}.warn{border-left:3px solid var(--gold);padding:10px 12px;background:#e7c16d12;border-radius:0 10px 10px 0;color:#e3dfd4;font-size:.9rem}
+h2{font-size:1.05rem;margin:0 0 12px}.features{display:flex;flex-wrap:wrap;gap:8px}.chip{font-size:.8rem;color:#e6e8f0;border:1px solid #ffffff1d;background:#ffffff08;border-radius:999px;padding:5px 9px}
+@media(max-width:560px){main{padding:16px 10px 36px}.panel{padding:12px;border-radius:17px}.row button,.row .filelabel{flex:1;text-align:center}}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">Mase<span>Net</span> Player</div>
+  <p class="sub">Browser playback prototype · track-aware media engine · mobile-first controls</p>
+  <section class="panel">
+    <h2>Open a streaming URL</h2>
+    <label for="source">Direct media URL</label>
+    <div class="row"><input id="source" type="url" placeholder="https://example.com/video.mkv" autocomplete="url"><button class="primary" id="open">Play URL</button></div>
+    <div class="row" style="margin-top:10px"><label class="filelabel">Choose local video / MKV<input id="local" type="file" accept="video/*,.mkv,.mp4,.webm,.mov,.avi,.ts"></label><button id="clear">Clear player</button></div>
+    <p class="status" id="status" role="status" aria-live="polite">Enter a direct media URL or choose a local file to test playback.</p>
+  </section>
+  <section class="panel">
+    <div class="stage"><movi-player id="player" controls playsinline></movi-player></div>
+    <div class="features" style="margin-top:12px"><span class="chip">Playback speed</span><span class="chip">Seek controls</span><span class="chip">Audio/subtitle tracks when supported</span><span class="chip">Fullscreen</span></div>
+  </section>
+  <section class="panel">
+    <h2>Compatibility notes</h2>
+    <div class="warn">This is an isolated player prototype, not yet wired into the live MaseNet catalogue. Browser playback cannot guarantee every codec or every URL. Remote servers must permit cross-origin access (CORS), and URL-based seeking commonly requires HTTP Range support. DRM-protected streams, expiring links, and unsupported codecs need separate handling.</div>
+    <p class="status">For maximum format coverage like desktop VLC, the long-term route is a native Android app using libVLC. A website player can cover many direct streams and MKV tracks, but it cannot honestly promise every stream will play in every browser.</p>
+  </section>
+</main>
+<script type="module">
+import "https://cdn.jsdelivr.net/npm/movi-player/dist/element.js";
+const player=document.querySelector("#player");
+const source=document.querySelector("#source");
+const status=document.querySelector("#status");
+const openButton=document.querySelector("#open");
+let localObjectUrl=null;
+function setStatus(message){status.textContent=message}
+function loadUrl(raw){
+  const value=raw.trim();
+  if(!value){setStatus("Paste a direct media URL first.");return}
+  let parsed;
+  try{parsed=new URL(value)}catch{setStatus("That URL is not valid.");return}
+  if(!["http:","https:"].includes(parsed.protocol)){setStatus("Use an HTTP or HTTPS media URL.");return}
+  if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
+  player.src=value;
+  setStatus("Loading stream… If it fails, check that the URL points directly to media and its server allows CORS and byte-range requests.");
+}
+openButton.addEventListener("click",()=>loadUrl(source.value));
+source.addEventListener("keydown",e=>{if(e.key==="Enter")loadUrl(source.value)});
+document.querySelector("#local").addEventListener("change",e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ if(localObjectUrl)URL.revokeObjectURL(localObjectUrl);
+ localObjectUrl=URL.createObjectURL(file);player.src=localObjectUrl;
+ setStatus("Opened local file: "+file.name+". Embedded tracks depend on the container, codecs and browser/device support.");
+});
+document.querySelector("#clear").addEventListener("click",()=>{
+ try{player.removeAttribute("src");player.src=""}catch{}
+ if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
+ source.value="";document.querySelector("#local").value="";
+ setStatus("Player cleared.");
+});
+player.addEventListener("error",()=>setStatus("Playback failed. The server may block CORS/range requests, the URL may not be a direct media stream, or the container/codec may be unsupported."));
+</script>
+</body>
+</html>
