@@ -1,6 +1,6 @@
 import { json } from "../../auth/_shared";
 
-interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; }
+interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; ADMIN_TELEGRAM_CHAT_ID?: string; }
 type Episode = { title?: string; season?: number | string; episode?: number | string; name?: string };
 type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; year?: number | string; description?: string; episodes?: Episode[] };
 
@@ -26,7 +26,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
 
   if (["/help", "/commands"].includes(command)) {
-    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: "MaseNet Assistant\n\nSend a movie/drama/episode name to search.\n/search title — search the catalog.\n/ai question — ask the AI assistant.\n/start — welcome message.", ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }) });
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: "MaseNet Assistant\n\nChat naturally — try “Hey AI, how are you?”\nSend a movie/drama/episode name to search.\n/search title — search the catalog.\n/ai question — optional direct AI command.\n/start — welcome message.", ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }) });
     return sent.ok ? json({ ok: true }) : json({ ok: false, error: "Telegram could not deliver the help reply." }, 502);
   }
 
@@ -125,7 +125,12 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     if (combined.length) {
       reply = "MaseNet search results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n");
     } else {
-      reply = "I couldn't find “" + query.slice(0, 100) + "” in the MaseNet catalog yet. Try a shorter title or check again later.";
+      // Keep a private, date-stamped record so the admin can see demand for missing titles.
+      try {
+        await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_missing_searches (id INTEGER PRIMARY KEY AUTOINCREMENT, query TEXT NOT NULL, chat_type TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
+        await env.DB.prepare("INSERT INTO telegram_missing_searches (query, chat_type) VALUES (?, ?)").bind(query.slice(0, 300), String((msg as { chat?: { type?: string } }).chat?.type || "unknown")).run();
+      } catch { /* Search still replies even if logging is unavailable. */ }
+      reply = "I couldn't find “" + query.slice(0, 100) + "” in the MaseNet catalog yet. I've recorded this request so the admin can review what users want. Try a shorter title or check again later.";
       if (env.AI) {
         try {
           const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", { messages: [
