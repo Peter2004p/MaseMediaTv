@@ -55,7 +55,7 @@ function loadUrl(raw){
   try{parsed=new URL(value)}catch{setStatus("That URL is not valid.");return}
   if(!["http:","https:"].includes(parsed.protocol)){setStatus("Use an HTTP or HTTPS media URL.");return}
   if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
-  player.src=value;
+  player.setAttribute("src",value);
   setStatus("Loading stream… If it fails, check that the URL points directly to media and its server allows CORS and byte-range requests.");
 }
 openButton.addEventListener("click",()=>loadUrl(source.value));
@@ -63,16 +63,16 @@ source.addEventListener("keydown",e=>{if(e.key==="Enter")loadUrl(source.value)})
 document.querySelector("#local").addEventListener("change",e=>{
  const file=e.target.files?.[0];if(!file)return;
  if(localObjectUrl)URL.revokeObjectURL(localObjectUrl);
- localObjectUrl=URL.createObjectURL(file);player.src=localObjectUrl;
+ localObjectUrl=URL.createObjectURL(file);player.setAttribute("src",localObjectUrl);
  setStatus("Opened local file: "+file.name+". Embedded tracks depend on the container, codecs and browser/device support.");
 });
 document.querySelector("#clear").addEventListener("click",()=>{
- try{player.removeAttribute("src");player.src=""}catch{}
+ try{player.pause();player.removeAttribute("src")}catch{}
  if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
  source.value="";document.querySelector("#local").value="";
  setStatus("Player cleared.");
 });
-player.addEventListener("error",()=>setStatus("Playback failed. The server may block CORS/range requests, the URL may not be a direct media stream, or the container/codec may be unsupported."));
+player.addEventListener("error",(event)=>{const detail=event?.detail;setStatus("Playback failed. Check whether the URL is a direct media file, the server permits CORS and HTTP range requests, and your device supports the codec."+(detail?.message?" Player: "+detail.message:""));});
 </script>
 </body>
 </html>
