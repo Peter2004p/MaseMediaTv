@@ -64,14 +64,20 @@ openButton.addEventListener("click",()=>loadUrl(source.value));
 source.addEventListener("keydown",e=>{if(e.key==="Enter")loadUrl(source.value)});
 document.querySelector("#local").addEventListener("change",e=>{
  const file=e.target.files?.[0];if(!file)return;
- if(localObjectUrl)URL.revokeObjectURL(localObjectUrl);
- localObjectUrl=URL.createObjectURL(file);
+ if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
  player.removeAttribute("src");
- player.setAttribute("src",localObjectUrl);
- setStatus("Opened local file: "+file.name+". Embedded tracks depend on the container, codecs and browser/device support.");
+ try{
+   // Pass the File directly so the player can inspect the original container.
+   player.src=file;
+   setStatus("Opened local file: "+file.name+". The player will show selectable embedded tracks if this file's container/codecs are supported.");
+ }catch(error){
+   localObjectUrl=URL.createObjectURL(file);
+   player.setAttribute("src",localObjectUrl);
+   setStatus("Opened local file: "+file.name+". Using browser file URL fallback; embedded tracks depend on container and codec support.");
+ }
 });
 document.querySelector("#clear").addEventListener("click",()=>{
- try{player.pause();player.removeAttribute("src")}catch{}
+ try{player.pause();player.removeAttribute("src");player.src=""}catch{}
  if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
  source.value="";document.querySelector("#local").value="";
  setStatus("Player cleared.");
