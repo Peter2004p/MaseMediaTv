@@ -30,6 +30,8 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
   const selected = variants.find(v => v.quality === quality) || variants[0];
   const src = selected?.streamUrl || episode.streamUrl || ''; const embed = embedFor(src); const tracks = selected?.subtitleTracks || episode.subtitleTracks || [];
 
+  useEffect(() => { setSelectedQuality(''); setSubtitle('off'); }, [episode.id]);
+
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
     setError(''); setBuffering(false); setTime(0); setDuration(0); setPlaying(false);
@@ -63,7 +65,7 @@ export default function FlootPlayer({ episode, onProgress }: Props) {
 
   return <div className="flootStylePlayer">
     <div className="flootStyleFrame">
-      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls={false} />}
+      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload="metadata" controls={false}>{tracks.map((t, i) => <track key={t.url + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {buffering && <div className="fspStatus">⏳ Buffering…</div>}
       {error && <div className="fspError" role="alert"><strong>Playback issue</strong><span>{error}</span><button onClick={retrySource}>Retry</button></div>}
       {!embed && !playing && !error && <button className="fspBigPlay" onClick={playPause} aria-label="Play video">▶</button>}
