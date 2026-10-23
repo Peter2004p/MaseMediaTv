@@ -85,9 +85,24 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       if (titleMatches.length >= 5 && episodeMatches.length >= 5) break;
     }
     const combined = [...new Set([...episodeMatches, ...titleMatches])].slice(0, 5);
-    reply = combined.length
-      ? "MaseTv search results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n")
-      : "I couldn't find that movie, drama, or episode in the MaseTv library yet. Try a shorter title or check again later.";
+    if (combined.length) {
+      reply = "MaseNet search results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n");
+    } else {
+      reply = "I couldn't find “" + query.slice(0, 100) + "” in the MaseNet catalog yet. Try a shorter title or check again later.";
+      if (env.AI) {
+        try {
+          const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", { messages: [
+            { role: "system", content: "You are MaseNet's Telegram assistant. The catalog search found no match for the user's query. Say clearly that the title was not found in the current catalog; do not invent catalog entries or claim availability. Offer a useful search tip or ask for an alternate spelling. Keep it brief." },
+            { role: "user", content: "Catalog search query: " + query.slice(0, 500) }
+          ], max_tokens: 220 });
+          if (result && typeof result === "object") {
+            const data = result as { response?: string; choices?: Array<{ message?: { content?: string } }> };
+            const suggestion = String(data.response || data.choices?.[0]?.message?.content || "").trim();
+            if (suggestion) reply = suggestion.slice(0, 1200);
+          }
+        } catch { /* Keep the reliable catalog-search fallback. */ }
+      }
+    }
   }
 
   const send = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
