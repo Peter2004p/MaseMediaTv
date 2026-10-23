@@ -67,5 +67,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       }
     }
   }
-  return json({ post:{id,title,heading,description:plainDescription,mediaType:body.mediaType === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl) ? "video" : body.mediaType === "gif" || /\.gif(\?|$)/i.test(mediaUrl) ? "gif" : "image",mediaUrl,caption:description,destination:target,expiresAt,createdAt:new Date().toISOString()} , telegram },201);
+  return json({ post:{id,title,heading,description:plainDescription,mediaType:body.mediaType === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl) ? "video" : body.mediaType === "gif" || /\.gif(\?|$)/i.test(mediaUrl) ? "gif" : "image",mediaUrl,caption:plainDescription,destination:target,expiresAt,createdAt:new Date().toISOString(),billboardStyle:metadata.billboardStyle,billboardTheme:metadata.billboardTheme,billboardSize:metadata.billboardSize,billboardShape:metadata.billboardShape,billboardAnimation:metadata.billboardAnimation,buttonLabel:metadata.buttonLabel,buttonUrl:metadata.buttonUrl,bubbleMessage:metadata.bubbleMessage} , telegram },201);
 };
