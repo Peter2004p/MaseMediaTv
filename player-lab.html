@@ -2,90 +2,229 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#080a10">
-<title>MaseNet Player Lab</title>
+<title>MaseNet Video Player Lab</title>
 <style>
-:root{color-scheme:dark;--bg:#080a10;--panel:#121722;--line:#2a3140;--text:#f4f6fb;--muted:#a6afc1;--gold:#e7c16d}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#1c2030 0,var(--bg) 55%);color:var(--text);font:15px/1.5 system-ui,-apple-system,sans-serif;min-height:100vh}
-main{width:min(1080px,100%);margin:auto;padding:24px 16px 56px}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.4rem}.brand span{color:var(--gold)}.sub{color:var(--muted);margin:4px 0 22px}
-.panel{background:#111621d9;border:1px solid #ffffff1b;border-radius:22px;padding:16px;margin:14px 0;box-shadow:0 18px 60px #0005}
-label{display:block;font-weight:700;margin:0 0 8px}input{display:block;width:100%;min-width:0;background:#080c13;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:13px;font:inherit}
-.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row input[type=text],.row input[type=url]{flex:1 1 260px}
-button,.filelabel{border:1px solid #ffffff24;border-radius:12px;background:#202737;color:var(--text);padding:12px 15px;font:700 14px system-ui;cursor:pointer}.primary{background:var(--gold);color:#19150b;border-color:transparent}.filelabel input{display:none}
-.stage{background:#000;border-radius:18px;overflow:hidden;min-height:180px}movi-player{display:block;width:100%;min-height:220px;aspect-ratio:16/9;background:#000;color:#fff}
-.status{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere;margin-top:10px}.warn{border-left:3px solid var(--gold);padding:10px 12px;background:#e7c16d12;border-radius:0 10px 10px 0;color:#e3dfd4;font-size:.9rem}
-h2{font-size:1.05rem;margin:0 0 12px}.features{display:flex;flex-wrap:wrap;gap:8px}.chip{font-size:.8rem;color:#e6e8f0;border:1px solid #ffffff1d;background:#ffffff08;border-radius:999px;padding:5px 9px}
-@media(max-width:560px){main{padding:16px 10px 36px}.panel{padding:12px;border-radius:17px}.row button,.row .filelabel{flex:1;text-align:center}}
+:root{color-scheme:dark;--bg:#080a10;--panel:#121722;--line:#30394a;--text:#f4f6fb;--muted:#a6afc1;--gold:#e7c16d;--danger:#ff9b9b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#1c2030 0,var(--bg) 58%);color:var(--text);font:15px/1.5 system-ui,-apple-system,sans-serif;min-height:100vh}
+main{width:min(1080px,100%);margin:auto;padding:22px 14px 50px}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.5rem}.brand span{color:var(--gold)}.sub{color:var(--muted);margin:4px 0 20px}
+.panel{background:#111621e8;border:1px solid #ffffff1b;border-radius:20px;padding:16px;margin:14px 0;box-shadow:0 18px 60px #0005}
+h2{font-size:1rem;margin:0 0 12px}label{display:block;font-weight:700;margin:0 0 7px}input,select{width:100%;min-width:0;background:#080c13;color:var(--text);border:1px solid var(--line);border-radius:11px;padding:12px;font:inherit}
+.row{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.field{flex:1 1 250px;min-width:0}.field.small{flex:1 1 150px}
+button,.filelabel{border:1px solid #ffffff24;border-radius:11px;background:#202737;color:var(--text);padding:12px 14px;font:700 14px system-ui;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-height:44px}.primary{background:var(--gold);color:#19150b;border-color:transparent}.filelabel input{display:none}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.playerbox{background:#000;border:1px solid #ffffff18;border-radius:16px;overflow:hidden;position:relative}video{display:block;width:100%;max-height:72vh;aspect-ratio:16/9;background:#000;object-fit:contain}
+.status{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere;margin:10px 0 0}.status.error{color:var(--danger)}.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.chip{font-size:.8rem;color:#e6e8f0;border:1px solid #ffffff1d;background:#ffffff08;border-radius:999px;padding:5px 9px}
+.note{border-left:3px solid var(--gold);padding:10px 12px;background:#e7c16d12;border-radius:0 10px 10px 0;color:#e3dfd4;font-size:.9rem}.muted{color:var(--muted);font-size:.86rem}
+@media(max-width:560px){main{padding:15px 9px 30px}.panel{padding:12px;border-radius:16px}.row button,.row .filelabel{flex:1}.actions>*{flex:1}.brand{font-size:1.35rem}}
 </style>
 </head>
 <body>
 <main>
   <div class="brand">Mase<span>Net</span> Player</div>
-  <p class="sub">MKV browser player · embedded tracks · mobile-first controls</p>
+  <p class="sub">A mobile-first streaming player for direct video links and HLS streams.</p>
+
   <section class="panel">
-    <h2>Open a streaming URL</h2>
-    <label for="source">Direct media URL</label>
-    <div class="row"><input id="source" type="url" placeholder="https://example.com/video.mkv" autocomplete="url"><button class="primary" id="open">Play URL</button></div>
-    <div class="row" style="margin-top:10px"><label class="filelabel">Choose local video / MKV<input id="local" type="file" accept="video/*,.mkv,.mp4,.webm,.mov,.avi,.ts"></label><button id="clear">Clear player</button></div>
-    <p class="status" id="status" role="status" aria-live="polite">Loading player engine…</p>
+    <h2>Play a video</h2>
+    <div class="field">
+      <label for="source">Direct video URL (.mp4, .webm, or .m3u8)</label>
+      <input id="source" type="url" placeholder="https://example.com/video.mp4" autocomplete="url" inputmode="url">
+    </div>
+    <div class="actions">
+      <button class="primary" id="playUrl">Play URL</button>
+      <label class="filelabel">Choose video file<input id="localVideo" type="file" accept="video/*,.mp4,.webm,.m4v,.mov,.mkv,.ogv"></label>
+      <button id="clear">Clear</button>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite">Ready. Paste a direct video link or choose a video from your phone.</p>
   </section>
+
   <section class="panel">
-    <div class="stage"><movi-player id="player" engine="wasm native" fallback="native" controls playsinline></movi-player></div>
-    <div class="features" style="margin-top:12px"><span class="chip">MKV / MP4 / WebM</span><span class="chip">Embedded audio & subtitles when supported</span><span class="chip">Seeking & speed</span><span class="chip">Fullscreen</span></div>
+    <div class="playerbox">
+      <video id="video" controls playsinline preload="metadata">
+        Your browser does not support HTML video.
+      </video>
+    </div>
+    <div class="chips"><span class="chip">Play / pause</span><span class="chip">Seek & timeline</span><span class="chip">Volume</span><span class="chip">Playback speed</span><span class="chip">Fullscreen</span><span class="chip">Picture-in-picture when supported</span></div>
   </section>
+
   <section class="panel">
-    <h2>How this version handles errors</h2>
-    <div class="warn">The WASM engine attempts MKV playback first. Version 0.4.1 can hand a source to native browser playback when the WASM fetch path fails. Native fallback may play a cross-origin file that lacks CORS headers, but native browser playback usually cannot decode MKV or expose its embedded tracks. The source server must allow browser-readable requests for full MKV track support.</div>
-    <p class="status">If the link still fails, it may be expired, require special headers, or the host may block browser requests. This lab does not proxy media or change your production website.</p>
+    <h2>Add subtitles (optional)</h2>
+    <p class="muted">You can add an external .vtt subtitle file from your phone, or a subtitle URL. The subtitle must be WebVTT (.vtt) for this basic version. Embedded MKV subtitles are not guaranteed in a normal browser player.</p>
+    <div class="row">
+      <div class="field"><label for="subtitleUrl">Subtitle URL (.vtt)</label><input id="subtitleUrl" type="url" placeholder="https://example.com/subtitles.vtt"></div>
+      <button id="addSubtitle" class="primary">Add subtitle</button>
+    </div>
+    <div class="actions">
+      <label class="filelabel">Choose .vtt subtitle<input id="subtitleFile" type="file" accept=".vtt,text/vtt"></label>
+      <button id="removeSubtitles">Remove subtitles</button>
+    </div>
+    <p class="status" id="subtitleStatus" aria-live="polite">No external subtitles added.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Supported formats & honest limits</h2>
+    <div class="note">MP4 (H.264/AAC) and WebM are the safest formats for browser playback. HLS (.m3u8) is supported when the stream is accessible; some browsers play it natively, while others use HLS.js. MKV support depends on browser/codec and is not reliable in standard HTML video. A link that has expired, requires login, or is blocked by its host cannot be fixed by the player alone.</div>
+    <p class="muted">This is an isolated test player. It does not change the live MaseNet website or production database.</p>
   </section>
 </main>
-<script type="module">
-import "https://cdn.jsdelivr.net/npm/movi-player@0.4.1/dist/element.js";
-const player=document.querySelector("#player");
-const source=document.querySelector("#source");
-const status=document.querySelector("#status");
-let localObjectUrl=null;
-function setStatus(message){status.textContent=message}
-customElements.whenDefined("movi-player").then(()=>setStatus("Player engine ready. Test a local MKV first, then an online URL."));
-function clearPreviousSource(){
-  if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
-  player.removeAttribute("src");
-}
-function loadUrl(raw){
-  const value=raw.trim();
-  if(!value){setStatus("Paste a direct media URL first.");return}
-  let parsed;
-  try{parsed=new URL(value)}catch{setStatus("That URL is not valid.");return}
-  if(!["http:","https:"].includes(parsed.protocol)){setStatus("Use an HTTP or HTTPS media URL.");return}
-  clearPreviousSource();
-  player.src=value;
-  setStatus("Trying MKV-capable playback. If the host blocks CORS, the player will attempt native browser fallback.");
-}
-document.querySelector("#open").addEventListener("click",()=>loadUrl(source.value));
-source.addEventListener("keydown",e=>{if(e.key==="Enter")loadUrl(source.value)});
-document.querySelector("#local").addEventListener("change",e=>{
- const file=e.target.files?.[0];if(!file)return;
- clearPreviousSource();
- player.src=file;
- setStatus("Opening local file: "+file.name+". Embedded tracks depend on the file's codec and the player engine.");
-});
-player.addEventListener("nativefallback",()=>setStatus("MKV engine could not read the remote source; trying browser-native playback. Native playback may not support MKV or embedded tracks."));
-player.addEventListener("loadedmetadata",()=>setStatus("Media metadata loaded. Start playback and check the player menu for available tracks."));
-player.addEventListener("error",event=>{
- const detail=event?.detail;
- setStatus("Playback failed after available fallback. The source may be expired, require authentication, block browser requests, or use unsupported media."+(detail?.message?" Details: "+detail.message:""));
-});
-window.addEventListener("unhandledrejection",event=>{
- const reason=event?.reason;
- setStatus("Media engine request failed: "+(reason?.message||"network, CORS, source URL, or codec error")+". Try a local MKV to check whether the engine itself loads.");
-});
-document.querySelector("#clear").addEventListener("click",()=>{
- try{player.pause();player.removeAttribute("src");player.src=""}catch{}
- if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
- source.value="";document.querySelector("#local").value="";
- setStatus("Player cleared.");
-});
+<script>
+(() => {
+  const video = document.querySelector('#video');
+  const source = document.querySelector('#source');
+  const status = document.querySelector('#status');
+  const subtitleUrl = document.querySelector('#subtitleUrl');
+  const subtitleStatus = document.querySelector('#subtitleStatus');
+  const localVideo = document.querySelector('#localVideo');
+  const subtitleFile = document.querySelector('#subtitleFile');
+  let hls = null;
+  let localVideoUrl = null;
+  let localSubtitleUrl = null;
+  let externalSubtitleTrack = null;
+
+  function say(message, isError = false) {
+    status.textContent = message;
+    status.classList.toggle('error', isError);
+  }
+  function subtitleSay(message) { subtitleStatus.textContent = message; }
+  function destroyHls() {
+    if (hls) { try { hls.destroy(); } catch (_) {} hls = null; }
+  }
+  function revokeLocalVideo() {
+    if (localVideoUrl) { URL.revokeObjectURL(localVideoUrl); localVideoUrl = null; }
+  }
+  function removeSubtitles() {
+    if (externalSubtitleTrack) {
+      try { externalSubtitleTrack.remove(); } catch (_) {}
+      externalSubtitleTrack = null;
+    }
+    if (localSubtitleUrl) { URL.revokeObjectURL(localSubtitleUrl); localSubtitleUrl = null; }
+    for (const track of [...video.querySelectorAll('track')]) track.remove();
+    subtitleFile.value = '';
+    subtitleUrl.value = '';
+    subtitleSay('External subtitles removed.');
+  }
+  function resetSource() {
+    destroyHls();
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    revokeLocalVideo();
+  }
+  function addTrack(url, label, local = false) {
+    if (!url) { subtitleSay('Enter a subtitle URL first.'); return; }
+    let parsed;
+    try { parsed = new URL(url, location.href); } catch (_) { subtitleSay('That subtitle URL is invalid.'); return; }
+    if (!['http:', 'https:', 'blob:'].includes(parsed.protocol)) {
+      subtitleSay('Use an HTTPS/HTTP subtitle URL or choose a local VTT file.'); return;
+    }
+    if (externalSubtitleTrack) externalSubtitleTrack.remove();
+    if (localSubtitleUrl && !local) { URL.revokeObjectURL(localSubtitleUrl); localSubtitleUrl = null; }
+    const track = document.createElement('track');
+    track.kind = 'subtitles';
+    track.label = label || 'Subtitles';
+    track.srclang = 'en';
+    track.src = url;
+    track.default = true;
+    video.appendChild(track);
+    externalSubtitleTrack = track;
+    track.addEventListener('load', () => {
+      try { track.track.mode = 'showing'; } catch (_) {}
+      subtitleSay('Subtitle loaded. Use the video player subtitle/CC menu to show or hide it.');
+    }, { once: true });
+    track.addEventListener('error', () => subtitleSay('Subtitle could not be loaded. Check the VTT file and whether its host permits browser access.'), { once: true });
+    subtitleSay('Loading subtitle…');
+  }
+  async function playUrl() {
+    const value = source.value.trim();
+    if (!value) { say('Paste a direct video URL first.', true); return; }
+    let parsed;
+    try { parsed = new URL(value); } catch (_) { say('That URL is not valid.', true); return; }
+    if (!['http:', 'https:'].includes(parsed.protocol)) { say('Use an HTTPS or HTTP video URL.', true); return; }
+    resetSource();
+    say('Opening video…');
+    const isHls = /\.m3u8(?:$|[?#])/i.test(parsed.href);
+    if (isHls && !video.canPlayType('application/vnd.apple.mpegurl') && !video.canPlayType('application/x-mpegURL')) {
+      try {
+        const module = await import('https://cdn.jsdelivr.net/npm/hls.js@1.6.13/+esm');
+        const Hls = module.default;
+        if (!Hls.isSupported()) {
+          video.src = value;
+          say('This browser does not support HLS.js; trying direct browser playback.');
+          video.play().catch(() => {});
+          return;
+        }
+        hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+        hls.loadSource(value);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          say('HLS stream loaded. Press play if playback does not start automatically.');
+          video.play().catch(() => {});
+        });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data && data.fatal) {
+            say('HLS stream failed. The URL may be expired or the host may block browser access (CORS).', true);
+            if (hls) { try { hls.destroy(); } catch (_) {} hls = null; }
+          }
+        });
+      } catch (_) {
+        video.src = value;
+        say('Could not load the HLS helper; trying native browser playback instead.');
+      }
+    } else {
+      video.src = value;
+      say(isHls ? 'Trying browser-native HLS playback…' : 'Video URL loaded. Press play; playback depends on the file format and source host.');
+    }
+    video.load();
+    video.play().catch(() => {});
+  }
+
+  document.querySelector('#playUrl').addEventListener('click', playUrl);
+  source.addEventListener('keydown', e => { if (e.key === 'Enter') playUrl(); });
+  localVideo.addEventListener('change', () => {
+    const file = localVideo.files && localVideo.files[0];
+    if (!file) return;
+    resetSource();
+    localVideoUrl = URL.createObjectURL(file);
+    video.src = localVideoUrl;
+    video.load();
+    say('Local file selected: ' + file.name + '. Press play. MKV playback depends on your browser and codecs.');
+    video.play().catch(() => {});
+  });
+  document.querySelector('#addSubtitle').addEventListener('click', () => addTrack(subtitleUrl.value.trim(), 'External subtitles'));
+  subtitleUrl.addEventListener('keydown', e => { if (e.key === 'Enter') addTrack(subtitleUrl.value.trim(), 'External subtitles'); });
+  subtitleFile.addEventListener('change', () => {
+    const file = subtitleFile.files && subtitleFile.files[0];
+    if (!file) return;
+    if (!/\.vtt$/i.test(file.name) && file.type !== 'text/vtt') {
+      subtitleSay('Please choose a .vtt subtitle file. SRT conversion can be added later.'); return;
+    }
+    if (localSubtitleUrl) URL.revokeObjectURL(localSubtitleUrl);
+    localSubtitleUrl = URL.createObjectURL(file);
+    addTrack(localSubtitleUrl, file.name, true);
+  });
+  document.querySelector('#removeSubtitles').addEventListener('click', removeSubtitles);
+  document.querySelector('#clear').addEventListener('click', () => {
+    resetSource();
+    source.value = '';
+    localVideo.value = '';
+    removeSubtitles();
+    say('Player cleared. Ready for another video.');
+  });
+  video.addEventListener('loadedmetadata', () => say('Video metadata loaded. Press play or use the timeline to seek.'));
+  video.addEventListener('playing', () => say('Playing.'));
+  video.addEventListener('waiting', () => say('Buffering…'));
+  video.addEventListener('stalled', () => say('The video source has stalled. Check the connection or try a supported direct MP4/WebM link.', true));
+  video.addEventListener('error', () => {
+    const errors = {1:'Playback was cancelled.',2:'A network error interrupted the video.',3:'The browser could not decode this video format or codec.',4:'This format or source is not supported by the browser.'};
+    const code = video.error && video.error.code;
+    say((errors[code] || 'Video could not be played.') + ' Try a direct MP4 (H.264/AAC) or WebM link.', true);
+  });
+  window.addEventListener('pagehide', () => {
+    destroyHls();
+    revokeLocalVideo();
+    if (localSubtitleUrl) URL.revokeObjectURL(localSubtitleUrl);
+  });
+})();
 </script>
 </body>
 </html>
