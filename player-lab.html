@@ -28,7 +28,7 @@ h2{font-size:1.05rem;margin:0 0 12px}.features{display:flex;flex-wrap:wrap;gap:8
     <label for="source">Direct media URL</label>
     <div class="row"><input id="source" type="url" placeholder="https://example.com/video.mkv" autocomplete="url"><button class="primary" id="open">Play URL</button></div>
     <div class="row" style="margin-top:10px"><label class="filelabel">Choose local video / MKV<input id="local" type="file" accept="video/*,.mkv,.mp4,.webm,.mov,.avi,.ts"></label><button id="clear">Clear player</button></div>
-    <p class="status" id="status" role="status" aria-live="polite">Enter a direct media URL or choose a local file to test playback.</p>
+    <p class="status" id="status" role="status" aria-live="polite">Starting player engine…</p>
   </section>
   <section class="panel">
     <div class="stage"><movi-player id="player" controls playsinline></movi-player></div>
@@ -48,6 +48,7 @@ const status=document.querySelector("#status");
 const openButton=document.querySelector("#open");
 let localObjectUrl=null;
 function setStatus(message){status.textContent=message}
+customElements.whenDefined("movi-player").then(()=>setStatus("Player engine loaded. Enter a direct media URL or choose a local file."));
 function loadUrl(raw){
   const value=raw.trim();
   if(!value){setStatus("Paste a direct media URL first.");return}
@@ -55,6 +56,7 @@ function loadUrl(raw){
   try{parsed=new URL(value)}catch{setStatus("That URL is not valid.");return}
   if(!["http:","https:"].includes(parsed.protocol)){setStatus("Use an HTTP or HTTPS media URL.");return}
   if(localObjectUrl){URL.revokeObjectURL(localObjectUrl);localObjectUrl=null}
+  player.removeAttribute("src");
   player.setAttribute("src",value);
   setStatus("Loading stream… If it fails, check that the URL points directly to media and its server allows CORS and byte-range requests.");
 }
@@ -63,7 +65,9 @@ source.addEventListener("keydown",e=>{if(e.key==="Enter")loadUrl(source.value)})
 document.querySelector("#local").addEventListener("change",e=>{
  const file=e.target.files?.[0];if(!file)return;
  if(localObjectUrl)URL.revokeObjectURL(localObjectUrl);
- localObjectUrl=URL.createObjectURL(file);player.setAttribute("src",localObjectUrl);
+ localObjectUrl=URL.createObjectURL(file);
+ player.removeAttribute("src");
+ player.setAttribute("src",localObjectUrl);
  setStatus("Opened local file: "+file.name+". Embedded tracks depend on the container, codecs and browser/device support.");
 });
 document.querySelector("#clear").addEventListener("click",()=>{
@@ -72,7 +76,11 @@ document.querySelector("#clear").addEventListener("click",()=>{
  source.value="";document.querySelector("#local").value="";
  setStatus("Player cleared.");
 });
-player.addEventListener("error",(event)=>{const detail=event?.detail;setStatus("Playback failed. Check whether the URL is a direct media file, the server permits CORS and HTTP range requests, and your device supports the codec."+(detail?.message?" Player: "+detail.message:""));});
+player.addEventListener("error",event=>{
+ const detail=event?.detail;
+ setStatus("Playback failed. Check whether the URL is a direct media file, the server permits CORS and HTTP range requests, and your device supports the codec."+(detail?.message?" Player: "+detail.message:""));
+});
+window.addEventListener("unhandledrejection",()=>setStatus("The player module or a media request failed. Check the browser connection and try a direct media URL."));
 </script>
 </body>
 </html>
