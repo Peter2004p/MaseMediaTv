@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, auth, image } from './cloudflare-client';
-import Player from './Player';
+import Player from './FlootPlayer';
 import { Search, UserRound, SlidersHorizontal, Play, Download, Plus, X, Send, ShieldCheck, Check, ArrowLeft, Upload, Link2, Bot, Trash2, ChevronRight, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Subtitles, RotateCcw, RotateCw, ImagePlus, LogOut, Save, Eye, EyeOff, Film, LayoutDashboard, Paperclip, Palette, Mic } from 'lucide-react';
 
 type Quality = '480p'|'720p'|'1080p';
