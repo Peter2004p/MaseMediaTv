@@ -804,3 +804,32 @@ button,a,input,textarea,select{touch-action:manipulation}
  .ttReelInfo{left:max(18px,calc((100% - 760px)/2 + 18px))}
  .ttReelActions{right:max(12px,calc((100% - 760px)/2 + 12px))}
 }
+
+
+/* Reels reference layout: compact landscape clip in a black social-video canvas. */
+.ttReelsPage{background:#000!important}
+.ttReelsTop{background:#000!important;border:0!important;height:62px;min-height:62px;padding-top:env(safe-area-inset-top)}
+.ttReelsTop>div{display:none}
+.ttReelsFeed{background:#000!important}
+.ttReelCard{height:calc(100dvh - 62px - env(safe-area-inset-bottom));min-height:calc(100svh - 62px - env(safe-area-inset-bottom));background:#000!important}
+.ttReelVideo{top:39%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);width:min(100%,900px);height:auto;max-height:38dvh;overflow:visible}
+.ttReelVideo>.flootStylePlayer{height:auto!important;min-height:0!important;width:100%;aspect-ratio:16/9;overflow:hidden;background:#000!important}
+.ttReelVideo .reelMode{height:auto!important;min-height:0!important;display:block!important;aspect-ratio:16/9;background:#000!important}
+.ttReelVideo .reelMode .flootStyleFrame{height:auto!important;min-height:0!important;max-height:38dvh!important;aspect-ratio:16/9!important;flex:none!important;width:100%}
+.ttReelVideo .reelMode .flootStyleFrame video,.ttReelVideo .reelMode .flootStyleFrame iframe{object-fit:contain!important;background:#000!important}
+.ttReelShade{background:linear-gradient(180deg,rgba(0,0,0,.16),transparent 25%,transparent 65%,rgba(0,0,0,.38) 100%)!important}
+.ttReelInfo{left:18px!important;right:82px!important;bottom:calc(22px + env(safe-area-inset-bottom))!important;gap:7px}
+.ttReelActions{right:13px!important;bottom:calc(120px + env(safe-area-inset-bottom))!important;gap:19px}
+.ttReelActions button>span{font-size:30px}
+.ttReelTapHint{inset:39% 0 auto;height:min(38dvh,56vw);transform:translateY(-50%);pointer-events:none}
+@media(min-width:700px){
+ .ttReelVideo{width:min(100%,900px)}
+ .ttReelInfo{left:max(18px,calc((100% - 900px)/2 + 18px))!important}
+ .ttReelActions{right:max(14px,calc((100% - 900px)/2 + 14px))!important}
+}
+@media(max-width:560px){
+ .ttReelVideo{width:100%;max-height:38dvh}
+ .ttReelInfo{left:18px!important;bottom:calc(20px + env(safe-area-inset-bottom))!important}
+ .ttReelActions{right:12px!important;bottom:calc(116px + env(safe-area-inset-bottom))!important;gap:17px}
+ .ttReelInfo>small{-webkit-line-clamp:2}
+}
