@@ -30,10 +30,15 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return sent.ok ? json({ ok: true }) : json({ ok: false, error: "Telegram could not deliver the help reply." }, 502);
   }
 
-  const conversationalMessage = !incoming.startsWith("/") && (
-    /^(hey|hi|hello|hey there|yo|good morning|good afternoon|good evening|how are you|what's up|whats up|thanks|thank you|who are you|what can you do|tell me a joke|let's chat|lets chat)\b/i.test(incoming) ||
+  // Treat ordinary greetings and natural-language questions as chat without requiring /ai.
+  // Keep likely title/episode searches in the catalog-search flow below.
+  const looksLikeCatalogSearch = /\b(?:episode|ep|season|movie|drama|film|s\d+e\d+)\b/i.test(incoming)
+    || /\b(?:find|search|look for)\b/i.test(incoming);
+  const conversationalMessage = !incoming.startsWith("/") && !looksLikeCatalogSearch && (
+    /^(hey|hi|hello|yo|good morning|good afternoon|good evening|how are you|what's up|whats up|thanks|thank you|who are you|what can you do|tell me a joke|let's chat|lets chat)\b/i.test(incoming) ||
     /^(hey|hi|hello)\s+(?:ai|assistant|masenet|bot)\b/i.test(incoming) ||
-    (incoming.includes("?") && !/\b(?:episode|ep|season|movie|drama|film|s\d+e\d+)\b/i.test(incoming))
+    /^(please\s+)?(?:can you|could you|would you|tell me|explain|help me|i need|i want|what is|what are|why is|why are|how do|how does|where can|when does)\b/i.test(incoming) ||
+    (incoming.includes("?") && incoming.split(/\s+/).length >= 3)
   );
 
   if (command === "/ai" || command === "/ask" || conversationalMessage) {
