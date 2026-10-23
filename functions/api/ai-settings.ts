@@ -5,8 +5,8 @@ const defaults: Appearance = { style:"glass", panelSize:"compact", buttonSize:"s
 const allowed: Record<string,string[]> = {
  style:["gold","glass","neon","minimal","aurora","ocean","candy"],
  panelSize:["compact","comfortable","large"], buttonSize:["small","medium","large"],
- avatar:["spark","robot","cat","panda","moon","bubble"], motion:["float","pulse","orbit","none"],
- shape:["glass","circle","rounded","square"], effect:["bubbles","sparkles","glow","none"]
+ avatar:["spark","robot","cat","panda","moon","bubble"], motion:["float","orbit","pulse","still"],
+ shape:["glass","orb","cloud","star"], effect:["bubbles","sparkles","none"]
 };
 export const onRequestGet = async ({ env }: { env: Env }) => {
   const rows = await env.DB.prepare("SELECT key,value_json FROM site_settings WHERE key IN ('ai_instructions','ai_appearance')").all<{key:string;value_json:string}>();
