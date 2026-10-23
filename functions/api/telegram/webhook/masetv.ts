@@ -26,7 +26,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
 
   if (["/help", "/commands"].includes(command)) {
-    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: "MaseNet Assistant\\n\\nSend a movie/drama/episode name to search.\\n/search title — search the catalog.\\n/ai question — ask the AI assistant.\\n/start — welcome message.", ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }) });
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: "MaseNet Assistant\n\nSend a movie/drama/episode name to search.\n/search title — search the catalog.\n/ai question — ask the AI assistant.\n/start — welcome message.", ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }) });
     return sent.ok ? json({ ok: true }) : json({ ok: false, error: "Telegram could not deliver the help reply." }, 502);
   }
 
@@ -51,7 +51,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   const query = incoming.replace(/^\/start(?:\s+\S+)?/i, "").replace(/^\/search\s*/i, "").trim();
-  let reply = "Welcome to MaseTv! Send a movie, drama, or episode name to search the library.";
+  let reply = "Welcome to MaseNet! 🎬\nSend a movie, drama, or episode name to search the library.\nNeed help? Use /help. Ask a question with /ai your question.";
   if (query) {
     const needle = normalize(query).slice(0, 100);
     const sql = await env.DB.prepare(
