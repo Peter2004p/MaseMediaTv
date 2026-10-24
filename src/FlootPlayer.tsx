@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import 'movi-player';
+
+const MoviPlayerTag: any = 'movi-player';
 
 type Quality = '480p' | '720p' | '1080p';
 type Track = { label?: string; url: string; path?: string; lang?: string; mimeType?: string };
@@ -42,6 +45,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const telegramWebView = typeof window !== 'undefined' && (/Telegram/i.test(navigator.userAgent) || Boolean((window as Window & { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp));
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
   const src = isHlsSource ? proxyUrl : rawSrc;
+  const mkvProxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
 
   useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
 
@@ -79,6 +83,39 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
   const pictureInPicture = async () => { const v = videoRef.current as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null; if (!v) return; try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled && v.requestPictureInPicture) { await v.requestPictureInPicture(); } else { setError('Picture-in-Picture is not supported in this browser or Telegram webview. Use Fullscreen instead.'); } } catch { setError('Picture-in-Picture could not start. Try playing the video first, or use Fullscreen.'); } };
   const retrySource = () => { setError(''); setRetry(x => x + 1); };
+
+  if (isMkvSource && !embed) {
+    return <section className={\`flootStylePlayer\${reelMode ? ' reelMode' : ''}\`} aria-label="MaseNet MKV video player">
+      <div className="flootStyleFrame" style={{ minHeight: 220 }}>
+        <MoviPlayerTag
+          key={episode.id + ':' + rawSrc + ':' + retry}
+          src={mkvProxyUrl}
+          controls
+          playsinline
+          theme="dark"
+          subtitlepicker
+          controlslist="nosubtitledrag"
+          subtitlesize="1.15"
+          subtitlebg="rgba(0,0,0,.65)"
+          style={{ display: 'block', width: '100%', height: '100%', minHeight: '220px', aspectRatio: '16 / 9', background: '#000' }}
+        >
+          {tracks.map((track, index) => {
+            const rawTrackUrl = String(track.url || track.path || '').trim();
+            const isAbsoluteHttps = /^https:\/\//i.test(rawTrackUrl);
+            const trackUrl = isAbsoluteHttps
+              ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&resource=' + encodeURIComponent(rawTrackUrl)
+              : rawTrackUrl;
+            const isSrt = /\.srt(?:$|[?#])/i.test(rawTrackUrl) || /subrip/i.test(track.mimeType || '');
+            return <track key={rawTrackUrl + index} kind="subtitles" src={trackUrl} srclang={track.lang || 'und'} label={track.label || track.lang || 'Subtitle ' + (index + 1)} default={index === 0} data-format={isSrt ? 'srt' : undefined} />;
+          })}
+        </MoviPlayerTag>
+      </div>
+      <div className="fspControls"><div className="fspRow fspOptions">
+        {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
+        <span style={{ color: '#c9ccd5', fontSize: 12 }}>MKV · Embedded audio and subtitles appear in the player track menu when available.</span>
+      </div></div>
+    </section>;
+  }
 
   return <div className={`flootStylePlayer${reelMode ? ' reelMode' : ''}`}>
     <div className="flootStyleFrame">
