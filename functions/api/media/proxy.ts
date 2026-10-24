@@ -35,10 +35,21 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  if(!episodeId || episodeId.length>200) return json({error:"Missing episodeId"},400);
  const rows=await env.DB.prepare("SELECT metadata_json FROM titles").all<{metadata_json:string}>();
  let episode:EpisodeLike|null=null;
+ const sourceHint=reqUrl.searchParams.get("source")||"";
  for(const row of rows.results||[]) {
-  try { const title=JSON.parse(row.metadata_json); const found=(title.episodes||[]).find((e:EpisodeLike)=>String(e.id)===episodeId); if(found){episode=found;break;} } catch {}
+  try {
+   const title=JSON.parse(row.metadata_json);
+   const episodes=Array.isArray(title.episodes)?title.episodes as EpisodeLike[]:[];
+   // Public titles may synthesize IDs for legacy/grouped uploads. If the ID misses,
+   // resolve only against an exact source URL already recorded in the library.
+   const found=episodes.find((e:EpisodeLike)=>String(e.id)===episodeId);
+   const bySource=!found && sourceHint
+    ? episodes.find((e:EpisodeLike)=>[e.streamUrl,...(e.qualities||[]).map(q=>q.streamUrl)].some((url)=>typeof url==="string" && url===sourceHint))
+    : undefined;
+   if(found||bySource){episode=found||bySource||null;break;}
+  } catch {}
  }
- if(!episode) return json({error:"Episode not found in the Cloudflare library"},404);
+ if(!episode) return json({error:"Episode not found in the Cloudflare library. Check the stored episode ID and source URL."},404);
  const allowed=[episode.streamUrl,...(episode.qualities||[]).map(q=>q.streamUrl)].filter((x):x is string=>typeof x==="string" && isPublicHttps(x));
  let upstreamUrl=requested||reqUrl.searchParams.get("source")||allowed[0]||"";
  if(!isPublicHttps(upstreamUrl)) return json({error:"This video source is not an allowed HTTPS URL"},400);
