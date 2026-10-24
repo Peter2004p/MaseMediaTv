@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import 'movi-player';
+
+// The package registers the <movi-player> custom element at runtime.
+const MoviPlayerTag: any = 'movi-player';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, RotateCcw, RotateCw, Subtitles, Settings, Download, AlertCircle, LoaderCircle } from 'lucide-react';
 
 type Quality = '480p' | '720p' | '1080p';
@@ -33,6 +37,27 @@ export default function Player({ episode, onProgress }: { episode: Episode; onPr
   const [subtitle, setSubtitle] = useState(-1);
   const [fullscreen, setFullscreen] = useState(false);
   const tracks = episode.subtitleTracks || [];
+  const isMkvSource = /\\.mkv(?:$|[?#])/i.test((episode.streamUrl || '').trim()) || /matroska|x-matroska/i.test(episode.mimeType || '');
+  const mkvSource = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent((episode.streamUrl || '').trim());
+  const mkvPlayerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isMkvSource) return;
+    const element = mkvPlayerRef.current as (HTMLElement & { currentTime?: number; duration?: number }) | null;
+    if (!element) return;
+    const tick = () => {
+      const current = Number(element.currentTime) || 0;
+      const total = Number(element.duration) || 0;
+      if (total > 0) onProgressRef.current(Math.min(99, Math.round(current / total * 100)));
+    };
+    const ended = () => onProgressRef.current(100);
+    element.addEventListener('timeupdate', tick);
+    element.addEventListener('ended', ended);
+    return () => {
+      element.removeEventListener('timeupdate', tick);
+      element.removeEventListener('ended', ended);
+    };
+  }, [isMkvSource, episode.id, episode.streamUrl]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -152,6 +177,51 @@ export default function Player({ episode, onProgress }: { episode: Episode; onPr
     if (!hlsRef.current) return;
     hlsRef.current.currentLevel = index; setQuality(index); setMenu('');
   };
+
+  if (isMkvSource) {
+    return <section className='vlcPlayer glass' aria-label='MaseTv MKV video player'>
+      <div className='videoStage maseStage'>
+        <div className='playerTop'><b>{episode.title}</b><span>S{episode.season} · E{episode.episode} · {episode.quality}</span></div>
+        {/*
+          MKV requires a container-aware browser engine. The old /api/media/convert
+          endpoint intentionally returns 501 because no server transcoder is configured.
+          Movi-Player demuxes MKV in the browser and reads the proxied source with Range
+          requests, avoiding a fake conversion endpoint.
+        */}
+        <MoviPlayerTag
+          ref={mkvPlayerRef}
+          src={mkvSource}
+          controls
+          playsinline
+          theme="dark"
+          sw="auto"
+          subtitlepicker
+          subtitlesize="1.1"
+          subtitlebg="0.7"
+          style={{ display: 'block', width: '100%', aspectRatio: '16 / 9', minHeight: '220px', background: '#000' }}
+        >
+          {tracks.map((track, index) => {
+            const isAbsoluteHttps = /^https:\/\//i.test(track.url);
+            const subtitleSrc = isAbsoluteHttps
+              ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&resource=' + encodeURIComponent(track.url)
+              : track.url;
+            const isSrt = /\.srt(?:$|[?#])/i.test(track.url) || /subrip/i.test(track.mimeType || '');
+            return <track
+              key={track.url + index}
+              kind="subtitles"
+              src={subtitleSrc}
+              srclang={track.lang || 'und'}
+              label={track.label}
+              default={index === 0}
+              data-format={isSrt ? 'srt' : undefined}
+            />;
+          })}
+        </MoviPlayerTag>
+      </div>
+      {episode.downloadUrl && <div className='playerDownload'><a className='secondary' href={episode.downloadUrl} target='_blank' rel='noopener noreferrer'><Download size={14} /> Download video</a></div>}
+      <div className='playerHint'>MKV playback uses browser-side decoding. Embedded audio/subtitle tracks are available in the player menu when supported by the source and device. If playback fails, the source must allow HTTPS byte-range requests.</div>
+    </section>;
+  }
 
   return <section className='vlcPlayer glass' aria-label='MaseTv video player'>
     <div className='videoStage maseStage' ref={stageRef}>
