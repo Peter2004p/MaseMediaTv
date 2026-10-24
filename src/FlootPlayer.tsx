@@ -26,6 +26,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
+  const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
