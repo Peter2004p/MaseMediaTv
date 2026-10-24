@@ -22,10 +22,10 @@ const embedFor = (raw: string, autoplay = false) => {
 const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value / 60) + ':' + String(Math.floor(value % 60)).padStart(2, '0') : '0:00';
 
 export default function FlootPlayer({ episode, onProgress, autoPlay = false, muted = false, reelMode = false }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
+  const videoRef = useRef<HTMLVideoElement>(null); const mkvPlayerRef = useRef<any>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
+  const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0); const [mkvSubtitleTracks, setMkvSubtitleTracks] = useState<any[]>([]); const [mkvSubtitleMenuOpen, setMkvSubtitleMenuOpen] = useState(false); const [activeMkvSubtitle, setActiveMkvSubtitle] = useState<number | null>(null);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
@@ -48,6 +48,36 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const mkvProxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
 
   useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
+  useEffect(() => {
+    if (!isMkvSource) { setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); return; }
+    let count = 0;
+    const readTracks = () => {
+      const player = mkvPlayerRef.current;
+      if (!player || typeof player.getSubtitleTracks !== 'function') return;
+      try {
+        const found = player.getSubtitleTracks() || [];
+        setMkvSubtitleTracks(found);
+      } catch { /* Player may still be initializing. */ }
+    };
+    readTracks();
+    const timer = window.setInterval(() => {
+      readTracks();
+      count += 1;
+      if (count >= 30) window.clearInterval(timer);
+    }, 700);
+    return () => window.clearInterval(timer);
+  }, [isMkvSource, rawSrc, retry, episode.id]);
+
+  const chooseMkvSubtitle = async (trackId: number | null) => {
+    const player = mkvPlayerRef.current;
+    if (!player || typeof player.selectSubtitleTrack !== 'function') return;
+    try {
+      const ok = await player.selectSubtitleTrack(trackId);
+      if (ok !== false) setActiveMkvSubtitle(trackId);
+      setMkvSubtitleMenuOpen(false);
+    } catch { /* Leave the menu open if the player cannot switch tracks. */ }
+  };
+
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
@@ -88,6 +118,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
     return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
       <div className="flootStyleFrame" style={{ minHeight: 220 }}>
         <MoviPlayerTag
+          ref={mkvPlayerRef}
           key={episode.id + ':' + rawSrc + ':' + retry}
           src={mkvProxyUrl}
           controls
@@ -112,8 +143,16 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
       </div>
       <div className="fspControls"><div className="fspRow fspOptions">
         {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
-        <span style={{ color: '#c9ccd5', fontSize: 12 }}>MKV · Embedded audio and subtitles appear in the player track menu when available.</span>
+        <button type="button" onClick={() => setMkvSubtitleMenuOpen(open => !open)} aria-expanded={mkvSubtitleMenuOpen} style={{ padding: '10px 14px', borderRadius: 12, background: '#202127', color: '#fff', border: '1px solid #555', touchAction: 'manipulation' }}>Subtitles {mkvSubtitleTracks.length ? '(' + mkvSubtitleTracks.length + ')' : ''} ▾</button>
       </div></div>
+      {mkvSubtitleMenuOpen && <div role="dialog" aria-label="Choose subtitle track" style={{ marginTop: 8, padding: 12, border: '1px solid #45464f', borderRadius: 14, background: '#111217', color: '#fff' }}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Choose subtitles</div>
+        <div style={{ maxHeight: 230, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', touchAction: 'pan-y', paddingRight: 4 }}>
+          <button type="button" onClick={() => void chooseMkvSubtitle(null)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: 12, marginBottom: 6, borderRadius: 10, background: activeMkvSubtitle === null ? '#393322' : '#202127', color: '#fff', border: '1px solid #555', touchAction: 'manipulation' }}>Off</button>
+          {mkvSubtitleTracks.map((track: any, index: number) => <button type="button" key={String(track.id ?? index)} onClick={() => void chooseMkvSubtitle(Number(track.id))} style={{ display: 'block', width: '100%', textAlign: 'left', padding: 12, marginBottom: 6, borderRadius: 10, background: activeMkvSubtitle === Number(track.id) ? '#393322' : '#202127', color: '#fff', border: '1px solid #555', touchAction: 'manipulation', overflowWrap: 'anywhere' }}>{track.title || track.label || track.language || track.lang || 'Subtitle track ' + (index + 1)}{track.codec ? ' · ' + track.codec : ''}</button>)}
+          {!mkvSubtitleTracks.length && <p style={{ color: '#bbb', fontSize: 13 }}>Subtitle tracks are still loading. If none appear, use the player's subtitle menu after playback starts.</p>}
+        </div>
+      </div>}
     </section>;
   }
 
