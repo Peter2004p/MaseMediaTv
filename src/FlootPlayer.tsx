@@ -85,7 +85,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const retrySource = () => { setError(''); setRetry(x => x + 1); };
 
   if (isMkvSource && !embed) {
-    return <section className={\`flootStylePlayer\${reelMode ? ' reelMode' : ''}\`} aria-label="MaseNet MKV video player">
+    return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
       <div className="flootStyleFrame" style={{ minHeight: 220 }}>
         <MoviPlayerTag
           key={episode.id + ':' + rawSrc + ':' + retry}
