@@ -12,6 +12,24 @@ const isPublicHttps = (value:string) => {
   return true;
  } catch { return false; }
 };
+// Follow redirects manually so every destination is revalidated. Automatic redirects can
+// bypass the URL checks above if a public media host redirects to a private address.
+async function fetchPublicHttps(initialUrl:string, headers:Headers):Promise<Response> {
+ let target=initialUrl;
+ for(let hop=0;hop<=5;hop++){
+  if(!isPublicHttps(target)) throw new Error("Blocked unsafe redirect target");
+  const response=await fetch(target,{headers,redirect:"manual"});
+  if(![301,302,303,307,308].includes(response.status)) return response;
+  const location=response.headers.get("location");
+  if(!location){await response.body?.cancel();throw new Error("Redirect missing location");}
+  let next:string;
+  try{next=new URL(location,target).toString();}catch{await response.body?.cancel();throw new Error("Invalid redirect location");}
+  await response.body?.cancel();
+  if(hop===5) throw new Error("Too many redirects");
+  target=next;
+ }
+ throw new Error("Too many redirects");
+}
 export const onRequestGet = async ({ request, env }: { request:Request; env:Env }) => {
  const reqUrl=new URL(request.url), episodeId=reqUrl.searchParams.get("episodeId")||"", requested=reqUrl.searchParams.get("resource");
  if(!episodeId || episodeId.length>200) return json({error:"Missing episodeId"},400);
@@ -36,7 +54,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  const headers=new Headers();
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
- try { upstream=await fetch(upstreamUrl,{headers,redirect:"follow"}); } catch { return json({error:"The video source could not be reached"},502); }
+ try { upstream=await fetchPublicHttps(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
  if(!upstream.ok && upstream.status!==206) return json({error:"The video source returned HTTP "+upstream.status},502);
  let contentType=upstream.headers.get("content-type")||"";
  let detectedPlaylist=/mpegurl|vnd\.apple\.mpegurl/i.test(contentType)||/\.m3u8(?:$|[?#])/i.test(upstreamUrl)||/\.m3u8(?:$|[?#])/i.test(upstream.url||"");
