@@ -862,3 +862,43 @@ button,a,input,textarea,select{touch-action:manipulation}
 .ttCommentForm button{border:0;border-radius:999px;padding:10px 15px;background:#d6b96c;color:#17130b;font-weight:800}
 .ttCommentForm button:disabled{opacity:.4}
 @media(min-width:700px){.ttCommentsBackdrop{align-items:center;padding:20px}.ttCommentsSheet{border-radius:20px;height:min(70dvh,650px)}}
+
+
+/* MaseNet quality pass — global shell, catalog, forms and accessibility only.
+   Intentionally does not target player, video, subtitle, or playback selectors. */
+:root{color-scheme:dark;scroll-padding-top:88px}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scrollbar-gutter:stable}
+body{min-width:320px;-webkit-tap-highlight-color:transparent}
+button,a,input,textarea,select,[role="button"]{touch-action:manipulation}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[role="button"]:focus-visible{outline:2px solid #e8c77a;outline-offset:3px}
+button:disabled{cursor:not-allowed;opacity:.58;transform:none!important}
+img{max-width:100%}
+::selection{background:rgba(210,173,96,.32);color:#fff}
+@media(hover:hover) and (pointer:fine){
+ .poster,.glass,.adminItem,.broadcastExisting{transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+ .poster:hover{border-color:rgba(232,199,122,.42)}
+ .glass:hover{border-color:rgba(232,199,122,.2)}
+}
+@media(max-width:760px){
+ .nav{top:max(6px,env(safe-area-inset-top));margin:6px 8px 0;padding:8px 9px;gap:8px;border-radius:18px}
+ .nav nav{gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
+ .nav nav::-webkit-scrollbar{display:none}
+ .nav nav button{flex:0 0 auto;padding:9px 10px}
+ .navActions{flex:0 0 auto}
+ .page{padding:28px 13px calc(92px + env(safe-area-inset-bottom))}
+ .actions>*{min-height:42px}
+ .primary,.secondary{min-height:42px;justify-content:center}
+ input,textarea,select{max-width:100%}
+}
+@media(max-width:420px){
+ .nav{gap:5px}
+ .brand{gap:6px;font-size:15px}
+ .brandMark{width:29px;height:29px}
+ .nav nav button{padding:8px;font-size:12px}
+ .navActions button{padding:8px}
+ .page{padding-left:11px;padding-right:11px}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
