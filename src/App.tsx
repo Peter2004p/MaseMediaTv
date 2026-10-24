@@ -52,7 +52,31 @@ export default function App(){
  const myList=titles.filter(t=>saved.includes(t.id));
  const featured=titles.find(t=>t.featured)||titles[0];
 
- async function createTitle(t:Title){const r=await api.post('/api/titles',t);const saved=(r.data?.title||t) as Title;setTitles(p=>[saved,...p.filter(x=>x.id!==saved.id)]);}
+ const normalizeSeriesName=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[’']/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+ async function createTitle(t:Title){
+  const normalizedName=normalizeSeriesName(t.name);
+  // Only exact normalized title + type matches are grouped; similar titles remain separate.
+  const existing=normalizedName?titles.find(item=>item.type===t.type&&normalizeSeriesName(item.name)===normalizedName):undefined;
+  if(!existing){const r=await api.post('/api/titles',t);const saved=(r.data?.title||t) as Title;setTitles(p=>[saved,...p.filter(x=>x.id!==saved.id)]);return;}
+  const merged=[...existing.episodes];
+  for(const incoming of t.episodes){
+   const index=merged.findIndex(ep=>Number(ep.season||1)===Number(incoming.season||1)&&Number(ep.episode)===Number(incoming.episode));
+   if(index<0){merged.push(incoming);continue;}
+   const current=merged[index];
+   const variantsOf=(ep:Episode):StreamVariant[]=>ep.qualities?.length?ep.qualities:[{quality:ep.quality,streamUrl:ep.streamUrl,streamPath:ep.streamPath,mimeType:ep.mimeType,downloadUrl:ep.downloadUrl,downloadPath:ep.downloadPath,subtitleTracks:ep.subtitleTracks}];
+   const variants=[...variantsOf(current)];
+   for(const variant of variantsOf(incoming)){
+    const same=variants.find(v=>v.quality===variant.quality);
+    if(same){if(!same.streamUrl&&variant.streamUrl)same.streamUrl=variant.streamUrl;if(!same.downloadUrl&&variant.downloadUrl)same.downloadUrl=variant.downloadUrl;}
+    else variants.push(variant);
+   }
+   merged[index]={...current,qualities:variants,streamUrl:current.streamUrl||incoming.streamUrl,downloadUrl:current.downloadUrl||incoming.downloadUrl};
+  }
+  merged.sort((a,b)=>(Number(a.season)||1)-(Number(b.season)||1)||Number(a.episode)-Number(b.episode));
+  const updated:Title={...existing,episodes:merged,description:existing.description||t.description,year:existing.year||t.year,posterUrl:existing.posterUrl||t.posterUrl,posterPath:existing.posterPath||t.posterPath};
+  await api.put('/api/titles/'+encodeURIComponent(existing.id),updated);
+  setTitles(p=>p.map(item=>item.id===existing.id?updated:item));
+ }
  async function deleteTitle(id:string){if(!window.confirm('Delete this movie/drama and all its episodes? This cannot be undone.'))return;try{await api.delete('/api/titles/'+id);setTitles(p=>p.filter(x=>x.id!==id));if(route.includes(id))go('#/home')}catch(e){window.alert(e instanceof Error?e.message:'MaseTv could not delete this title. Please retry or check admin access.')}}
  async function updateTitle(t:Title){await api.put('/api/titles/'+t.id,t);setTitles(p=>p.map(x=>x.id===t.id?t:x))}
  async function saveRows(){await api.post('/api/homepage-settings',{rows:homepageRows});}
