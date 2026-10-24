@@ -48,75 +48,74 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const mkvProxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
 
   useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
-  // Mobile fix: the subtitle chooser lives inside Movi Player's shadow DOM.
-  // Make its actual internal track-list panel vertically scrollable instead of
-  // adding a separate page-level subtitle picker.
+  // Mobile/Telegram WebView fix: Movi's subtitle menu can be rendered in
+  // the player shadow root or in a body-level portal. Give the real menu a
+  // bounded height so overflow exists, then enable native touch scrolling.
   useEffect(() => {
     if (!isMkvSource) return;
     let observer: MutationObserver | undefined;
     let frame = 0;
-    const applyScrollableSubtitleMenu = () => {
-      const host = mkvPlayerRef.current as (HTMLElement & { shadowRoot?: ShadowRoot | null }) | null;
-      const root = host?.shadowRoot;
-      if (!root) return;
-      const nodes = Array.from(root.querySelectorAll<HTMLElement>('*'));
-      for (const node of nodes) {
-        const label = (node.textContent || '').trim().toLowerCase();
-        if (!label.includes('subtitles') || label.length > 80) continue;
-        let panel: HTMLElement | null = node;
-        for (let depth = 0; depth < 5 && panel; depth++, panel = panel.parentElement) {
-          if (panel.scrollHeight > panel.clientHeight + 8) {
-            panel.style.setProperty('overflow-y', 'auto', 'important');
-            panel.style.setProperty('overscroll-behavior-y', 'contain', 'important');
-            panel.style.setProperty('touch-action', 'pan-y', 'important');
-            panel.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-            panel.style.setProperty('pointer-events', 'auto', 'important');
-            break;
-          }
-        }
-      }
-      // Apply touch scrolling to the real menu/list containers, not the player
-      // surface, so playback gestures remain available elsewhere.
-      for (const node of nodes) {
-        const text = (node.textContent || '').trim().toLowerCase();
-        if (!(text === 'off' || text.includes('ara') || text.includes('text'))) continue;
-        let panel: HTMLElement | null = node;
-        for (let depth = 0; depth < 4 && panel; depth++, panel = panel.parentElement) {
-          if (panel.scrollHeight > panel.clientHeight + 8) {
-            panel.style.setProperty('overflow-y', 'auto', 'important');
-            panel.style.setProperty('overscroll-behavior-y', 'contain', 'important');
-            panel.style.setProperty('touch-action', 'pan-y', 'important');
-            panel.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-            break;
-          }
+    const makeScrollable = (root: ParentNode) => {
+      const elements = Array.from(root.querySelectorAll<HTMLElement>('*'));
+      const visible = (el: HTMLElement) => {
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      };
+      const candidates = elements.filter(el => {
+        if (!visible(el)) return false;
+        const text = (el.innerText || el.textContent || '').trim();
+        return text.length > 0 && text.length < 1200 &&
+          (/subtitles/i.test(text) || /^(off|by\s*:-|by\s*:-\s*@|.*\b(?:ara|eng|text)\b)/i.test(text));
+      });
+      for (const item of candidates) {
+        let panel: HTMLElement | null = item;
+        for (let depth = 0; depth < 6 && panel; depth++, panel = panel.parentElement) {
+          if (!visible(panel)) continue;
+          const text = (panel.innerText || panel.textContent || '').trim();
+          // Target a menu-sized container with multiple subtitle rows; don't
+          // accidentally constrain a single row or the entire player.
+          const rows = panel.querySelectorAll('button,[role="option"],[role="menuitem"],li').length;
+          const looksLikeTrackList = rows >= 3 || (/subtitles/i.test(text) && text.length > 100);
+          if (!looksLikeTrackList || panel.clientHeight < 60) continue;
+          panel.style.setProperty('max-height', 'min(68dvh, 520px)', 'important');
+          panel.style.setProperty('overflow-y', 'auto', 'important');
+          panel.style.setProperty('overscroll-behavior-y', 'contain', 'important');
+          panel.style.setProperty('touch-action', 'pan-y', 'important');
+          panel.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+          panel.style.setProperty('pointer-events', 'auto', 'important');
+          panel.style.setProperty('scrollbar-width', 'thin', 'important');
+          break;
         }
       }
     };
+    const apply = () => {
+      const host = mkvPlayerRef.current as (HTMLElement & { shadowRoot?: ShadowRoot | null }) | null;
+      if (host?.shadowRoot) makeScrollable(host.shadowRoot);
+      // Movi versions may portal menus outside the custom element's shadow DOM.
+      makeScrollable(document.body);
+    };
     const attach = () => {
-      const root = mkvPlayerRef.current?.shadowRoot as ShadowRoot | null | undefined;
-      if (!root) return;
-      applyScrollableSubtitleMenu();
+      const host = mkvPlayerRef.current as (HTMLElement & { shadowRoot?: ShadowRoot | null }) | null;
+      if (!host?.shadowRoot) return;
+      apply();
       observer?.disconnect();
       observer = new MutationObserver(() => {
         cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(applyScrollableSubtitleMenu);
+        frame = requestAnimationFrame(apply);
       });
-      observer.observe(root, { childList: true, subtree: true });
+      observer.observe(host.shadowRoot, { childList: true, subtree: true });
+      observer.observe(document.body, { childList: true, subtree: true });
     };
     attach();
-    // Poll only until the custom element exposes its shadow root. Repeatedly
-    // reconnecting the observer can interrupt interaction on mobile devices.
     let attempts = 0;
     const timer = window.setInterval(() => {
       attempts += 1;
-      if (mkvPlayerRef.current?.shadowRoot || attempts >= 20) {
-        attach();
-        window.clearInterval(timer);
-      }
-    }, 250);
+      attach();
+      if (mkvPlayerRef.current?.shadowRoot || attempts >= 24) window.clearInterval(timer);
+    }, 300);
     return () => { window.clearInterval(timer); cancelAnimationFrame(frame); observer?.disconnect(); };
   }, [isMkvSource, rawSrc, retry, episode.id]);
-
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
