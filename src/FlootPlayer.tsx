@@ -22,7 +22,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1); const [speed, setSpeed] = useState(1); const [retry, setRetry] = useState(0);
+  const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
@@ -71,7 +71,8 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
     return () => { v.removeEventListener('loadedmetadata', metadata); v.textTracks.removeEventListener('addtrack', tracksChanged); v.textTracks.removeEventListener('change', tracksChanged); v.removeEventListener('timeupdate', tick); v.removeEventListener('play', play); v.removeEventListener('pause', pause); v.removeEventListener('waiting', wait); v.removeEventListener('canplay', ready); v.removeEventListener('error', fail); };
   }, [onProgress, isMkvSource, isHlsSource, rawSrc, episode.id, telegramWebView]);
 
-  useEffect(() => { const v = videoRef.current; if (v) v.volume = volume; }, [volume]);
+  useEffect(() => { const v = videoRef.current; if (v) v.volume = volume; try { localStorage.setItem('masenet-player-volume', String(volume)); } catch { /* Storage may be unavailable in private browsing. */ } }, [volume]);
+  useEffect(() => { const v = videoRef.current; if (v) v.playbackRate = speed; try { localStorage.setItem('masenet-player-speed', String(speed)); } catch { /* Storage may be unavailable in private browsing. */ } }, [speed]);
   useEffect(() => { const v = videoRef.current; if (!v) return; v.muted = Boolean(muted); if (!autoPlay) { v.pause(); return; } const attempt = () => { if (autoPlay) void v.play().catch(() => {}); }; if (v.readyState >= 2) attempt(); else v.addEventListener('canplay', attempt, { once: true }); return () => v.removeEventListener('canplay', attempt); }, [autoPlay, muted, src, retry]);
   const playPause = async () => { const v = videoRef.current; if (!v) return; setError(''); try { if (v.paused) await v.play(); else v.pause(); } catch { setError('Playback was blocked or the video URL is not playable. Tap Retry or choose another quality.'); } };
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
