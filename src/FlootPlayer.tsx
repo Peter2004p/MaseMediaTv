@@ -45,7 +45,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const telegramWebView = typeof window !== 'undefined' && (/Telegram/i.test(navigator.userAgent) || Boolean((window as Window & { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp));
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
   const src = isHlsSource ? proxyUrl : rawSrc;
-  const mkvProxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
+  const mkvProxyUrl = rawSrc; // Play the uploaded source directly first; this avoids proxy lookups failing for newly grouped/generated episode IDs.
 
   useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
