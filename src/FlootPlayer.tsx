@@ -98,13 +98,15 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
 .fspSubtitleButton{border:1px solid rgba(255,255,255,.24);border-radius:9px;background:rgba(255,255,255,.08);color:#fff;padding:7px 10px;min-height:34px;font-size:12px;font-weight:700}
 .fspSubtitleMenu{position:absolute;z-index:30;left:0;bottom:calc(100% + 8px);width:min(260px,78vw);max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid rgba(255,255,255,.17);border-radius:13px;background:rgba(13,15,21,.98);box-shadow:0 15px 40px #0009;backdrop-filter:blur(18px)}
 .fspSubtitleMenu strong{font-size:12px;padding:2px 4px 6px}.fspSubtitleMenu button{width:100%;text-align:left;border:1px solid transparent;border-radius:8px;padding:8px 9px;background:#ffffff0a;color:#f6f6f8;font-size:12px}.fspSubtitleMenu button.selected{border-color:#dfbf74;background:#dfbf7420;color:#f4d891}.fspSubtitleMenu p,.fspSubtitleMenu small{font-size:11px;line-height:1.45;color:#c9ccd5;margin:5px 3px}
-.reelMode{height:100%;border:0!important;border-radius:0!important;background:#000!important;box-shadow:none!important;display:flex;flex-direction:column}
-.reelMode .flootStyleFrame{aspect-ratio:9/16;min-height:0;height:100%;max-height:100%;flex:1;background:#000}
-.reelMode .flootStyleFrame video,.reelMode .flootStyleFrame iframe{object-fit:cover}
+/* Reels intentionally use a centered landscape player, not a full-screen portrait crop. */
+.reelMode{height:auto!important;min-height:0!important;width:100%;border:0!important;border-radius:0!important;background:#000!important;box-shadow:none!important;display:block!important;overflow:visible!important}
+.reelMode .flootStyleFrame{width:100%;aspect-ratio:16/9!important;min-height:0!important;height:auto!important;max-height:32dvh!important;flex:none!important;background:#000}
+.reelMode .flootStyleFrame video,.reelMode .flootStyleFrame iframe{object-fit:contain!important;background:#000}
 .reelMode .fspControls{display:none!important}
 .reelMode .fspBigPlay{width:58px;height:58px}
 .reelMode .fspStatus{z-index:3;top:50%}
-.reelMode .fspError{z-index:5}
+.reelMode .fspError{z-index:5;max-height:100%;overflow:auto}
+@media(min-width:700px){.reelMode .flootStyleFrame{max-height:38dvh!important}}
 `}
 </style>
   </div>;
