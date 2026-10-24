@@ -57,6 +57,14 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  try { upstream=await fetchPublicHttps(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
  if(!upstream.ok && upstream.status!==206) return json({error:"The video source returned HTTP "+upstream.status},502);
  let contentType=upstream.headers.get("content-type")||"";
+ // Keep the container MIME type when an upstream labels ranged MKV responses as
+ // generic binary downloads. The proxy URL itself has no .mkv suffix, so the player
+ // otherwise cannot reliably select its Matroska demuxer while requesting byte ranges.
+ const mediaPath=(new URL(upstream.url||upstreamUrl)).pathname.toLowerCase();
+ const requestedPath=(new URL(upstreamUrl)).pathname.toLowerCase();
+ const sourcePath=/\\.(mkv|mp4|m4v|webm|mov|m3u8)$/.test(mediaPath)?mediaPath:requestedPath;
+ const extensionType=sourcePath.endsWith(".mkv")?"video/x-matroska":sourcePath.endsWith(".mp4")||sourcePath.endsWith(".m4v")?"video/mp4":sourcePath.endsWith(".webm")?"video/webm":sourcePath.endsWith(".mov")?"video/quicktime":sourcePath.endsWith(".m3u8")?"application/vnd.apple.mpegurl":"";
+ if(extensionType) contentType=extensionType;
  let detectedPlaylist=/mpegurl|vnd\.apple\.mpegurl/i.test(contentType)||/\.m3u8(?:$|[?#])/i.test(upstreamUrl)||/\.m3u8(?:$|[?#])/i.test(upstream.url||"");
  // Some streaming providers expose an HLS playlist or MP4 through an extensionless
  // endpoint and label it as application/octet-stream. Peek at a bounded clone of the
@@ -95,6 +103,6 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  }
  const outHeaders=new Headers();
  for(const key of ["content-length","content-range","accept-ranges","last-modified","etag"]) { const value=upstream.headers.get(key); if(value) outHeaders.set(key,value); } outHeaders.set("content-type",contentType || "application/octet-stream");
- outHeaders.set("cache-control","no-store"); outHeaders.set("access-control-allow-origin","*"); outHeaders.set("x-content-type-options","nosniff");
+ outHeaders.set("cache-control","no-store"); outHeaders.set("access-control-allow-origin","*"); outHeaders.set("access-control-expose-headers","content-length,content-range,accept-ranges,last-modified,etag"); outHeaders.set("accept-ranges",upstream.headers.get("accept-ranges")||"bytes"); outHeaders.set("x-content-type-options","nosniff");
  return new Response(upstream.body,{status:upstream.status,headers:outHeaders});
 };
