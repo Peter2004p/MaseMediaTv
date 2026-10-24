@@ -101,10 +101,19 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(applyScrollableSubtitleMenu);
       });
-      observer.observe(root, { childList: true, subtree: true, attributes: true });
+      observer.observe(root, { childList: true, subtree: true });
     };
     attach();
-    const timer = window.setInterval(attach, 500);
+    // Poll only until the custom element exposes its shadow root. Repeatedly
+    // reconnecting the observer can interrupt interaction on mobile devices.
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      if (mkvPlayerRef.current?.shadowRoot || attempts >= 20) {
+        attach();
+        window.clearInterval(timer);
+      }
+    }, 250);
     return () => { window.clearInterval(timer); cancelAnimationFrame(frame); observer?.disconnect(); };
   }, [isMkvSource, rawSrc, retry, episode.id]);
 
