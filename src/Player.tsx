@@ -196,6 +196,7 @@ export default function Player({ episode, onProgress }: { episode: Episode; onPr
           theme="dark"
           sw="auto"
           subtitlepicker
+          controlslist="nosubtitledrag"
           subtitlesize="1.1"
           subtitlebg="0.7"
           style={{ display: 'block', width: '100%', aspectRatio: '16 / 9', minHeight: '220px', background: '#000' }}
