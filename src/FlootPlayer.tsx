@@ -48,6 +48,66 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const mkvProxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
 
   useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
+  // Mobile fix: the subtitle chooser lives inside Movi Player's shadow DOM.
+  // Make its actual internal track-list panel vertically scrollable instead of
+  // adding a separate page-level subtitle picker.
+  useEffect(() => {
+    if (!isMkvSource) return;
+    let observer: MutationObserver | undefined;
+    let frame = 0;
+    const applyScrollableSubtitleMenu = () => {
+      const host = mkvPlayerRef.current as (HTMLElement & { shadowRoot?: ShadowRoot | null }) | null;
+      const root = host?.shadowRoot;
+      if (!root) return;
+      const nodes = Array.from(root.querySelectorAll<HTMLElement>('*'));
+      for (const node of nodes) {
+        const label = (node.textContent || '').trim().toLowerCase();
+        if (!label.includes('subtitles') || label.length > 80) continue;
+        let panel: HTMLElement | null = node;
+        for (let depth = 0; depth < 5 && panel; depth++, panel = panel.parentElement) {
+          if (panel.scrollHeight > panel.clientHeight + 8) {
+            panel.style.setProperty('overflow-y', 'auto', 'important');
+            panel.style.setProperty('overscroll-behavior-y', 'contain', 'important');
+            panel.style.setProperty('touch-action', 'pan-y', 'important');
+            panel.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+            panel.style.setProperty('pointer-events', 'auto', 'important');
+            break;
+          }
+        }
+      }
+      // Apply touch scrolling to the real menu/list containers, not the player
+      // surface, so playback gestures remain available elsewhere.
+      for (const node of nodes) {
+        const text = (node.textContent || '').trim().toLowerCase();
+        if (!(text === 'off' || text.includes('ara') || text.includes('text'))) continue;
+        let panel: HTMLElement | null = node;
+        for (let depth = 0; depth < 4 && panel; depth++, panel = panel.parentElement) {
+          if (panel.scrollHeight > panel.clientHeight + 8) {
+            panel.style.setProperty('overflow-y', 'auto', 'important');
+            panel.style.setProperty('overscroll-behavior-y', 'contain', 'important');
+            panel.style.setProperty('touch-action', 'pan-y', 'important');
+            panel.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+            break;
+          }
+        }
+      }
+    };
+    const attach = () => {
+      const root = mkvPlayerRef.current?.shadowRoot as ShadowRoot | null | undefined;
+      if (!root) return;
+      applyScrollableSubtitleMenu();
+      observer?.disconnect();
+      observer = new MutationObserver(() => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(applyScrollableSubtitleMenu);
+      });
+      observer.observe(root, { childList: true, subtree: true, attributes: true });
+    };
+    attach();
+    const timer = window.setInterval(attach, 500);
+    return () => { window.clearInterval(timer); cancelAnimationFrame(frame); observer?.disconnect(); };
+  }, [isMkvSource, rawSrc, retry, episode.id]);
+
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
