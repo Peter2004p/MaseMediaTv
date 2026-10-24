@@ -62,7 +62,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  // otherwise cannot reliably select its Matroska demuxer while requesting byte ranges.
  const mediaPath=(new URL(upstream.url||upstreamUrl)).pathname.toLowerCase();
  const requestedPath=(new URL(upstreamUrl)).pathname.toLowerCase();
- const sourcePath=/\\.(mkv|mp4|m4v|webm|mov|m3u8)$/.test(mediaPath)?mediaPath:requestedPath;
+ const sourcePath=/\.(mkv|mp4|m4v|webm|mov|m3u8)$/.test(mediaPath)?mediaPath:requestedPath;
  const extensionType=sourcePath.endsWith(".mkv")?"video/x-matroska":sourcePath.endsWith(".mp4")||sourcePath.endsWith(".m4v")?"video/mp4":sourcePath.endsWith(".webm")?"video/webm":sourcePath.endsWith(".mov")?"video/quicktime":sourcePath.endsWith(".m3u8")?"application/vnd.apple.mpegurl":"";
  if(extensionType) contentType=extensionType;
  let detectedPlaylist=/mpegurl|vnd\.apple\.mpegurl/i.test(contentType)||/\.m3u8(?:$|[?#])/i.test(upstreamUrl)||/\.m3u8(?:$|[?#])/i.test(upstream.url||"");
