@@ -6,7 +6,8 @@ const json = (data: unknown, status = 200) =>
   Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 
 async function hmac(key: ArrayBuffer | Uint8Array, value: string) {
-  const cryptoKey = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const keyData: ArrayBuffer = key instanceof Uint8Array ? key.slice().buffer as ArrayBuffer : key;
+  const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(value)));
 }
 function hex(bytes: Uint8Array) { return [...bytes].map(b => b.toString(16).padStart(2, "0")).join(""); }
@@ -26,7 +27,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!suppliedHash || !authDate || Math.abs(Date.now() / 1000 - authDate) > 86400)
     return json({ error: "Telegram login data expired or invalid." }, 401);
 
-  const dataCheckString = [...params.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}=${v}`).join("\n");
+  const entries: Array<[string, string]> = [];
+  params.forEach((value, key) => entries.push([key, value]));
+  const dataCheckString = entries.sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}=${v}`).join("\n");
   const secretKey = await hmac(new TextEncoder().encode("WebAppData"), env.TELEGRAM_BOT_TOKEN);
   const expected = hex(await hmac(secretKey, dataCheckString));
   if (expected.length !== suppliedHash.length)

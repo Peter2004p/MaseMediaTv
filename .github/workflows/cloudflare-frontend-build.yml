@@ -1,7 +1,7 @@
 name: Cloudflare migration frontend build
 on:
   push:
-    branches: [cloudflare-migration]
+    branches: [cloudflare-migration, fix/mase-mkv-browser-playback]
   pull_request:
     branches: [cloudflare-migration]
 jobs:

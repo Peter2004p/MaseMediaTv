@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import 'movi-player';
+
+const MoviPlayerTag: any = 'movi-player';
 
 type Quality = '480p' | '720p' | '1080p';
 type Track = { label?: string; url: string; path?: string; lang?: string; mimeType?: string };
@@ -19,7 +22,7 @@ const embedFor = (raw: string, autoplay = false) => {
 const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value / 60) + ':' + String(Math.floor(value % 60)).padStart(2, '0') : '0:00';
 
 export default function FlootPlayer({ episode, onProgress, autoPlay = false, muted = false, reelMode = false }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
+  const videoRef = useRef<HTMLVideoElement>(null); const mkvPlayerRef = useRef<any>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
@@ -42,8 +45,11 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const telegramWebView = typeof window !== 'undefined' && (/Telegram/i.test(navigator.userAgent) || Boolean((window as Window & { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp));
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
   const src = isHlsSource ? proxyUrl : rawSrc;
+  const mkvProxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
 
   useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
+  // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
+  // interfere with the custom element's own click/touch handling in WebViews.
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
@@ -79,6 +85,40 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
   const pictureInPicture = async () => { const v = videoRef.current as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null; if (!v) return; try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled && v.requestPictureInPicture) { await v.requestPictureInPicture(); } else { setError('Picture-in-Picture is not supported in this browser or Telegram webview. Use Fullscreen instead.'); } } catch { setError('Picture-in-Picture could not start. Try playing the video first, or use Fullscreen.'); } };
   const retrySource = () => { setError(''); setRetry(x => x + 1); };
+
+  if (isMkvSource && !embed) {
+    return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
+      <div className="flootStyleFrame" style={{ minHeight: 220 }}>
+        <MoviPlayerTag
+          ref={mkvPlayerRef}
+          key={episode.id + ':' + rawSrc + ':' + retry}
+          src={mkvProxyUrl}
+          controls
+          playsinline
+          theme="dark"
+          subtitlepicker
+          controlslist="nosubtitledrag"
+          subtitlesize="1.15"
+          subtitlebg="rgba(0,0,0,.65)"
+          style={{ display: 'block', width: '100%', height: '100%', minHeight: '220px', aspectRatio: '16 / 9', background: '#000' }}
+        >
+          {tracks.map((track, index) => {
+            const rawTrackUrl = String(track.url || track.path || '').trim();
+            const isAbsoluteHttps = /^https:\/\//i.test(rawTrackUrl);
+            const trackUrl = isAbsoluteHttps
+              ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&resource=' + encodeURIComponent(rawTrackUrl)
+              : rawTrackUrl;
+            const isSrt = /\.srt(?:$|[?#])/i.test(rawTrackUrl) || /subrip/i.test(track.mimeType || '');
+            return <track key={rawTrackUrl + index} kind="subtitles" src={trackUrl} srclang={track.lang || 'und'} label={track.label || track.lang || 'Subtitle ' + (index + 1)} default={index === 0} data-format={isSrt ? 'srt' : undefined} />;
+          })}
+        </MoviPlayerTag>
+      </div>
+      <div className="fspControls"><div className="fspRow fspOptions">
+        {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
+        <span style={{ color: '#c9ccd5', fontSize: 12 }}>Use the player's own subtitle menu to scroll and choose embedded tracks.</span>
+      </div></div>
+    </section>;
+  }
 
   return <div className={`flootStylePlayer${reelMode ? ' reelMode' : ''}`}>
     <div className="flootStyleFrame">
