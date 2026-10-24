@@ -37,7 +37,7 @@ export default function Player({ episode, onProgress }: { episode: Episode; onPr
   const [subtitle, setSubtitle] = useState(-1);
   const [fullscreen, setFullscreen] = useState(false);
   const tracks = episode.subtitleTracks || [];
-  const isMkvSource = /\\.mkv(?:$|[?#])/i.test((episode.streamUrl || '').trim()) || /matroska|x-matroska/i.test(episode.mimeType || '');
+  const isMkvSource = /\.mkv(?:$|[?#])/i.test((episode.streamUrl || '').trim()) || /matroska|x-matroska/i.test(episode.mimeType || '');
   const mkvSource = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent((episode.streamUrl || '').trim());
   const mkvPlayerRef = useRef<HTMLElement | null>(null);
 
