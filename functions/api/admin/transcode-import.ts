@@ -80,7 +80,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const current = owner.episode;
   const previousStream = current.originalStreamUrl || current.streamUrl;
   const previousQualities = current.originalQualities || current.qualities;
-  const oldVariants = current.qualities || (current.streamUrl ? [{ quality: current.quality || "720p", streamUrl: current.streamUrl, mimeType: current.mimeType }] : []);
+  const oldVariants = current.qualities || (current.streamUrl ? [{ quality: current.quality || "720p", streamUrl: current.streamUrl, mimeType: typeof current.mimeType === "string" ? current.mimeType : undefined }] : []);
   const converted: Variant = { quality, streamUrl, mimeType: "video/mp4", converted: true, storagePath: objectPath };
   const nextVariants = [converted, ...oldVariants.filter(v => v.quality !== quality && v.streamUrl !== streamUrl)];
   current.originalStreamUrl = previousStream;
