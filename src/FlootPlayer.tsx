@@ -76,6 +76,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const playPause = async () => { const v = videoRef.current; if (!v) return; setError(''); try { if (v.paused) await v.play(); else v.pause(); } catch { setError('Playback was blocked or the video URL is not playable. Tap Retry or choose another quality.'); } };
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
   const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
+  const pictureInPicture = async () => { const v = videoRef.current as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null; if (!v) return; try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled && v.requestPictureInPicture) { await v.requestPictureInPicture(); } else { setError('Picture-in-Picture is not supported in this browser or Telegram webview. Use Fullscreen instead.'); } } catch { setError('Picture-in-Picture could not start. Try playing the video first, or use Fullscreen.'); } };
   const retrySource = () => { setError(''); setRetry(x => x + 1); };
 
   return <div className={`flootStylePlayer${reelMode ? ' reelMode' : ''}`}>
@@ -86,7 +87,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
       {!embed && !playing && !error && <button className="fspBigPlay" onClick={playPause} aria-label="Play video">▶</button>}
     </div>
     {!embed && <div className="fspControls">
-      <div className="fspRow"><button onClick={playPause} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Ⅱ' : '▶'}</button><button onClick={() => seek(-10)} aria-label="Back 10 seconds">↶ 10s</button><button onClick={() => seek(10)} aria-label="Forward 10 seconds">10s ↷</button><span className="fspTime">{timeLabel(time)} / {timeLabel(duration)}</span><button onClick={fullscreen} aria-label="Fullscreen">⛶</button></div>
+      <div className="fspRow"><button onClick={playPause} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Ⅱ' : '▶'}</button><button onClick={() => seek(-10)} aria-label="Back 10 seconds">↶ 10s</button><button onClick={() => seek(10)} aria-label="Forward 10 seconds">10s ↷</button><span className="fspTime">{timeLabel(time)} / {timeLabel(duration)}</span><button onClick={pictureInPicture} aria-label="Picture in Picture" title="Picture in Picture">▣</button><button onClick={fullscreen} aria-label="Fullscreen">⛶</button></div>
       <input className="fspSeek" aria-label="Seek video" type="range" min={0} max={duration || 0} step="0.1" value={Math.min(time, duration || 0)} onChange={e => { const n = Number(e.target.value); if (videoRef.current) videoRef.current.currentTime = n; setTime(n); }} />
       <div className="fspRow fspOptions">
         {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
