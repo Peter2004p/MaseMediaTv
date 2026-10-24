@@ -85,7 +85,7 @@ function Home(p:{titles:Title[];all:Title[];featured?:Title;movies:Title[];drama
  const open=(t:Title)=>p.go('#/title/'+encodeURIComponent(t.id));
  const row=(title:string,items:Title[],tone='')=>items.length?<section className="iqRow" key={title}><div className="iqRowHead"><div><span className="iqKicker">MASETV</span><h2>{title}</h2></div><button className="rowMore" onClick={()=>items[0]&&open(items[0])}>View all <ChevronRight size={14}/></button></div><div className="iqGrid">{items.slice(0,12).map(t=><button className={`iqCard ${tone}`} key={t.id} onClick={()=>open(t)}><div className="iqPoster"><Poster title={t}/><span className="iqPlay"><Play size={15}/></span><span className="iqMeta">{t.quality}</span></div><b>{t.name}</b><small>{t.type} · {t.year} · {t.episodes.length} {t.episodes.length===1?'episode':'episodes'}</small></button>)}</div></section>:null;
  const featured=p.featured||p.all[0];
- 0return <div className="page iqHome">
+ return <div className="page iqHome">
 <style>{`
 .iqHome{max-width:1440px;margin:auto;padding:clamp(10px,2vw,28px);color:#f7f8fc;overflow:hidden}
 .iqHome .iqHero{position:relative;isolation:isolate;min-height:clamp(400px,47vw,570px);display:grid;grid-template-columns:minmax(0,1fr) 240px;align-items:end;gap:22px;padding:clamp(20px,4vw,52px);border:1px solid #ffffff24;border-radius:30px;overflow:hidden;background:radial-gradient(ellipse at 75% 12%,#5eabe944,transparent 40%),linear-gradient(125deg,#111b2a,#10121d 56%,#25213a);box-shadow:0 30px 80px #0006,inset 0 1px #ffffff20}
