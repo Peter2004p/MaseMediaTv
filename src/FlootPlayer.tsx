@@ -33,7 +33,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => {
     const value = String(t.url || t.path || '').trim();
     // Browser <track> can load same-origin relative WebVTT URLs as well as absolute HTTP(S) URLs.
-    const safeUrl = /^https?:\/\//i.test(value) || !/^[a-z][a-z0-9+.-]*:/i.test(value);
+    const safeUrl = /^https?:\/\//i.test(value) || (!value.startsWith('//') && !/^[a-z][a-z0-9+.-]*:/i.test(value));
     return safeUrl && /\.vtt(?:$|[?#])/i.test(value);
   }).map(t => ({ ...t, url: String(t.url || t.path).trim() }));
   const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');
