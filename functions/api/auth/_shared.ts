@@ -7,7 +7,12 @@ export const sha256 = async (value: string) => {
 export const cookie = (request: Request, name: string) => {
   for (const item of (request.headers.get("Cookie") || "").split(";")) {
     const i = item.indexOf("=");
-    if (i > 0 && item.slice(0, i).trim() === name) return decodeURIComponent(item.slice(i + 1).trim());
+    if (i > 0 && item.slice(0, i).trim() === name) {
+      const value = item.slice(i + 1).trim();
+      // Malformed percent-encoding in an unrelated or forged cookie must not crash
+      // every protected API route. Treat an invalid session cookie as unauthenticated.
+      try { return decodeURIComponent(value); } catch { return null; }
+    }
   }
   return null;
 };
