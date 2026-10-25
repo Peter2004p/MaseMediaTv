@@ -1,6 +1,6 @@
 import { json } from "../../auth/_shared";
 
-interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; ADMIN_TELEGRAM_CHAT_ID?: string; }
+interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; ADMIN_TELEGRAM_CHAT_ID?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; }
 type Episode = { title?: string; season?: number | string; episode?: number | string; name?: string };
 type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; year?: number | string; description?: string; episodes?: Episode[] };
 
@@ -95,6 +95,30 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       }
     } else {
       console.error("MaseNet Telegram AI binding is missing from this deployment.");
+    }
+    // Use the configured OpenAI key as a second AI provider if the Workers AI binding is absent or its models fail.
+    if (!answer && env.OPENAI_API_KEY) {
+      try {
+        const response = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: env.OPENAI_MODEL || "gpt-4o-mini",
+            instructions: "You are MaseNet's friendly Telegram assistant (@MaseTv_Bot). Respond naturally to greetings and questions. Help with MaseNet website, Mini App, movies, dramas, episodes, Reels, subtitles, and playback. Never invent catalogue availability, streaming links, or admin actions. Do not reveal secrets or private information. Do not mention AI providers or hosting unless asked. Keep answers concise and friendly.",
+            input: prompt.slice(0, 3000),
+            max_output_tokens: 450
+          })
+        });
+        if (response.ok) {
+          const data = await response.json() as { output_text?: string; output?: Array<{content?:Array<{type?:string;text?:string}>}> };
+          const candidate = data.output_text || (data.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\\n");
+          if (candidate.trim()) answer = candidate.trim();
+        } else {
+          console.error("MaseNet Telegram OpenAI fallback failed with status", response.status);
+        }
+      } catch (error) {
+        console.error("MaseNet Telegram OpenAI fallback error", error instanceof Error ? error.message : String(error));
+      }
     }
     if (!answer) {
       // Keep the assistant useful when the optional Workers AI binding or model is unavailable.
