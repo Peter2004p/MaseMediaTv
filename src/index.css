@@ -1177,3 +1177,28 @@ img{max-width:100%}
  .app aside.telegram{right:66px!important;bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;max-width:calc(100vw - 80px)!important}
  .app aside.telegram .telegramJoin{min-height:33px!important;padding:0 10px!important;font-size:10px!important}
 }
+
+/* Admin Telegram Button Studio */
+.app aside.telegram.telegram-chip-left{left:10px!important;right:auto!important;top:auto!important;bottom:calc(84px + env(safe-area-inset-bottom,0px))!important}
+.app aside.telegram.telegram-chip-right{right:76px!important;left:auto!important;top:auto!important;bottom:calc(84px + env(safe-area-inset-bottom,0px))!important}
+.app aside.telegram.telegram-chip-top-left{left:10px!important;right:auto!important;top:calc(16px + env(safe-area-inset-top,0px))!important;bottom:auto!important}
+.app aside.telegram.telegram-chip-top-right{right:12px!important;left:auto!important;top:calc(16px + env(safe-area-inset-top,0px))!important;bottom:auto!important}
+.app aside.telegram .telegramJoin{color:var(--telegram-chip-color,#54efaa)!important;background:var(--telegram-chip-bg,#101916)!important;min-height:var(--telegram-chip-size,36px)!important;border-radius:999px!important;transition:all .25s ease!important}
+.app aside.telegram.telegram-shape-rounded .telegramJoin{border-radius:13px!important}
+.app aside.telegram.telegram-shape-square .telegramJoin{border-radius:4px!important}
+.app aside.telegram.telegram-motion-float .telegramJoin{animation:telegramChipFloat 3s ease-in-out infinite}
+.app aside.telegram.telegram-motion-pulse .telegramJoin{animation:telegramChipPulse 1.8s ease-in-out infinite}
+.app aside.telegram.telegram-motion-spin3d .telegramJoin{animation:telegramChip3d 3.8s ease-in-out infinite;transform-style:preserve-3d}
+.app aside.telegram.telegram-motion-none .telegramJoin{animation:none!important}
+@keyframes telegramChipFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes telegramChipPulse{0%,100%{box-shadow:0 6px 18px #0005,0 0 0 0 color-mix(in srgb,var(--telegram-chip-color) 25%,transparent)}50%{box-shadow:0 8px 24px #0006,0 0 0 6px transparent}}
+@keyframes telegramChip3d{0%,100%{transform:perspective(500px) rotateY(-8deg) rotateX(3deg)}50%{transform:perspective(500px) rotateY(8deg) rotateX(-3deg) translateY(-3px)}}
+.app .telegramChipEditToggle{position:fixed!important;right:12px!important;bottom:calc(84px + env(safe-area-inset-bottom,0px))!important;z-index:10001!important;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#111b18;color:#54efaa;border:1px solid #54efaa77;box-shadow:0 5px 18px #0007}
+.app .telegramChipEditor{position:fixed!important;right:12px!important;bottom:calc(128px + env(safe-area-inset-bottom,0px))!important;z-index:10002!important;width:min(310px,calc(100vw - 24px));max-height:min(72vh,580px);overflow:auto;padding:14px;border:1px solid #54efaa55;border-radius:18px;background:rgba(10,17,15,.97)!important;box-shadow:0 18px 60px #000a;display:grid;gap:8px;color:#f2fff8}
+.app .telegramChipEditor header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+.app .telegramChipEditor header button{background:transparent;border:0;color:#fff}
+.app .telegramChipEditor label{font-size:11px;font-weight:750;color:#a6cbb8;margin-top:4px}
+.app .telegramChipEditor input:not([type=color]):not([type=range]),.app .telegramChipEditor select{width:100%;min-height:34px;padding:7px 9px;border-radius:9px;border:1px solid #ffffff26;background:#17211d;color:#fff}
+.app .telegramChipEditor input[type=color]{width:100%;height:35px;border:0;background:transparent}
+.app .telegramChipEditor input[type=range]{width:100%;accent-color:#54efaa}
+@media(max-width:560px){.app .telegramChipEditToggle{right:10px!important;bottom:calc(78px + env(safe-area-inset-bottom,0px))!important}.app .telegramChipEditor{right:8px!important;bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}.app aside.telegram.telegram-chip-right{right:66px!important}.app aside.telegram.telegram-chip-left{left:8px!important}}
