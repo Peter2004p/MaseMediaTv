@@ -127,10 +127,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       )`).run();
       const targets = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1").all<{chat_id:string}>();
       const appUrl = (config.TELEGRAM_MINI_APP_URL || config.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
-      const itemUrl = appUrl.startsWith("https://") ? "\\n\\nOpen MaseNet: " + appUrl : "";
+      const itemUrl = appUrl.startsWith("https://") ? "\n\nOpen MaseNet: " + appUrl : "";
       const announcement = isNewTitle
-        ? "🎬 NEW " + (kind === "drama" ? "DRAMA" : "MOVIE") + " ON MASETV\\n\\n" + String(title.name).trim().slice(0,180) + (title.year ? " (" + String(title.year).slice(0,4) + ")" : "") + (typeof title.description === "string" && title.description.trim() ? "\\n\\n" + title.description.trim().slice(0,500) : "") + itemUrl
-        : "🍿 NEW EPISODE\\n\\n" + String(title.name).trim().slice(0,180) + "\\n" + newEpisodes.map(ep => "Season " + String(ep.season || 1) + " · Episode " + String(ep.episode || "?") + (ep.title ? " — " + String(ep.title).slice(0,100) : "")).join("\\n") + itemUrl;
+        ? "🎬 NEW " + (kind === "drama" ? "DRAMA" : "MOVIE") + " ON MASETV\n\n" + String(title.name).trim().slice(0,180) + (title.year ? " (" + String(title.year).slice(0,4) + ")" : "") + (typeof title.description === "string" && title.description.trim() ? "\n\n" + title.description.trim().slice(0,500) : "") + itemUrl
+        : "🍿 NEW EPISODE\n\n" + String(title.name).trim().slice(0,180) + "\n" + newEpisodes.map(ep => "Season " + String(ep.season || 1) + " · Episode " + String(ep.episode || "?") + (ep.title ? " — " + String(ep.title).slice(0,100) : "")).join("\n") + itemUrl;
       telegramNotifications.attempted = true;
       for (const target of targets.results || []) {
         try {
