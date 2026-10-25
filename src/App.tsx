@@ -12,7 +12,7 @@ type Broadcast = { id:string; title?:string; heading?:string; description?:strin
 
 const demo:Title[] = [];
 
-const normalizeSeriesKey=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[’']/g,'').replace(/[^\\p{L}\\p{N}]+/gu,' ').trim();
+const normalizeSeriesKey=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[’']/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 function groupLegacyTitles(items:Title[]):Title[]{
  const groups=new Map<string,Title>();
  for(const item of items){
