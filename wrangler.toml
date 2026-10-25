@@ -15,17 +15,3 @@ bucket_name = "masenet-posters"
 
 [ai]
 binding = "AI"
-
-# Keep Worker Preview deployments isolated from the migration/live resources.
-[[previews.d1_databases]]
-binding = "DB"
-database_name = "masetv-mkv-preview-db"
-database_id = "667629a0-3025-483d-b3b4-6ce82767f119"
-migrations_dir = "migrations"
-
-[[previews.r2_buckets]]
-binding = "MEDIA_BUCKET"
-bucket_name = "masetv-mkv-preview-media"
-
-[previews.ai]
-binding = "AI"

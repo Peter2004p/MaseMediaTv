@@ -12,6 +12,34 @@ type Broadcast = { id:string; title?:string; heading?:string; description?:strin
 
 const demo:Title[] = [];
 
+const normalizeSeriesKey=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[’']/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+function groupLegacyTitles(items:Title[]):Title[]{
+ const groups=new Map<string,Title>();
+ for(const item of items){
+  const nameKey=normalizeSeriesKey(item.name);
+  const key=nameKey?item.type+'|'+nameKey:'id|'+item.id;
+  const current=groups.get(key);
+  if(!current){groups.set(key,{...item,episodes:[...(item.episodes||[])]});continue;}
+  const episodes=[...(current.episodes||[])];
+  for(const incoming of item.episodes||[]){
+   const index=episodes.findIndex(ep=>Number(ep.season||1)===Number(incoming.season||1)&&Number(ep.episode)===Number(incoming.episode));
+   if(index<0){episodes.push({...incoming});continue;}
+   const existing=episodes[index];
+   const variantsOf=(ep:Episode):StreamVariant[]=>ep.qualities?.length?[...ep.qualities]:[{quality:ep.quality,streamUrl:ep.streamUrl,streamPath:ep.streamPath,mimeType:ep.mimeType,downloadUrl:ep.downloadUrl,downloadPath:ep.downloadPath,subtitleTracks:ep.subtitleTracks}];
+   const variants=variantsOf(existing);
+   for(const v of variantsOf(incoming)){
+    const found=variants.find(x=>x.quality===v.quality);
+    if(!found)variants.push(v);
+    else {if(!found.streamUrl&&v.streamUrl)found.streamUrl=v.streamUrl;if(!found.downloadUrl&&v.downloadUrl)found.downloadUrl=v.downloadUrl;if(!found.streamPath&&v.streamPath)found.streamPath=v.streamPath;if(!found.downloadPath&&v.downloadPath)found.downloadPath=v.downloadPath;}
+   }
+   episodes[index]={...existing,qualities:variants,streamUrl:existing.streamUrl||incoming.streamUrl,downloadUrl:existing.downloadUrl||incoming.downloadUrl,subtitleTracks:existing.subtitleTracks?.length?existing.subtitleTracks:incoming.subtitleTracks};
+  }
+  episodes.sort((a,b)=>(Number(a.season)||1)-(Number(b.season)||1)||Number(a.episode)-Number(b.episode));
+  groups.set(key,{...current,episodes,description:current.description||item.description,year:current.year||item.year,posterUrl:current.posterUrl||item.posterUrl,posterPath:current.posterPath||item.posterPath,featured:current.featured||item.featured});
+ }
+ return [...groups.values()];
+}
+
 function Poster({title,small=false}:{title:Title;small?:boolean}){const [src,setSrc]=useState(title.posterUrl||'');const [failed,setFailed]=useState(false);const [retried,setRetried]=useState(false);const initials=title.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('');const refresh=()=>{if(!title.posterPath||retried)return;setRetried(true);api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(r.data?.url){setFailed(false);setSrc(String(r.data.url))}}).catch(()=>{})};useEffect(()=>{let alive=true;setFailed(false);setRetried(false);setSrc(title.posterUrl||'');if(title.posterPath)api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(alive&&r.data?.url)setSrc(String(r.data.url))}).catch(()=>{});return()=>{alive=false}},[title.posterUrl,title.posterPath]);return <div className={`poster ${small?'smallPoster':''}`}>{src&&!failed?<img className="posterImage" src={src} alt={`${title.name} poster`} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>{setFailed(true);refresh()}}/>:<><div className="posterAura"/><b>{initials}</b><small>{title.type}</small></>}<i/><span>{title.quality}</span></div>;}
 
 export default function App(){
@@ -42,7 +70,7 @@ export default function App(){
 
  const telegramAlertsUrl=telegramStatus.username?`https://t.me/${telegramStatus.username}?start=alerts_on`:'';
 
- useEffect(()=>{const tg=(window as unknown as {Telegram?:{WebApp?:{initData?:string;ready?:()=>void;expand?:()=>void;setHeaderColor?: (c:string)=>void}}}).Telegram?.WebApp;if(tg?.initData){tg.ready?.();tg.expand?.();tg.setHeaderColor?.('#070910')}const f=()=>setRoute(window.location.hash||'#/home');window.addEventListener('hashchange',f);api.get('/api/titles').then(r=>{if(Array.isArray(r.data?.titles))setTitles(r.data.titles)}).catch(()=>{}).finally(()=>setTitlesLoaded(true));api.get('/api/broadcasts').then(r=>setBroadcasts(r.data?.posts||[])).catch(()=>{});api.get('/api/homepage-settings').then(r=>r.data?.rows&&setHomepageRows(r.data.rows)).catch(()=>{});const refreshTelegram=()=>api.get('/api/telegram/status').then(r=>setTelegramStatus(r.data||{configured:false})).catch(()=>{});refreshTelegram();const telegramTimer=window.setInterval(refreshTelegram,30000);try{setSaved(JSON.parse(localStorage.getItem('masetv-my-list')||'[]'));setProgress(JSON.parse(localStorage.getItem('masetv-progress')||'{}'));setCompleted(JSON.parse(localStorage.getItem('masetv-completed')||'{}'))}catch{}return()=>{window.removeEventListener('hashchange',f);window.clearInterval(telegramTimer)}},[]);
+ useEffect(()=>{const tg=(window as unknown as {Telegram?:{WebApp?:{initData?:string;ready?:()=>void;expand?:()=>void;setHeaderColor?: (c:string)=>void}}}).Telegram?.WebApp;if(tg?.initData){tg.ready?.();tg.expand?.();tg.setHeaderColor?.('#070910')}const f=()=>setRoute(window.location.hash||'#/home');window.addEventListener('hashchange',f);api.get('/api/titles').then(r=>{if(Array.isArray(r.data?.titles))setTitles(groupLegacyTitles(r.data.titles))}).catch(()=>{}).finally(()=>setTitlesLoaded(true));api.get('/api/broadcasts').then(r=>setBroadcasts(r.data?.posts||[])).catch(()=>{});api.get('/api/homepage-settings').then(r=>r.data?.rows&&setHomepageRows(r.data.rows)).catch(()=>{});const refreshTelegram=()=>api.get('/api/telegram/status').then(r=>setTelegramStatus(r.data||{configured:false})).catch(()=>{});refreshTelegram();const telegramTimer=window.setInterval(refreshTelegram,30000);try{setSaved(JSON.parse(localStorage.getItem('masetv-my-list')||'[]'));setProgress(JSON.parse(localStorage.getItem('masetv-progress')||'{}'));setCompleted(JSON.parse(localStorage.getItem('masetv-completed')||'{}'))}catch{}return()=>{window.removeEventListener('hashchange',f);window.clearInterval(telegramTimer)}},[]);
  const closePanel=()=>{window.speechSynthesis?.cancel();setPanelClosing(true);window.setTimeout(()=>{setPanel(null);setPanelClosing(false)},220)}; const go=(r:string)=>{if(r==='#/admin'&&!isAdmin)return;window.location.hash=r};
  const filtered=useMemo(()=>{const q=query.trim().toLowerCase();if(!q)return titles;return titles.filter(t=>[t.name,t.description,t.type,t.year,t.quality,...t.episodes.map(e=>`${e.title} season ${e.season} episode ${e.episode} ${e.quality}`)].some(v=>String(v||'').toLowerCase().includes(q)))},[titles,query]);
  const requestedTitleId=route.startsWith('#/title/')?(()=>{try{return decodeURIComponent(route.slice(8).split(/[?&]/)[0])}catch{return route.slice(8).split(/[?&]/)[0]}})():null;
@@ -52,7 +80,31 @@ export default function App(){
  const myList=titles.filter(t=>saved.includes(t.id));
  const featured=titles.find(t=>t.featured)||titles[0];
 
- async function createTitle(t:Title){const r=await api.post('/api/titles',t);const saved=(r.data?.title||t) as Title;setTitles(p=>[saved,...p.filter(x=>x.id!==saved.id)]);}
+ const normalizeSeriesName=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[’']/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+ async function createTitle(t:Title){
+  const normalizedName=normalizeSeriesName(t.name);
+  // Only exact normalized title + type matches are grouped; similar titles remain separate.
+  const existing=normalizedName?titles.find(item=>item.type===t.type&&normalizeSeriesName(item.name)===normalizedName):undefined;
+  if(!existing){const r=await api.post('/api/titles',t);const saved=(r.data?.title||t) as Title;setTitles(p=>[saved,...p.filter(x=>x.id!==saved.id)]);return;}
+  const merged=[...existing.episodes];
+  for(const incoming of t.episodes){
+   const index=merged.findIndex(ep=>Number(ep.season||1)===Number(incoming.season||1)&&Number(ep.episode)===Number(incoming.episode));
+   if(index<0){merged.push(incoming);continue;}
+   const current=merged[index];
+   const variantsOf=(ep:Episode):StreamVariant[]=>ep.qualities?.length?ep.qualities:[{quality:ep.quality,streamUrl:ep.streamUrl,streamPath:ep.streamPath,mimeType:ep.mimeType,downloadUrl:ep.downloadUrl,downloadPath:ep.downloadPath,subtitleTracks:ep.subtitleTracks}];
+   const variants=[...variantsOf(current)];
+   for(const variant of variantsOf(incoming)){
+    const same=variants.find(v=>v.quality===variant.quality);
+    if(same){if(!same.streamUrl&&variant.streamUrl)same.streamUrl=variant.streamUrl;if(!same.downloadUrl&&variant.downloadUrl)same.downloadUrl=variant.downloadUrl;}
+    else variants.push(variant);
+   }
+   merged[index]={...current,qualities:variants,streamUrl:current.streamUrl||incoming.streamUrl,downloadUrl:current.downloadUrl||incoming.downloadUrl};
+  }
+  merged.sort((a,b)=>(Number(a.season)||1)-(Number(b.season)||1)||Number(a.episode)-Number(b.episode));
+  const updated:Title={...existing,episodes:merged,description:existing.description||t.description,year:existing.year||t.year,posterUrl:existing.posterUrl||t.posterUrl,posterPath:existing.posterPath||t.posterPath};
+  await api.put('/api/titles/'+encodeURIComponent(existing.id),updated);
+  setTitles(p=>p.map(item=>item.id===existing.id?updated:item));
+ }
  async function deleteTitle(id:string){if(!window.confirm('Delete this movie/drama and all its episodes? This cannot be undone.'))return;try{await api.delete('/api/titles/'+id);setTitles(p=>p.filter(x=>x.id!==id));if(route.includes(id))go('#/home')}catch(e){window.alert(e instanceof Error?e.message:'MaseTv could not delete this title. Please retry or check admin access.')}}
  async function updateTitle(t:Title){await api.put('/api/titles/'+t.id,t);setTitles(p=>p.map(x=>x.id===t.id?t:x))}
  async function saveRows(){await api.post('/api/homepage-settings',{rows:homepageRows});}
