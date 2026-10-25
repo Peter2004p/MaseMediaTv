@@ -102,28 +102,53 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     await env.DB.prepare("INSERT INTO titles (id,name,kind,metadata_json) VALUES (?,?,?,?)").bind(id, String(title.name), kind, JSON.stringify(title)).run();
   }
 
-  // Best-effort channel notifications must not undo a successful catalog publish.
+  // Notify opted-in private chats and explicitly registered channels. Existing episodes
+  // are compared by season/episode number so edits do not resend old announcements.
   const config = env as Env & { TELEGRAM_BOT_TOKEN?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string };
   const token = config.TELEGRAM_BOT_TOKEN;
-  const telegramNotifications = { attempted: !!token, delivered: 0, failed: 0 };
-  if (token) {
-    const appUrl = (config.TELEGRAM_MINI_APP_URL || config.TELEGRAM_WEBAPP_URL || "").trim();
-    const year = title.year ? " (" + String(title.year).slice(0, 4) + ")" : "";
-    const description = typeof title.description === "string" ? title.description.trim().slice(0, 700) : "";
-    const message = "🎬 New on MaseNet: " + String(title.name).trim().slice(0, 180) + year + "\n" +
-      (kind === "drama" ? "Drama" : "Movie") +
-      (description ? "\n\n" + description : "") +
-      (appUrl.startsWith("https://") ? "\n\nOpen MaseNet: " + appUrl : "");
-    for (const chatId of ["@MaseMediaTv", "@MoonDramaC"]) {
-      try {
-        const response = await fetch("https://api.telegram.org/bot" + token + "/sendMessage", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ chat_id: chatId, text: message, disable_web_page_preview: false })
-        });
-        if (response.ok) telegramNotifications.delivered++;
-        else telegramNotifications.failed++;
-      } catch { telegramNotifications.failed++; }
+  const telegramNotifications = { attempted: false, delivered: 0, failed: 0 };
+  const previousEpisodeKeys = new Set<string>();
+  if (existing) {
+    let previous: Record<string, unknown> = {};
+    try { previous = JSON.parse(existing.metadata_json) as Record<string, unknown>; } catch {}
+    for (const ep of (Array.isArray(previous.episodes) ? previous.episodes : []) as Record<string, unknown>[]) {
+      previousEpisodeKeys.add(String(ep.season || 1) + "|" + String(ep.episode || 1));
     }
+  }
+  const allEpisodes = (Array.isArray(title.episodes) ? title.episodes : []) as Record<string, unknown>[];
+  const newEpisodes = allEpisodes.filter(ep => !previousEpisodeKeys.has(String(ep.season || 1) + "|" + String(ep.episode || 1)));
+  const isNewTitle = !existing;
+  if (token && (isNewTitle || newEpisodes.length)) {
+    try {
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
+        chat_id TEXT PRIMARY KEY, chat_type TEXT NOT NULL, title TEXT,
+        active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`).run();
+      const targets = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1").all<{chat_id:string}>();
+      const appUrl = (config.TELEGRAM_MINI_APP_URL || config.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
+      const itemUrl = appUrl.startsWith("https://") ? "\\n\\nOpen MaseNet: " + appUrl : "";
+      const announcement = isNewTitle
+        ? "🎬 NEW " + (kind === "drama" ? "DRAMA" : "MOVIE") + " ON MASETV\\n\\n" + String(title.name).trim().slice(0,180) + (title.year ? " (" + String(title.year).slice(0,4) + ")" : "") + (typeof title.description === "string" && title.description.trim() ? "\\n\\n" + title.description.trim().slice(0,500) : "") + itemUrl
+        : "🍿 NEW EPISODE\\n\\n" + String(title.name).trim().slice(0,180) + "\\n" + newEpisodes.map(ep => "Season " + String(ep.season || 1) + " · Episode " + String(ep.episode || "?") + (ep.title ? " — " + String(ep.title).slice(0,100) : "")).join("\\n") + itemUrl;
+      telegramNotifications.attempted = true;
+      for (const target of targets.results || []) {
+        try {
+          const response = await fetch("https://api.telegram.org/bot" + token + "/sendMessage", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ chat_id: target.chat_id, text: announcement, disable_web_page_preview: false })
+          });
+          const data = await response.json().catch(() => ({})) as {ok?:boolean;description?:string};
+          if (response.ok && data.ok) telegramNotifications.delivered++;
+          else {
+            telegramNotifications.failed++;
+            if (/blocked by the user|chat not found|bot was kicked|user is deactivated/i.test(String(data.description || ""))) {
+              await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(target.chat_id).run();
+            }
+          }
+        } catch { telegramNotifications.failed++; }
+      }
+    } catch { telegramNotifications.failed++; }
   }
   return json({ title, telegramNotifications }, 201);
 };
