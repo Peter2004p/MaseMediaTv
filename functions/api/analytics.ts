@@ -1,4 +1,4 @@
-import { json, requireAdmin, type Env } from "../auth/_shared";
+import { json, requireAdmin, type Env } from "./auth/_shared";
 
 type AnalyticsEnv = Env & { DB: D1Database };
 
