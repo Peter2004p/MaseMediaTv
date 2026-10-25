@@ -1,5 +1,13 @@
 import { Env, json, requireAdmin } from "../auth/_shared";
 type StoredTitle = { id: string; name: string; kind: string; metadata_json: string; created_at: string };
+const normalizeTitleType = (...values: unknown[]): "Movie" | "Drama" => {
+  for (const value of values) {
+    const type = String(value ?? "").trim().toLowerCase().replace(/[_-]+/g, " ");
+    if (["drama", "dramas", "series", "tv series", "tv show", "show", "episode"].includes(type)) return "Drama";
+    if (["movie", "movies", "film", "films", "feature film"].includes(type)) return "Movie";
+  }
+  return "Movie";
+};
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json,created_at FROM titles ORDER BY created_at DESC").all<StoredTitle>();
   const titles = (rows.results || []).map((row) => {
@@ -25,7 +33,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       ...metadata,
       id: row.id,
       name: String(metadata.name || row.name || "Untitled"),
-      type: String(metadata.type || "").trim().toLowerCase() === "drama" || String(row.kind || "").trim().toLowerCase() === "drama" ? "Drama" : "Movie",
+      type: normalizeTitleType(row.kind, metadata.type),
       description: typeof metadata.description === "string" ? metadata.description : "",
       year: String(metadata.year || ""),
       posterUrl: typeof metadata.posterUrl === "string" ? metadata.posterUrl : "",
@@ -33,10 +41,17 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       episodes,
     };
   });
-  // Present duplicate uploads of the same series as one library folder.
+  // Keep movies as individual records. Only drama records are merged into series folders.
   const grouped = new Map<string, Record<string, unknown>>();
-  for (const title of titles as Record<string, unknown>[]) {
-    const key = String(title.type || "Movie").toLowerCase() + "|" + String(title.name || "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const standaloneMovies: Record<string, unknown>[] = [];
+  for (const rawTitle of titles as Record<string, unknown>[]) {
+    const title = { ...rawTitle, type: normalizeTitleType(rawTitle.type) };
+    if (title.type !== "Drama") {
+      standaloneMovies.push(title);
+      continue;
+    }
+    const normalizedName = String(title.name || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const key = "drama|" + (normalizedName || String(title.id || crypto.randomUUID()));
     const current = grouped.get(key);
     if (!current) { grouped.set(key, title); continue; }
     const all = [...(Array.isArray(current.episodes) ? current.episodes as Record<string, unknown>[] : []), ...(Array.isArray(title.episodes) ? title.episodes as Record<string, unknown>[] : [])];
@@ -46,17 +61,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       if (!seen.has(episodeKey)) seen.set(episodeKey, ep);
     }
     current.episodes = [...seen.values()].sort((a,b) => Number(a.season||1)-Number(b.season||1) || Number(a.episode||1)-Number(b.episode||1));
-    // Keep the richer metadata/poster when another duplicate upload has blanks.
     for (const field of ["description","posterUrl","posterPath","year"]) if (!current[field] && title[field]) current[field] = title[field];
-    if (!current.id && title.id) current.id = title.id;
   }
-  return json({ titles: [...grouped.values()] });
+  return json({ titles: [...standaloneMovies, ...grouped.values()] });
 };
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const gate = await requireAdmin(request, env); if (gate.response) return gate.response;
   const body = await request.json() as Record<string, unknown>;
   if (typeof body.name !== "string" || !body.name.trim()) return json({ error: "A title name is required." }, 400);
-  const kind = String(body.type || "").trim().toLowerCase() === "drama" ? "drama" : "movie";
+  const kind = normalizeTitleType(body.type) === "Drama" ? "drama" : "movie";
   const normalizedName = body.name.trim().normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const existingRows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
   const existing = (existingRows.results || []).find(row => row.name.trim().normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim() === normalizedName);
