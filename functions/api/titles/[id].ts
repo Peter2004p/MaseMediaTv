@@ -7,7 +7,7 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
   const body = await request.json() as Record<string, unknown>;
   if (typeof body.name !== "string" || !body.name.trim()) return json({ error: "A title name is required." }, 400);
   const title: Record<string, unknown> = { ...body, id };
-  const kind = title.type === "Drama" ? "drama" : "movie";
+  const kind = String(title.type || "").trim().toLowerCase() === "drama" ? "drama" : "movie";
   await env.DB.prepare("UPDATE titles SET name=?,kind=?,metadata_json=?,updated_at=datetime('now') WHERE id=?")
     .bind(title.name, kind, JSON.stringify(title), id).run();
   return json({ title });
