@@ -4,3 +4,24 @@
 
 
 .iqEmptySearch{display:grid;justify-items:center;gap:10px;text-align:center;padding:34px 18px;margin:12px 0 26px;border:1px solid #ffffff1a;border-radius:20px;background:linear-gradient(135deg,#ffffff08,#ffffff03);color:var(--text,#f7f8fc)}.iqEmptySearch svg{color:#9bd9ff}.iqEmptySearch b{font-size:16px}.iqEmptySearch p{max-width:420px;margin:0;color:var(--muted,#a1a1aa);font-size:12px;line-height:1.6}.iqEmptySearch button{margin-top:5px;border:1px solid #ffffff24;border-radius:999px;padding:10px 16px;background:#ffffff0d;color:inherit;font:inherit;font-size:12px;font-weight:750}
+
+
+/* Floating, glass search bar and cinematic search results */
+.searchDock{position:sticky;top:8px;z-index:120;display:flex;align-items:center;gap:11px;width:min(760px,calc(100% - 24px));margin:12px auto 18px;padding:12px 16px;border:1px solid #b9dcff38;border-radius:999px;background:linear-gradient(120deg,#101827ed,#151522e8)!important;box-shadow:0 12px 34px #0005,inset 0 1px #ffffff17;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);transition:box-shadow .22s,transform .22s,border-color .22s}
+.searchDock input{flex:1;min-width:0;border:0!important;outline:0!important;background:transparent!important;color:var(--text,#f7f8fc)!important;font-size:14px;padding:5px 0!important;box-shadow:none!important}
+.searchDock input::placeholder{color:#aab8cc}
+.searchDock>svg{flex:0 0 auto;color:#9bd9ff}
+.searchDockLabel{display:none;color:#9bd9ff;font-size:10px;font-weight:800;letter-spacing:.08em;white-space:nowrap}
+.searchDockFloating{top:7px;border-color:#a7dfff66;box-shadow:0 14px 38px #0009,0 0 0 1px #7fcaff12,inset 0 1px #ffffff22;transform:translateY(0)}
+.iqHome .iqSearchResults{position:relative;margin:0 auto 30px;padding:18px;border:1px solid #9bd9ff26;border-radius:24px;background:radial-gradient(ellipse at 0 0,#3678a522,transparent 52%),linear-gradient(135deg,#101827f5,#0b0d15f2);box-shadow:0 20px 48px #0003;animation:searchResultsEnter .28s ease-out both}
+.iqHome .iqSearchResults>.iqRowHead{padding:0 2px 12px;border-bottom:1px solid #ffffff12;margin-bottom:17px}
+.iqHome .iqSearchResults>.iqRowHead p{margin:7px 0 0;color:#aab8cc;font-size:12px}
+.iqHome .iqSearchResults .iqRow{margin-bottom:0}
+.iqHome .iqSearchResults .iqCard{padding:7px;border:1px solid #ffffff12;border-radius:17px;background:#ffffff06}
+.iqHome .iqSearchResults .iqCard:hover{background:#ffffff12;border-color:#9bd9ff66;box-shadow:0 12px 28px #0005}
+.iqHome .iqSearchResults .iqCard>b{display:block;padding:9px 3px 0;line-height:1.35}
+.iqHome .iqSearchResults .iqCard>small{display:block;padding:4px 3px 3px;color:#aab8cc;font-size:10px}
+.iqHome .iqSearchResults .iqPoster{border-radius:12px}
+@keyframes searchResultsEnter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:680px){.searchDock{top:5px;width:calc(100% - 18px);margin:8px auto 12px;padding:11px 14px;gap:9px}.searchDock input{font-size:13px}.iqHome .iqSearchResults{padding:13px;border-radius:19px}.iqHome .iqSearchResults .iqGrid{gap:11px 8px}.iqHome .iqSearchResults .iqCard{padding:5px;border-radius:13px}.iqHome .iqSearchResults .iqPoster{border-radius:10px}.iqHome .iqSearchResults .iqCard>b{font-size:11px}.iqHome .iqSearchResults .iqCard>small{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.iqHome .iqSearchResults{animation:none}}
