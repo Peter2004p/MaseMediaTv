@@ -1152,3 +1152,28 @@ img{max-width:100%}
 .app .telegram a.telegramJoin{gap:6px!important}
 .app .telegram a.telegramJoin svg{display:block!important;flex:0 0 auto!important;width:15px!important;height:15px!important}
 .app .telegram a.telegramJoin span{display:inline!important}
+
+/* FINAL override: persistent fixed Telegram channel chip above the bottom navigation */
+.app aside.telegram{
+  position:fixed!important;inset:auto 76px calc(84px + env(safe-area-inset-bottom,0px)) auto!important;
+  z-index:9999!important;display:flex!important;visibility:visible!important;opacity:1!important;
+  width:max-content!important;max-width:calc(100vw - 100px)!important;min-height:0!important;
+  margin:0!important;padding:0!important;overflow:visible!important;transform:none!important;
+  background:transparent!important;border:0!important;box-shadow:none!important;
+  pointer-events:none!important;animation:none!important;
+}
+.app aside.telegram .telegramJoin{
+  pointer-events:auto!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  gap:7px!important;min-height:36px!important;max-width:100%!important;padding:0 12px!important;
+  border-radius:999px!important;background:rgba(16,25,22,.96)!important;color:#54efaa!important;
+  border:1px solid rgba(84,239,170,.55)!important;box-shadow:0 6px 22px rgba(0,0,0,.35)!important;
+  font-size:10px!important;font-weight:800!important;line-height:1!important;white-space:nowrap!important;
+  text-decoration:none!important;
+}
+.app aside.telegram .telegramJoin .telegramLogo{display:block!important;width:17px!important;height:17px!important;flex:0 0 17px!important}
+.app aside.telegram.telegramCompact .telegramJoin{min-height:32px!important;padding:0 10px!important;gap:6px!important}
+.app aside.telegram.telegramCompact .telegramJoin span{font-size:10px!important}
+@media(max-width:560px){
+ .app aside.telegram{right:66px!important;bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;max-width:calc(100vw - 80px)!important}
+ .app aside.telegram .telegramJoin{min-height:33px!important;padding:0 10px!important;font-size:10px!important}
+}
