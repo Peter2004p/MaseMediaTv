@@ -199,18 +199,46 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         await env.DB.prepare("INSERT INTO telegram_missing_searches (query, chat_type) VALUES (?, ?)").bind(query.slice(0, 300), String((msg as { chat?: { type?: string } }).chat?.type || "unknown")).run();
       } catch { /* Search still replies even if logging is unavailable. */ }
       reply = "I couldn't find “" + query.slice(0, 100) + "” in the MaseNet catalog yet. I've recorded this request so the admin can review what users want. Try a shorter title or check again later.";
+      // A catalog miss must not end the conversation. Treat the unmatched message as a
+      // normal chat turn and let the AI respond, while being honest that the title was not found.
+      const chatSystem = "You are MaseNet's friendly Telegram AI assistant. The catalog lookup did not find a match for the user's message, but the user may be chatting rather than searching for a title. Respond naturally to what they said and keep the conversation going. If their message clearly asks for a movie/drama/episode title, briefly say it was not found in the current catalog and suggest another spelling or title. Never invent catalog entries or streaming links. Never reveal secrets or private admin data. Keep the reply concise and friendly.";
       if (env.AI) {
-        try {
-          const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", { messages: [
-            { role: "system", content: "You are MaseNet's Telegram assistant. The catalog search found no match for the user's query. Say clearly that the title was not found in the current catalog; do not invent catalog entries or claim availability. Offer a useful search tip or ask for an alternate spelling. Keep it brief." },
-            { role: "user", content: "Catalog search query: " + query.slice(0, 500) }
-          ], max_tokens: 220 });
-          if (result && typeof result === "object") {
-            const data = result as { response?: string; choices?: Array<{ message?: { content?: string } }> };
-            const suggestion = String(data.response || data.choices?.[0]?.message?.content || "").trim();
-            if (suggestion) reply = suggestion.slice(0, 1200);
+        for (const model of ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
+          try {
+            const result = await env.AI.run(model, { messages: [
+              { role: "system", content: chatSystem },
+              { role: "user", content: query.slice(0, 1000) }
+            ], max_tokens: 300 });
+            if (result && typeof result === "object") {
+              const data = result as { response?: string; output_text?: string; choices?: Array<{ message?: { content?: string } }> };
+              const suggestion = String(data.response || data.output_text || data.choices?.[0]?.message?.content || "").trim();
+              if (suggestion) { reply = suggestion.slice(0, 1200); break; }
+            }
+          } catch (error) {
+            console.error("MaseNet catalog-miss chat AI failed:", error instanceof Error ? error.message : String(error));
           }
-        } catch { /* Keep the reliable catalog-search fallback. */ }
+        }
+      }
+      if (reply.startsWith("I couldn't find") && env.OPENAI_API_KEY) {
+        try {
+          const response = await fetch("https://api.openai.com/v1/responses", {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: env.OPENAI_MODEL || "gpt-4o-mini",
+              instructions: chatSystem,
+              input: query.slice(0, 1000),
+              max_output_tokens: 300
+            })
+          });
+          if (response.ok) {
+            const data = await response.json() as { output_text?: string; output?: Array<{content?:Array<{type?:string;text?:string}>}> };
+            const candidate = data.output_text || (data.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\\n");
+            if (candidate.trim()) reply = candidate.trim().slice(0, 1200);
+          }
+        } catch (error) {
+          console.error("MaseNet catalog-miss OpenAI fallback failed:", error instanceof Error ? error.message : String(error));
+        }
       }
     }
   }
