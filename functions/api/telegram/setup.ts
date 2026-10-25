@@ -5,6 +5,11 @@ interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
 }
+
+// Always register Telegram against the stable Pages project hostname, never a
+// deployment-specific preview hostname.
+const CANONICAL_SITE_ORIGIN = "https://masetv-cloudflare-migration.pages.dev";
+
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
   const gate = await requireAdmin(request, env);
   if (gate.response) return gate.response;
@@ -15,8 +20,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return json({ error: "Add TELEGRAM_WEBHOOK_SECRET as a Cloudflare Pages secret. Use 32–256 letters, numbers, underscores, or hyphens." }, 503);
   }
 
-  const origin = new URL(request.url).origin;
-  const webhookUrl = origin + "/api/telegram/webhook/masetv";
+  const webhookUrl = CANONICAL_SITE_ORIGIN + "/api/telegram/webhook/masetv";
   const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/setWebhook", {
     method: "POST",
     headers: { "content-type": "application/json" },
