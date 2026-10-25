@@ -1147,3 +1147,8 @@ img{max-width:100%}
   .app .telegram{right:66px!important;bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;max-width:calc(100vw - 132px)!important}
   .app .telegram a.telegramJoin{min-height:32px!important;padding:0 11px!important;font-size:10px!important}
 }
+
+/* Floating Telegram identity: icon + channel tag only */
+.app .telegram a.telegramJoin{gap:6px!important}
+.app .telegram a.telegramJoin svg{display:block!important;flex:0 0 auto!important;width:15px!important;height:15px!important}
+.app .telegram a.telegramJoin span{display:inline!important}
