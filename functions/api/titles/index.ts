@@ -33,7 +33,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       ...metadata,
       id: row.id,
       name: String(metadata.name || row.name || "Untitled"),
-      type: normalizeTitleType(row.kind, metadata.type),
+      type: normalizeTitleType(metadata.type, row.kind),
       description: typeof metadata.description === "string" ? metadata.description : "",
       year: String(metadata.year || ""),
       posterUrl: typeof metadata.posterUrl === "string" ? metadata.posterUrl : "",
