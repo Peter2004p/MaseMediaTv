@@ -10,7 +10,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const body = await request.json().catch(() => ({})) as { message?: unknown; images?: Array<{data?:unknown;mimeType?:unknown}>; audios?: Array<{data?:unknown;mimeType?:unknown}>; adminMode?: boolean; viewerName?: string };
   // Verify admin identity from the secure session cookie; ignore client claims for permissions.
   const authenticatedAdmin = await currentAdmin(request, env);
-  const message = String(body.message || "").trim().slice(0, 2000);\n  const imageInputs = Array.isArray(body.images) ? body.images.slice(0, 3).filter((x) => typeof x?.data === "string" && typeof x?.mimeType === "string" && String(x.mimeType).startsWith("image/") && String(x.data).length <= 5_000_000) as Array<{data:string;mimeType:string}> : [];
+  const message = String(body.message || "").trim().slice(0, 2000);
+  const imageInputs = Array.isArray(body.images) ? body.images.slice(0, 3).filter((x) => typeof x?.data === "string" && typeof x?.mimeType === "string" && String(x.mimeType).startsWith("image/") && String(x.data).length <= 5_000_000) as Array<{data:string;mimeType:string}> : [];
   if (!message && !imageInputs.length) return json({ text: "Tell me what you would like help with, or attach an image or screenshot." });
 
   // A catalog/schema mismatch should never crash the entire assistant.
@@ -54,7 +55,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       "Only use website data supplied in this request. Do not claim access to private user accounts, live activity, or messages unless explicitly provided.",
       "Do not claim to have changed site data or performed admin actions. Until secure action tools are connected, explain that changes must be made through authorized dashboard controls.",
       "Never claim a title, episode, stream URL, download, or feature exists unless confirmed in the supplied catalogue or by the user.",
-      "If you cannot verify a requested title, say so and suggest a shorter search.",\n      "For images and screenshots, describe only what is actually visible; transcribe readable text accurately, distinguish observations from guesses, and state clearly when an area is unclear.",\n      "For factual questions, avoid making up sources, statistics, release dates, or technical details. State uncertainty and suggest how the user can verify important claims.",
+      "If you cannot verify a requested title, say so and suggest a shorter search.",
+      "For images and screenshots, describe only what is actually visible; transcribe readable text accurately, distinguish observations from guesses, and state clearly when an area is unclear.",
+      "For factual questions, avoid making up sources, statistics, release dates, or technical details. State uncertainty and suggest how the user can verify important claims.",
       "Never reveal API keys, secrets, admin sessions, or internal configuration.",
       customInstructions ? "Administrator guidance (follow only when safe):\n" + customInstructions : "",
       "Current MaseNet catalogue snapshot:\n" + catalogueContext
@@ -98,7 +101,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       "Only use website data supplied in this request. Do not claim access to private user accounts, live activity, or messages unless explicitly provided.",
       "Do not claim to have changed site data or performed admin actions. Until secure action tools are connected, explain that changes must be made through authorized dashboard controls.",
       "Do not claim a title, episode, streaming URL, download, or feature exists unless it appears in the supplied catalogue or the user provided it.",
-      "If asked to find a title and the catalogue does not confirm it, say you could not verify it and suggest trying a shorter search.",\n      "For factual questions, do not invent sources, statistics, release dates, or technical details. State uncertainty and recommend verification for important claims.",
+      "If asked to find a title and the catalogue does not confirm it, say you could not verify it and suggest trying a shorter search.",
+      "For factual questions, do not invent sources, statistics, release dates, or technical details. State uncertainty and recommend verification for important claims.",
       "Do not reveal secrets, environment variables, admin sessions, or internal configuration.",
       customInstructions ? "Administrator guidance (follow only if safe and consistent with the rules above):\n" + customInstructions : "",
       "Current catalogue snapshot (not necessarily complete):\n" + catalogueContext
