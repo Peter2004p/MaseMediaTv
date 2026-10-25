@@ -13,11 +13,15 @@ type Broadcast = { id:string; title?:string; heading?:string; description?:strin
 const demo:Title[] = [];
 
 const normalizeSeriesKey=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[’']/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+const normalizeTitleType=(value:unknown):'Movie'|'Drama'=>{const type=String(value??'').trim().toLowerCase().replace(/[_-]+/g,' ');if(['drama','dramas','series','tv series','tv show','show','episode'].includes(type))return 'Drama';return 'Movie';};
 function groupLegacyTitles(items:Title[]):Title[]{
  const groups=new Map<string,Title>();
- for(const item of items){
+ const movies:Title[]=[];
+ for(const rawItem of items){
+  const item={...rawItem,type:normalizeTitleType(rawItem.type),episodes:[...(rawItem.episodes||[])]};
+  if(item.type!=='Drama'){movies.push(item);continue;}
   const nameKey=normalizeSeriesKey(item.name);
-  const key=nameKey?item.type+'|'+nameKey:'id|'+item.id;
+  const key=nameKey?'Drama|'+nameKey:'id|'+item.id;
   const current=groups.get(key);
   if(!current){groups.set(key,{...item,episodes:[...(item.episodes||[])]});continue;}
   const episodes=[...(current.episodes||[])];
@@ -37,7 +41,7 @@ function groupLegacyTitles(items:Title[]):Title[]{
   episodes.sort((a,b)=>(Number(a.season)||1)-(Number(b.season)||1)||Number(a.episode)-Number(b.episode));
   groups.set(key,{...current,episodes,description:current.description||item.description,year:current.year||item.year,posterUrl:current.posterUrl||item.posterUrl,posterPath:current.posterPath||item.posterPath,featured:current.featured||item.featured});
  }
- return [...groups.values()];
+ return [...movies,...groups.values()];
 }
 
 function Poster({title,small=false}:{title:Title;small?:boolean}){const [src,setSrc]=useState(title.posterUrl||'');const [failed,setFailed]=useState(false);const [retried,setRetried]=useState(false);const initials=title.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('');const refresh=()=>{if(!title.posterPath||retried)return;setRetried(true);api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(r.data?.url){setFailed(false);setSrc(String(r.data.url))}}).catch(()=>{})};useEffect(()=>{let alive=true;setFailed(false);setRetried(false);setSrc(title.posterUrl||'');if(title.posterPath)api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(alive&&r.data?.url)setSrc(String(r.data.url))}).catch(()=>{});return()=>{alive=false}},[title.posterUrl,title.posterPath]);return <div className={`poster ${small?'smallPoster':''}`}>{src&&!failed?<img className="posterImage" src={src} alt={`${title.name} poster`} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>{setFailed(true);refresh()}}/>:<><div className="posterAura"/><b>{initials}</b><small>{title.type}</small></>}<i/><span>{title.quality}</span></div>;}
