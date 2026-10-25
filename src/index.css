@@ -902,3 +902,26 @@ img{max-width:100%}
  html{scroll-behavior:auto}
  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+
+/* Compact MaseNet AI hint: keep the animated prompt small and never create a screen-sized overlay. */
+.app .aiSuggestionBubble{
+  position:fixed;right:12px;bottom:132px;z-index:47;
+  display:flex;align-items:center;gap:4px;
+  width:max-content;max-width:min(198px,calc(100vw - 78px));
+  box-sizing:border-box;padding:5px 6px;
+  border-radius:16px 16px 5px 16px;
+  border:1px solid color-mix(in srgb,var(--glow,#d2ad60) 34%,rgba(255,255,255,.16));
+  background:rgba(13,16,25,.88);color:var(--text,#fff);
+  box-shadow:0 7px 20px rgba(0,0,0,.24),0 0 12px color-mix(in srgb,var(--glow,#d2ad60) 12%,transparent);
+  backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
+  animation:aiHintPop .28s ease-out both;overflow:hidden;
+}
+.app .aiSuggestionOpen{flex:1;min-width:0;gap:6px;padding:2px 3px}
+.app .aiSuggestionOrb{width:25px;height:25px;flex:0 0 25px}
+.app .aiSuggestionCopy{min-width:0;max-width:142px;gap:1px}
+.app .aiSuggestionCopy strong{font-size:9px;line-height:1.15}
+.app .aiSuggestionCopy>span{font-size:10px;line-height:1.22;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.app .aiSuggestionClose{width:18px;height:18px;flex:0 0 18px;font-size:14px;align-self:flex-start}
+@media(max-width:380px){.app .aiSuggestionBubble{right:8px;bottom:120px;max-width:min(184px,calc(100vw - 72px));padding:4px 5px}.app .aiSuggestionCopy{max-width:126px}}
+@media(prefers-reduced-motion:reduce){.app .aiSuggestionBubble,.app .aiSuggestionOrb{animation:none!important}}
