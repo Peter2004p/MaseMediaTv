@@ -1123,3 +1123,27 @@ img{max-width:100%}
 }
 @media(max-width:380px){.iqHome .iqCard{flex-basis:104px!important}.iqHome .ranked .iqCard{flex-basis:124px!important}}
 \n.iqHome .iqVipBadge{background:linear-gradient(120deg,#d9b76b,#fff0bd)!important;color:#201909!important;border-color:#f6dc9b!important}.iqHome .iqQuickCategories{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 30px}.iqHome .iqQuickCategories button{min-width:0;display:grid;justify-items:start;gap:7px;padding:17px;border:1px solid #ffffff18;border-radius:18px;background:linear-gradient(145deg,#171d29,#10141d);color:#f5f7fb;text-align:left;cursor:pointer;transition:transform .2s,border-color .2s}.iqHome .iqQuickCategories button:hover{transform:translateY(-3px);border-color:#22e26780}.iqHome .iqQuickCategories button>span{display:grid;place-items:center;width:35px;height:35px;border-radius:12px;background:#22e2671b;color:#22e267;font-size:17px;font-weight:900}.iqHome .iqQuickCategories button b{font-size:12px}.iqHome .iqQuickCategories button small{font-size:10px;color:#98a4b7}.iqHome .iqHeroActions .secondary{background:#ffffff16;color:#fff;border:1px solid #ffffff40;backdrop-filter:blur(12px)}@media(max-width:640px){.iqHome .iqQuickCategories{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.iqHome .iqQuickCategories button{padding:13px;border-radius:15px}.iqHome .iqQuickCategories button>span{width:30px;height:30px}.iqHome .iqHero{grid-template-columns:minmax(0,1fr);min-height:440px}.iqHome .iqHeroRail{display:none}}\n
+
+/* FIX: compact floating channel action; never render a blocking promo panel */
+.app .telegram{
+  position:fixed!important;left:auto!important;right:76px!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;
+  z-index:34!important;width:auto!important;max-width:calc(100vw - 150px)!important;min-height:0!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:0!important;
+  padding:0!important;border:0!important;border-radius:999px!important;background:transparent!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  pointer-events:none!important;overflow:visible!important;
+}
+.app .telegram .close,.app .telegram>svg,.app .telegram>div,.app .telegram>a:not(.telegramJoin){display:none!important}
+.app .telegram a.telegramJoin{
+  pointer-events:auto!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  gap:6px;min-height:34px!important;padding:0 13px!important;border-radius:999px!important;
+  background:rgba(18,27,23,.94)!important;color:#55f0a7!important;border:1px solid rgba(34,226,103,.48)!important;
+  box-shadow:0 5px 18px rgba(0,0,0,.26)!important;font-size:11px!important;font-weight:800!important;
+  line-height:1!important;white-space:nowrap!important;text-decoration:none!important;transition:transform .18s ease,background .18s ease!important;
+}
+.app .telegram a.telegramJoin:active{transform:scale(.96)}
+.app .telegram.telegramCompact a.telegramJoin{min-height:30px!important;padding:0 10px!important;font-size:10px!important;opacity:.92}
+@media(max-width:560px){
+  .app .telegram{right:66px!important;bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;max-width:calc(100vw - 132px)!important}
+  .app .telegram a.telegramJoin{min-height:32px!important;padding:0 11px!important;font-size:10px!important}
+}
