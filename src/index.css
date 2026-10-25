@@ -904,24 +904,31 @@ img{max-width:100%}
 }
 
 
-/* Compact MaseNet AI hint: keep the animated prompt small and never create a screen-sized overlay. */
+/* iOS-inspired MaseNet suggestion: compact neon glass pill that visually unfolds from the AI dock. */
 .app .aiSuggestionBubble{
-  position:fixed;right:12px;bottom:132px;z-index:47;
-  display:flex;align-items:center;gap:4px;
-  width:max-content;max-width:min(198px,calc(100vw - 78px));
-  box-sizing:border-box;padding:5px 6px;
-  border-radius:16px 16px 5px 16px;
-  border:1px solid color-mix(in srgb,var(--glow,#d2ad60) 34%,rgba(255,255,255,.16));
-  background:rgba(13,16,25,.88);color:var(--text,#fff);
-  box-shadow:0 7px 20px rgba(0,0,0,.24),0 0 12px color-mix(in srgb,var(--glow,#d2ad60) 12%,transparent);
-  backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
-  animation:aiHintPop .28s ease-out both;overflow:hidden;
+  position:fixed;right:17px;bottom:74px;z-index:46;
+  display:flex;align-items:center;gap:5px;
+  width:max-content;max-width:min(282px,calc(100vw - 78px));
+  box-sizing:border-box;padding:7px 8px;
+  border-radius:28px 28px 8px 28px;
+  border:1px solid rgba(36,255,239,.72);
+  background:linear-gradient(110deg,rgba(4,20,24,.96),rgba(8,18,25,.91));
+  color:#f8ffff;
+  box-shadow:0 0 5px rgba(23,255,240,.75),0 0 20px rgba(0,245,230,.28),inset 0 0 12px rgba(0,255,238,.08);
+  backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);
+  transform-origin:calc(100% - 20px) calc(100% + 18px);
+  animation:aiHintSpringOut .58s cubic-bezier(.2,1.35,.35,1) both;
+  overflow:hidden;
 }
-.app .aiSuggestionOpen{flex:1;min-width:0;gap:6px;padding:2px 3px}
-.app .aiSuggestionOrb{width:25px;height:25px;flex:0 0 25px}
-.app .aiSuggestionCopy{min-width:0;max-width:142px;gap:1px}
-.app .aiSuggestionCopy strong{font-size:9px;line-height:1.15}
-.app .aiSuggestionCopy>span{font-size:10px;line-height:1.22;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
-.app .aiSuggestionClose{width:18px;height:18px;flex:0 0 18px;font-size:14px;align-self:flex-start}
-@media(max-width:380px){.app .aiSuggestionBubble{right:8px;bottom:120px;max-width:min(184px,calc(100vw - 72px));padding:4px 5px}.app .aiSuggestionCopy{max-width:126px}}
+.app .aiSuggestionOpen{flex:1;min-width:0;gap:9px;padding:3px 4px;text-align:left}
+.app .aiSuggestionOrb{width:35px;height:35px;flex:0 0 35px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 30% 25%,#baffff,#00dccc 58%,#007b83);color:#032a2b;box-shadow:0 0 14px rgba(0,255,238,.42);animation:aiOrbBreathe 2.8s ease-in-out infinite}
+.app .aiSuggestionCopy{min-width:0;max-width:202px;gap:2px}
+.app .aiSuggestionCopy strong{font-size:10px;line-height:1.15;letter-spacing:.03em;color:#65fff2}
+.app .aiSuggestionCopy>span{font-size:12px;line-height:1.28;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.app .aiSuggestionClose{width:20px;height:20px;flex:0 0 20px;font-size:15px;align-self:flex-start;border-radius:50%;background:rgba(255,255,255,.08);color:#c9ffff}
+.app .aiDock{transition:transform .38s cubic-bezier(.2,.9,.2,1),box-shadow .38s ease}
+.app .aiDock:active{transform:scale(.9)}
+@keyframes aiHintSpringOut{0%{opacity:0;transform:translate(7px,24px) scale(.18);filter:blur(5px)}58%{opacity:1;transform:translate(-1px,-2px) scale(1.035);filter:blur(0)}78%{transform:translate(0,1px) scale(.985)}100%{opacity:1;transform:translate(0,0) scale(1)}}
+@keyframes aiOrbBreathe{0%,100%{box-shadow:0 0 10px rgba(0,255,238,.32);transform:scale(1)}50%{box-shadow:0 0 18px rgba(0,255,238,.62);transform:scale(1.045)}}
+@media(max-width:380px){.app .aiSuggestionBubble{right:8px;bottom:68px;max-width:min(248px,calc(100vw - 70px));padding:6px}.app .aiSuggestionOrb{width:30px;height:30px;flex-basis:30px}.app .aiSuggestionCopy{max-width:170px}.app .aiSuggestionCopy>span{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.app .aiSuggestionBubble,.app .aiSuggestionOrb{animation:none!important}}
