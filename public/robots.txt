@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://masetv-cloudflare-migration.pages.dev/sitemap.xml
