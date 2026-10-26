@@ -1,0 +1,14 @@
+{
+  "name": "MaseNet | MaseMedia TV",
+  "short_name": "MaseNet",
+  "description": "Discover entertainment updates and content from MaseMedia TV.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070910",
+  "theme_color": "#070910",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/masemediatv-logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
