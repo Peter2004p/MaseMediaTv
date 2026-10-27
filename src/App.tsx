@@ -48,6 +48,22 @@ function groupLegacyTitles(items:Title[]):Title[]{
 function Poster({title,small=false}:{title:Title;small?:boolean}){const [src,setSrc]=useState(title.posterUrl||'');const [failed,setFailed]=useState(false);const [retried,setRetried]=useState(false);const initials=title.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('');const refresh=()=>{if(!title.posterPath||retried)return;setRetried(true);api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(r.data?.url){setFailed(false);setSrc(String(r.data.url))}}).catch(()=>{})};useEffect(()=>{let alive=true;setFailed(false);setRetried(false);setSrc(title.posterUrl||'');if(title.posterPath)api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(alive&&r.data?.url)setSrc(String(r.data.url))}).catch(()=>{});return()=>{alive=false}},[title.posterUrl,title.posterPath]);return <div className={`poster ${small?'smallPoster':''}`}>{src&&!failed?<img className="posterImage" src={src} alt={`${title.name} poster`} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>{setFailed(true);refresh()}}/>:<><div className="posterAura"/><b>{initials}</b><small>{title.type}</small></>}<i/><span>{title.quality}</span></div>;}
 
 export default function App(){
+ // Adaptive rendering: preserve the full design on capable devices and reduce expensive effects on low-end phones.
+ useEffect(()=>{
+  const nav=navigator as Navigator & {deviceMemory?:number;connection?:{saveData?:boolean;effectiveType?:string}};
+  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;
+  const lowMemory=typeof nav.deviceMemory==='number'&&nav.deviceMemory<=4;
+  const fewCores=typeof nav.hardwareConcurrency==='number'&&nav.hardwareConcurrency<=4;
+  const dataSaver=nav.connection?.saveData===true;
+  const slowNetwork=nav.connection?.effectiveType==='slow-2g'||nav.connection?.effectiveType==='2g';
+  document.documentElement.classList.toggle('masenet-low-performance',lowMemory||fewCores||dataSaver||slowNetwork||reduced);
+  document.documentElement.classList.toggle('masenet-reduced-motion',reduced);
+  const onMotion=()=>document.documentElement.classList.toggle('masenet-reduced-motion',window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const mq=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  mq?.addEventListener?.('change',onMotion);
+  return()=>mq?.removeEventListener?.('change',onMotion);
+ },[]);
+
 
  const [titles,setTitles]=useState<Title[]>(demo);
  const [titlesLoaded,setTitlesLoaded]=useState(false);
