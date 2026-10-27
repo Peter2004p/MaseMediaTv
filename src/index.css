@@ -1637,3 +1637,28 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
  .app .maseReferenceHeader .maseVipButton span{display:none!important}
  .app .iqHome .iqHeroCopy{padding-top:clamp(175px,50vw,230px)!important}
 }
+
+/* Header simplification: no VIP; stable search width on phones */
+.app .maseReferenceHeader{grid-template-columns:max-content minmax(0,1fr) max-content!important;gap:10px!important;overflow:visible!important}
+.app .maseReferenceHeader .navActions{display:flex!important;min-width:0!important;gap:6px!important}
+.app .maseReferenceHeader .maseVipButton{display:none!important}
+.app .maseReferenceHeader .maseProfileButton{display:grid!important;flex:0 0 42px!important;width:42px!important;height:42px!important}
+@media(max-width:680px){
+ .app .maseReferenceHeader{grid-template-columns:36px minmax(0,1fr) 36px!important;gap:7px!important;padding:6px 8px!important;width:calc(100% - 12px)!important;min-height:52px!important;box-sizing:border-box!important}
+ .app .maseReferenceHeader .brand{width:36px!important;min-width:36px!important;max-width:36px!important;overflow:hidden!important;gap:0!important}
+ .app .maseReferenceHeader .brandLogo{display:block!important;width:34px!important;height:34px!important;flex:0 0 34px!important}
+ .app .maseReferenceHeader .brandName{display:none!important}
+ .app .maseHeaderSearch{width:100%!important;min-width:0!important;height:37px!important;padding:0 8px!important;gap:5px!important;box-sizing:border-box!important}
+ .app .maseHeaderSearch input{min-width:0!important;width:0!important;flex:1 1 auto!important;font-size:10px!important;white-space:nowrap!important}
+ .app .maseHeaderSearch input::placeholder{font-size:10px!important;letter-spacing:-.02em!important}
+ .app .maseReferenceHeader .navActions{width:36px!important;min-width:36px!important;max-width:36px!important;justify-content:center!important;gap:0!important}
+ .app .maseReferenceHeader .maseProfileButton{width:34px!important;height:34px!important;flex:0 0 34px!important;padding:5px!important}
+ .app .maseReferenceHeader .navActions>button:not(.maseProfileButton){display:none!important}
+}
+@media(max-width:370px){
+ .app .maseReferenceHeader{grid-template-columns:32px minmax(0,1fr) 32px!important;gap:5px!important}
+ .app .maseReferenceHeader .brand,.app .maseReferenceHeader .navActions{width:32px!important;min-width:32px!important;max-width:32px!important}
+ .app .maseReferenceHeader .brandLogo{width:30px!important;height:30px!important;flex-basis:30px!important}
+ .app .maseReferenceHeader .maseProfileButton{width:31px!important;height:31px!important;flex-basis:31px!important}
+ .app .maseHeaderSearch input::placeholder{font-size:9px!important}
+}
