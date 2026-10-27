@@ -13,6 +13,12 @@ async function ensureTable(db: D1Database) {
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_analytics_events_created ON analytics_events(created_at)").run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_analytics_events_type ON analytics_events(event_type, created_at)").run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS analytics_presence (
+    session_key TEXT PRIMARY KEY,
+    route TEXT NOT NULL DEFAULT '/',
+    last_seen TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_analytics_presence_seen ON analytics_presence(last_seen)").run();
 }
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: AnalyticsEnv }) => {
@@ -22,7 +28,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: A
   let body: { event?: unknown; itemId?: unknown; itemName?: unknown };
   try { body = JSON.parse(raw) as { event?: unknown; itemId?: unknown; itemName?: unknown }; }
   catch { return json({ error: "Invalid analytics event" }, 400); }
-  const allowed = new Set(["page_view", "title_view", "search", "feedback"]);
+  const allowed = new Set(["page_view", "title_view", "search", "feedback", "presence"]);
   const event = String(body.event || "");
   if (!allowed.has(event)) return json({ error: "Unsupported analytics event" }, 400);
   const itemId = typeof body.itemId === "string" ? body.itemId.slice(0, 120) : null;
@@ -39,6 +45,14 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: A
   }
   try {
     await ensureTable(env.DB);
+    if (event === "presence") {
+      const route = typeof body.itemId === "string" ? body.itemId.slice(0, 180) : "/";
+      await env.DB.prepare("INSERT INTO analytics_presence(session_key,route,last_seen) VALUES(?,?,datetime('now')) ON CONFLICT(session_key) DO UPDATE SET route=excluded.route,last_seen=datetime('now')")
+        .bind(session, route).run();
+      const response = json({ ok: true, recorded: true });
+      if (newCookie) response.headers.append("Set-Cookie", cookieName + "=" + session + "; Max-Age=2592000; Path=/; Secure; SameSite=Lax; HttpOnly");
+      return response;
+    }
     // Deduplicate noisy page-view events for the same anonymous browser and route.
     if (event === "page_view" || event === "title_view") {
       const exists = await env.DB.prepare("SELECT id FROM analytics_events WHERE event_type=? AND session_key=? AND COALESCE(item_id,'')=COALESCE(?,'') AND created_at >= datetime('now','-30 minutes') LIMIT 1")
@@ -65,14 +79,16 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: An
   if (gate.response) return gate.response;
   try {
     await ensureTable(env.DB);
-    const [totals, daily, popular, searches, feedback] = await Promise.all([
+    const [totals, daily, popular, searches, feedback, online, recent] = await Promise.all([
       env.DB.prepare("SELECT COUNT(DISTINCT session_key) AS visitors, SUM(CASE WHEN event_type='page_view' THEN 1 ELSE 0 END) AS page_views, SUM(CASE WHEN event_type='title_view' THEN 1 ELSE 0 END) AS title_views, SUM(CASE WHEN event_type='search' THEN 1 ELSE 0 END) AS searches, SUM(CASE WHEN event_type='feedback' THEN 1 ELSE 0 END) AS feedback FROM analytics_events").first(),
       env.DB.prepare("SELECT date(created_at) AS day, COUNT(*) AS events, COUNT(DISTINCT session_key) AS visitors FROM analytics_events WHERE created_at >= datetime('now','-6 days') GROUP BY date(created_at) ORDER BY day").all(),
       env.DB.prepare("SELECT item_id AS id,item_name AS name,COUNT(*) AS views FROM analytics_events WHERE event_type='title_view' AND item_name IS NOT NULL GROUP BY item_id,item_name ORDER BY views DESC LIMIT 8").all(),
       env.DB.prepare("SELECT item_name AS query,COUNT(*) AS count FROM analytics_events WHERE event_type='search' AND item_name IS NOT NULL GROUP BY item_name ORDER BY count DESC LIMIT 8").all(),
-      env.DB.prepare("SELECT item_name AS rating,COUNT(*) AS count FROM analytics_events WHERE event_type='feedback' AND item_name IS NOT NULL GROUP BY item_name ORDER BY count DESC LIMIT 8").all()
+      env.DB.prepare("SELECT item_name AS rating,COUNT(*) AS count FROM analytics_events WHERE event_type='feedback' AND item_name IS NOT NULL GROUP BY item_name ORDER BY count DESC LIMIT 8").all(),
+      env.DB.prepare("SELECT COUNT(*) AS count FROM analytics_presence WHERE last_seen >= datetime('now','-2 minutes')").first(),
+      env.DB.prepare("SELECT event_type AS event,item_name AS detail,created_at AS at FROM analytics_events WHERE event_type IN ('page_view','title_view','feedback') ORDER BY id DESC LIMIT 12").all()
     ]);
-    return json({ totals: totals || {}, daily: daily.results || [], popular: popular.results || [], searches: searches.results || [], feedback: feedback.results || [], generatedAt: new Date().toISOString(), note: "Counts include only events recorded since analytics collection was enabled. They are not historical totals." });
+    return json({ totals: totals || {}, onlineNow: Number((online as any)?.count || 0), daily: daily.results || [], popular: popular.results || [], searches: searches.results || [], feedback: feedback.results || [], recent: recent.results || [], generatedAt: new Date().toISOString(), note: "Counts include only events recorded since analytics collection was enabled. Online presence is approximate and expires after two minutes without a heartbeat." });
   } catch (error) {
     console.error("Analytics summary failed", error instanceof Error ? error.message : "unknown error");
     return json({ error: "Analytics summary unavailable" }, 503);
