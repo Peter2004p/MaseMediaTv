@@ -13,7 +13,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: He
   try {
     await env.DB.prepare("SELECT 1 AS ok").first();
     database = "healthy";
-    const known = ["admins", "admin_sessions", "catalog", "analytics_events", "user_library_state", "site_users", "site_user_sessions"];
+    const known = ["admins", "admin_sessions", "titles", "broadcasts", "analytics_events", "user_library_state", "site_users", "site_user_sessions"];
     const rows = await env.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name IN (" + known.map(() => "?").join(",") + ")"
     ).bind(...known).all<{ name: string }>();
@@ -29,7 +29,8 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: He
     services: {
       database,
       adminAuth: "protected",
-      catalogueData: tables.catalog ? "table-present" : "not-confirmed",
+      catalogueData: tables.titles ? "table-present" : "not-confirmed",
+      broadcasts: tables.broadcasts ? "table-present" : "not-confirmed",
       analytics: tables.analytics_events ? "table-present" : "not-yet-created",
       librarySync: tables.user_library_state ? "table-present" : "created-on-first-sync"
     },
