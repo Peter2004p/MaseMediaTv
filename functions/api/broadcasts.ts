@@ -24,46 +24,64 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const expiresAt = typeof body.expiresAt === "string" ? body.expiresAt : null;
   if (!mediaUrl || !/^https:\/\//i.test(mediaUrl)) return json({ error: "A valid HTTPS media URL is required." }, 400);
   await env.DB.prepare("INSERT INTO broadcasts (id,title,description,media_url,target,expires_at) VALUES (?,?,?,?,?,?)").bind(id,title,description,mediaUrl,target,expiresAt).run();
-  const telegram = { attempted: target !== "website", delivered: 0, failed: 0 };
+  const telegram: { attempted: boolean; delivered: number; failed: number; recipients: number; reason?: string } = { attempted: target !== "website", delivered: 0, failed: 0, recipients: 0 };
   const config = env as Env & { TELEGRAM_BOT_TOKEN?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string };
   if (telegram.attempted) {
-    if (!config.TELEGRAM_BOT_TOKEN) telegram.failed = 2;
-    else {
-      const appUrl = (config.TELEGRAM_MINI_APP_URL || config.TELEGRAM_WEBAPP_URL || "").trim();
-      const message = [heading || title, plainDescription, mediaUrl, appUrl.startsWith("https://") ? "Open MaseNet: " + appUrl : ""].filter(Boolean).join("\n\n").slice(0, 3900);
-      const mediaType = body.mediaType === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl)
-        ? "video"
-        : body.mediaType === "gif" || /\.gif(\?|$)/i.test(mediaUrl)
-          ? "animation"
-          : "photo";
-      for (const chatId of ["@MaseMediaTv", "@MoonDramaC"]) {
-        try {
-          const mediaMethod = mediaType === "video" ? "sendVideo" : mediaType === "animation" ? "sendAnimation" : "sendPhoto";
-          const mediaField = mediaType === "video" ? "video" : mediaType === "animation" ? "animation" : "photo";
-          const caption = [heading || title, plainDescription, appUrl.startsWith("https://") ? "Open MaseNet: " + appUrl : ""].filter(Boolean).join("\n\n").slice(0, 1000);
-          const mediaResponse = await fetch("https://api.telegram.org/bot" + config.TELEGRAM_BOT_TOKEN + "/" + mediaMethod, {
-            method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ chat_id: chatId, [mediaField]: mediaUrl, caption, disable_notification: false })
-          });
-          if (mediaResponse.ok) {
-            telegram.delivered++;
-          } else {
-            // Some hosts reject direct URL ingestion; preserve the announcement with a clickable URL.
-            const sent = await fetch("https://api.telegram.org/bot" + config.TELEGRAM_BOT_TOKEN + "/sendMessage", {
-              method: "POST", headers: { "content-type": "application/json" },
-              body: JSON.stringify({ chat_id: chatId, text: message, disable_web_page_preview: false })
-            });
-            if (sent.ok) telegram.delivered++; else telegram.failed++;
-          }
-        } catch {
+    if (!config.TELEGRAM_BOT_TOKEN) {
+      telegram.failed = 1;
+      telegram.reason = "Telegram bot token is not configured.";
+    } else {
+      try {
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
+          chat_id TEXT PRIMARY KEY, chat_type TEXT NOT NULL, title TEXT,
+          active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )`).run();
+        const result = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1").all<{chat_id:string}>();
+        const targets = result.results || [];
+        telegram.recipients = targets.length;
+        const appUrl = (config.TELEGRAM_MINI_APP_URL || config.TELEGRAM_WEBAPP_URL || "").trim();
+        const message = [heading || title, plainDescription, mediaUrl, appUrl.startsWith("https://") ? "Open MaseNet: " + appUrl : ""].filter(Boolean).join("\n\n").slice(0,3900);
+        const mediaType = body.mediaType === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl)
+          ? "video"
+          : body.mediaType === "gif" || /\.gif(\?|$)/i.test(mediaUrl)
+            ? "animation"
+            : "photo";
+        for (const targetItem of targets) {
+          const chatId = targetItem.chat_id;
+          let delivered = false;
           try {
-            const sent = await fetch("https://api.telegram.org/bot" + config.TELEGRAM_BOT_TOKEN + "/sendMessage", {
-              method: "POST", headers: { "content-type": "application/json" },
-              body: JSON.stringify({ chat_id: chatId, text: message, disable_web_page_preview: false })
+            const method = mediaType === "video" ? "sendVideo" : mediaType === "animation" ? "sendAnimation" : "sendPhoto";
+            const mediaField = mediaType === "video" ? "video" : mediaType === "animation" ? "animation" : "photo";
+            const caption = [heading || title, plainDescription, appUrl.startsWith("https://") ? "Open MaseNet: " + appUrl : ""].filter(Boolean).join("\n\n").slice(0,1000);
+            const response = await fetch("https://api.telegram.org/bot" + config.TELEGRAM_BOT_TOKEN + "/" + method, {
+              method:"POST", headers:{"content-type":"application/json"},
+              body:JSON.stringify({chat_id:chatId,[mediaField]:mediaUrl,caption,disable_notification:false})
             });
-            if (sent.ok) telegram.delivered++; else telegram.failed++;
-          } catch { telegram.failed++; }
+            const data = await response.json().catch(()=>({})) as {ok?:boolean;description?:string};
+            delivered = response.ok && data.ok === true;
+            if (!delivered) {
+              const fallback = await fetch("https://api.telegram.org/bot" + config.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+                method:"POST", headers:{"content-type":"application/json"},
+                body:JSON.stringify({chat_id:chatId,text:message,disable_web_page_preview:false,disable_notification:false})
+              });
+              const fallbackData = await fallback.json().catch(()=>({})) as {ok?:boolean;description?:string};
+              delivered = fallback.ok && fallbackData.ok === true;
+              if (!delivered && /blocked by the user|chat not found|bot was kicked|user is deactivated/i.test(String(fallbackData.description || data.description || ""))) {
+                await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
+              }
+            }
+          } catch (error) {
+            console.error("MaseNet broadcast delivery failed:", error instanceof Error ? error.message : String(error));
+          }
+          if (delivered) telegram.delivered++;
+          else telegram.failed++;
         }
+        if (targets.length === 0) telegram.reason = "No Telegram users or channels are subscribed yet. Users must send /start to @MaseTv_Bot; channels must add the bot as an admin and post /masenet_subscribe.";
+      } catch (error) {
+        telegram.failed++;
+        telegram.reason = "Could not load Telegram subscribers.";
+        console.error("MaseNet broadcast recipient lookup failed:", error instanceof Error ? error.message : String(error));
       }
     }
   }
