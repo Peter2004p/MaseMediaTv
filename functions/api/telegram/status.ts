@@ -34,8 +34,36 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
       return json({ ok: false, error: data.description || "Telegram could not return webhook status." }, 502);
     }
 
-    const info = data.result;
-    const expectedUrl = new URL("/api/telegram/webhook/masetv", new URL(request.url).origin).toString();
+    let info = data.result;
+    const expectedUrl = "https://masetv-cloudflare-migration.pages.dev/api/telegram/webhook/masetv";
+    let autoRepairAttempted = false;
+    let autoRepairSucceeded = false;
+    // Keep the live bot webhook on the stable production hostname and make sure
+    // channel posts reach the subscription handler. This runs only for an authenticated admin.
+    if (env.TELEGRAM_WEBHOOK_SECRET && (info.url !== expectedUrl || !(info.allowed_updates || []).includes("channel_post"))) {
+      autoRepairAttempted = true;
+      try {
+        const repair = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/setWebhook", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            url: expectedUrl,
+            drop_pending_updates: false,
+            allowed_updates: ["message", "edited_message", "channel_post", "my_chat_member"],
+            secret_token: env.TELEGRAM_WEBHOOK_SECRET
+          })
+        });
+        const repairData = await repair.json().catch(() => ({})) as { ok?: boolean };
+        autoRepairSucceeded = repair.ok && repairData.ok === true;
+        if (autoRepairSucceeded) {
+          const refreshed = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getWebhookInfo");
+          const refreshedData = await refreshed.json().catch(() => ({})) as { ok?: boolean; result?: typeof info };
+          if (refreshed.ok && refreshedData.ok && refreshedData.result) info = refreshedData.result;
+        }
+      } catch (error) {
+        console.error("MaseNet Telegram webhook auto-repair failed:", error instanceof Error ? error.message : String(error));
+      }
+    }
     const urlMatches = info.url === expectedUrl;
     const row = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key='telegram_webhook'").first<{ value_json: string }>();
     let recorded = false;
@@ -54,6 +82,8 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
       lastErrorDate: info.last_error_date ?? null,
       lastErrorMessage: info.last_error_message ?? null,
       allowedUpdates: info.allowed_updates ?? [],
+      autoRepairAttempted,
+      autoRepairSucceeded,
       note: info.last_error_message
         ? "Telegram reports a delivery error. Review lastErrorMessage and check the deployed webhook route and secrets."
         : !urlMatches
