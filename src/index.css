@@ -1413,3 +1413,38 @@ img{max-width:100%}
 }
 @media(hover:none){.card:hover .poster{transform:none}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+
+/* MaseNet Liquid Glass homepage + iOS-inspired floating navigation dock */
+:root{--mase-mint:#35efa0;--mase-glass:rgba(13,20,32,.68);--mase-glass-edge:rgba(190,225,255,.28)}
+body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transparent 42%),#05070b}
+.app .nav.glass{border:1px solid var(--mase-glass-edge);background:linear-gradient(125deg,rgba(17,31,50,.84),rgba(8,12,22,.78) 60%,rgba(32,19,49,.74));box-shadow:0 14px 42px #0007,inset 0 1px rgba(255,255,255,.18),0 0 26px rgba(51,175,255,.06);backdrop-filter:blur(28px) saturate(165%);-webkit-backdrop-filter:blur(28px) saturate(165%)}
+.app .nav .brandLogo{filter:drop-shadow(0 0 10px rgba(81,205,255,.28))}
+.app .nav .brandName{background:linear-gradient(100deg,#6de8ff 0%,#b9a4ff 48%,#ffb34e 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.app .nav nav button,.app .navActions .icon{border-radius:999px;transition:background .2s,border-color .2s,transform .2s}
+.app .nav nav button:hover,.app .navActions .icon:hover{background:rgba(255,255,255,.11);border-color:rgba(155,222,255,.3)}
+.app .iqHome .iqHero{border:1px solid rgba(158,225,255,.25);border-radius:28px;background:#080d17;box-shadow:0 28px 78px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.16),0 0 44px rgba(31,148,230,.055)}
+.app .iqHome .iqHeroShade{background:linear-gradient(90deg,rgba(3,8,16,.97) 0%,rgba(3,8,16,.78) 38%,rgba(3,8,16,.12) 100%),linear-gradient(0deg,rgba(3,7,13,.96),transparent 70%)}
+.app .iqHome .iqTags span:first-child{background:linear-gradient(110deg,#36f0a0,#9affd0);color:#042517;border-color:transparent;box-shadow:0 4px 18px rgba(53,239,160,.18)}
+.app .iqHome .iqKicker{color:#57f0b0}
+.app .iqHome .iqHeroActions .primary{background:linear-gradient(115deg,#40f0a0,#12c978);color:#032719;box-shadow:0 8px 28px rgba(25,224,137,.25)}
+.app .iqHome .iqCategories{border:1px solid rgba(174,223,255,.22);background:linear-gradient(120deg,rgba(14,24,39,.83),rgba(15,13,28,.76));box-shadow:0 12px 36px #0005,inset 0 1px #ffffff12;backdrop-filter:blur(26px) saturate(165%);-webkit-backdrop-filter:blur(26px) saturate(165%)}
+.app .iqHome .iqCategories button.active,.app .iqHome .iqCategories button:hover{background:linear-gradient(120deg,#42f2a3,#8ef8cc);color:#042819;box-shadow:0 5px 20px #35efa026}
+.app .iqHome .iqQuickCategories button{border:1px solid rgba(160,218,255,.15);background:linear-gradient(145deg,rgba(21,31,48,.78),rgba(10,14,24,.78));box-shadow:inset 0 1px #ffffff12,0 8px 20px #0002;backdrop-filter:blur(18px)}
+.app .iqHome .iqCard{border-color:rgba(190,220,255,.08);background:rgba(255,255,255,.015)}
+.app .iqHome .iqCard:hover{border-color:rgba(74,239,169,.35);box-shadow:0 15px 34px #0005,0 0 20px rgba(53,239,160,.045)}
+.app .iqHome .iqPoster{border:1px solid rgba(175,225,255,.17);box-shadow:0 10px 28px #0006}
+.app .homepageBroadcasts .broadcastDynamicIsland{border-color:rgba(100,255,190,.25);background:linear-gradient(120deg,rgba(25,47,46,.74),rgba(11,17,28,.78));box-shadow:0 8px 28px #0005,inset 0 1px #ffffff20;backdrop-filter:blur(26px) saturate(170%)}
+.app .homepageBroadcasts .homepageBroadcast{border-color:rgba(166,225,255,.24);box-shadow:0 20px 52px #0006,inset 0 1px #ffffff24;backdrop-filter:blur(22px) saturate(150%)}
+.app .masenetLiquidDock{position:fixed;z-index:900;left:50%;bottom:max(9px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(620px,calc(100% - 24px));min-height:70px;padding:7px 9px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;gap:5px;border:1px solid rgba(192,230,255,.36);border-radius:27px;background:linear-gradient(115deg,rgba(20,41,57,.78),rgba(10,15,28,.76) 45%,rgba(43,20,50,.72));box-shadow:0 14px 44px rgba(0,0,0,.58),inset 0 1px rgba(255,255,255,.3),inset 0 -1px rgba(255,255,255,.06),0 0 32px rgba(65,183,255,.1);backdrop-filter:blur(32px) saturate(190%);-webkit-backdrop-filter:blur(32px) saturate(190%)}
+.app .masenetLiquidDock button{position:relative;min-width:0;min-height:54px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1px solid transparent;border-radius:19px;background:transparent;color:#c3d2e7;font-size:10px;font-weight:700;line-height:1.1;cursor:pointer;touch-action:manipulation;transition:transform .18s,background .18s,color .18s,border-color .18s}
+.app .masenetLiquidDock button.active{color:#62f4b1;background:linear-gradient(145deg,rgba(54,240,160,.2),rgba(54,240,160,.055));border-color:rgba(87,245,177,.24);text-shadow:0 0 15px rgba(53,239,160,.25)}
+.app .masenetLiquidDock button:active{transform:scale(.94)}
+.app .masenetLiquidDock button.dockAI{margin-top:-20px;min-height:62px;border-radius:23px;border-color:rgba(176,152,255,.55);color:white;background:radial-gradient(circle at 30% 15%,rgba(255,255,255,.42),transparent 33%),linear-gradient(145deg,#6f75ff,#853bff 55%,#e64bdb);box-shadow:0 0 0 5px rgba(122,78,255,.13),0 0 30px rgba(134,73,255,.52),inset 0 1px rgba(255,255,255,.55)}
+.app .masenetLiquidDock button.dockAI span{font-weight:850}
+.app .masenetLiquidDock .dockR{display:grid;place-items:center;width:25px;height:25px;border-radius:9px;background:linear-gradient(135deg,#f4c9ff,#a777ff 55%,#ff5a9b);color:#27113f;font-size:19px;font-weight:1000;text-shadow:none;box-shadow:0 0 16px rgba(208,105,255,.3)}
+.app .siteLegalFooter{padding-bottom:112px!important}
+.app .homeFloat{display:none}
+@media(min-width:760px){.app .masenetLiquidDock{width:min(520px,calc(100% - 36px));bottom:18px}.app .masenetLiquidDock button{font-size:11px}.app .siteLegalFooter{padding-bottom:118px!important}}
+@media(max-width:520px){.app .nav.glass{margin:7px 8px 0;padding:7px 8px;border-radius:21px;gap:5px}.app .nav .brandName{font-size:13px}.app .nav nav button{font-size:10px}.app .navActions .icon{padding:7px}.app .masenetLiquidDock{width:calc(100% - 20px);min-height:66px;bottom:max(7px,env(safe-area-inset-bottom));padding:6px 7px;border-radius:24px;gap:3px}.app .masenetLiquidDock button{min-height:51px;font-size:9px;border-radius:16px}.app .masenetLiquidDock button.dockAI{min-height:59px;margin-top:-17px;border-radius:20px}.app .masenetLiquidDock .dockR{width:23px;height:23px}.app .siteLegalFooter{padding-bottom:105px!important}}
+@media(prefers-reduced-motion:reduce){.app .masenetLiquidDock button{transition:none!important}}
