@@ -23,6 +23,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
+  const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim();
+  const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
   const chatType = String(msg?.chat?.type || "private");
   const ensureSubscribers = async () => env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
     chat_id TEXT PRIMARY KEY, chat_type TEXT NOT NULL, title TEXT,
@@ -64,8 +66,6 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🔔 MaseNet movie, drama and episode alerts are now enabled."})});
     return sent.ok ? json({ok:true}) : json({ok:false},502);
   }
-  const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim();
-  const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
 
   if (["/help", "/commands"].includes(command)) {
     const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: "MaseNet Assistant\n\nChat naturally — try “Hey AI, how are you?”\nSend a movie/drama/episode name to search.\n/search title — search the catalog.\n/ai question — optional direct AI command.\n/start — welcome message.", ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }) });
