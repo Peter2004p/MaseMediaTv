@@ -1732,3 +1732,19 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
  .app header.nav.maseReferenceHeader .navActions{width:32px!important;min-width:32px!important;max-width:32px!important}
  .app header.nav.maseReferenceHeader .navActions .maseProfileButton{width:31px!important;height:31px!important;min-width:31px!important;flex-basis:31px!important}
 }
+
+/* Bottom dock requested order: Home, Movies, custom Reel R, Customize, Profile */
+.app .masenetLiquidDock{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}
+.app .masenetLiquidDock button{min-width:0!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:4px!important}
+.app .masenetLiquidDock .dockAI{display:none!important}
+.app .masenetLiquidDock .dockReels .dockR{display:grid!important;place-items:center!important;width:34px!important;height:34px!important;font-size:29px!important;font-weight:1000!important;font-style:italic!important;line-height:1!important;letter-spacing:-.09em!important;color:transparent!important;background:linear-gradient(145deg,#fff 0%,#d6a2ff 22%,#a04cff 52%,#ff4fc8 78%,#ffb5ee 100%)!important;background-clip:text!important;-webkit-background-clip:text!important;filter:drop-shadow(0 0 6px #a848ffb3)!important;position:relative!important}
+.app .masenetLiquidDock .dockReels .dockR:after{content:"";position:absolute;inset:1px 0 0 3px;border-right:2px solid #ff6bdb;border-radius:9px;transform:skewY(-13deg);opacity:.7;pointer-events:none}
+.app .masenetLiquidDock .dockReels.active{background:radial-gradient(ellipse at 50% 20%,#b94cff38,transparent 76%)!important;color:#f2caff!important}
+.app .masenetLiquidDock .dockReels.active .dockR{filter:drop-shadow(0 0 10px #ba48ff)!important}
+.app .masenetLiquidDock .dockCustomize svg{color:#d5e8ff!important}
+.app .masenetLiquidDock .dockCustomize.active svg{color:#54efaa!important}
+@media(max-width:680px){
+ .app .masenetLiquidDock{grid-template-columns:repeat(5,minmax(0,1fr))!important;padding:7px 6px!important}
+ .app .masenetLiquidDock .dockReels .dockR{width:29px!important;height:29px!important;font-size:26px!important}
+ .app .masenetLiquidDock button{font-size:9px!important}
+}
