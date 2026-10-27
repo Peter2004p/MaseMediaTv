@@ -1371,3 +1371,15 @@ button,a,input,select,textarea{touch-action:manipulation}
 @media(max-width:760px){.app .maseYoutubeHub{grid-template-columns:44px minmax(0,1fr);gap:12px}.app .maseYoutubeBadge{width:42px;height:42px;border-radius:14px}.app .maseYoutubeActions{grid-column:1/-1;justify-content:stretch}.app .maseYoutubeActions a{flex:1}.app .iqCategories{align-items:center;gap:7px}.app .maseDiscoverySelect{flex:1;justify-content:space-between;min-width:135px}.app .maseDiscoverySelect select{max-width:100px}}
 @media(max-width:420px){.app .maseYoutubeHub{padding:14px}.app .maseYoutubeCopy p{font-size:11px}.app .maseYoutubeActions a{padding:0 8px;font-size:10px}.app .maseCatalogWarning{align-items:flex-start}.app .maseDiscoverySelect{min-width:calc(50% - 6px)}}
 @media(prefers-reduced-motion:reduce){.app .maseNotificationItem,.app .maseYoutubeActions a{transition:none!important;scroll-behavior:auto!important}}
+
+/* Install-to-home-screen control; intentionally separate from player UI. */
+.app .maseInstallWrap{position:relative;display:inline-flex;align-items:center}
+.app .maseInstallButton,.app .maseInstallInstalled{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:0 10px;border:1px solid rgba(101,239,183,.28);border-radius:12px;background:rgba(101,239,183,.09);color:#a5f8d5;font-size:11px;font-weight:850;white-space:nowrap;cursor:pointer}
+.app .maseInstallInstalled{cursor:default;opacity:.8}
+.app .maseInstallHelp{position:absolute;z-index:120;top:calc(100% + 10px);right:0;width:min(290px,calc(100vw - 32px));padding:15px 36px 14px 15px;border:1px solid rgba(101,239,183,.28);border-radius:16px;background:#10161b;color:#f2fff8;box-shadow:0 14px 38px #0009;font-size:12px;line-height:1.55}
+.app .maseInstallHelp b{display:block;margin-bottom:5px;font-size:13px}
+.app .maseInstallHelp p{margin:0;color:#b7c9c0}
+.app .maseInstallHelp strong{color:#a5f8d5}
+.app .maseInstallClose{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:8px;background:rgba(255,255,255,.07);color:#e9f8f0}
+@media(max-width:420px){.app .maseInstallButton{min-width:34px;padding:0 8px}.app .maseInstallButton span{display:none}.app .maseInstallHelp{right:-42px}}
+@media(prefers-reduced-motion:reduce){.app .maseInstallButton{transition:none}}
