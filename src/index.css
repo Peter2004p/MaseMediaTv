@@ -1857,3 +1857,32 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
 @media(prefers-reduced-motion:reduce){
  .app .maseCustomizeSettings *,.app .notificationSettings *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
+
+
+/* Adaptive performance mode: reduce compositing and paint work on entry-level devices. */
+html.masenet-low-performance{scroll-behavior:auto!important}
+html.masenet-low-performance *,html.masenet-low-performance *::before,html.masenet-low-performance *::after{
+ animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;
+ transition-duration:.001ms!important;transition-delay:0ms!important;
+}
+html.masenet-low-performance .nav,html.masenet-low-performance .searchDock,html.masenet-low-performance .side,
+html.masenet-low-performance .telegram,html.masenet-low-performance .aiDock,html.masenet-low-performance .player,
+html.masenet-low-performance .masenetLiquidDock,html.masenet-low-performance .homepageBroadcast,
+html.masenet-low-performance .broadcastDynamicIsland,html.masenet-low-performance .iqCategories,
+html.masenet-low-performance .iqTags span,html.masenet-low-performance .iqCard .iqMeta{
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+html.masenet-low-performance .masenetLiquidDock{background:rgba(8,17,32,.97)!important;box-shadow:0 4px 14px #0007!important}
+html.masenet-low-performance .app{background:#070910!important}
+html.masenet-low-performance .heroPoster,html.masenet-low-performance .posterAura{filter:none!important}
+html.masenet-low-performance .card:hover .poster,html.masenet-low-performance .primary:hover,html.masenet-low-performance .secondary:hover{transform:none!important}
+html.masenet-low-performance .homepageBroadcast:after{display:none!important}
+html.masenet-low-performance img{content-visibility:auto}
+html.masenet-low-performance .iqHome .iqCard{contain:layout paint style}
+html.masenet-reduced-motion *,html.masenet-reduced-motion *::before,html.masenet-reduced-motion *::after{
+ animation:none!important;transition:none!important;scroll-behavior:auto!important
+}
+@media(hover:none) and (pointer:coarse){
+ .card:hover .poster{transform:none!important}
+ .primary:hover,.secondary:hover{transform:none!important}
+}
