@@ -1555,3 +1555,24 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
  .app .iqHome .iqHero h1{font-size:28px}
  .app .iqHome .iqGrid{grid-template-columns:repeat(5,minmax(105px,1fr))}
 }
+
+.app .iqHome .iqHeroEmpty{background:radial-gradient(ellipse at 78% 20%,rgba(41,155,222,.3),transparent 37%),radial-gradient(ellipse at 78% 85%,rgba(169,46,234,.22),transparent 45%),linear-gradient(125deg,#06101b,#080b17 55%,#170e22)}
+.app .iqHome .iqHeroEmpty:before{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(circle at 78% 34%,#5bf7c514 0 2px,transparent 3px),radial-gradient(circle at 88% 23%,#8de7ff1c 0 2px,transparent 3px),radial-gradient(circle at 71% 65%,#cf8bff22 0 2px,transparent 3px);background-size:53px 53px,71px 71px,89px 89px;mask-image:linear-gradient(90deg,transparent,black)}
+.app .iqHome .iqHeroEmpty .iqHeroCopy{max-width:70%}
+.app .iqHome .iqHeroEmpty .iqHeroDots{margin-top:22px}
+.app .iqHome .iqCategories button:before{display:inline-block;margin-right:6px;font-size:13px;vertical-align:-1px}
+.app .iqHome .iqCategories button:nth-child(1):before{content:"♨"}
+.app .iqHome .iqCategories button:nth-child(2):before{content:"◉"}
+.app .iqHome .iqCategories button:nth-child(3):before{content:"▣"}
+.app .iqHome .iqCategories button:nth-child(4):before{content:"K"}
+.app .iqHome .iqCategories button:nth-child(5):before{content:"☻"}
+.app .iqHome .iqCategories button:nth-child(6):before{content:"★"}
+.app .iqHome .iqCategories button:nth-child(7):before{content:"＋"}
+.app .iqHome .maseTelegramBanner{display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;margin:18px 0 24px;padding:13px 16px;border:1px solid rgba(115,223,255,.42);border-radius:24px;background:radial-gradient(ellipse at 5% 50%,rgba(24,200,255,.2),transparent 38%),linear-gradient(110deg,rgba(9,27,44,.96),rgba(18,24,45,.94) 50%,rgba(66,27,69,.92));box-shadow:0 14px 35px #0008,inset 0 1px #ffffff28,0 0 20px #35c7ff14;text-decoration:none;color:#f8fbff}
+.app .iqHome .maseTelegramLogo{width:58px;height:58px;flex:0 0 58px;display:grid;place-items:center;border-radius:19px;background:radial-gradient(circle,#5cf0ff18,transparent 70%)}
+.app .iqHome .maseTelegramLogo img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 0 10px #3fcaff66)}
+.app .iqHome .maseTelegramText{display:grid;gap:5px;min-width:0;flex:1}
+.app .iqHome .maseTelegramText b{font-size:clamp(14px,2vw,18px);letter-spacing:-.02em}
+.app .iqHome .maseTelegramText small{font-size:11px;line-height:1.4;color:#b9cce4}
+.app .iqHome .maseTelegramAction{display:flex;align-items:center;gap:6px;white-space:nowrap;padding:11px 13px;border-radius:999px;background:linear-gradient(110deg,#4af0b0,#5dd9ff);color:#04261d;font-size:11px;font-weight:900;box-shadow:0 5px 18px #35efa02e}
+@media(max-width:520px){.app .iqHome .maseTelegramBanner{gap:8px;padding:11px 9px;border-radius:20px}.app .iqHome .maseTelegramLogo{width:42px;height:42px;flex-basis:42px}.app .iqHome .maseTelegramLogo img{width:40px;height:40px}.app .iqHome .maseTelegramText b{font-size:12px}.app .iqHome .maseTelegramText small{font-size:9px}.app .iqHome .maseTelegramAction{gap:4px;padding:9px 9px;font-size:9px}.app .iqHome .maseTelegramAction svg:first-child{display:none}}
