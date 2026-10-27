@@ -1999,3 +1999,14 @@ button{touch-action:manipulation}
 @media(prefers-reduced-motion:reduce){
  .app :is(.primary,.secondary,.icon,.nav button,.card .poster){transition:none!important}
 }
+
+/* Navigation visibility follows scroll direction without covering content. */
+.app .maseReferenceHeader{transition:transform .22s ease,opacity .22s ease}
+.app .masenetLiquidDock{transition:transform .22s ease,opacity .22s ease,visibility .22s ease!important}
+.app.nav-auto-hidden .maseReferenceHeader{transform:translateY(-125%);opacity:0;pointer-events:none}
+.app.nav-auto-hidden .masenetLiquidDock{transform:translateY(140%)!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+.app.nav-overlay-open .masenetLiquidDock{transform:translateY(140%)!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+.app.nav-overlay-open .maseReferenceHeader{opacity:.45;pointer-events:none}
+.app main,.app .page{scroll-margin-top:82px;scroll-margin-bottom:104px}
+.app :is(input,textarea,select){scroll-margin-top:90px;scroll-margin-bottom:120px}
+@media(prefers-reduced-motion:reduce){.app .maseReferenceHeader,.app .masenetLiquidDock{transition:none!important}}
