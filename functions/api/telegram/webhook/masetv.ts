@@ -12,16 +12,58 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TELEGRAM_WEBHOOK_SECRET) return json({ ok: false }, 401);
 
   const update = await request.json().catch(() => ({})) as {
-    message?: { chat?: { id?: number | string }; text?: string };
-    edited_message?: { chat?: { id?: number | string }; text?: string };
+    message?: { chat?: { id?: number | string; type?: string }; text?: string };
+    edited_message?: { chat?: { id?: number | string; type?: string }; text?: string };
+    channel_post?: { chat?: { id?: number | string; type?: string }; text?: string };
   };
-  const msg = update.message || update.edited_message;
+  const msg = update.message || update.edited_message || update.channel_post;
   const chatId = msg?.chat?.id;
   const incoming = String(msg?.text || "").trim();
   if (!chatId || !incoming) return json({ ok: true });
 
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
+  const chatType = String(msg?.chat?.type || "private");
+  const ensureSubscribers = async () => env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
+    chat_id TEXT PRIMARY KEY, chat_type TEXT NOT NULL, title TEXT,
+    active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  const displayTitle = String((msg as any)?.chat?.title || (msg as any)?.from?.first_name || "Telegram user").slice(0,160);
+  if ((chatType === "channel" || chatType === "supergroup") && command === "/masenet_subscribe") {
+    try {
+      await ensureSubscribers();
+      await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,?,?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET chat_type=excluded.chat_type,title=excluded.title,active=1,updated_at=datetime('now')").bind(String(chatId),chatType,displayTitle).run();
+      const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({chat_id:chatId,text:"✅ This channel/group is now subscribed to MaseNet movie, drama, episode and broadcast announcements."}) });
+      if (!sent.ok) return json({ok:false,error:"Channel subscription saved, but Telegram could not post the confirmation."},502);
+      return json({ok:true,subscribed:true});
+    } catch (error) {
+      console.error("MaseNet Telegram channel subscription failed:", error instanceof Error ? error.message : String(error));
+      return json({ok:false,error:"Could not register this channel."},500);
+    }
+  }
+  if (chatType === "private" && command === "/start") {
+    try {
+      await ensureSubscribers();
+      await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET chat_type='private',title=excluded.title,active=1,updated_at=datetime('now')").bind(String(chatId),displayTitle).run();
+    } catch (error) {
+      console.error("MaseNet Telegram private subscription failed:", error instanceof Error ? error.message : String(error));
+    }
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({chat_id:chatId,text:"Welcome to MaseNet 🎬\n\nYou are now subscribed to new movie, drama and episode alerts. Chat normally with me, or tap Open MaseNet to browse.\n\nCommands: /app, /help, /notifications_on, /notifications_off", ...(replyMarkup ? {reply_markup:replyMarkup} : {})}) });
+    return sent.ok ? json({ok:true,subscribed:true}) : json({ok:false,error:"Telegram could not deliver the welcome message."},502);
+  }
+  if (chatType === "private" && command === "/notifications_off") {
+    await ensureSubscribers();
+    await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(String(chatId)).run();
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🔕 MaseNet new-title alerts are paused. Send /notifications_on to enable them again."})});
+    return sent.ok ? json({ok:true}) : json({ok:false},502);
+  }
+  if (chatType === "private" && command === "/notifications_on") {
+    await ensureSubscribers();
+    await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET active=1,title=excluded.title,updated_at=datetime('now')").bind(String(chatId),displayTitle).run();
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🔔 MaseNet movie, drama and episode alerts are now enabled."})});
+    return sent.ok ? json({ok:true}) : json({ok:false},502);
+  }
   const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim();
   const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
 
