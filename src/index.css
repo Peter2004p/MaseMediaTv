@@ -1886,3 +1886,116 @@ html.masenet-reduced-motion *,html.masenet-reduced-motion *::before,html.masenet
  .card:hover .poster{transform:none!important}
  .primary:hover,.secondary:hover{transform:none!important}
 }
+
+
+/* MaseNet mobile polish v2: touch-first spacing, safe-area support and responsive layouts. */
+:root{--mn-bg:#070910;--mn-panel:rgba(17,22,34,.88);--mn-line:rgba(218,228,245,.13);--mn-gold:#e5bd68;--mn-muted:#a3a9b8;--mn-radius:20px}
+html{scroll-padding-top:92px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{min-width:320px;overscroll-behavior-x:none}
+button,a,input,textarea,select,[role="button"]{-webkit-tap-highlight-color:transparent}
+button,input,textarea,select{max-width:100%}
+button{touch-action:manipulation}
+:focus-visible{outline:2px solid #8fc8ff!important;outline-offset:3px}
+.app{padding-bottom:env(safe-area-inset-bottom);isolation:isolate}
+.app img{max-width:100%;height:auto}
+.app .nav{width:calc(100% - 28px);padding:10px 14px;border-color:var(--mn-line);background:rgba(10,14,23,.86);box-shadow:0 12px 38px rgba(0,0,0,.22)}
+.app .brand{font-weight:800;letter-spacing:-.025em}
+.app .primary,.app .secondary,.app .nav button,.app .icon,.app .actions button{min-height:42px}
+.app input:not([type=file]),.app select,.app textarea{min-height:44px;border-radius:12px;max-width:100%}
+.app textarea{line-height:1.55;resize:vertical}
+.app .page{width:100%;padding-left:clamp(14px,3vw,24px);padding-right:clamp(14px,3vw,24px)}
+.app .rowHead{gap:12px;flex-wrap:wrap}
+.app .grid{align-items:start}
+.app .card{min-width:0;width:100%;padding:0}
+.app .card>b{line-height:1.4;overflow-wrap:anywhere}
+.app .card>small{line-height:1.45}
+.app .poster{box-shadow:0 8px 22px rgba(0,0,0,.18)}
+.app .searchDock{top:max(12px,env(safe-area-inset-top));box-shadow:0 16px 45px #0007;border-color:var(--mn-line);background:rgba(10,15,25,.96)}
+.app .telegram{left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));max-width:calc(100vw - 94px);padding:10px 12px;background:rgba(12,19,31,.94);border:1px solid var(--mn-line);box-shadow:0 10px 28px #0005}
+.app .aiDock{right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));width:52px;height:52px;box-shadow:0 8px 26px #0007;border:1px solid rgba(229,189,104,.28);background:rgba(17,23,36,.95)}
+.app .glass{border-color:var(--mn-line)}
+.app .adminCard,.app .adminPanel,.app .editPanel,.app .bulk,.app .broadcastManager{min-width:0;max-width:100%}
+.app .formGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.app .formGrid>label{min-width:0;overflow-wrap:anywhere}
+.app .formGrid input,.app .formGrid textarea,.app .formGrid select{width:100%;min-width:0}
+.app .bulkRow{min-width:0;max-width:100%}
+.app .bulkRow input,.app .bulkRow select{min-width:0;max-width:100%}
+.app table{width:100%;border-collapse:separate;border-spacing:0}
+.app :is(.primary,.secondary,.icon,.nav button){transition:background-color .18s ease,border-color .18s ease,opacity .18s ease,transform .18s ease}
+.app .primary:active,.app .secondary:active,.app .nav button:active{transform:scale(.98)}
+.app :is(.adminSectionHead,.adminHead,.rowHead,.notificationToolbar){min-width:0}
+.app :is(.adminSectionHead,.adminHead){gap:12px;flex-wrap:wrap}
+.app .adminSectionHead>*,.app .adminHead>*{min-width:0}
+.app :is(.adminCard,.adminPanel,.editPanel,.bulk){overflow-wrap:anywhere}
+@media(max-width:900px){
+ .app .hero{grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:32px;min-height:460px}
+ .app .heroPoster{width:min(100%,260px)}
+ .app .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+ .app .nav{gap:12px}
+ .app .nav nav{gap:2px}
+ .app .nav nav button{padding:9px}
+}
+@media(max-width:680px){
+ html{scroll-padding-top:76px}
+ .app .nav{position:sticky;top:max(6px,env(safe-area-inset-top));width:calc(100% - 16px);margin:7px 8px 0;padding:8px 10px;gap:8px;border-radius:18px;min-height:54px}
+ .app .brand{font-size:15px;gap:7px;white-space:nowrap}
+ .app .brandMark{width:30px;height:30px;border-radius:10px;flex:0 0 30px}
+ .app .nav nav{min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;white-space:nowrap;flex:1}
+ .app .nav nav::-webkit-scrollbar{display:none}
+ .app .nav nav button{flex:0 0 auto;min-height:40px;padding:8px 10px;font-size:12px}
+ .app .navActions{flex:0 0 auto}
+ .app .navActions button{min-width:40px;min-height:40px;padding:8px}
+ .app .page{padding-top:24px;padding-bottom:112px}
+ .app .hero{min-height:auto;grid-template-columns:minmax(0,1fr);gap:18px;padding:8px 0 24px}
+ .app .hero>div:first-child{order:2}
+ .app .heroPoster{order:1;width:min(54%,210px);max-height:290px;object-fit:cover;margin:0 auto;transform:none}
+ .app .hero h1,.app .detail h1,.app .adminHead h1{font-size:clamp(38px,10vw,56px);line-height:.98;letter-spacing:-.045em;margin:10px 0 14px}
+ .app .hero p,.app .detail p,.app .adminHead p{font-size:14px;line-height:1.65}
+ .app .actions{gap:8px;margin-top:17px}
+ .app .actions button,.app .actions a{flex:1 1 auto;justify-content:center;min-height:46px}
+ .app .row{margin-top:22px}
+ .app .rowHead{align-items:center;margin-bottom:12px}
+ .app .rowHead h2{font-size:26px}
+ .app .rowHead>span{font-size:10px}
+ .app .grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 10px}
+ .app .poster{border-radius:12px}
+ .app .poster b{font-size:clamp(32px,9vw,52px)}
+ .app .card>b{font-size:12px;margin-top:8px}
+ .app .card>small{font-size:10px}
+ .app .searchDock{top:68px;width:calc(100% - 20px);padding:10px 12px;border-radius:15px}
+ .app .side{width:calc(100% - 16px);height:min(520px,calc(100dvh - 90px));margin:max(66px,env(safe-area-inset-top)) 8px 0 0;padding:17px;border-radius:22px;overflow-y:auto}
+ .app .telegram{bottom:max(12px,env(safe-area-inset-bottom));left:10px;max-width:calc(100vw - 82px);padding:9px 11px;border-radius:15px}
+ .app .telegram b{font-size:11px}
+ .app .telegram small{font-size:9px}
+ .app .aiDock{width:48px;height:48px;right:12px;bottom:max(12px,env(safe-area-inset-bottom))}
+ .app .formGrid{grid-template-columns:minmax(0,1fr);gap:12px}
+ .app .bulkRow{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:9px!important;padding:12px!important;border-radius:15px!important}
+ .app .bulkRow>*{width:100%;min-width:0}
+ .app .adminSectionHead{align-items:flex-start!important}
+ .app .adminSectionHead .actions{width:100%;margin-top:6px}
+ .app .adminSectionHead .actions button{flex:1;justify-content:center}
+ .app .adminHead h1{overflow-wrap:anywhere}
+ .app .adminCard,.app .bulk,.app .editPanel{padding:14px!important;border-radius:18px!important}
+ .app .primary,.app .secondary{min-height:44px;padding:11px 13px}
+ .app .notificationToolbar{align-items:flex-start!important;flex-wrap:wrap}
+ .app .notificationToolbar>button{min-height:40px!important;font-size:11px!important}
+ .app .customizeFooterActions{padding-bottom:env(safe-area-inset-bottom)}
+}
+@media(max-width:390px){
+ .app .brand{font-size:13px}
+ .app .nav{gap:5px;padding:7px}
+ .app .nav nav button{padding:8px;font-size:11px}
+ .app .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}
+ .app .heroPoster{width:min(62%,200px)}
+ .app .rowHead h2{font-size:23px}
+ .app .telegram small{display:none}
+}
+@media(orientation:landscape) and (max-height:500px) and (max-width:900px){
+ .app .hero{grid-template-columns:150px minmax(0,1fr);gap:22px;min-height:0}
+ .app .heroPoster{width:140px;max-height:220px}
+ .app .hero h1{font-size:38px}
+ .app .page{padding-top:18px}
+}
+@media(prefers-reduced-motion:reduce){
+ .app :is(.primary,.secondary,.icon,.nav button,.card .poster){transition:none!important}
+}
