@@ -82,24 +82,24 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const keyboard = { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: appUrl } }]] };
 
   if (chatType === "private") {
-    const startMatch = text.match(/^\\/start(?:@\\w+)?(?:\\s+([\\w-]+))?$/i);
+    const startMatch = text.match(/^\/start(?:@\w+)?(?:\s+([\w-]+))?$/i);
     if (startMatch) {
       const startPayload = (startMatch[1] || "").toLowerCase();
       const disablesAlerts = startPayload === "alerts_off";
       const active = disablesAlerts ? 0 : 1;
       await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title,active=excluded.active,updated_at=datetime('now'),chat_type='private'").bind(chatId,title,active).run();
-      const alertNote = startPayload === "alerts_on" ? "\\n\\n🔔 New-title alerts are enabled." : disablesAlerts ? "\\n\\n🔕 New-title alerts are paused." : "";
-      await sendMessage(env, chatId, "Welcome to MaseNet 🎬\\n\\nI can help with movies, dramas, episodes, Reels, and using MaseNet. Chat normally with me, or tap Open MaseNet to browse the Mini App.\\n\\nCommands: /app, /help, /notifications_on, /notifications_off, /privacy" + alertNote, keyboard);
+      const alertNote = startPayload === "alerts_on" ? "\n\n🔔 New-title alerts are enabled." : disablesAlerts ? "\n\n🔕 New-title alerts are paused." : "";
+      await sendMessage(env, chatId, "Welcome to MaseNet 🎬\n\nI can help with movies, dramas, episodes, Reels, and using MaseNet. Chat normally with me, or tap Open MaseNet to browse the Mini App.\n\nCommands: /app, /help, /notifications_on, /notifications_off, /privacy" + alertNote, keyboard);
     } else if (/^\/notifications_off(?:@\w+)?$/i.test(text)) {
       await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
       await sendMessage(env, chatId, "Movie and episode alerts are now off. Send /notifications_on to turn them back on.");
     } else if (/^\/notifications_on(?:@\w+)?$/i.test(text)) {
       await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET active=1,title=excluded.title,updated_at=datetime('now')").bind(chatId,title).run();
       await sendMessage(env, chatId, "Movie and episode alerts are now on.");
-    } else if (/^\\/(?:help|menu)(?:@\\w+)?$/i.test(text)) {
-      await sendMessage(env, chatId, "MaseNet Bot menu 🎬\\n\\n• Chat normally: ask a question or say “hey AI”\\n• /app — open the Mini App\\n• /notifications_off — pause new-title alerts\\n• /notifications_on — enable new-title alerts\\n• /privacy — learn what the bot stores\\n• /help — show this menu", keyboard);
-    } else if (/^\\/privacy(?:@\\w+)?$/i.test(text)) {
-      await sendMessage(env, chatId, "MaseNet privacy 🔐\\n\\nThe bot stores your Telegram chat ID and display name to manage optional new-title alerts. Turning alerts off pauses those messages. Do not send passwords, payment details, or private account credentials in chat.", keyboard);
+    } else if (/^\/(?:help|menu)(?:@\w+)?$/i.test(text)) {
+      await sendMessage(env, chatId, "MaseNet Bot menu 🎬\n\n• Chat normally: ask a question or say “hey AI”\n• /app — open the Mini App\n• /notifications_off — pause new-title alerts\n• /notifications_on — enable new-title alerts\n• /privacy — learn what the bot stores\n• /help — show this menu", keyboard);
+    } else if (/^\/privacy(?:@\w+)?$/i.test(text)) {
+      await sendMessage(env, chatId, "MaseNet privacy 🔐\n\nThe bot stores your Telegram chat ID and display name to manage optional new-title alerts. Turning alerts off pauses those messages. Do not send passwords, payment details, or private account credentials in chat.", keyboard);
     } else if (/^\/app(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "Open MaseNet Mini App:", keyboard);
     } else if (text && !text.startsWith("/")) {
