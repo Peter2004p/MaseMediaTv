@@ -6,6 +6,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
  if(!env.MEDIA_BUCKET) return json({error:"Cloudflare R2 storage is not enabled or its MEDIA_BUCKET binding is missing. No file was uploaded."},503);
  const body = await request.json().catch(()=>null) as {filename?:string;contentType?:string;base64?:string;folder?:string}|null;
  if(!body?.base64 || !body.filename) return json({error:"filename and base64 file content are required"},400);
+ if(auth.admin?.role === "bulk" && (body.folder !== "posters" || !String(body.contentType || "").startsWith("image/"))) return json({error:"Restricted admins can upload poster images only."},403);
  if(body.base64.length > 500_000) return json({error:"Poster is too large after compression. Choose a smaller image."},413);
  const type = String(body.contentType || "").slice(0,120);
  if(!["image/jpeg","image/png","image/webp"].includes(type)) return json({error:"Only JPEG, PNG, or WebP poster images are allowed."},415);
