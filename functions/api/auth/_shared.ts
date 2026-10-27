@@ -25,7 +25,7 @@ export async function ensureAdminRoles(env: Env) {
 export async function currentAdmin(request: Request, env: Env) {
   const token = cookie(request, "masetv_session");
   if (!token) return null;
-  const owner = await ensureAdminRoles(env);
+  await ensureAdminRoles(env);
   return await env.DB.prepare("SELECT a.id,a.email,r.role FROM admin_sessions s JOIN admins a ON a.id=s.admin_id JOIN admin_roles r ON lower(r.email)=lower(a.email) WHERE s.id_hash=? AND s.expires_at > datetime('now') AND lower(a.email)=lower(r.email)")
     .bind(await sha256(token)).first<{ id: string; email: string; role: AdminRole }>();
 }
