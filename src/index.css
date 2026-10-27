@@ -2235,3 +2235,33 @@ button{touch-action:manipulation}
 }
 /* Keep the floating assistant usable without preventing taps/scrolls on the page behind it. */
 .app .aiDock{z-index:81!important;touch-action:pan-y!important}
+
+
+/* Telegram Mini App: keep the primary bottom dock visible above Telegram's safe area. */
+.app .masenetLiquidDock{
+ position:fixed!important;
+ left:50%!important;
+ right:auto!important;
+ bottom:calc(10px + env(safe-area-inset-bottom, 0px))!important;
+ transform:translateX(-50%)!important;
+ z-index:120!important;
+ visibility:visible!important;
+ opacity:1!important;
+ pointer-events:auto!important;
+}
+.app.nav-auto-hidden .masenetLiquidDock{
+ transform:translateX(-50%)!important;
+ opacity:1!important;
+ visibility:visible!important;
+ pointer-events:auto!important;
+}
+.app .masenetLiquidDock button{touch-action:manipulation!important;pointer-events:auto!important}
+@media(max-width:560px){
+ .app .masenetLiquidDock{
+  width:calc(100vw - 20px)!important;
+  max-width:440px!important;
+  bottom:calc(8px + env(safe-area-inset-bottom, 0px))!important;
+  padding-bottom:max(6px,env(safe-area-inset-bottom,0px))!important;
+ }
+ .app main{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important}
+}
