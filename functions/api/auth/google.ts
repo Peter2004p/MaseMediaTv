@@ -18,8 +18,11 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
     const profile = await profileRes.json() as { email?: string; verified_email?: boolean };
     const email = (profile.email || "").toLowerCase();
     if (!profile.verified_email || !email) return json({ error: "Google could not verify this email address." }, 401);
-    const isAdmin = email === (env.ADMIN_EMAIL || "pb5089780@gmail.com").toLowerCase();
-    if (isAdmin) {
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS admin_roles (email TEXT PRIMARY KEY, role TEXT NOT NULL CHECK(role IN ('owner','bulk')), created_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
+    const ownerEmail = (env.ADMIN_EMAIL || "pb5089780@gmail.com").trim().toLowerCase();
+    await env.DB.prepare("INSERT INTO admin_roles (email,role) VALUES (?,'owner') ON CONFLICT(email) DO UPDATE SET role='owner'").bind(ownerEmail).run();
+    const adminRole = await env.DB.prepare("SELECT role FROM admin_roles WHERE lower(email)=?").bind(email).first<{role:"owner"|"bulk"}>();
+    if (adminRole) {
       const adminId = await sha256("masetv-google-admin:" + email);
       await env.DB.prepare("INSERT INTO admins (id,email) VALUES (?,?) ON CONFLICT(email) DO NOTHING").bind(adminId, email).run();
       const admin = await env.DB.prepare("SELECT id FROM admins WHERE email=?").bind(email).first<{id:string}>();
