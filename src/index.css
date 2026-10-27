@@ -2129,3 +2129,51 @@ button{touch-action:manipulation}
  .app .aiSide .aiAttach,.app .aiSide .aiVoice,.app .aiSide .aiSend{flex:0 0 32px!important;width:32px!important;height:32px!important;min-height:32px!important;border-radius:11px!important}
  .app .aiSide .aiMessages{padding:10px 2px!important}
 }
+
+
+/* Final compact iOS-style header: enforce dimensions on desktop and mobile. */
+.app>header.nav.maseReferenceHeader{
+  display:flex!important;min-height:40px!important;height:42px!important;max-height:46px!important;
+  width:calc(100% - 32px)!important;max-width:1380px!important;
+  margin:7px auto 0!important;padding:4px 8px!important;gap:7px!important;
+  border-radius:999px!important;overflow:hidden!important;
+}
+.app>header.nav.maseReferenceHeader .brand{height:32px!important;min-height:32px!important;padding:2px 6px!important;gap:5px!important}
+.app>header.nav.maseReferenceHeader .brandLogo{width:23px!important;height:23px!important;max-width:23px!important;max-height:23px!important}
+.app>header.nav.maseReferenceHeader .brandName{font-size:12px!important;line-height:1!important}
+.app>header.nav.maseReferenceHeader .icon,.app>header.nav.maseReferenceHeader .maseSearchToggle{width:30px!important;height:30px!important;min-width:30px!important;min-height:30px!important;padding:5px!important;border-radius:50%!important}
+.app>header.nav.maseReferenceHeader .navActions{gap:3px!important}
+.app>header.nav.maseReferenceHeader nav button{min-height:29px!important;padding:5px 8px!important;border-radius:999px!important;font-size:11px!important}
+.app>header.nav.maseReferenceHeader .maseHeaderSearch{height:31px!important;min-height:31px!important}
+@media(max-width:900px){
+ .app>header.nav.maseReferenceHeader{width:calc(100% - 18px)!important;height:40px!important;min-height:40px!important;margin:5px 9px 0!important;padding:3px 6px!important;gap:4px!important}
+ .app>header.nav.maseReferenceHeader .brandLogo{width:21px!important;height:21px!important;max-width:21px!important;max-height:21px!important}
+ .app>header.nav.maseReferenceHeader .brandName{font-size:11px!important}
+ .app>header.nav.maseReferenceHeader nav button{padding:4px 6px!important;font-size:10px!important}
+}
+
+/* Keep the assistant as a compact floating sheet, not a full-screen website blocker. */
+.app .backdrop.aiBackdrop{
+ position:fixed!important;inset:0!important;z-index:80!important;
+ display:flex!important;justify-content:flex-end!important;align-items:flex-end!important;
+ padding:0!important;background:transparent!important;pointer-events:none!important;
+}
+.app .aiSide{
+ pointer-events:auto!important;position:relative!important;
+ width:min(420px,calc(100vw - 20px))!important;max-width:420px!important;
+ height:min(650px,78dvh)!important;max-height:78dvh!important;min-height:280px!important;
+ margin:0 12px 76px 0!important;padding:12px!important;
+ border:1px solid #ffffff20!important;border-radius:25px!important;
+ background:rgba(12,16,15,.97)!important;box-shadow:0 20px 70px #0009,0 0 0 1px #00cc7810!important;
+ overflow:hidden!important;display:flex!important;flex-direction:column!important;
+}
+.app .aiSide .sideHead{flex:0 0 auto!important;display:none!important}
+.app .aiSide .ai{min-height:0!important;height:100%!important;flex:1 1 auto!important}
+.app .aiSide .aiHeader{flex:0 0 auto!important}
+.app .aiSide .aiMessages{flex:1 1 0!important;min-height:0!important;overflow-y:auto!important}
+.app .aiSide .aiComposer{flex:0 0 auto!important}
+@media(max-width:560px){
+ .app .backdrop.aiBackdrop{inset:0!important;justify-content:center!important;align-items:flex-end!important}
+ .app .aiSide{width:calc(100vw - 16px)!important;max-width:none!important;height:min(68dvh,560px)!important;max-height:68dvh!important;min-height:260px!important;margin:0 8px 66px!important;padding:10px!important;border-radius:23px!important}
+ .app .aiSide .aiHeader{padding-bottom:7px!important}
+}
