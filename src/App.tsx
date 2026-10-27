@@ -115,8 +115,6 @@ export default function App(){
  const movies=titles.filter(t=>t.type==='Movie'), dramas=titles.filter(t=>t.type==='Drama');
  const continueWatching=titles.filter(t=>(progress[t.id]||0)>0&&(progress[t.id]||0)<96&&!completed[t.id]);
  const myList=titles.filter(t=>saved.includes(t.id));
- const notificationItems=useMemo(()=>[...broadcasts.filter(p=>(p.destination==='website'||p.destination==='both')&&(!p.expiresAt||new Date(p.expiresAt).getTime()>Date.now())).slice(0,8).map(p=>({id:'broadcast-'+p.id,title:p.title||p.heading||'MaseNet announcement',description:p.description||p.caption||'A new update from MaseNet.',kind:'Announcement',target:'#/home'})),...titles.slice(0,5).map(t=>({id:'library-'+t.id,title:'Explore '+t.name,description:t.description||`Discover this ${t.type.toLowerCase()} in the MaseNet library.`,kind:'Library pick',target:'#/title/'+encodeURIComponent(t.id)}))].slice(0,12),[broadcasts,titles]);
- const unreadNotificationCount=notificationItems.filter(n=>!readNotificationIds.includes(n.id)).length;
  const featured=titles.find(t=>t.featured)||titles[0];
 
  const normalizeSeriesName=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[’']/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
