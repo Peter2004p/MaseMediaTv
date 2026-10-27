@@ -27,7 +27,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     body: JSON.stringify({
       url: webhookUrl,
       drop_pending_updates: false,
-      allowed_updates: ["message", "edited_message"],
+      allowed_updates: ["message", "edited_message", "channel_post", "my_chat_member"],
       secret_token: env.TELEGRAM_WEBHOOK_SECRET
     })
   });
