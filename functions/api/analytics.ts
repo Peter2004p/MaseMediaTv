@@ -16,7 +16,12 @@ async function ensureTable(db: D1Database) {
 }
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: AnalyticsEnv }) => {
-  const body = await request.json().catch(() => ({})) as { event?: unknown; itemId?: unknown; itemName?: unknown };
+  if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const raw = await request.text();
+  if (raw.length > 4096) return json({ error: "Analytics event is too large" }, 413);
+  let body: { event?: unknown; itemId?: unknown; itemName?: unknown };
+  try { body = JSON.parse(raw) as { event?: unknown; itemId?: unknown; itemName?: unknown }; }
+  catch { return json({ error: "Invalid analytics event" }, 400); }
   const allowed = new Set(["page_view", "title_view", "search", "feedback"]);
   const event = String(body.event || "");
   if (!allowed.has(event)) return json({ error: "Unsupported analytics event" }, 400);
