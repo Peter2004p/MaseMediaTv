@@ -28,7 +28,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: A
   let body: { event?: unknown; itemId?: unknown; itemName?: unknown };
   try { body = JSON.parse(raw) as { event?: unknown; itemId?: unknown; itemName?: unknown }; }
   catch { return json({ error: "Invalid analytics event" }, 400); }
-  const allowed = new Set(["page_view", "title_view", "search", "feedback", "presence"]);
+  const allowed = new Set(["page_view", "title_view", "search", "search_no_results", "feedback", "presence"]);
   const event = String(body.event || "");
   if (!allowed.has(event)) return json({ error: "Unsupported analytics event" }, 400);
   const itemId = typeof body.itemId === "string" ? body.itemId.slice(0, 120) : null;
