@@ -1350,3 +1350,24 @@ button,a,input,select,textarea{touch-action:manipulation}
 .app .maseBackButton{margin-top:22px}
 .app .ttReelActions button svg{width:19px;height:19px;margin:0 auto;filter:drop-shadow(0 2px 6px #0008)}
 @media(max-width:520px){.app .maseUtilityHead{align-items:flex-start}.app .maseUtilityHead h1{font-size:30px}.app .maseNotificationItem{padding:12px;gap:10px}.app .maseNotificationIcon{flex-basis:36px;width:36px;height:36px;border-radius:12px}.app .maseNotificationCopy b{font-size:13px}.app .maseWatchlistGrid{grid-template-columns:1fr}.app .maseWatchlistCard{grid-template-columns:78px minmax(0,1fr)}.app .maseWatchlistPoster,.app .maseWatchlistPoster .poster{width:78px}.app .maseWatchlistPoster .poster{height:112px;min-height:112px}}
+
+
+/* Phase 2: discovery filters, account library sync, YouTube creator hub and resilient mobile states */
+.app .maseDiscoverySelect{display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border:1px solid rgba(255,255,255,.13);border-radius:13px;background:rgba(255,255,255,.045);color:#aeb7c9;font-size:10px;font-weight:750;white-space:nowrap}
+.app .maseDiscoverySelect select{max-width:125px;min-height:30px;padding:4px 22px 4px 7px;border:0;border-radius:8px;background:#111722;color:#f4f6fb;font-size:11px;outline-offset:3px}
+.app .maseYoutubeHub{display:grid;grid-template-columns:54px minmax(0,1fr) auto;align-items:center;gap:17px;margin:22px 0 30px;padding:clamp(16px,3vw,26px);border:1px solid rgba(255,69,69,.24);border-radius:24px;background:radial-gradient(ellipse at 0 0,rgba(255,69,69,.11),transparent 45%),linear-gradient(125deg,rgba(25,20,25,.96),rgba(13,17,26,.97));box-shadow:0 18px 42px #0003}
+.app .maseYoutubeBadge{width:52px;height:52px;display:grid;place-items:center;border-radius:17px;background:rgba(255,69,69,.13);color:#ff6868}
+.app .maseYoutubeCopy{min-width:0}
+.app .maseYoutubeCopy h2{margin:6px 0;font-size:clamp(17px,2.5vw,23px);letter-spacing:-.03em}
+.app .maseYoutubeCopy p{margin:0;color:var(--muted,#a1a1aa);font-size:12px;line-height:1.6}
+.app .maseYoutubeActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.app .maseYoutubeActions a{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 12px;border:1px solid rgba(255,69,69,.3);border-radius:12px;color:#ffb0b0;text-decoration:none;font-size:11px;font-weight:850;background:rgba(255,69,69,.07)}
+.app .maseYoutubeActions a:last-child{background:#ff4545;color:white;border-color:#ff4545}
+.app .maseSyncStatus{padding:10px 12px;border:1px solid rgba(84,239,170,.2);border-radius:12px;background:rgba(84,239,170,.06);color:#8eecc4;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.app .maseCatalogWarning{display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(1160px,calc(100% - 28px));margin:14px auto;padding:12px 14px;border:1px solid rgba(255,190,80,.35);border-radius:14px;background:rgba(255,165,60,.08);color:#ffd49b;font-size:12px;line-height:1.5}
+.app .maseCatalogWarning button,.app .iqEmptySearch button+button{min-height:36px;padding:0 12px;border:1px solid rgba(255,190,80,.35);border-radius:11px;background:rgba(255,190,80,.1);color:#ffe2b7;font-weight:800;font-size:11px;white-space:nowrap}
+.app .iqEmptySearch button:disabled{opacity:.65;cursor:wait}
+.app .iqEmptySearch small[role=alert]{display:block;margin-top:8px;color:#ffaaa9}
+@media(max-width:760px){.app .maseYoutubeHub{grid-template-columns:44px minmax(0,1fr);gap:12px}.app .maseYoutubeBadge{width:42px;height:42px;border-radius:14px}.app .maseYoutubeActions{grid-column:1/-1;justify-content:stretch}.app .maseYoutubeActions a{flex:1}.app .iqCategories{align-items:center;gap:7px}.app .maseDiscoverySelect{flex:1;justify-content:space-between;min-width:135px}.app .maseDiscoverySelect select{max-width:100px}}
+@media(max-width:420px){.app .maseYoutubeHub{padding:14px}.app .maseYoutubeCopy p{font-size:11px}.app .maseYoutubeActions a{padding:0 8px;font-size:10px}.app .maseCatalogWarning{align-items:flex-start}.app .maseDiscoverySelect{min-width:calc(50% - 6px)}}
+@media(prefers-reduced-motion:reduce){.app .maseNotificationItem,.app .maseYoutubeActions a{transition:none!important;scroll-behavior:auto!important}}
