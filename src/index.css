@@ -1317,3 +1317,36 @@ button,a,input,select,textarea{touch-action:manipulation}
 .app .ttCommentForm button{min-height:42px!important;border-radius:13px!important;background:linear-gradient(145deg,#a8ffdc,#63e4b4)!important;color:#082219!important;font-weight:900!important}
 @media(max-width:380px){.app .ttReelsBrand small{display:none!important}.app .ttReelsTop>button.ttReelsDiscover{min-width:38px!important;width:38px!important;padding:0!important}.app .ttReelsTop>button.ttReelsDiscover span{display:none!important}.app .ttReelsInfo{left:12px!important}}
 @media(prefers-reduced-motion:reduce){.app .aiQuickPrompts button{transition:none!important}}
+
+
+/* MaseNet all-in-one discovery, watchlist, notifications and Reels save controls */
+.app .utilityNavButton{position:relative}
+.app .navUnreadBadge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;border:2px solid #0a0d11;border-radius:999px;background:#65efb7;color:#06251a;font-size:9px;font-weight:900;line-height:1}
+.app .maseUtilityPage{width:min(1160px,calc(100% - 28px));margin:0 auto;padding:clamp(18px,4vw,38px) 0 46px;min-height:58vh}
+.app .maseUtilityHead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:4px 0 24px}
+.app .maseUtilityHead h1{font-size:clamp(28px,5vw,42px);letter-spacing:-.04em;margin:8px 0}
+.app .maseUtilityHead p{margin:0;color:var(--muted,#9ca3af);font-size:13px;line-height:1.6}
+.app .maseUtilityActions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.app .maseUtilityCount{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 11px;border:1px solid rgba(116,255,207,.22);border-radius:999px;background:rgba(93,255,195,.07);color:#91f5cb;font-size:11px;font-weight:800}
+.app .maseNotificationList{display:grid;gap:10px}
+.app .maseNotificationItem{width:100%;display:flex;align-items:center;gap:13px;padding:15px;border:1px solid var(--glass-border,rgba(255,255,255,.12));border-radius:18px;background:var(--glass-bg,rgba(255,255,255,.035));color:inherit;text-align:left;cursor:pointer;transition:transform .18s,border-color .18s}
+.app .maseNotificationItem:active{transform:scale(.99)}
+.app .maseNotificationItem:not(.isRead){border-color:rgba(98,244,184,.28);background:linear-gradient(110deg,rgba(83,235,177,.09),rgba(255,255,255,.025))}
+.app .maseNotificationItem.isRead{opacity:.76}
+.app .maseNotificationIcon{flex:0 0 42px;width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:rgba(93,255,195,.09);font-size:18px}
+.app .maseNotificationCopy{flex:1;min-width:0;display:grid;gap:5px}
+.app .maseNotificationCopy small{color:#7fe8bd;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.app .maseNotificationCopy b{font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+.app .maseNotificationCopy>span{color:var(--muted,#a1a1aa);font-size:12px;line-height:1.55}
+.app .maseWatchlistGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:14px}
+.app .maseWatchlistCard{display:grid;grid-template-columns:88px minmax(0,1fr);gap:13px;align-items:center;padding:12px;border:1px solid var(--glass-border,rgba(255,255,255,.12));border-radius:19px;background:var(--glass-bg,rgba(255,255,255,.035));min-width:0}
+.app .maseWatchlistPoster{display:block;width:88px;padding:0;border:0;border-radius:12px;overflow:hidden;background:transparent;cursor:pointer}
+.app .maseWatchlistPoster .poster{width:88px;height:128px;min-height:128px}
+.app .maseWatchlistCopy{display:grid;gap:9px;min-width:0}
+.app .maseWatchlistCopy>b{font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+.app .maseWatchlistCopy>small{font-size:11px;color:var(--muted,#a1a1aa);line-height:1.45}
+.app .maseWatchlistCopy>div{display:flex;gap:7px;flex-wrap:wrap}
+.app .maseWatchlistCopy button{min-height:34px;padding:0 10px;font-size:11px}
+.app .maseBackButton{margin-top:22px}
+.app .ttReelActions button svg{width:19px;height:19px;margin:0 auto;filter:drop-shadow(0 2px 6px #0008)}
+@media(max-width:520px){.app .maseUtilityHead{align-items:flex-start}.app .maseUtilityHead h1{font-size:30px}.app .maseNotificationItem{padding:12px;gap:10px}.app .maseNotificationIcon{flex-basis:36px;width:36px;height:36px;border-radius:12px}.app .maseNotificationCopy b{font-size:13px}.app .maseWatchlistGrid{grid-template-columns:1fr}.app .maseWatchlistCard{grid-template-columns:78px minmax(0,1fr)}.app .maseWatchlistPoster,.app .maseWatchlistPoster .poster{width:78px}.app .maseWatchlistPoster .poster{height:112px;min-height:112px}}
