@@ -1786,3 +1786,74 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
 @media(hover:none) and (pointer:coarse){
  .app .masenetLiquidDock{touch-action:pan-x!important}
 }
+
+
+/* MaseNet Customize Studio + functional notification center */
+.app .side:has(.maseCustomizeSettings),.app .side:has(.notificationSettings){max-height:min(88dvh,900px)!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+.app .side:has(.maseCustomizeSettings) .maseCustomizeSettings,.app .side:has(.notificationSettings) .notificationSettings{min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:14px 14px calc(22px + env(safe-area-inset-bottom,0px))!important;scrollbar-width:thin!important}
+.app .maseCustomizeSettings .settingsHeading{margin-bottom:15px!important}
+.app .maseCustomizeSettings .settingsHeading b{font-size:19px!important;letter-spacing:-.03em!important}
+.app .maseCustomizeSettings .settingsHeading small{display:block!important;line-height:1.45!important;margin-top:4px!important}
+.app .maseCustomizeSettings>label{display:block!important;margin:20px 0 9px!important;font-size:12px!important;font-weight:800!important;letter-spacing:.08em!important;text-transform:uppercase!important;color:var(--muted,#9aaec5)!important}
+.app .customizePreview{display:flex!important;align-items:center!important;gap:12px!important;padding:13px!important;border:1px solid rgba(125,190,255,.24)!important;border-radius:19px!important;background:radial-gradient(ellipse at 0 0,rgba(53,239,160,.14),transparent 62%),linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.025))!important}
+.app .customizePreviewOrb{display:grid!important;place-items:center!important;width:44px!important;height:44px!important;flex:0 0 44px!important;border-radius:15px!important;color:#6af3bd!important;background:rgba(72,233,174,.13)!important;border:1px solid rgba(72,233,174,.24)!important}
+.app .customizePreview>div{display:grid!important;gap:4px!important;min-width:0!important;flex:1!important}
+.app .customizePreview>div b{font-size:13px!important}
+.app .customizePreview>div small{font-size:11px!important;color:var(--muted,#9aaec5)!important}
+.app .customizeLiveDot{font-size:9px!important;font-weight:900!important;letter-spacing:.08em!important;color:#56efad!important}
+.app .maseCustomizeSettings .themeGrid button{min-height:48px!important;transition:transform .18s ease,border-color .18s ease,background .18s ease!important}
+.app .maseCustomizeSettings .themeGrid button:active{transform:scale(.97)!important}
+.app .maseCustomizeSettings .customizeThree,.app .maseCustomizeSettings .customizeTwo{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+.app .maseCustomizeSettings .customizeTwo{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.app .maseCustomizeSettings .customizeThree button,.app .maseCustomizeSettings .customizeTwo button{display:flex!important;align-items:flex-start!important;justify-content:center!important;flex-direction:column!important;gap:4px!important;padding:10px!important;text-align:left!important}
+.app .maseCustomizeSettings .customizeThree button b,.app .maseCustomizeSettings .customizeTwo button b{font-size:11px!important}
+.app .maseCustomizeSettings .customizeThree button small,.app .maseCustomizeSettings .customizeTwo button small{font-size:10px!important;line-height:1.35!important;color:var(--muted,#9aaec5)!important}
+.app .customizeToggleRow{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:13px 0!important;border-bottom:1px solid rgba(150,180,220,.13)!important}
+.app .customizeToggleRow>span{display:grid!important;gap:4px!important}
+.app .customizeToggleRow>span b{font-size:13px!important}
+.app .customizeToggleRow>span small{font-size:11px!important;line-height:1.4!important;color:var(--muted,#9aaec5)!important}
+.app .customizeSwitch{position:relative!important;display:block!important;flex:0 0 44px!important;width:44px!important;height:26px!important;padding:3px!important;border-radius:99px!important;border:1px solid rgba(180,200,230,.28)!important;background:rgba(140,155,175,.25)!important;cursor:pointer!important}
+.app .customizeSwitch i{display:block!important;width:18px!important;height:18px!important;border-radius:50%!important;background:#fff!important;box-shadow:0 1px 4px #0005!important;transition:transform .18s ease!important}
+.app .customizeSwitch.on{background:#26bd83!important;border-color:#26bd83!important}
+.app .customizeSwitch.on i{transform:translateX(18px)!important}
+.app .customizeWeather{display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;width:100%!important;margin-top:14px!important;min-height:44px!important}
+.app .customizeStatus{font-size:11px!important;line-height:1.45!important;color:#6cebb5!important}
+.app .customizeFooterActions{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,.7fr)!important;gap:8px!important;margin-top:18px!important}
+.app .customizeFooterActions button{display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;min-height:44px!important;padding:8px!important;font-size:11px!important}
+.app .maseCustomizeSettings .settingsAdminLink{display:flex!important;justify-content:center!important;width:100%!important;margin-top:10px!important}
+.app .notificationToolbar{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;margin-bottom:14px!important}
+.app .notificationToolbar>div{display:grid!important;gap:4px!important}
+.app .notificationToolbar>div b{font-size:17px!important}
+.app .notificationToolbar>div small{font-size:11px!important;color:var(--muted,#9aaec5)!important}
+.app .notificationToolbar>button{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;padding:8px 10px!important;min-height:36px!important;font-size:10px!important;white-space:nowrap!important}
+.app .notificationToolbar>button:disabled{opacity:.45!important;cursor:not-allowed!important}
+.app .notificationList{display:grid!important;gap:8px!important}
+.app .notificationItem{position:relative!important;display:flex!important;align-items:flex-start!important;gap:10px!important;width:100%!important;min-width:0!important;padding:12px!important;text-align:left!important;border-radius:16px!important;border:1px solid rgba(150,190,235,.17)!important;background:rgba(255,255,255,.045)!important;color:inherit!important;cursor:pointer!important}
+.app .notificationItem:not(.isRead){background:linear-gradient(120deg,rgba(52,224,158,.09),rgba(100,150,255,.055))!important;border-color:rgba(77,225,170,.27)!important}
+.app .notificationIcon{display:grid!important;place-items:center!important;flex:0 0 36px!important;width:36px!important;height:36px!important;border-radius:12px!important;background:rgba(72,233,174,.12)!important;color:#62edb5!important}
+.app .notificationCopy{display:grid!important;gap:5px!important;min-width:0!important;flex:1!important}
+.app .notificationCopy b{font-size:12px!important;line-height:1.4!important}
+.app .notificationCopy small{font-size:11px!important;line-height:1.5!important;color:var(--muted,#a6b7cc)!important;white-space:normal!important}
+.app .notificationCopy em{font-size:9px!important;font-style:normal!important;color:#6be9b5!important}
+.app .notificationUnreadDot{width:7px!important;height:7px!important;flex:0 0 7px!important;margin-top:6px!important;border-radius:50%!important;background:#54efaa!important;box-shadow:0 0 10px #54efaa99!important}
+.app .notificationItem.isRead{opacity:.74!important}
+.app .notificationEmpty{display:grid!important;justify-items:center!important;gap:10px!important;padding:34px 15px!important;text-align:center!important;border:1px dashed rgba(150,190,235,.23)!important;border-radius:20px!important;color:var(--muted,#9aaec5)!important}
+.app .notificationEmpty svg{color:#62edb5!important}
+.app .notificationEmpty b{font-size:14px!important;color:var(--text,#f6f8fc)!important}
+.app .notificationEmpty p{font-size:12px!important;line-height:1.5!important;margin:0!important}
+.app .notificationRefresh{display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;width:100%!important;min-height:42px!important;margin-top:12px!important}
+.app .masenetLiquidDock .dockNotifications{position:relative!important}
+.app .masenetLiquidDock .dockNotifications>svg{color:#d8e9ff!important}
+.app .masenetLiquidDock .dockNotifications:active>svg{color:#54efaa!important}
+.app .masenetLiquidDock .dockNotificationBadge{position:absolute!important;top:0!important;right:calc(50% - 23px)!important;min-width:16px!important;height:16px!important;padding:0 4px!important;display:grid!important;place-items:center!important;border-radius:99px!important;background:#ff4778!important;color:#fff!important;font-size:8px!important;font-weight:900!important;font-style:normal!important;line-height:16px!important;box-shadow:0 0 0 2px #091322!important}
+@media(max-width:680px){
+ .app .maseCustomizeSettings .customizeThree{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .app .maseCustomizeSettings .customizeThree button{padding:8px!important}
+ .app .maseCustomizeSettings .customizeThree button b{font-size:10px!important}
+ .app .maseCustomizeSettings .settingsThemeCompact{gap:7px!important}
+ .app .customizeFooterActions{grid-template-columns:minmax(0,1fr) minmax(0,.7fr)!important}
+ .app .notificationToolbar>button{padding:7px!important;font-size:9px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .maseCustomizeSettings *,.app .notificationSettings *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
