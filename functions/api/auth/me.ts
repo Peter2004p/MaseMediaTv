@@ -1,7 +1,7 @@
 import { Env, currentAdmin, json, cookie, sha256 } from "./_shared";
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const admin = await currentAdmin(request, env);
-  if (admin) return json({ user: { userId: admin.id, email: admin.email, provider: "google" } });
+  if (admin) return json({ user: { userId: admin.id, email: admin.email, provider: "google", role: admin.role } });
   const token = cookie(request, "masetv_user_session");
   if (!token) return json({ user: null });
   try {
