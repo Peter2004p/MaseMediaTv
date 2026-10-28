@@ -105,6 +105,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       await sendMessage(env, chatId, "MaseNet privacy 🔐\n\nThe bot stores your Telegram chat ID and display name to manage optional new-title alerts. Turning alerts off pauses those messages. Do not send passwords, payment details, or private account credentials in chat.", keyboard);
     } else if (/^\/app(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "Open MaseNet Mini App:", keyboard);
+    } else if (text && !text.startsWith("/") && /social|official links|facebook|tiktok|youtube|telegram|follow (?:you|us|masenet|masetv|masemedia)|where can i follow/i.test(text) && /link|url|social|follow|channel|account|facebook|tiktok|youtube|telegram/i.test(text)) {
+      await sendMessage(env, chatId, "MaseNet, MaseTv, and MaseMediaTv are the same platform. Here are our official links:\\n\\nYouTube: https://youtube.com/@masemedia_tv\\nFacebook: https://www.facebook.com/share/1A5pSvKte9/\\nTikTok: https://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E\\nTelegram Channel 1: https://t.me/MaseMediaTv\\nTelegram Channel 2: https://t.me/MoonDramaC\\nTelegram Bot: https://t.me/MaseTv_Bot", keyboard);
     } else if (text && !text.startsWith("/")) {
       await sendTyping(env, chatId);
       let answer: string;
