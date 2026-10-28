@@ -3451,3 +3451,32 @@ nav.masenetLiquidDock>button.dockReels:hover,nav.masenetLiquidDock>button.dockRe
  -webkit-background-clip:initial!important;background-clip:initial!important;-webkit-text-fill-color:#ff5b9d!important;color:#ff5b9d!important;
  box-shadow:none!important;text-shadow:none!important;filter:none!important;transform:none!important
 }
+
+
+/* FINAL Reel button mark: styled R only, absolutely no tile/background/shadow */
+nav.masenetLiquidDock>button.dockReels,
+nav.masenetLiquidDock>button.dockReels:hover,
+nav.masenetLiquidDock>button.dockReels:focus-visible{
+  background:transparent!important;border-color:transparent!important;box-shadow:none!important;
+}
+nav.masenetLiquidDock>button.dockReels .dockR{
+  width:28px!important;height:27px!important;display:flex!important;align-items:center!important;justify-content:center!important;
+  margin:0!important;padding:0 3px 2px 0!important;
+  font-family:ui-rounded,"Arial Rounded MT Bold",Arial,sans-serif!important;
+  font-size:29px!important;font-weight:950!important;font-style:italic!important;line-height:1!important;
+  letter-spacing:-.14em!important;
+  background:linear-gradient(145deg,#ff9acb 4%,#ff4d9a 52%,#b58aff 100%)!important;
+  -webkit-background-clip:text!important;background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;color:#ff4d9a!important;
+  border:0!important;border-radius:0!important;box-shadow:none!important;text-shadow:none!important;filter:none!important;
+  transform:skewX(-7deg)!important;
+}
+nav.masenetLiquidDock>button.dockReels>span:last-child{color:#c5ccda!important}
+nav.masenetLiquidDock>button.dockReels:hover .dockR,
+nav.masenetLiquidDock>button.dockReels:focus-visible .dockR{
+  background:linear-gradient(145deg,#ffc0df 0%,#ff70b0 52%,#c9afff 100%)!important;
+  -webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;
+}
+@media(max-width:560px){
+ nav.masenetLiquidDock>button.dockReels .dockR{width:27px!important;height:26px!important;font-size:28px!important}
+}
