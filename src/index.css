@@ -3387,28 +3387,42 @@ nav.masenetLiquidDock>button:focus-visible{outline:2px solid rgba(175,203,255,.9
 
 
 
-/* MaseNet clean navigation buttons — zero shadows, clear Reel icon */
-nav.masenetLiquidDock>button{position:relative!important;isolation:auto!important;overflow:visible!important;min-width:0!important;min-height:48px!important;flex:1 1 0!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;padding:7px 4px!important;border-radius:12px!important;color:#aab5c7!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;text-shadow:none!important;filter:none!important;transform:none!important;transition:color .16s ease,background-color .16s ease,border-color .16s ease!important;-webkit-tap-highlight-color:transparent!important}
+/* MaseNet bottom navigation — flat controls, logo Home, redesigned R Reel */
+nav.masenetLiquidDock>button{
+ position:relative!important;isolation:auto!important;overflow:visible!important;min-width:0!important;min-height:48px!important;flex:1 1 0!important;
+ display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;padding:7px 4px!important;border-radius:12px!important;
+ color:#aab5c7!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;text-shadow:none!important;filter:none!important;transform:none!important;
+ transition:color .16s ease,background-color .16s ease,border-color .16s ease!important;-webkit-tap-highlight-color:transparent!important;
+}
 nav.masenetLiquidDock>button::before,nav.masenetLiquidDock>button::after{content:none!important;display:none!important}
 nav.masenetLiquidDock>button>svg{width:20px!important;height:20px!important;filter:none!important;transform:none!important;transition:none!important}
 nav.masenetLiquidDock>button>span{font-size:10px!important;font-weight:600!important;letter-spacing:.01em!important;line-height:1!important;text-shadow:none!important}
 nav.masenetLiquidDock>button:first-child{color:#aebbd0!important;background:transparent!important;border-color:transparent!important}
 nav.masenetLiquidDock>button:first-child.active{color:#fff!important;background:#263653!important;border-color:#344b70!important;box-shadow:none!important}
-nav.masenetLiquidDock>button:first-child.active>svg{color:#b9d0ff!important}
-nav.masenetLiquidDock>button:nth-child(2){color:#aab5c7!important;background:transparent!important;border-color:transparent!important}
-nav.masenetLiquidDock>button:nth-child(2):hover,nav.masenetLiquidDock>button:nth-child(2):focus-visible{color:#d9fff1!important;background:#173b34!important;border-color:#24594c!important}
-/* Reel uses a simple clapperboard outline, not a letter tile */
+nav.masenetLiquidDock>button:first-child .dockHomeLogo{display:block!important;width:25px!important;height:25px!important;object-fit:contain!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;filter:none!important;padding:0!important}
+nav.masenetLiquidDock>button:nth-child(2){color:#aab5c7!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+nav.masenetLiquidDock>button:nth-child(2):hover,nav.masenetLiquidDock>button:nth-child(2):focus-visible{color:#d9fff1!important;background:#173b34!important;border-color:#24594c!important;box-shadow:none!important}
+/* Bespoke Reel lettermark: crisp outlined R, no tile fill and no shadows */
 nav.masenetLiquidDock>button.dockReels{color:#aab5c7!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important}
-nav.masenetLiquidDock>button.dockReels>svg{width:21px!important;height:21px!important;color:#ed78ad!important;stroke-width:1.9!important;filter:none!important}
+nav.masenetLiquidDock>button.dockReels .dockR{
+ width:25px!important;height:25px!important;display:flex!important;align-items:center!important;justify-content:center!important;border-radius:7px!important;
+ font-family:ui-rounded,system-ui,sans-serif!important;font-size:21px!important;font-weight:950!important;font-style:italic!important;line-height:1!important;letter-spacing:-.08em!important;padding:0 2px 1px 0!important;
+ color:#ff5c9b!important;background:transparent!important;border:2px solid #ff5c9b!important;box-shadow:none!important;text-shadow:none!important;filter:none!important;transform:none!important;
+}
 nav.masenetLiquidDock>button.dockReels>span:last-child{color:#aab5c7!important}
-nav.masenetLiquidDock>button.dockReels:hover,nav.masenetLiquidDock>button.dockReels:focus-visible{background:#2c202b!important;border-color:#483044!important;color:#fff!important}
-nav.masenetLiquidDock>button.dockCustomize{color:#aab5c7!important;background:transparent!important;border-color:transparent!important}
-nav.masenetLiquidDock>button.dockCustomize:hover,nav.masenetLiquidDock>button.dockCustomize:focus-visible{color:#d9eaff!important;background:#1e3046!important;border-color:#2d4967!important}
-nav.masenetLiquidDock>button.dockNotifications{color:#aab5c7!important;background:transparent!important;border-color:transparent!important}
-nav.masenetLiquidDock>button.dockNotifications:hover,nav.masenetLiquidDock>button.dockNotifications:focus-visible{color:#ffedc8!important;background:#3a2c18!important;border-color:#5b4524!important}
+nav.masenetLiquidDock>button.dockReels:hover,nav.masenetLiquidDock>button.dockReels:focus-visible{background:#2c202b!important;border-color:#483044!important;color:#fff!important;box-shadow:none!important}
+nav.masenetLiquidDock>button.dockCustomize,nav.masenetLiquidDock>button.dockNotifications{color:#aab5c7!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+nav.masenetLiquidDock>button.dockCustomize:hover,nav.masenetLiquidDock>button.dockCustomize:focus-visible{color:#d9eaff!important;background:#1e3046!important;border-color:#2d4967!important;box-shadow:none!important}
+nav.masenetLiquidDock>button.dockNotifications:hover,nav.masenetLiquidDock>button.dockNotifications:focus-visible{color:#ffedc8!important;background:#3a2c18!important;border-color:#5b4524!important;box-shadow:none!important}
 nav.masenetLiquidDock>button.dockNotifications .dockNotificationBadge{box-shadow:none!important;animation:none!important;border:1px solid #10151e!important}
 nav.masenetLiquidDock>button:hover{transform:none!important;filter:none!important;box-shadow:none!important}
 nav.masenetLiquidDock>button:active{transform:scale(.97)!important;filter:none!important;box-shadow:none!important}
 nav.masenetLiquidDock>button:focus-visible{outline:2px solid #8daeff!important;outline-offset:2px!important}
-@media(max-width:560px){nav.masenetLiquidDock>button{min-height:46px!important;padding:6px 2px!important;gap:4px!important;border-radius:10px!important}nav.masenetLiquidDock>button>svg{width:19px!important;height:19px!important}nav.masenetLiquidDock>button>span{font-size:9px!important}}
+@media(max-width:560px){
+ nav.masenetLiquidDock>button{min-height:46px!important;padding:6px 2px!important;gap:4px!important;border-radius:10px!important}
+ nav.masenetLiquidDock>button>svg{width:19px!important;height:19px!important}
+ nav.masenetLiquidDock>button>span{font-size:9px!important}
+ nav.masenetLiquidDock>button:first-child .dockHomeLogo{width:23px!important;height:23px!important}
+ nav.masenetLiquidDock>button.dockReels .dockR{width:23px!important;height:23px!important;font-size:19px!important}
+}
 @media(prefers-reduced-motion:reduce){nav.masenetLiquidDock>button{transition:none!important}}
