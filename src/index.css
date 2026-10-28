@@ -2949,3 +2949,25 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
 /* Anchor the AI suggestion island to the actual floating AI launcher position. */
 .app .aiDynamicIsland{right:auto!important;bottom:auto!important;}
 @media(max-width:560px){.app .aiDynamicIsland{right:auto!important;bottom:auto!important}}
+
+
+/* Restore MaseNet's normal green-on-dark brand palette consistently. */
+.app.theme-dark{
+ --accent:#00cc78!important;--accentText:#03150d!important;--bg:#080a0b!important;
+ --text:#f4f7f5!important;--muted:#9aa6a0!important;--glass:rgba(255,255,255,.055)!important;
+ --glassStrong:rgba(255,255,255,.085)!important;--border:rgba(255,255,255,.12)!important;
+ --mase-accent:#00cc78!important;--mase-accent-soft:#00cc7824!important;
+ background:radial-gradient(ellipse at 80% -15%,#00cc7810,transparent 35%),#080a0b!important;color:#f4f7f5!important;
+}
+.app.theme-dark .primary,.app.theme-dark .aiSend,.app.theme-dark .playBig,.app.theme-dark .brandMark,
+.app.theme-dark .aiAvatar,.app.theme-dark .iqPlay,.app.theme-dark .nav .active,
+.app.theme-dark .iqCategories button.active{background:#00cc78!important;border-color:#00cc78!important;color:#03150d!important}
+.app.theme-dark .telegram a,.app.theme-dark .eyebrow,.app.theme-dark .iqKicker,
+.app.theme-dark .adminBadge,.app.theme-dark .aiHeader small{color:#48e6a0!important}
+.app.theme-dark .aiDock{border-color:#3ce8a37a!important;background:linear-gradient(145deg,#123b2d,#081a14)!important;color:#8dffca!important}
+.app.theme-dark .aiDynamicIsland{border-color:#39e6a35c!important;box-shadow:0 12px 36px #0008,0 0 24px #00cc781f,inset 0 1px 0 #ffffff20!important}
+.app.theme-dark .aiIslandIcon{background:linear-gradient(145deg,#164c37,#0b2620)!important;border-color:#67f9c64d!important;color:#77ffd0!important}
+.app.theme-dark .poster{background:linear-gradient(145deg,#103b2a,#11131b 55%,#092b1c)!important}
+.app.theme-dark .iqHero{background:radial-gradient(ellipse at 80% 0%,#00cc7824,transparent 42%),linear-gradient(115deg,#111614,#0b100f 65%,#12241a)!important;border-color:#ffffff1b!important}
+.app.theme-dark .iqHeroActions .primary{background:#00cc78!important;color:#03150d!important}
+.app.theme-dark .themeGrid button.chosen,.app.theme-dark .settings .chosen{border-color:#00cc78!important}
