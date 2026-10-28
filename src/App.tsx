@@ -207,7 +207,6 @@ function HomepageBroadcasts({broadcasts,compact=false}:{broadcasts:Broadcast[];c
 
 function Home(p:{titles:Title[];all:Title[];featured?:Title;heroSettings:HeroSettings;movies:Title[];dramas:Title[];continueWatching:Title[];myList:Title[];rows:string[];go:(x:string)=>void;query:string;setQuery:(x:string)=>void;searchOpen:boolean;experienceMode:'standard'|'oneui9'|'ios27'|'cinema';broadcasts:Broadcast[];catalogError:string;requestMissingTitle:(query:string)=>Promise<void>}) {
  const [libraryFilter,setLibraryFilter]=useState<'all'|'movies'|'dramas'|'miniseries'|'anime'|'mylist'>('all');
- const featured = p.heroSettings.featuredTitleId ? p.all.find(t=>t.id===p.heroSettings.featuredTitleId)||p.featured : p.featured;
  const [heroIndex,setHeroIndex]=useState(0);
  const heroSlides=useMemo(()=>p.all.slice(0,5),[p.all]);
  useEffect(()=>{if(heroSlides.length<2)return;const timer=window.setInterval(()=>setHeroIndex(i=>(i+1)%heroSlides.length),6500);return()=>window.clearInterval(timer)},[heroSlides.length]);
@@ -223,7 +222,7 @@ function Home(p:{titles:Title[];all:Title[];featured?:Title;heroSettings:HeroSet
  const open=(t:Title)=>p.go('#/title/'+encodeURIComponent(t.id));
  const cardMeta=(t:Title)=>t.type==='Movie'?['Movie',t.year,t.quality].filter(Boolean).join(' · '):['Drama series',t.year,`${new Set(t.episodes.map(e=>Number(e.season)||1)).size||1} ${new Set(t.episodes.map(e=>Number(e.season)||1)).size===1?'season':'seasons'}`,`${t.episodes.length} ${t.episodes.length===1?'episode':'episodes'}`].filter(Boolean).join(' · ');
  const row=(title:string,items:Title[],tone='')=>applyDiscoveryFilters(items).length?<section className="iqRow" key={title}><div className="iqRowHead"><div><span className="iqKicker">MASETV</span><h2>{title}</h2></div><button className="rowMore" onClick={()=>setViewAll({title,items})} aria-label={`View all ${items.length} titles in ${title}`}>View all <ChevronRight size={13}/></button></div><div className="iqGrid">{applyDiscoveryFilters(items).slice(0,12).map(t=><button className={`iqCard ${tone} ${t.type==='Drama'?'seriesCard':'movieCard'}`} key={t.id} onClick={()=>open(t)} aria-label={`Open ${t.type.toLowerCase()} ${t.name}`}><div className="iqPoster"><Poster title={t}/><span className="iqPlay"><Play size={15}/></span><span className="iqMeta">{t.type==='Drama'?(t.episodes.length>0?'SERIES':'DRAMA'):(t.quality||'MOVIE')}</span></div><b title={t.name}>{t.name}</b><small>{cardMeta(t)}</small></button>)}</div></section>:null;
- const featured=heroSlides[heroIndex]||p.featured||p.all[0];
+ const featured=p.heroSettings.featuredTitleId?p.all.find(t=>t.id===p.heroSettings.featuredTitleId)||heroSlides[heroIndex]||p.featured||p.all[0]:heroSlides[heroIndex]||p.featured||p.all[0];
  return <div className="page iqHome">
 {p.catalogError&&<div className="maseCatalogWarning" role="status"><span>{p.catalogError}</span><button onClick={()=>window.location.reload()}>Retry</button></div>}
 <style>{`
