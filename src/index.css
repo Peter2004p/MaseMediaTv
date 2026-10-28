@@ -2882,3 +2882,29 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
 @media(min-width:761px){.ios27-universal .side,.ios27-universal .aiSide{border-radius:30px;align-self:center;max-height:calc(100dvh - 36px)}.ios27-universal .backdrop{align-items:center}.ios27-universal .iqGrid{gap:16px}}
 @media(max-width:760px){.ios27-universal .nav{border-radius:24px;margin:8px auto 12px;width:calc(100% - 16px)}.ios27-universal .iqHero{border-radius:25px}.ios27-universal .masenetLiquidDock{left:10px;right:10px;width:auto}.ios27-universal .page,.ios27-universal .detail,.ios27-universal .settings,.ios27-universal .adminSection{border-radius:24px}}
 @media(prefers-reduced-motion:reduce){.ios27PageTransition{animation:none!important;filter:none!important;transform:none!important;opacity:1!important;will-change:auto}}
+
+
+/* Compact AI hint: keep the suggestion discreet and never let it cover content. */
+.app .aiSuggestionBubble{
+  width:max-content!important;
+  max-width:min(164px,calc(100vw - 76px))!important;
+  min-height:0!important;
+  gap:3px!important;
+  padding:3px!important;
+  border-radius:999px!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.2)!important;
+}
+.app .aiSuggestionOpen{gap:5px!important;padding:2px 3px!important}
+.app .aiSuggestionOrb{width:19px!important;height:19px!important;min-width:19px!important;flex:0 0 19px!important;animation:none!important}
+.app .aiSuggestionCopy{max-width:112px!important;gap:0!important}
+.app .aiSuggestionCopy strong{font-size:8px!important;line-height:1.1!important}
+.app .aiSuggestionCopy>span{font-size:9px!important;line-height:1.15!important;display:-webkit-box!important;-webkit-line-clamp:1!important;-webkit-box-orient:vertical!important;overflow:hidden!important;white-space:normal!important}
+.app .aiSuggestionClose{width:16px!important;height:16px!important;min-width:16px!important;flex:0 0 16px!important;font-size:12px!important;align-self:center!important}
+@media(max-width:560px){
+ .app .aiSuggestionBubble{right:58px!important;max-width:min(150px,calc(100vw - 72px))!important;padding:2px!important}
+ .app .aiSuggestionOpen{gap:4px!important;padding:2px!important}
+ .app .aiSuggestionOrb{width:17px!important;height:17px!important;min-width:17px!important;flex-basis:17px!important}
+ .app .aiSuggestionCopy{max-width:100px!important}
+ .app .aiSuggestionCopy>span{font-size:8px!important}
+ .app .aiSuggestionClose{width:15px!important;height:15px!important;min-width:15px!important;flex-basis:15px!important}
+}
