@@ -1437,18 +1437,18 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
 .app .iqHome .iqPoster{border:1px solid rgba(175,225,255,.17);box-shadow:0 10px 28px #0006}
 .app .homepageBroadcasts .broadcastDynamicIsland{border-color:rgba(100,255,190,.25);background:linear-gradient(120deg,rgba(25,47,46,.74),rgba(11,17,28,.78));box-shadow:0 8px 28px #0005,inset 0 1px #ffffff20;backdrop-filter:blur(26px) saturate(170%)}
 .app .homepageBroadcasts .homepageBroadcast{border-color:rgba(166,225,255,.24);box-shadow:0 20px 52px #0006,inset 0 1px #ffffff24;backdrop-filter:blur(22px) saturate(150%)}
-.app .masenetLiquidDock{position:fixed;z-index:900;left:50%;bottom:max(9px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(620px,calc(100% - 24px));min-height:70px;padding:7px 9px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;gap:5px;border:1px solid rgba(192,230,255,.36);border-radius:27px;background:linear-gradient(115deg,rgba(20,41,57,.78),rgba(10,15,28,.76) 45%,rgba(43,20,50,.72));box-shadow:0 14px 44px rgba(0,0,0,.58),inset 0 1px rgba(255,255,255,.3),inset 0 -1px rgba(255,255,255,.06),0 0 32px rgba(65,183,255,.1);backdrop-filter:blur(32px) saturate(190%);-webkit-backdrop-filter:blur(32px) saturate(190%)}
-.app .masenetLiquidDock button{position:relative;min-width:0;min-height:54px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1px solid transparent;border-radius:19px;background:transparent;color:#c3d2e7;font-size:10px;font-weight:700;line-height:1.1;cursor:pointer;touch-action:manipulation;transition:transform .18s,background .18s,color .18s,border-color .18s}
-.app .masenetLiquidDock button.active{color:#62f4b1;background:linear-gradient(145deg,rgba(54,240,160,.2),rgba(54,240,160,.055));border-color:rgba(87,245,177,.24);text-shadow:0 0 15px rgba(53,239,160,.25)}
-.app .masenetLiquidDock button:active{transform:scale(.94)}
-.app .masenetLiquidDock button.dockAI{margin-top:-20px;min-height:62px;border-radius:23px;border-color:rgba(176,152,255,.55);color:white;background:radial-gradient(circle at 30% 15%,rgba(255,255,255,.42),transparent 33%),linear-gradient(145deg,#6f75ff,#853bff 55%,#e64bdb);box-shadow:0 0 0 5px rgba(122,78,255,.13),0 0 30px rgba(134,73,255,.52),inset 0 1px rgba(255,255,255,.55)}
-.app .masenetLiquidDock button.dockAI span{font-weight:850}
-.app .masenetLiquidDock .dockR{display:grid;place-items:center;width:25px;height:25px;border-radius:9px;background:linear-gradient(135deg,#f4c9ff,#a777ff 55%,#ff5a9b);color:#27113f;font-size:19px;font-weight:1000;text-shadow:none;box-shadow:0 0 16px rgba(208,105,255,.3)}
+.masenetLiquidDock{position:fixed;z-index:900;left:50%;bottom:max(9px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(620px,calc(100% - 24px));min-height:70px;padding:7px 9px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;gap:5px;border:1px solid rgba(192,230,255,.36);border-radius:27px;background:linear-gradient(115deg,rgba(20,41,57,.78),rgba(10,15,28,.76) 45%,rgba(43,20,50,.72));box-shadow:0 14px 44px rgba(0,0,0,.58),inset 0 1px rgba(255,255,255,.3),inset 0 -1px rgba(255,255,255,.06),0 0 32px rgba(65,183,255,.1);backdrop-filter:blur(32px) saturate(190%);-webkit-backdrop-filter:blur(32px) saturate(190%)}
+.masenetLiquidDock button{position:relative;min-width:0;min-height:54px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1px solid transparent;border-radius:19px;background:transparent;color:#c3d2e7;font-size:10px;font-weight:700;line-height:1.1;cursor:pointer;touch-action:manipulation;transition:transform .18s,background .18s,color .18s,border-color .18s}
+.masenetLiquidDock button.active{color:#62f4b1;background:linear-gradient(145deg,rgba(54,240,160,.2),rgba(54,240,160,.055));border-color:rgba(87,245,177,.24);text-shadow:0 0 15px rgba(53,239,160,.25)}
+.masenetLiquidDock button:active{transform:scale(.94)}
+.masenetLiquidDock button.dockAI{margin-top:-20px;min-height:62px;border-radius:23px;border-color:rgba(176,152,255,.55);color:white;background:radial-gradient(circle at 30% 15%,rgba(255,255,255,.42),transparent 33%),linear-gradient(145deg,#6f75ff,#853bff 55%,#e64bdb);box-shadow:0 0 0 5px rgba(122,78,255,.13),0 0 30px rgba(134,73,255,.52),inset 0 1px rgba(255,255,255,.55)}
+.masenetLiquidDock button.dockAI span{font-weight:850}
+.masenetLiquidDock .dockR{display:grid;place-items:center;width:25px;height:25px;border-radius:9px;background:linear-gradient(135deg,#f4c9ff,#a777ff 55%,#ff5a9b);color:#27113f;font-size:19px;font-weight:1000;text-shadow:none;box-shadow:0 0 16px rgba(208,105,255,.3)}
 .app .siteLegalFooter{padding-bottom:112px!important}
 .app .homeFloat{display:none}
-@media(min-width:760px){.app .masenetLiquidDock{width:min(520px,calc(100% - 36px));bottom:18px}.app .masenetLiquidDock button{font-size:11px}.app .siteLegalFooter{padding-bottom:118px!important}}
-@media(max-width:520px){.app .nav.glass{margin:7px 8px 0;padding:7px 8px;border-radius:21px;gap:5px}.app .nav .brandName{font-size:13px}.app .nav nav button{font-size:10px}.app .navActions .icon{padding:7px}.app .masenetLiquidDock{width:calc(100% - 20px);min-height:66px;bottom:max(7px,env(safe-area-inset-bottom));padding:6px 7px;border-radius:24px;gap:3px}.app .masenetLiquidDock button{min-height:51px;font-size:9px;border-radius:16px}.app .masenetLiquidDock button.dockAI{min-height:59px;margin-top:-17px;border-radius:20px}.app .masenetLiquidDock .dockR{width:23px;height:23px}.app .siteLegalFooter{padding-bottom:105px!important}}
-@media(prefers-reduced-motion:reduce){.app .masenetLiquidDock button{transition:none!important}}
+@media(min-width:760px){.masenetLiquidDock{width:min(520px,calc(100% - 36px));bottom:18px}.masenetLiquidDock button{font-size:11px}.app .siteLegalFooter{padding-bottom:118px!important}}
+@media(max-width:520px){.app .nav.glass{margin:7px 8px 0;padding:7px 8px;border-radius:21px;gap:5px}.app .nav .brandName{font-size:13px}.app .nav nav button{font-size:10px}.app .navActions .icon{padding:7px}.masenetLiquidDock{width:calc(100% - 20px);min-height:66px;bottom:max(7px,env(safe-area-inset-bottom));padding:6px 7px;border-radius:24px;gap:3px}.masenetLiquidDock button{min-height:51px;font-size:9px;border-radius:16px}.masenetLiquidDock button.dockAI{min-height:59px;margin-top:-17px;border-radius:20px}.masenetLiquidDock .dockR{width:23px;height:23px}.app .siteLegalFooter{padding-bottom:105px!important}}
+@media(prefers-reduced-motion:reduce){.masenetLiquidDock button{transition:none!important}}
 
 /* Screenshot-matched MaseMediaTv streaming home */
 .app .maseReferenceHeader{display:grid;grid-template-columns:auto minmax(150px,1fr) auto;align-items:center;gap:14px;max-width:1380px;margin:8px auto 0;padding:9px 14px;border-radius:25px;position:sticky;top:5px;z-index:1000}
@@ -1512,7 +1512,7 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
 .app .iqHome .iqCard.continue .iqPoster:before{content:"";position:absolute;z-index:2;left:8px;right:8px;bottom:8px;height:3px;border-radius:5px;background:linear-gradient(90deg,#35efa0 0 38%,#ffffff4a 38%);box-shadow:0 0 9px #35efa055}
 .app .iqHome .iqCard.continue>b{font-size:12px}
 .app .iqHome .maseYoutubeHub{margin:18px 0 24px;padding:16px;border:1px solid #7adfff55;border-radius:24px;background:linear-gradient(110deg,#102b43d9,#111a30dd 48%,#49204ac9);box-shadow:0 12px 32px #0008,inset 0 1px #ffffff24}
-.app .masenetLiquidDock{bottom:max(7px,env(safe-area-inset-bottom));border-radius:25px}
+.masenetLiquidDock{bottom:max(7px,env(safe-area-inset-bottom));border-radius:25px}
 .app .siteLegalFooter{padding-bottom:120px!important}
 @media(max-width:680px){
  .app .maseReferenceHeader{grid-template-columns:auto minmax(0,1fr) auto;gap:7px;margin:5px 6px 0;padding:7px;border-radius:20px}
@@ -1545,8 +1545,8 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
  .app .iqHome .iqCard>b{font-size:10px;margin:7px 6px 3px}
  .app .iqHome .iqCard>small{font-size:9px;margin:0 6px 5px}
  .app .iqHome .maseYoutubeHub{padding:13px;border-radius:20px}
- .app .masenetLiquidDock{width:calc(100% - 18px);min-height:68px}
- .app .masenetLiquidDock button{font-size:9px}
+ .masenetLiquidDock{width:calc(100% - 18px);min-height:68px}
+ .masenetLiquidDock button{font-size:9px}
 }
 @media(max-width:390px){
  .app .maseReferenceHeader .brandName{display:none}
@@ -1735,23 +1735,23 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
 }
 
 /* Bottom dock requested order: Home, Movies, custom Reel R, Customize, Profile */
-.app .masenetLiquidDock{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}
-.app .masenetLiquidDock button{min-width:0!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:4px!important}
-.app .masenetLiquidDock .dockAI{display:none!important}
-.app .masenetLiquidDock .dockReels .dockR{display:grid!important;place-items:center!important;width:34px!important;height:34px!important;font-size:29px!important;font-weight:1000!important;font-style:italic!important;line-height:1!important;letter-spacing:-.09em!important;color:transparent!important;background:linear-gradient(145deg,#fff 0%,#d6a2ff 22%,#a04cff 52%,#ff4fc8 78%,#ffb5ee 100%)!important;background-clip:text!important;-webkit-background-clip:text!important;filter:drop-shadow(0 0 6px #a848ffb3)!important;position:relative!important}
-.app .masenetLiquidDock .dockReels .dockR:after{content:"";position:absolute;inset:1px 0 0 3px;border-right:2px solid #ff6bdb;border-radius:9px;transform:skewY(-13deg);opacity:.7;pointer-events:none}
-.app .masenetLiquidDock .dockReels.active{background:radial-gradient(ellipse at 50% 20%,#b94cff38,transparent 76%)!important;color:#f2caff!important}
-.app .masenetLiquidDock .dockReels.active .dockR{filter:drop-shadow(0 0 10px #ba48ff)!important}
-.app .masenetLiquidDock .dockCustomize svg{color:#d5e8ff!important}
-.app .masenetLiquidDock .dockCustomize.active svg{color:#54efaa!important}
+.masenetLiquidDock{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}
+.masenetLiquidDock button{min-width:0!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:4px!important}
+.masenetLiquidDock .dockAI{display:none!important}
+.masenetLiquidDock .dockReels .dockR{display:grid!important;place-items:center!important;width:34px!important;height:34px!important;font-size:29px!important;font-weight:1000!important;font-style:italic!important;line-height:1!important;letter-spacing:-.09em!important;color:transparent!important;background:linear-gradient(145deg,#fff 0%,#d6a2ff 22%,#a04cff 52%,#ff4fc8 78%,#ffb5ee 100%)!important;background-clip:text!important;-webkit-background-clip:text!important;filter:drop-shadow(0 0 6px #a848ffb3)!important;position:relative!important}
+.masenetLiquidDock .dockReels .dockR:after{content:"";position:absolute;inset:1px 0 0 3px;border-right:2px solid #ff6bdb;border-radius:9px;transform:skewY(-13deg);opacity:.7;pointer-events:none}
+.masenetLiquidDock .dockReels.active{background:radial-gradient(ellipse at 50% 20%,#b94cff38,transparent 76%)!important;color:#f2caff!important}
+.masenetLiquidDock .dockReels.active .dockR{filter:drop-shadow(0 0 10px #ba48ff)!important}
+.masenetLiquidDock .dockCustomize svg{color:#d5e8ff!important}
+.masenetLiquidDock .dockCustomize.active svg{color:#54efaa!important}
 @media(max-width:680px){
- .app .masenetLiquidDock{grid-template-columns:repeat(5,minmax(0,1fr))!important;padding:7px 6px!important}
- .app .masenetLiquidDock .dockReels .dockR{width:29px!important;height:29px!important;font-size:26px!important}
- .app .masenetLiquidDock button{font-size:9px!important}
+ .masenetLiquidDock{grid-template-columns:repeat(5,minmax(0,1fr))!important;padding:7px 6px!important}
+ .masenetLiquidDock .dockReels .dockR{width:29px!important;height:29px!important;font-size:26px!important}
+ .masenetLiquidDock button{font-size:9px!important}
 }
 
 /* Dynamic dock: never cover route content, overlays, forms or the reels/customize screens */
-.app .masenetLiquidDock{
+.masenetLiquidDock{
  position:fixed!important;left:50%!important;right:auto!important;bottom:max(8px,env(safe-area-inset-bottom,0px))!important;
  transform:translateX(-50%)!important;z-index:900!important;
  width:min(560px,calc(100% - 24px))!important;max-width:calc(100vw - 24px)!important;
@@ -1762,30 +1762,30 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
  -webkit-backdrop-filter:blur(24px) saturate(170%)!important;border:1px solid rgba(175,224,255,.3)!important;
  box-shadow:0 10px 34px #0009,inset 0 1px #ffffff24!important;border-radius:24px!important;
 }
-.app .masenetLiquidDock button{min-width:0!important;width:100%!important;min-height:48px!important;height:auto!important;position:relative!important;z-index:1!important;white-space:nowrap!important;overflow:visible!important}
-.app .masenetLiquidDock button span:last-child{max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important}
-.app .masenetLiquidDock .dockCustomize span:last-child{font-size:clamp(8px,2.4vw,11px)!important}
-.app .masenetLiquidDock .dockReels{background:transparent!important}
-.app .masenetLiquidDock .dockReels.active{background:radial-gradient(ellipse at center,#a843ff35,transparent 80%)!important}
+.masenetLiquidDock button{min-width:0!important;width:100%!important;min-height:48px!important;height:auto!important;position:relative!important;z-index:1!important;white-space:nowrap!important;overflow:visible!important}
+.masenetLiquidDock button span:last-child{max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.masenetLiquidDock .dockCustomize span:last-child{font-size:clamp(8px,2.4vw,11px)!important}
+.masenetLiquidDock .dockReels{background:transparent!important}
+.masenetLiquidDock .dockReels.active{background:radial-gradient(ellipse at center,#a843ff35,transparent 80%)!important}
 .app .siteLegalFooter{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 .app .iqHome{padding-bottom:calc(105px + env(safe-area-inset-bottom,0px))!important}
-.app .masenetLiquidDock~*{scroll-margin-bottom:110px!important}
+.masenetLiquidDock~*{scroll-margin-bottom:110px!important}
 @media(max-width:680px){
- .app .masenetLiquidDock{width:calc(100% - 16px)!important;max-width:calc(100vw - 16px)!important;min-height:61px!important;bottom:max(7px,env(safe-area-inset-bottom,0px))!important;padding:6px 5px!important;gap:2px!important;border-radius:21px!important}
- .app .masenetLiquidDock button{min-height:46px!important;gap:3px!important;font-size:10px!important}
- .app .masenetLiquidDock button svg{width:19px!important;height:19px!important;flex-shrink:0!important}
- .app .masenetLiquidDock .dockReels .dockR{width:27px!important;height:27px!important;font-size:25px!important}
- .app .masenetLiquidDock .dockCustomize span:last-child{font-size:8px!important;letter-spacing:-.03em!important}
+ .masenetLiquidDock{width:calc(100% - 16px)!important;max-width:calc(100vw - 16px)!important;min-height:61px!important;bottom:max(7px,env(safe-area-inset-bottom,0px))!important;padding:6px 5px!important;gap:2px!important;border-radius:21px!important}
+ .masenetLiquidDock button{min-height:46px!important;gap:3px!important;font-size:10px!important}
+ .masenetLiquidDock button svg{width:19px!important;height:19px!important;flex-shrink:0!important}
+ .masenetLiquidDock .dockReels .dockR{width:27px!important;height:27px!important;font-size:25px!important}
+ .masenetLiquidDock .dockCustomize span:last-child{font-size:8px!important;letter-spacing:-.03em!important}
  .app .siteLegalFooter{padding-bottom:calc(95px + env(safe-area-inset-bottom,0px))!important}
  .app .iqHome{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))!important}
 }
 @media(max-width:360px){
- .app .masenetLiquidDock{width:calc(100% - 10px)!important;padding:5px 3px!important}
- .app .masenetLiquidDock button{font-size:9px!important}
- .app .masenetLiquidDock .dockCustomize span:last-child{font-size:7px!important}
+ .masenetLiquidDock{width:calc(100% - 10px)!important;padding:5px 3px!important}
+ .masenetLiquidDock button{font-size:9px!important}
+ .masenetLiquidDock .dockCustomize span:last-child{font-size:7px!important}
 }
 @media(hover:none) and (pointer:coarse){
- .app .masenetLiquidDock{touch-action:pan-x!important}
+ .masenetLiquidDock{touch-action:pan-x!important}
 }
 
 
@@ -1843,10 +1843,10 @@ body{background:radial-gradient(ellipse at 50% -12%,rgba(22,83,115,.2),transpare
 .app .notificationEmpty b{font-size:14px!important;color:var(--text,#f6f8fc)!important}
 .app .notificationEmpty p{font-size:12px!important;line-height:1.5!important;margin:0!important}
 .app .notificationRefresh{display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;width:100%!important;min-height:42px!important;margin-top:12px!important}
-.app .masenetLiquidDock .dockNotifications{position:relative!important}
-.app .masenetLiquidDock .dockNotifications>svg{color:#d8e9ff!important}
-.app .masenetLiquidDock .dockNotifications:active>svg{color:#54efaa!important}
-.app .masenetLiquidDock .dockNotificationBadge{position:absolute!important;top:0!important;right:calc(50% - 23px)!important;min-width:16px!important;height:16px!important;padding:0 4px!important;display:grid!important;place-items:center!important;border-radius:99px!important;background:#ff4778!important;color:#fff!important;font-size:8px!important;font-weight:900!important;font-style:normal!important;line-height:16px!important;box-shadow:0 0 0 2px #091322!important}
+.masenetLiquidDock .dockNotifications{position:relative!important}
+.masenetLiquidDock .dockNotifications>svg{color:#d8e9ff!important}
+.masenetLiquidDock .dockNotifications:active>svg{color:#54efaa!important}
+.masenetLiquidDock .dockNotificationBadge{position:absolute!important;top:0!important;right:calc(50% - 23px)!important;min-width:16px!important;height:16px!important;padding:0 4px!important;display:grid!important;place-items:center!important;border-radius:99px!important;background:#ff4778!important;color:#fff!important;font-size:8px!important;font-weight:900!important;font-style:normal!important;line-height:16px!important;box-shadow:0 0 0 2px #091322!important}
 @media(max-width:680px){
  .app .maseCustomizeSettings .customizeThree{grid-template-columns:repeat(3,minmax(0,1fr))!important}
  .app .maseCustomizeSettings .customizeThree button{padding:8px!important}
@@ -2003,14 +2003,14 @@ button{touch-action:manipulation}
 
 /* Navigation visibility follows scroll direction without covering content. */
 .app .maseReferenceHeader{transition:transform .22s ease,opacity .22s ease}
-.app .masenetLiquidDock{transition:transform .22s ease,opacity .22s ease,visibility .22s ease!important}
+.masenetLiquidDock{transition:transform .22s ease,opacity .22s ease,visibility .22s ease!important}
 .app.nav-auto-hidden .maseReferenceHeader{transform:translateY(-125%);opacity:0;pointer-events:none}
 .app.nav-auto-hidden .masenetLiquidDock{transform:translateY(140%)!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 .app.nav-overlay-open .masenetLiquidDock{transform:translateY(140%)!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 .app.nav-overlay-open .maseReferenceHeader{opacity:.45;pointer-events:none}
 .app main,.app .page{scroll-margin-top:82px;scroll-margin-bottom:104px}
 .app :is(input,textarea,select){scroll-margin-top:90px;scroll-margin-bottom:120px}
-@media(prefers-reduced-motion:reduce){.app .maseReferenceHeader,.app .masenetLiquidDock{transition:none!important}}
+@media(prefers-reduced-motion:reduce){.app .maseReferenceHeader,.masenetLiquidDock{transition:none!important}}
 
 
 /* iOS-inspired compact navigation and consistently rounded controls. */
@@ -2027,13 +2027,13 @@ button{touch-action:manipulation}
 .app .maseReferenceHeader .navActions button{
   min-width:32px!important;min-height:32px!important;padding:6px!important;border-radius:50%!important;
 }
-.app .masenetLiquidDock{
+.masenetLiquidDock{
   width:max-content!important;max-width:calc(100vw - 28px)!important;
   min-height:0!important;padding:5px!important;gap:4px!important;
   border-radius:999px!important;bottom:max(10px,env(safe-area-inset-bottom))!important;
   box-shadow:0 8px 28px rgba(0,0,0,.32)!important;
 }
-.app .masenetLiquidDock button,.app .masenetLiquidDock a{
+.masenetLiquidDock button,.masenetLiquidDock a{
   min-width:34px!important;min-height:34px!important;height:34px!important;
   padding:6px 9px!important;border-radius:999px!important;font-size:11px!important;
 }
@@ -2059,8 +2059,8 @@ button{touch-action:manipulation}
  .app .maseReferenceHeader .brandMark{width:25px;height:25px;border-radius:8px}
  .app .maseReferenceHeader nav button{min-height:30px!important;padding:6px 8px!important;font-size:11px!important}
  .app .maseReferenceHeader .navActions button{min-width:30px!important;min-height:30px!important}
- .app .masenetLiquidDock{gap:3px!important;padding:4px!important}
- .app .masenetLiquidDock button,.app .masenetLiquidDock a{min-width:31px!important;min-height:31px!important;height:31px!important;padding:5px 8px!important;font-size:10px!important}
+ .masenetLiquidDock{gap:3px!important;padding:4px!important}
+ .masenetLiquidDock button,.masenetLiquidDock a{min-width:31px!important;min-height:31px!important;height:31px!important;padding:5px 8px!important;font-size:10px!important}
  .app .aiDock{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;border-radius:14px!important}
  .app .side{border-radius:22px!important}
  .app :is(.adminCard,.adminPanel,.editPanel,.bulk,.broadcastManager){border-radius:18px!important}
@@ -2069,10 +2069,10 @@ button{touch-action:manipulation}
  .app .maseReferenceHeader{gap:4px!important}
  .app .maseReferenceHeader .brand{font-size:12px!important}
  .app .maseReferenceHeader nav button{padding:5px 7px!important;font-size:10px!important}
- .app .masenetLiquidDock button,.app .masenetLiquidDock a{min-width:29px!important;height:29px!important;min-height:29px!important;padding:4px 7px!important}
+ .masenetLiquidDock button,.masenetLiquidDock a{min-width:29px!important;height:29px!important;min-height:29px!important;padding:4px 7px!important}
 }
 @media(prefers-reduced-motion:reduce){
- .app .masenetLiquidDock,.app .maseReferenceHeader{transition:none!important}
+ .masenetLiquidDock,.app .maseReferenceHeader{transition:none!important}
 }
 
 
@@ -2239,7 +2239,7 @@ button{touch-action:manipulation}
 
 
 /* Telegram Mini App: keep the primary bottom dock visible above Telegram's safe area. */
-.app .masenetLiquidDock{
+.masenetLiquidDock{
  position:fixed!important;
  left:50%!important;
  right:auto!important;
@@ -2256,9 +2256,9 @@ button{touch-action:manipulation}
  visibility:visible!important;
  pointer-events:auto!important;
 }
-.app .masenetLiquidDock button{touch-action:manipulation!important;pointer-events:auto!important}
+.masenetLiquidDock button{touch-action:manipulation!important;pointer-events:auto!important}
 @media(max-width:560px){
- .app .masenetLiquidDock{
+ .masenetLiquidDock{
   width:calc(100vw - 20px)!important;
   max-width:440px!important;
   bottom:calc(8px + env(safe-area-inset-bottom, 0px))!important;
@@ -2564,7 +2564,7 @@ button{touch-action:manipulation}
 
  
 /* iOS 27-inspired compact floating bottom dock */
-.app .masenetLiquidDock{
+.masenetLiquidDock{
   width:min(470px,calc(100% - 52px))!important;
   max-width:470px!important;
   min-height:0!important;height:54px!important;
@@ -2577,33 +2577,33 @@ button{touch-action:manipulation}
   backdrop-filter:blur(34px) saturate(185%)!important;
   -webkit-backdrop-filter:blur(34px) saturate(185%)!important;
 }
-.app .masenetLiquidDock button{
+.masenetLiquidDock button{
   min-height:42px!important;height:42px!important;
   padding:3px 5px!important;gap:0!important;
   border:1px solid transparent!important;border-radius:999px!important;
   color:rgba(232,240,255,.82)!important;
 }
-.app .masenetLiquidDock button>span:last-child{display:none!important}
-.app .masenetLiquidDock button svg{width:22px!important;height:22px!important;stroke-width:2!important}
-.app .masenetLiquidDock button.active:not(.dockReels){background:rgba(255,255,255,.09)!important;color:#fff!important}
-.app .masenetLiquidDock .dockReels .dockR{width:35px!important;height:35px!important;font-size:29px!important}
-.app .masenetLiquidDock .dockReels.active{background:rgba(173,90,255,.13)!important}
-.app .masenetLiquidDock .dockNotifications{position:relative!important}
-.app .masenetLiquidDock .dockNotifications i{top:0!important;right:calc(50% - 24px)!important}
+.masenetLiquidDock button>span:last-child{display:none!important}
+.masenetLiquidDock button svg{width:22px!important;height:22px!important;stroke-width:2!important}
+.masenetLiquidDock button.active:not(.dockReels){background:rgba(255,255,255,.09)!important;color:#fff!important}
+.masenetLiquidDock .dockReels .dockR{width:35px!important;height:35px!important;font-size:29px!important}
+.masenetLiquidDock .dockReels.active{background:rgba(173,90,255,.13)!important}
+.masenetLiquidDock .dockNotifications{position:relative!important}
+.masenetLiquidDock .dockNotifications i{top:0!important;right:calc(50% - 24px)!important}
 .app .siteLegalFooter{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))!important}
 .app .iqHome{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))!important}
 @media(max-width:680px){
- .app .masenetLiquidDock{width:calc(100% - 52px)!important;max-width:420px!important;height:51px!important;padding:4px 7px!important;gap:4px!important;bottom:max(9px,env(safe-area-inset-bottom,0px))!important}
- .app .masenetLiquidDock button{height:41px!important;min-height:41px!important}
- .app .masenetLiquidDock button svg{width:21px!important;height:21px!important}
- .app .masenetLiquidDock .dockReels .dockR{width:32px!important;height:32px!important;font-size:27px!important}
+ .masenetLiquidDock{width:calc(100% - 52px)!important;max-width:420px!important;height:51px!important;padding:4px 7px!important;gap:4px!important;bottom:max(9px,env(safe-area-inset-bottom,0px))!important}
+ .masenetLiquidDock button{height:41px!important;min-height:41px!important}
+ .masenetLiquidDock button svg{width:21px!important;height:21px!important}
+ .masenetLiquidDock .dockReels .dockR{width:32px!important;height:32px!important;font-size:27px!important}
  .app .siteLegalFooter{padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))!important}
  .app .iqHome{padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))!important}
 }
 
 
 /* Reference-matched compact floating glass navigation dock */
-.app .masenetLiquidDock{
+.masenetLiquidDock{
   width:min(760px,calc(100% - 40px))!important;
   max-width:760px!important;
   height:66px!important;min-height:66px!important;
@@ -2616,25 +2616,25 @@ button{touch-action:manipulation}
   backdrop-filter:blur(30px) saturate(170%)!important;
   -webkit-backdrop-filter:blur(30px) saturate(170%)!important;
 }
-.app .masenetLiquidDock button{
+.masenetLiquidDock button{
   height:50px!important;min-height:50px!important;
   padding:4px 8px!important;gap:3px!important;
   border-radius:999px!important;color:#e4eaf7!important;
 }
-.app .masenetLiquidDock button>span:last-child{display:none!important}
-.app .masenetLiquidDock button.dockNotifications>span:last-child{
+.masenetLiquidDock button>span:last-child{display:none!important}
+.masenetLiquidDock button.dockNotifications>span:last-child{
   display:block!important;font-size:10px!important;line-height:1!important;
   font-weight:650!important;letter-spacing:.01em!important;overflow:visible!important;
 }
-.app .masenetLiquidDock button svg{width:25px!important;height:25px!important;stroke-width:1.9!important}
-.app .masenetLiquidDock button.active:not(.dockReels){background:rgba(255,255,255,.075)!important;color:#fff!important}
-.app .masenetLiquidDock .dockReels .dockR{
+.masenetLiquidDock button svg{width:25px!important;height:25px!important;stroke-width:1.9!important}
+.masenetLiquidDock button.active:not(.dockReels){background:rgba(255,255,255,.075)!important;color:#fff!important}
+.masenetLiquidDock .dockReels .dockR{
   width:43px!important;height:43px!important;font-size:36px!important;
   border-radius:14px!important;filter:drop-shadow(0 0 9px rgba(171,83,255,.48))!important;
 }
-.app .masenetLiquidDock .dockReels.active{background:rgba(176,93,255,.13)!important}
-.app .masenetLiquidDock .dockNotifications{position:relative!important}
-.app .masenetLiquidDock .dockNotifications .dockNotificationBadge{
+.masenetLiquidDock .dockReels.active{background:rgba(176,93,255,.13)!important}
+.masenetLiquidDock .dockNotifications{position:relative!important}
+.masenetLiquidDock .dockNotifications .dockNotificationBadge{
   position:absolute!important;top:1px!important;right:calc(50% - 27px)!important;
   display:grid!important;place-items:center!important;min-width:22px!important;height:22px!important;
   padding:0 5px!important;border-radius:999px!important;background:#f04460!important;color:white!important;
@@ -2644,18 +2644,18 @@ button{touch-action:manipulation}
 .app .siteLegalFooter{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))!important}
 .app .iqHome{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))!important}
 @media(max-width:680px){
- .app .masenetLiquidDock{width:calc(100% - 48px)!important;max-width:480px!important;height:60px!important;min-height:60px!important;padding:5px 9px!important;gap:5px!important;bottom:max(10px,env(safe-area-inset-bottom,0px))!important}
- .app .masenetLiquidDock button{height:48px!important;min-height:48px!important;padding:3px 5px!important}
- .app .masenetLiquidDock button svg{width:24px!important;height:24px!important}
- .app .masenetLiquidDock .dockReels .dockR{width:39px!important;height:39px!important;font-size:33px!important}
- .app .masenetLiquidDock button.dockNotifications>span:last-child{font-size:10px!important}
- .app .masenetLiquidDock .dockNotifications .dockNotificationBadge{right:calc(50% - 24px)!important;min-width:20px!important;height:20px!important;font-size:10px!important}
+ .masenetLiquidDock{width:calc(100% - 48px)!important;max-width:480px!important;height:60px!important;min-height:60px!important;padding:5px 9px!important;gap:5px!important;bottom:max(10px,env(safe-area-inset-bottom,0px))!important}
+ .masenetLiquidDock button{height:48px!important;min-height:48px!important;padding:3px 5px!important}
+ .masenetLiquidDock button svg{width:24px!important;height:24px!important}
+ .masenetLiquidDock .dockReels .dockR{width:39px!important;height:39px!important;font-size:33px!important}
+ .masenetLiquidDock button.dockNotifications>span:last-child{font-size:10px!important}
+ .masenetLiquidDock .dockNotifications .dockNotificationBadge{right:calc(50% - 24px)!important;min-width:20px!important;height:20px!important;font-size:10px!important}
  .app .siteLegalFooter{padding-bottom:calc(82px + env(safe-area-inset-bottom,0px))!important}
  .app .iqHome{padding-bottom:calc(82px + env(safe-area-inset-bottom,0px))!important}
 }
 @media(max-width:360px){
- .app .masenetLiquidDock{width:calc(100% - 28px)!important;padding:4px 6px!important;gap:2px!important}
- .app .masenetLiquidDock button svg{width:22px!important;height:22px!important}
+ .masenetLiquidDock{width:calc(100% - 28px)!important;padding:4px 6px!important;gap:2px!important}
+ .masenetLiquidDock button svg{width:22px!important;height:22px!important}
 }
 
 
@@ -3137,9 +3137,9 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
 
 
 /* iOS 27-inspired navigation button refresh — deliberately leaves the dock/bar itself untouched. */
-.app .masenetLiquidDock>button:first-child,
-.app .masenetLiquidDock>button:nth-child(2),
-.app .masenetLiquidDock>button.dockReels{
+.masenetLiquidDock>button:first-child,
+.masenetLiquidDock>button:nth-child(2),
+.masenetLiquidDock>button.dockReels{
   position:relative;isolation:isolate;overflow:hidden;min-width:58px;min-height:54px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
   padding:7px 13px;border:1px solid rgba(255,255,255,.11);border-radius:19px;
@@ -3148,60 +3148,60 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
   -webkit-tap-highlight-color:transparent;backdrop-filter:blur(18px) saturate(150%);
   transition:transform .28s cubic-bezier(.2,.8,.2,1),background .25s ease,border-color .25s ease,color .25s ease,box-shadow .25s ease;
 }
-.app .masenetLiquidDock>button:first-child::before,
-.app .masenetLiquidDock>button:nth-child(2)::before,
-.app .masenetLiquidDock>button.dockReels::before{
+.masenetLiquidDock>button:first-child::before,
+.masenetLiquidDock>button:nth-child(2)::before,
+.masenetLiquidDock>button.dockReels::before{
   content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;opacity:0;transition:opacity .25s ease;pointer-events:none;
 }
-.app .masenetLiquidDock>button:first-child svg,
-.app .masenetLiquidDock>button:nth-child(2) svg,
-.app .masenetLiquidDock>button.dockReels .dockR{flex:0 0 auto;transition:transform .28s cubic-bezier(.2,.8,.2,1),filter .25s ease}
-.app .masenetLiquidDock>button:first-child span,
-.app .masenetLiquidDock>button:nth-child(2) span,
-.app .masenetLiquidDock>button.dockReels>span:last-child{
+.masenetLiquidDock>button:first-child svg,
+.masenetLiquidDock>button:nth-child(2) svg,
+.masenetLiquidDock>button.dockReels .dockR{flex:0 0 auto;transition:transform .28s cubic-bezier(.2,.8,.2,1),filter .25s ease}
+.masenetLiquidDock>button:first-child span,
+.masenetLiquidDock>button:nth-child(2) span,
+.masenetLiquidDock>button.dockReels>span:last-child{
   font-size:10px;font-weight:650;letter-spacing:.01em;line-height:1.05;white-space:nowrap;
 }
-.app .masenetLiquidDock>button:first-child.active{
+.masenetLiquidDock>button:first-child.active{
   color:#fff;border-color:rgba(166,196,255,.48);
   background:linear-gradient(145deg,rgba(115,154,255,.28),rgba(126,98,232,.16) 55%,rgba(255,255,255,.07));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 0 1px rgba(130,160,255,.08),0 7px 22px rgba(95,115,255,.19);
 }
-.app .masenetLiquidDock>button:first-child.active::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(182,205,255,.18),transparent 70%)}
-.app .masenetLiquidDock>button:first-child.active svg{filter:drop-shadow(0 0 7px rgba(157,190,255,.7))}
-.app .masenetLiquidDock>button:nth-child(2){color:#e8edf7}
-.app .masenetLiquidDock>button:nth-child(2):hover,
-.app .masenetLiquidDock>button:nth-child(2):focus-visible{
+.masenetLiquidDock>button:first-child.active::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(182,205,255,.18),transparent 70%)}
+.masenetLiquidDock>button:first-child.active svg{filter:drop-shadow(0 0 7px rgba(157,190,255,.7))}
+.masenetLiquidDock>button:nth-child(2){color:#e8edf7}
+.masenetLiquidDock>button:nth-child(2):hover,
+.masenetLiquidDock>button:nth-child(2):focus-visible{
   color:#fff;border-color:rgba(124,229,202,.38);background:linear-gradient(145deg,rgba(70,215,177,.16),rgba(255,255,255,.035));box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 18px rgba(25,190,151,.12)
 }
-.app .masenetLiquidDock>button:nth-child(2):hover svg{transform:translateY(-2px)}
-.app .masenetLiquidDock>button.dockReels{border-color:rgba(255,111,174,.35);color:#fff;background:linear-gradient(150deg,rgba(255,79,145,.18),rgba(125,83,255,.14) 58%,rgba(255,255,255,.035));box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 20px rgba(196,67,178,.13)}
-.app .masenetLiquidDock>button.dockReels::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(255,130,186,.14),transparent 72%)}
-.app .masenetLiquidDock>button.dockReels .dockR{
+.masenetLiquidDock>button:nth-child(2):hover svg{transform:translateY(-2px)}
+.masenetLiquidDock>button.dockReels{border-color:rgba(255,111,174,.35);color:#fff;background:linear-gradient(150deg,rgba(255,79,145,.18),rgba(125,83,255,.14) 58%,rgba(255,255,255,.035));box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 20px rgba(196,67,178,.13)}
+.masenetLiquidDock>button.dockReels::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(255,130,186,.14),transparent 72%)}
+.masenetLiquidDock>button.dockReels .dockR{
   width:27px;height:27px;display:grid;place-items:center;border-radius:10px;
   font-size:18px;font-weight:900;font-style:italic;line-height:1;letter-spacing:-.09em;
   color:#fff;background:linear-gradient(145deg,#ff72b2 0%,#ff477c 42%,#895cff 100%);
   border:1px solid rgba(255,255,255,.46);box-shadow:inset 0 1px 0 rgba(255,255,255,.48),0 3px 12px rgba(239,63,148,.35);
   text-shadow:0 1px 3px rgba(62,10,67,.35)
 }
-.app .masenetLiquidDock>button.dockReels>span:last-child{color:#ffd9e9}
-.app .masenetLiquidDock>button.dockReels.active{border-color:rgba(255,123,184,.62);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 0 1px rgba(255,91,166,.1),0 8px 25px rgba(225,51,151,.23)}
-.app .masenetLiquidDock>button.dockReels.active .dockR{transform:scale(1.06);filter:drop-shadow(0 0 6px rgba(255,91,166,.55))}
-.app .masenetLiquidDock>button:first-child:active,
-.app .masenetLiquidDock>button:nth-child(2):active,
-.app .masenetLiquidDock>button.dockReels:active{transform:scale(.94)}
-.app .masenetLiquidDock>button:first-child:focus-visible,
-.app .masenetLiquidDock>button:nth-child(2):focus-visible,
-.app .masenetLiquidDock>button.dockReels:focus-visible{outline:2px solid rgba(158,190,255,.9);outline-offset:3px}
+.masenetLiquidDock>button.dockReels>span:last-child{color:#ffd9e9}
+.masenetLiquidDock>button.dockReels.active{border-color:rgba(255,123,184,.62);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 0 1px rgba(255,91,166,.1),0 8px 25px rgba(225,51,151,.23)}
+.masenetLiquidDock>button.dockReels.active .dockR{transform:scale(1.06);filter:drop-shadow(0 0 6px rgba(255,91,166,.55))}
+.masenetLiquidDock>button:first-child:active,
+.masenetLiquidDock>button:nth-child(2):active,
+.masenetLiquidDock>button.dockReels:active{transform:scale(.94)}
+.masenetLiquidDock>button:first-child:focus-visible,
+.masenetLiquidDock>button:nth-child(2):focus-visible,
+.masenetLiquidDock>button.dockReels:focus-visible{outline:2px solid rgba(158,190,255,.9);outline-offset:3px}
 @media(max-width:560px){
- .app .masenetLiquidDock>button:first-child,
- .app .masenetLiquidDock>button:nth-child(2),
- .app .masenetLiquidDock>button.dockReels{min-width:51px;min-height:51px;padding:6px 10px;border-radius:17px;gap:3px}
- .app .masenetLiquidDock>button:first-child span,
- .app .masenetLiquidDock>button:nth-child(2) span,
- .app .masenetLiquidDock>button.dockReels>span:last-child{font-size:9px}
- .app .masenetLiquidDock>button.dockReels .dockR{width:25px;height:25px;border-radius:9px;font-size:17px}
+ .masenetLiquidDock>button:first-child,
+ .masenetLiquidDock>button:nth-child(2),
+ .masenetLiquidDock>button.dockReels{min-width:51px;min-height:51px;padding:6px 10px;border-radius:17px;gap:3px}
+ .masenetLiquidDock>button:first-child span,
+ .masenetLiquidDock>button:nth-child(2) span,
+ .masenetLiquidDock>button.dockReels>span:last-child{font-size:9px}
+ .masenetLiquidDock>button.dockReels .dockR{width:25px;height:25px;border-radius:9px;font-size:17px}
 }
 @media(prefers-reduced-motion:reduce){
- .app .masenetLiquidDock>button:first-child,.app .masenetLiquidDock>button:nth-child(2),.app .masenetLiquidDock>button.dockReels,
- .app .masenetLiquidDock>button:first-child svg,.app .masenetLiquidDock>button:nth-child(2) svg,.app .masenetLiquidDock>button.dockReels .dockR{transition:none!important}
+ .masenetLiquidDock>button:first-child,.masenetLiquidDock>button:nth-child(2),.masenetLiquidDock>button.dockReels,
+ .masenetLiquidDock>button:first-child svg,.masenetLiquidDock>button:nth-child(2) svg,.masenetLiquidDock>button.dockReels .dockR{transition:none!important}
 }
