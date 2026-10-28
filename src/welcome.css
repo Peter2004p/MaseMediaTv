@@ -25,3 +25,83 @@
 @keyframes searchResultsEnter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:680px){.searchDock{top:5px;width:calc(100% - 18px);margin:8px auto 12px;padding:11px 14px;gap:9px}.searchDock input{font-size:13px}.iqHome .iqSearchResults{padding:13px;border-radius:19px}.iqHome .iqSearchResults .iqGrid{gap:11px 8px}.iqHome .iqSearchResults .iqCard{padding:5px;border-radius:13px}.iqHome .iqSearchResults .iqPoster{border-radius:10px}.iqHome .iqSearchResults .iqCard>b{font-size:11px}.iqHome .iqSearchResults .iqCard>small{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.iqHome .iqSearchResults{animation:none}}
+
+
+/* MaseNet premium welcome/title page — brand-green cinematic direction */
+.welcomePro{--welcome-accent:#00d982;--welcome-accent-bright:#6cf5b6;position:relative;min-height:100dvh;overflow:hidden;background:#070b09;color:#f4faf6}
+.welcomePro .welcomeBackdrop{background:radial-gradient(ellipse at 76% 28%,#00d98216,transparent 35%),radial-gradient(ellipse at 15% 88%,#00a96812,transparent 34%),linear-gradient(145deg,#0b110e,#070a09 62%,#060807)}
+.welcomePro .welcomeGlow{filter:blur(90px);opacity:.24}
+.welcomePro .welcomeGlowOne{background:#00d982;top:130px;left:-150px}
+.welcomePro .welcomeGlowTwo{background:#137b59;right:-150px;top:400px}
+.welcomeOrb{position:absolute;display:block;width:360px;height:360px;border:1px solid #8affc20a;border-radius:50%;right:-150px;top:20%;box-shadow:0 0 0 50px #8affc205,0 0 0 100px #8affc203}
+.welcomeOrbTwo{width:220px;height:220px;left:-140px;top:65%;right:auto}
+.welcomeProShell{width:min(1240px,100%);padding:24px clamp(16px,4vw,44px) 22px}
+.welcomeProHeader{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 0 24px;border-bottom:1px solid #ffffff12}
+.welcomeProBrand{display:flex;align-items:center;gap:11px;color:#f7fcf9;text-decoration:none;min-width:0}
+.welcomeProBrand img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 15px #00d98224)}
+.welcomeProBrand>span{display:grid;gap:4px}
+.welcomeProBrand b{font-size:19px;line-height:1;letter-spacing:-.045em;font-weight:900}
+.welcomeProBrand small{font-size:8px;letter-spacing:.16em;color:#83958b;font-weight:800}
+.welcomeProHeaderActions{display:flex;align-items:center;gap:18px}
+.welcomeLive{display:flex;align-items:center;gap:7px;color:#9baea4;font-size:9px;letter-spacing:.13em;font-weight:800}
+.welcomeLive i,.welcomeVisualTop>span:first-child i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--welcome-accent);box-shadow:0 0 12px #00d98288}
+.welcomeHeaderSignIn{border:1px solid #ffffff20;background:#ffffff08;color:#f4faf6;border-radius:999px;padding:10px 17px;font-size:12px;font-weight:800;white-space:nowrap}
+.welcomeHeaderSignIn:hover{border-color:#00d98277;background:#00d98212}
+.welcomeProHero{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1fr);align-items:center;gap:clamp(26px,5vw,74px);padding:clamp(42px,7vw,82px) 0 48px;min-height:500px}
+.welcomeProCopy{position:relative;z-index:2}
+.welcomeProEyebrow{display:flex;align-items:center;gap:9px;color:#7cf4b7;font-size:10px;letter-spacing:.19em;font-weight:900}
+.welcomeProEyebrow span{display:grid;place-items:center;width:25px;height:25px;border-radius:9px;border:1px solid #00d98238;background:#00d98213;font-size:14px}
+.welcomeProCopy h1{margin:22px 0 20px;max-width:670px;font-size:clamp(42px,5.6vw,76px);line-height:.99;letter-spacing:-.065em;font-weight:850;color:#f5fbf7}
+.welcomeProCopy h1 em{font-style:normal;color:transparent;background:linear-gradient(100deg,#65efb0,#c2ffe1 60%,#8bbfa7);background-clip:text;-webkit-background-clip:text}
+.welcomeProLead{max-width:540px;margin:0;color:#aebdb4;font-size:clamp(14px,1.3vw,16px);line-height:1.8}
+.welcomeProActions{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:29px}
+.welcomePro .welcomeProPrimary{width:auto;min-height:52px;padding:14px 21px;border-radius:13px;background:linear-gradient(110deg,#66f3b2,#00cb7a);color:#03150c;box-shadow:0 12px 34px #00d98225;font-size:14px;transition:transform .2s,box-shadow .2s}
+.welcomePro .welcomeProPrimary:hover{transform:translateY(-2px);box-shadow:0 15px 38px #00d98238}
+.welcomePro .welcomeProPrimary span{font-size:18px}
+.welcomeExploreLink{display:inline-flex;align-items:center;gap:8px;color:#c5d3ca;text-decoration:none;font-size:12px;font-weight:750}
+.welcomeExploreLink span{color:#6cf5b6;font-size:17px;transition:transform .2s}
+.welcomeExploreLink:hover span{transform:translateX(4px)}
+.welcomeProTrust{display:flex;align-items:center;gap:15px 19px;flex-wrap:wrap;margin-top:30px;color:#8fa197;font-size:10px}
+.welcomeProTrust span{display:flex;align-items:center;gap:6px}
+.welcomeProTrust i{font-style:normal;color:#5ae9a6;font-weight:900}
+.welcomeProVisual{position:relative;min-width:0;isolation:isolate;padding:18px 17px 15px;border:1px solid #ffffff18;border-radius:25px;background:linear-gradient(145deg,#18221cdd,#0c120ff0 68%);box-shadow:0 35px 90px #0008,inset 0 1px #ffffff14;overflow:hidden}
+.welcomeVisualGlow{position:absolute;z-index:-1;width:280px;height:280px;top:15%;left:30%;border-radius:50%;background:#00d98222;filter:blur(65px)}
+.welcomeVisualTop{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#6f897a;font-size:8px;letter-spacing:.13em;font-weight:900}
+.welcomeVisualTop>span:first-child{display:flex;align-items:center;gap:7px;color:#a6c7b4}
+.welcomeAccent{color:#6cf5b6}
+.welcomeVisualPosters{position:relative;display:flex;align-items:center;justify-content:center;gap:0;height:clamp(240px,29vw,355px);margin:12px 0 8px;perspective:1000px}
+.welcomeVisualPoster{position:relative;flex:0 1 35%;height:77%;min-width:0;border-radius:14px;overflow:hidden;border:1px solid #ffffff25;background:#101914;box-shadow:0 20px 42px #0008}
+.welcomeVisualPoster img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.8)}
+.welcomeVisualPoster:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#07100a05 25%,#06100ac9 100%)}
+.welcomeVisualPosterLeft{transform:rotateY(17deg) rotateZ(-7deg) translateX(12px);height:65%;margin-right:-24px}
+.welcomeVisualPosterRight{transform:rotateY(-17deg) rotateZ(7deg) translateX(-12px);height:65%;margin-left:-24px}
+.welcomeVisualPosterMain{flex-basis:45%;height:100%;z-index:2;border-color:#76f0b34d;box-shadow:0 22px 60px #0009,0 0 0 1px #00d98212}
+.welcomeVisualPoster>span{position:absolute;z-index:1;top:12px;left:11px;right:8px;font-size:7px;letter-spacing:.12em;font-weight:900;color:#d6e8dc}
+.welcomeVisualPosterBack>b{position:absolute;z-index:1;left:12px;bottom:15px;color:white;font-size:clamp(14px,2vw,21px);line-height:1.05;letter-spacing:-.04em}
+.welcomePosterOverlay{position:absolute;z-index:1;inset:auto 15px 20px;display:grid;gap:9px}
+.welcomePosterOverlay span{font-size:7px;font-weight:900;letter-spacing:.14em;color:#80f3b8}
+.welcomePosterOverlay b{font-size:clamp(21px,3vw,35px);line-height:.98;letter-spacing:-.06em;color:#fff}
+.welcomePosterOverlay small{font-size:9px;color:#d1ddd5}
+.welcomePosterPlay{position:absolute;z-index:2;right:13px;top:13px;display:grid;place-items:center;width:31px;height:31px;border:1px solid #ffffff66;border-radius:50%;background:#07100b8c;color:#80f3b8;font-size:10px;padding-left:2px;backdrop-filter:blur(10px)}
+.welcomeVisualBottom{display:flex;align-items:center;gap:10px;padding:12px 4px 2px;border-top:1px solid #ffffff12}
+.welcomeVisualAvatar{display:grid;place-items:center;width:34px;height:34px;border:1px solid #00d98245;border-radius:12px;background:linear-gradient(145deg,#0b4b31,#0d2418);color:#8affc1;font-weight:950}
+.welcomeVisualBottom>span:nth-child(2){display:grid;gap:4px;flex:1}
+.welcomeVisualBottom b{font-size:11px;color:#e9f6ed}
+.welcomeVisualBottom small{font-size:9px;color:#8ca396}
+.welcomeVisualArrow{color:#6cf5b6;font-size:20px}
+.welcomeProFeatures{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;padding:0 0 27px}
+.welcomeProFeatures article{display:flex;align-items:flex-start;gap:11px;min-width:0;padding:17px 14px;border:1px solid #ffffff12;border-radius:15px;background:linear-gradient(145deg,#ffffff08,#ffffff03);transition:transform .2s,border-color .2s,background .2s}
+.welcomeProFeatures article:hover{transform:translateY(-3px);border-color:#00d98235;background:#00d98208}
+.welcomeFeatureIcon{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border:1px solid #00d98224;border-radius:10px;background:#00d98212;color:#6cf5b6;font-size:15px}
+.welcomeProFeatures b{display:block;color:#eaf4ed;font-size:12px;line-height:1.4}
+.welcomeProFeatures p{margin:5px 0 0;color:#8fa197;font-size:10px;line-height:1.6}
+.welcomeProFooter{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:17px 0 8px;border-top:1px solid #ffffff12;color:#73857a;font-size:10px}
+.welcomeFooterDot{padding:0 5px;color:#00d982}
+.welcomeProFooter nav{display:flex;flex-wrap:wrap;gap:17px}
+.welcomeProFooter a,.welcomeProLegal a{color:#a8c6b4;text-decoration:none}
+.welcomeProFooter a:hover,.welcomeProLegal a:hover{color:#6cf5b6}
+.welcomeProLegal{margin:6px 0 0;text-align:center;color:#64776b;font-size:9px;line-height:1.6}
+@media(max-width:900px){.welcomeProShell{padding-top:19px}.welcomeProHero{grid-template-columns:minmax(0,1fr);gap:33px;padding:45px 0 34px;min-height:0}.welcomeProCopy h1{max-width:760px;font-size:clamp(44px,8vw,70px)}.welcomeProLead{max-width:680px}.welcomeProVisual{width:min(100%,650px);margin:0 auto}.welcomeVisualPosters{height:clamp(260px,50vw,365px)}.welcomeProFeatures{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.welcomeProShell{padding:15px 15px max(18px,env(safe-area-inset-bottom))}.welcomeProHeader{padding-bottom:16px}.welcomeProBrand img{width:35px;height:35px}.welcomeProBrand b{font-size:17px}.welcomeProBrand small{font-size:7px;letter-spacing:.11em}.welcomeProHeaderActions{gap:9px}.welcomeLive{display:none}.welcomeHeaderSignIn{padding:9px 13px;font-size:11px}.welcomeProHero{padding:40px 0 27px;gap:29px}.welcomeProCopy h1{font-size:clamp(39px,10.7vw,53px);margin:18px 0 16px}.welcomeProLead{font-size:13px;line-height:1.75}.welcomeProActions{gap:16px;margin-top:23px}.welcomePro .welcomeProPrimary{width:100%;justify-content:center}.welcomeExploreLink{margin:0 auto}.welcomeProTrust{gap:10px 14px;margin-top:22px;font-size:9px}.welcomeProVisual{padding:13px 10px 11px;border-radius:19px}.welcomeVisualTop{font-size:6px;letter-spacing:.08em}.welcomeVisualPosters{height:clamp(220px,66vw,300px);margin-top:15px}.welcomeVisualPoster{border-radius:11px}.welcomeVisualPosterLeft{margin-right:-17px;transform:rotateY(14deg) rotateZ(-7deg) translateX(8px)}.welcomeVisualPosterRight{margin-left:-17px;transform:rotateY(-14deg) rotateZ(7deg) translateX(-8px)}.welcomePosterOverlay{inset:auto 10px 14px;gap:7px}.welcomePosterOverlay b{font-size:clamp(20px,6vw,28px)}.welcomePosterOverlay span{font-size:6px}.welcomePosterOverlay small{font-size:8px}.welcomeVisualPoster>span{font-size:6px;top:9px;left:8px}.welcomeVisualPosterBack>b{left:8px;bottom:11px;font-size:14px}.welcomeVisualBottom{gap:8px}.welcomeVisualBottom b{font-size:10px}.welcomeVisualBottom small{font-size:8px}.welcomeProFeatures{gap:8px;padding-bottom:18px}.welcomeProFeatures article{padding:12px 10px;gap:8px;border-radius:12px}.welcomeFeatureIcon{width:27px;height:27px;flex-basis:27px;font-size:12px;border-radius:8px}.welcomeProFeatures b{font-size:11px}.welcomeProFeatures p{font-size:9px}.welcomeProFooter{align-items:flex-start;flex-direction:column;gap:11px;font-size:9px}.welcomeProFooter nav{gap:15px}.welcomeProLegal{text-align:left;font-size:9px}}
+@media(max-width:360px){.welcomeProCopy h1{font-size:37px}.welcomeVisualTop>span:last-child{display:none}.welcomeProFeatures{grid-template-columns:1fr}.welcomeProFeatures article{align-items:center}.welcomeProFeatures p{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.welcomePro *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
