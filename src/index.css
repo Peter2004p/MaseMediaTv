@@ -2780,3 +2780,11 @@ html body #root .app nav.masenetLiquidDock>button.dockNotifications .dockNotific
 .app .ttCommentForm button{background:#1877f2;color:#fff;padding:10px 16px}
 .app .ttReelCommentBar>span:first-child{border-color:#ffffff30!important;background:#ffffff12!important}
 @media(max-width:420px){.app .ttReelActions{right:7px!important;bottom:calc(102px + env(safe-area-inset-bottom))!important;gap:8px!important}.app .ttReelActions button{min-height:44px!important}.app .ttReelInfo{right:70px!important}.app .ttCommentsSheet{height:min(76dvh,680px)}}
+
+
+/* The floating site navigation must never sit above the Reels controls. */
+.app:has(.ttReelsPage) .masenetLiquidDock,
+.app:has(.ttReelsPage) .homeFloat,
+.app:has(.ttReelsPage) .aiBubbleButton,
+.app:has(.ttReelsPage) .aiSuggestionBubble{display:none!important;pointer-events:none!important}
+.app:has(.ttReelsPage) .ttReelsPage{z-index:999!important}
