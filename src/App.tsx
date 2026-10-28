@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api, auth, image } from './cloudflare-client';
 const Player = lazy(() => import('./FlootPlayer'));
 const PlayerLoading = () => <div role="status" aria-live="polite" style={{ minHeight: 180, display: "grid", placeItems: "center", borderRadius: 16, background: "#08090d", color: "#e8c77a", fontSize: 14 }}>Loading video player…</div>;
-import { House, Search, UserRound, SlidersHorizontal, Play, Download, Plus, X, Send, ShieldCheck, Check, ArrowLeft, Upload, Link2, Bot, Trash2, ChevronRight, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Subtitles, RotateCcw, RotateCw, ImagePlus, LogOut, Save, Eye, EyeOff, Film, LayoutDashboard, Paperclip, Palette, Mic, Copy, ExternalLink, RefreshCw, Youtube, Facebook, Music2, Share2, Sparkles, Bell, Bookmark, CheckCheck } from 'lucide-react';
+import { House, Clapperboard, Search, UserRound, SlidersHorizontal, Play, Download, Plus, X, Send, ShieldCheck, Check, ArrowLeft, Upload, Link2, Bot, Trash2, ChevronRight, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Subtitles, RotateCcw, RotateCw, ImagePlus, LogOut, Save, Eye, EyeOff, Film, LayoutDashboard, Paperclip, Palette, Mic, Copy, ExternalLink, RefreshCw, Youtube, Facebook, Music2, Share2, Sparkles, Bell, Bookmark, CheckCheck } from 'lucide-react';
 
 type Quality = '480p'|'720p'|'1080p';
 type StreamVariant = { quality:Quality; streamUrl:string; streamPath?:string; mimeType?:string; downloadUrl?:string; downloadPath?:string; subtitleTracks?:{label:string;url:string;path?:string;lang?:string;mimeType?:string}[] };
@@ -218,7 +218,7 @@ export default function App(){
   {(route==='#/home'||(inTelegramMiniApp&&route!=='#/admin'&&route!=='#/admin-statistics'&&!route.startsWith('#/title/')))&&<nav className="masenetLiquidDock" aria-label="Main navigation">
     <button className={route==='#/home'?'active':''} onClick={()=>go('#/home')} aria-label="Home"><House size={19}/><span>Home</span></button>
     <button onClick={()=>{go('#/home');window.setTimeout(()=>document.querySelector('.iqCategories button:nth-child(2)')?.click(),80)}} aria-label="Movies"><Film size={19}/><span>Movies</span></button>
-    <button className={route==='#/reels'?'active dockReels':'dockReels'} onClick={()=>go('#/reels')} aria-label="Open Reels"><span className="dockR" aria-hidden="true">R</span><span>Reel</span></button>
+    <button className={route==='#/reels'?'active dockReels':'dockReels'} onClick={()=>go('#/reels')} aria-label="Open Reels"><Clapperboard size={21} strokeWidth={1.9} aria-hidden="true" /><span>Reel</span></button>
     <button className="dockCustomize" onClick={()=>setPanel('customize')} aria-label="Customize appearance"><SlidersHorizontal size={19}/><span>Customize</span></button>
     <button className="dockNotifications" onClick={()=>setPanel('notifications')} aria-label={unreadNotificationCount?(`Notifications, ${unreadNotificationCount} unread`):'Notifications'}><Bell size={19}/><span>Alerts</span>{unreadNotificationCount>0&&<i className="dockNotificationBadge">{unreadNotificationCount>99?'99+':unreadNotificationCount}</i>}</button>
   </nav>}
