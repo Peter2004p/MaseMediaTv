@@ -822,6 +822,7 @@ button,a,input,textarea,select{touch-action:manipulation}
 .ttReelHandle{display:flex;align-items:center;gap:8px;max-width:100%;font-size:14px}
 .ttReelHandle>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ttReelLogo{width:29px;height:29px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(135deg,#f0d68e,#a87a27);color:#15110a;font-weight:900;text-shadow:none}
+.ttReelPosterAvatar{flex:0 0 36px;width:36px;height:36px;padding:0;overflow:hidden;border:1.5px solid #ffffffd9;border-radius:50%;background:#15151b;box-shadow:0 2px 12px #0008;cursor:pointer;display:block;position:relative}.ttReelPosterAvatar:focus-visible{outline:2px solid #f3d58d;outline-offset:3px}.ttReelPosterAvatar .poster{width:100%;height:100%;min-height:0;aspect-ratio:1/1;border-radius:50%;overflow:hidden;margin:0;box-shadow:none}.ttReelPosterAvatar .posterImage{width:100%;height:100%;object-fit:cover;display:block}.ttReelPosterAvatar .posterAura,.ttReelPosterAvatar .poster b,.ttReelPosterAvatar .poster small,.ttReelPosterAvatar .poster i,.ttReelPosterAvatar .poster>span{display:none!important}
 .ttReelTag{font-size:10px;padding:4px 7px;border:1px solid #ffffff5c;border-radius:999px;background:#ffffff1a}
 .ttReelInfo p{margin:0;color:#f2f2f5;font-size:12px;line-height:1.45}
 .ttReelInfo>small{max-width:100%;font-size:12px;line-height:1.45;color:#e0e0e5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
