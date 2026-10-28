@@ -3387,7 +3387,7 @@ nav.masenetLiquidDock>button:focus-visible{outline:2px solid rgba(175,203,255,.9
 
 
 
-/* FINAL navigation button styling — shadowless, consistent on mobile and desktop */
+/* FINAL navigation button styling — shadowless; Reel R is visible text with no background */
 nav.masenetLiquidDock>button,
 nav.masenetLiquidDock>button *,
 nav.masenetLiquidDock>button::before,
@@ -3411,26 +3411,26 @@ nav.masenetLiquidDock>button:first-child.active{color:#fff!important;background:
 nav.masenetLiquidDock>button:first-child .dockHomeLogo{display:block!important;width:25px!important;height:25px!important;object-fit:contain!important;background:transparent!important;border:0!important;border-radius:0!important;padding:0!important}
 nav.masenetLiquidDock>button:nth-child(2){color:#aab5c7!important;background:transparent!important;border-color:transparent!important}
 nav.masenetLiquidDock>button:nth-child(2):hover,nav.masenetLiquidDock>button:nth-child(2):focus-visible{color:#d9fff1!important;background:#173b34!important;border-color:#24594c!important}
-/* Reel: a custom italic gradient R as text only — no box, badge, border or background */
+/* Reel: styled solid pink italic R; absolutely no tile, fill gradient, or background */
 nav.masenetLiquidDock>button.dockReels,
 nav.masenetLiquidDock>button.dockReels:hover,
 nav.masenetLiquidDock>button.dockReels:focus-visible{
-  color:#aab5c7!important;background:transparent!important;border-color:transparent!important;
+  color:#aab5c7!important;background:transparent!important;background-image:none!important;border-color:transparent!important;
 }
 nav.masenetLiquidDock>button.dockReels .dockR{
-  display:flex!important;align-items:center!important;justify-content:center!important;
+  position:relative!important;z-index:2!important;display:flex!important;align-items:center!important;justify-content:center!important;
   width:28px!important;height:27px!important;min-width:0!important;margin:0!important;padding:0 4px 2px 0!important;
-  font-family:ui-rounded,"Arial Rounded MT Bold",Arial,sans-serif!important;
-  font-size:29px!important;font-weight:950!important;font-style:italic!important;line-height:1!important;letter-spacing:-.14em!important;
-  color:#ff4d9a!important;background:linear-gradient(145deg,#fff0f8 0%,#ff78b7 38%,#f13e96 72%,#b58aff 100%)!important;
-  -webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;
-  border:0!important;border-radius:0!important;text-shadow:none!important;filter:none!important;transform:skewX(-7deg)!important;
+  font-family:Arial,"Arial Rounded MT Bold",sans-serif!important;
+  font-size:29px!important;font-weight:900!important;font-style:italic!important;line-height:1!important;letter-spacing:-.12em!important;
+  color:#ff4d9a!important;-webkit-text-fill-color:#ff4d9a!important;
+  background:none!important;background-image:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;
+  border:0!important;border-radius:0!important;outline:0!important;text-shadow:none!important;box-shadow:none!important;filter:none!important;
+  transform:skewX(-7deg)!important;opacity:1!important;visibility:visible!important;
 }
 nav.masenetLiquidDock>button.dockReels>span:last-child{color:#c5ccda!important}
 nav.masenetLiquidDock>button.dockReels:hover .dockR,
 nav.masenetLiquidDock>button.dockReels:focus-visible .dockR{
-  background:linear-gradient(145deg,#fff7fc 0%,#ff9bcb 38%,#ff69ad 72%,#c9afff 100%)!important;
-  -webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;
+  color:#ff80b7!important;-webkit-text-fill-color:#ff80b7!important;background:none!important;background-image:none!important;
 }
 nav.masenetLiquidDock>button.dockCustomize,nav.masenetLiquidDock>button.dockNotifications{color:#aab5c7!important;background:transparent!important;border-color:transparent!important}
 nav.masenetLiquidDock>button.dockCustomize:hover,nav.masenetLiquidDock>button.dockCustomize:focus-visible{color:#d9eaff!important;background:#1e3046!important;border-color:#2d4967!important}
