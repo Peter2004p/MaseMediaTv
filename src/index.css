@@ -3447,3 +3447,36 @@ nav.masenetLiquidDock>button:focus-visible{outline:2px solid #8daeff!important;o
  nav.masenetLiquidDock>button.dockReels .dockR{width:28px!important;height:27px!important;font-size:29px!important}
 }
 @media(prefers-reduced-motion:reduce){nav.masenetLiquidDock>button{transition:none!important}}
+
+
+/* FINAL Reel dock correction: display a styled R only; absolutely no backing shape */
+nav.masenetLiquidDock>button.dockReels,
+nav.masenetLiquidDock>button.dockReels:hover,
+nav.masenetLiquidDock>button.dockReels:focus,
+nav.masenetLiquidDock>button.dockReels:focus-visible,
+nav.masenetLiquidDock>button.dockReels:active{
+  background:transparent!important;background-color:transparent!important;background-image:none!important;
+  border:0!important;border-color:transparent!important;border-radius:0!important;
+  box-shadow:none!important;outline-offset:2px!important;filter:none!important;transform:none!important;
+}
+nav.masenetLiquidDock>button.dockReels::before,
+nav.masenetLiquidDock>button.dockReels::after,
+nav.masenetLiquidDock>button.dockReels .dockR::before,
+nav.masenetLiquidDock>button.dockReels .dockR::after{
+  content:none!important;display:none!important;background:none!important;box-shadow:none!important;border:0!important;
+}
+nav.masenetLiquidDock>button.dockReels .dockR{
+  display:block!important;width:auto!important;height:auto!important;min-width:0!important;min-height:0!important;
+  margin:0!important;padding:0 3px 0 0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;background-image:none!important;box-shadow:none!important;outline:0!important;
+  color:#ff4f9a!important;font-family:Arial,Helvetica,sans-serif!important;
+  font-size:27px!important;font-weight:900!important;font-style:italic!important;
+  line-height:.9!important;letter-spacing:-.12em!important;text-shadow:none!important;
+  filter:none!important;transform:none!important;
+}
+nav.masenetLiquidDock>button.dockReels>span:last-child{
+  background:transparent!important;background-image:none!important;border:0!important;box-shadow:none!important;
+}
+nav.masenetLiquidDock>button.dockReels:hover,
+nav.masenetLiquidDock>button.dockReels:focus-visible{color:#fff!important}
+@media(max-width:560px){nav.masenetLiquidDock>button.dockReels .dockR{font-size:26px!important}}
