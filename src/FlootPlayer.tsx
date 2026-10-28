@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
-import 'movi-player';
 
 const MoviPlayerTag: any = 'movi-player';
 
@@ -27,6 +26,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const [error, setError] = useState(''); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
   const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
+  const [moviReady, setMoviReady] = useState(false);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
@@ -49,6 +49,20 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const mkvProxyUrl = mkvUseDirectSource ? rawSrc : proxyUrl;
 
   useEffect(() => { setMkvUseDirectSource(false); }, [episode.id, rawSrc]);
+
+  // Load the large Matroska-capable player only when an MKV source is actually opened.
+  // This keeps the regular MP4/HLS experience from downloading its multi-megabyte decoder bundle.
+  useEffect(() => {
+    if (!isMkvSource) { setMoviReady(false); return; }
+    let active = true;
+    setMoviReady(false);
+    import('movi-player').then(() => {
+      if (active) { setMoviReady(true); setError(''); }
+    }).catch(() => {
+      if (active) setError('The MKV playback module could not load. Check your connection and tap Retry.');
+    });
+    return () => { active = false; };
+  }, [isMkvSource, retry]);
 
   useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
@@ -88,6 +102,14 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
   const pictureInPicture = async () => { const v = videoRef.current as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null; if (!v) return; try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled && v.requestPictureInPicture) { await v.requestPictureInPicture(); } else { setError('Picture-in-Picture is not supported in this browser or Telegram webview. Use Fullscreen instead.'); } } catch { setError('Picture-in-Picture could not start. Try playing the video first, or use Fullscreen.'); } };
   const retrySource = () => { setError(''); setRetry(x => x + 1); };
+
+  if (isMkvSource && !embed && !moviReady) {
+    return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
+      <div className="flootStyleFrame" style={{ minHeight: 220, display: 'grid', placeItems: 'center', padding: 24, background: '#000', color: '#fff', textAlign: 'center' }}>
+        <div><p>{error || 'Preparing MKV playback…'}</p><button type="button" onClick={retrySource}>Retry</button></div>
+      </div>
+    </section>;
+  }
 
   if (isMkvSource && !embed) {
     return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
