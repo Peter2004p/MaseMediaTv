@@ -45,7 +45,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const grouped = new Map<string, Record<string, unknown>>();
   const standaloneMovies: Record<string, unknown>[] = [];
   for (const rawTitle of titles as Record<string, unknown>[]) {
-    const title = { ...rawTitle, type: normalizeTitleType(rawTitle.type) };
+    const title: Record<string, unknown> = { ...rawTitle, type: normalizeTitleType(rawTitle.type) };
     if (title.type !== "Drama") {
       standaloneMovies.push(title);
       continue;
@@ -70,9 +70,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const body = await request.json() as Record<string, unknown>;
   if (typeof body.name !== "string" || !body.name.trim()) return json({ error: "A title name is required." }, 400);
   const kind = normalizeTitleType(body.type) === "Drama" ? "drama" : "movie";
-  const normalizedName = body.name.trim().normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const normalizedName = body.name.trim().normalize("NFKC").toLowerCase().replace(/[’\']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const existingRows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
-  const existing = (existingRows.results || []).find(row => row.name.trim().normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim() === normalizedName);
+  const existing = (existingRows.results || []).find(row => row.name.trim().normalize("NFKC").toLowerCase().replace(/[’\']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim() === normalizedName);
   let id: string;
   let title: Record<string, unknown>;
   if (existing) {

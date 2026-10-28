@@ -6,6 +6,21 @@ interface WorkersAI {
 }
 interface Env { DB: D1Database; AI?: WorkersAI; ADMIN_EMAIL?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; }
 
+const episodeSearchText = (metadataJson: string): string => {
+  try {
+    const metadata = JSON.parse(metadataJson) as { episodes?: Array<{ title?: unknown; name?: unknown; season?: unknown; episode?: unknown }> };
+    if (!Array.isArray(metadata.episodes)) return "";
+    return metadata.episodes.map((episode) => {
+      const title = String(episode?.title || episode?.name || "").trim();
+      const season = Number(episode?.season) || 1;
+      const number = Number(episode?.episode) || 0;
+      return [title, number ? "season " + season + " episode " + number : "", number ? "s" + season + "e" + number : ""].filter(Boolean).join(" ");
+    }).join(" ");
+  } catch {
+    return "";
+  }
+};
+
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
   const body = await request.json().catch(() => ({})) as { message?: unknown; images?: Array<{data?:unknown;mimeType?:unknown}>; audios?: Array<{data?:unknown;mimeType?:unknown}>; adminMode?: boolean; viewerName?: string };
   // Verify admin identity from the secure session cookie; ignore client claims for permissions.
@@ -18,7 +33,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   let titles: Array<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}> = [];
   try {
     const rows = await env.DB.prepare(
-      "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 100"
+      "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC"
     ).all<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
     titles = rows.results || [];
   } catch (error) {
@@ -34,7 +49,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   if (!imageInputs.length && /recommend|available|library|drama|movie|search|find|episode/.test(q)) {
     const words = q.split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 2);
     const matches = titles.filter(t => {
-      const haystack = (t.name + " " + t.kind + " " + (t.description || "")).toLowerCase();
+      const haystack = (t.name + " " + t.kind + " " + (t.description || "") + " " + episodeSearchText(t.metadata_json)).toLowerCase();
       return haystack.includes(q) || words.some(w => haystack.includes(w));
     });
     if (!titles.length) {
@@ -52,7 +67,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       if (setting?.value_json) customInstructions = String(JSON.parse(setting.value_json).instructions || "").slice(0, 4000);
     } catch { /* Optional site setting. */ }
     const catalogueContext = titles.slice(0, 60).map(t =>
-      "- " + t.name + (t.year ? " (" + t.year + ")" : "") + " [" + t.kind + "]" + (t.description ? ": " + t.description.slice(0, 180) : "")
+      "- " + t.name + (t.year ? " (" + t.year + ")" : "") + " [" + t.kind + "]" + (t.description ? ": " + t.description.slice(0, 180) : "") + (episodeSearchText(t.metadata_json) ? " | Episodes: " + episodeSearchText(t.metadata_json).slice(0, 300) : "")
     ).join("\n") || "(No titles are currently saved.)";
     const instructions = [
       "You are MaseNet's helpful website assistant, inside the MaseNet website. Do not volunteer hosting providers, infrastructure, deployment platforms, internal configuration, or developer-only details. Be friendly, concise, and clear.",
@@ -101,7 +116,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     } catch { /* Optional setting; keep assistant available if it is absent. */ }
 
     const catalogueContext = titles.slice(0, 60).map(t =>
-      "- " + t.name + (t.year ? " (" + t.year + ")" : "") + " [" + t.kind + "]" + (t.description ? ": " + t.description.slice(0, 180) : "")
+      "- " + t.name + (t.year ? " (" + t.year + ")" : "") + " [" + t.kind + "]" + (t.description ? ": " + t.description.slice(0, 180) : "") + (episodeSearchText(t.metadata_json) ? " | Episodes: " + episodeSearchText(t.metadata_json).slice(0, 300) : "")
     ).join("\n") || "(No titles are currently saved.)";
     const systemPrompt = [
       "You are MaseNet's helpful website assistant. Do not volunteer hosting providers, infrastructure, deployment platforms, internal configuration, or developer-only details. Be friendly, concise, and clear.",
