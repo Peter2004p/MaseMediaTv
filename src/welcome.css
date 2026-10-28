@@ -105,3 +105,92 @@
 @media(max-width:560px){.welcomeProShell{padding:15px 15px max(18px,env(safe-area-inset-bottom))}.welcomeProHeader{padding-bottom:16px}.welcomeProBrand img{width:35px;height:35px}.welcomeProBrand b{font-size:17px}.welcomeProBrand small{font-size:7px;letter-spacing:.11em}.welcomeProHeaderActions{gap:9px}.welcomeLive{display:none}.welcomeHeaderSignIn{padding:9px 13px;font-size:11px}.welcomeProHero{padding:40px 0 27px;gap:29px}.welcomeProCopy h1{font-size:clamp(39px,10.7vw,53px);margin:18px 0 16px}.welcomeProLead{font-size:13px;line-height:1.75}.welcomeProActions{gap:16px;margin-top:23px}.welcomePro .welcomeProPrimary{width:100%;justify-content:center}.welcomeExploreLink{margin:0 auto}.welcomeProTrust{gap:10px 14px;margin-top:22px;font-size:9px}.welcomeProVisual{padding:13px 10px 11px;border-radius:19px}.welcomeVisualTop{font-size:6px;letter-spacing:.08em}.welcomeVisualPosters{height:clamp(220px,66vw,300px);margin-top:15px}.welcomeVisualPoster{border-radius:11px}.welcomeVisualPosterLeft{margin-right:-17px;transform:rotateY(14deg) rotateZ(-7deg) translateX(8px)}.welcomeVisualPosterRight{margin-left:-17px;transform:rotateY(-14deg) rotateZ(7deg) translateX(-8px)}.welcomePosterOverlay{inset:auto 10px 14px;gap:7px}.welcomePosterOverlay b{font-size:clamp(20px,6vw,28px)}.welcomePosterOverlay span{font-size:6px}.welcomePosterOverlay small{font-size:8px}.welcomeVisualPoster>span{font-size:6px;top:9px;left:8px}.welcomeVisualPosterBack>b{left:8px;bottom:11px;font-size:14px}.welcomeVisualBottom{gap:8px}.welcomeVisualBottom b{font-size:10px}.welcomeVisualBottom small{font-size:8px}.welcomeProFeatures{gap:8px;padding-bottom:18px}.welcomeProFeatures article{padding:12px 10px;gap:8px;border-radius:12px}.welcomeFeatureIcon{width:27px;height:27px;flex-basis:27px;font-size:12px;border-radius:8px}.welcomeProFeatures b{font-size:11px}.welcomeProFeatures p{font-size:9px}.welcomeProFooter{align-items:flex-start;flex-direction:column;gap:11px;font-size:9px}.welcomeProFooter nav{gap:15px}.welcomeProLegal{text-align:left;font-size:9px}}
 @media(max-width:360px){.welcomeProCopy h1{font-size:37px}.welcomeVisualTop>span:last-child{display:none}.welcomeProFeatures{grid-template-columns:1fr}.welcomeProFeatures article{align-items:center}.welcomeProFeatures p{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.welcomePro *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+
+/* 2026 premium title-page refinement: editorial hierarchy, accessible motion, and mobile-safe spacing */
+.welcomePro{
+  isolation:isolate;
+  background-color:#070b09;
+  background-image:linear-gradient(#d9ffe506 1px,transparent 1px),linear-gradient(90deg,#d9ffe506 1px,transparent 1px);
+  background-size:54px 54px;
+  background-position:center top;
+}
+.welcomePro .welcomeBackdrop{
+  background:radial-gradient(ellipse at 77% 27%,#00d9821c,transparent 34%),radial-gradient(ellipse at 15% 84%,#00a96816,transparent 31%),linear-gradient(145deg,#0b110e 0%,#070a09 58%,#060807 100%);
+}
+.welcomeProShell{padding-top:clamp(18px,2.8vw,34px)}
+.welcomeProHeader{border-bottom-color:#b4ffd018}
+.welcomeProBrand img{filter:drop-shadow(0 0 18px #00d98230)}
+.welcomeProBrand b{font-size:clamp(18px,2vw,22px);letter-spacing:-.055em}
+.welcomeProBrand small{color:#92a99a}
+.welcomeHeaderSignIn{transition:background .2s,border-color .2s,transform .2s}
+.welcomeHeaderSignIn:focus-visible,.welcomeExploreLink:focus-visible,.welcomePro a:focus-visible,.welcomePro button:focus-visible{outline:2px solid #7bf7b7;outline-offset:4px}
+.welcomeProHero{position:relative}
+.welcomeProCopy h1{max-width:700px;text-wrap:balance}
+.welcomeProCopy h1 em{background-image:linear-gradient(105deg,#70f5b8 0%,#d9ffea 44%,#8fe7bd 78%,#55d9a0 100%)}
+.welcomeProLead{color:#b7c7bd;max-width:525px}
+.welcomeProEyebrow{letter-spacing:.17em}
+.welcomePro .welcomeProPrimary{position:relative;overflow:hidden;box-shadow:0 10px 28px #00d98220,inset 0 1px #eafff188}
+.welcomePro .welcomeProPrimary:after{content:"";position:absolute;inset:0;transform:translateX(-120%);background:linear-gradient(105deg,transparent 20%,#ffffff4a 48%,transparent 75%);transition:transform .55s ease}
+.welcomePro .welcomeProPrimary:hover:after{transform:translateX(120%)}
+.welcomePro .welcomeProPrimary:active{transform:translateY(0) scale(.985)}
+.welcomeExploreLink{min-height:42px}
+.welcomeProTrust{color:#a0b2a6}
+.welcomeProTrust i{display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#00d98216;font-size:9px}
+.welcomeProVisual{
+  border-color:#b8ffda25;
+  background:linear-gradient(145deg,#15221add,#0a100df2 72%);
+  box-shadow:0 38px 100px #0009,inset 0 1px #ffffff1b,0 0 0 1px #00d98206;
+}
+.welcomeProVisual:before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(125deg,#ffffff0a,transparent 28% 70%,#00d98208)}
+.welcomeVisualTop{position:relative;z-index:1}
+.welcomeVisualPosters{isolation:isolate}
+.welcomeVisualPoster{transition:transform .35s ease,box-shadow .35s ease;will-change:transform}
+.welcomeVisualPosterMain{box-shadow:0 24px 65px #000b,0 0 0 1px #00d98218}
+.welcomeProVisual:hover .welcomeVisualPosterMain{transform:translateY(-3px)}
+.welcomeProVisual:hover .welcomeVisualPosterLeft{transform:rotateY(17deg) rotateZ(-8deg) translate(8px,-2px)}
+.welcomeProVisual:hover .welcomeVisualPosterRight{transform:rotateY(-17deg) rotateZ(8deg) translate(-8px,-2px)}
+.welcomePosterPlay{border-color:#c4ffdf70;box-shadow:0 0 22px #00d9821c}
+.welcomeVisualBottom{position:relative;z-index:1}
+.welcomeVisualAvatar{box-shadow:inset 0 1px #baffd633,0 0 22px #00d98212}
+.welcomeProFeatures{gap:12px}
+.welcomeProFeatures article{position:relative;overflow:hidden;border-color:#d5ffe615;background:linear-gradient(145deg,#ffffff09,#ffffff03);box-shadow:inset 0 1px #ffffff07}
+.welcomeProFeatures article:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,#00d9820a,transparent 55%);opacity:0;transition:opacity .2s}
+.welcomeProFeatures article:hover:after{opacity:1}
+.welcomeFeatureIcon{box-shadow:inset 0 1px #caffdf15}
+.welcomeProFooter{border-top-color:#b4ffd018;color:#809488}
+.welcomeProFooter a{transition:color .2s}
+.welcomeProLegal{color:#7c9083}
+@keyframes welcomeSoftRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.welcomeProCopy{animation:welcomeSoftRise .5s ease-out both}
+.welcomeProVisual{animation:welcomeSoftRise .65s .08s ease-out both}
+.welcomeProFeatures article{animation:welcomeSoftRise .45s ease-out both}
+.welcomeProFeatures article:nth-child(2){animation-delay:.05s}
+.welcomeProFeatures article:nth-child(3){animation-delay:.1s}
+.welcomeProFeatures article:nth-child(4){animation-delay:.15s}
+@media(max-width:900px){
+ .welcomeProHero{padding-top:clamp(36px,7vw,60px)}
+ .welcomeProVisual{max-width:680px}
+}
+@media(max-width:560px){
+ .welcomePro{background-size:38px 38px;background-position:center top}
+ .welcomeProShell{padding-top:13px}
+ .welcomeProHeader{align-items:center}
+ .welcomeProBrand{gap:8px}
+ .welcomeProBrand img{width:34px;height:34px}
+ .welcomeProBrand small{font-size:6.5px}
+ .welcomeProHero{padding-top:34px}
+ .welcomeProCopy h1{max-width:440px;text-wrap:balance}
+ .welcomeProTrust{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .welcomeProTrust span:last-child{grid-column:1/-1}
+ .welcomeProVisual{box-shadow:0 24px 60px #0008,inset 0 1px #ffffff14}
+ .welcomeProFeatures{gap:8px}
+ .welcomeProFeatures article{min-height:90px}
+ .welcomeProFooter{padding-top:15px}
+}
+@media(prefers-reduced-motion:reduce){
+ .welcomeProCopy,.welcomeProVisual,.welcomeProFeatures article{animation:none!important}
+ .welcomePro .welcomeProPrimary:after{display:none}
+ .welcomeProVisual:hover .welcomeVisualPosterMain,.welcomeProVisual:hover .welcomeVisualPosterLeft,.welcomeProVisual:hover .welcomeVisualPosterRight{transform:none}
+ *{scroll-behavior:auto!important}
+}
