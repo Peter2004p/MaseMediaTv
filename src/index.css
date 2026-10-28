@@ -3047,3 +3047,90 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
  .profileProBenefits small{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){.profilePro *{transition:none!important;animation:none!important}}
+
+
+/* MaseNet professional polish — navigation, discovery, settings, assistant and player-page chrome.
+   Playback elements and source-selection logic are intentionally untouched. */
+.telegram.telegramCompact{width:46px!important;height:46px!important;min-width:46px!important;padding:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;overflow:visible!important;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);background:linear-gradient(145deg,rgba(25,38,54,.96),rgba(7,14,25,.94))!important;border:1px solid rgba(92,190,255,.42)!important;box-shadow:0 10px 32px rgba(0,0,0,.34),0 0 0 4px rgba(57,166,239,.07)!important}
+.telegram.telegramCompact .telegramJoin{width:100%!important;height:100%!important;min-height:0!important;padding:0!important;gap:0!important;display:grid!important;place-items:center!important;border:0!important;border-radius:50%!important;background:transparent!important}
+.telegram.telegramCompact .telegramJoin span{display:none!important}
+.telegram.telegramCompact .telegramLogo{width:22px!important;height:22px!important;flex:none!important;filter:drop-shadow(0 0 8px rgba(75,183,255,.22))}
+.telegram:not(.telegramCompact) .telegramJoin{transition:width .22s ease,background .22s ease,box-shadow .22s ease}
+.telegram.telegramCompact{transition:width .22s ease,height .22s ease,transform .22s ease,box-shadow .22s ease}
+.telegram.telegramCompact:hover{transform:translateY(-2px) scale(1.04)!important;box-shadow:0 13px 36px rgba(0,0,0,.4),0 0 0 5px rgba(57,166,239,.1)!important}
+@media(max-width:560px){.telegram.telegramCompact{width:42px!important;height:42px!important;min-width:42px!important}.telegram.telegramCompact .telegramLogo{width:20px!important;height:20px!important}.telegram:not(.telegramCompact){max-width:calc(100vw - 28px)}}
+
+.maseCustomizeSettings{gap:17px!important;padding:5px 2px 14px!important}
+.maseCustomizeSettings .settingsHeading{padding:3px 2px 13px!important;border-bottom:1px solid var(--border,rgba(255,255,255,.1))}
+.maseCustomizeSettings .settingsHeading>b{font-size:16px!important;letter-spacing:-.025em}
+.maseCustomizeSettings .settingsHeading small{display:block;margin-top:5px;line-height:1.5;color:var(--muted,#9ba6b6)}
+.maseCustomizeSettings .customizePreview{padding:15px!important;min-height:82px;border-radius:20px!important;border:1px solid color-mix(in srgb,var(--accent,#52e6a0) 22%,transparent)!important;background:linear-gradient(135deg,color-mix(in srgb,var(--accent,#52e6a0) 10%,transparent),rgba(255,255,255,.035))!important;box-shadow:inset 0 1px rgba(255,255,255,.08),0 12px 30px rgba(0,0,0,.12)}
+.maseCustomizeSettings .customizePreviewOrb{box-shadow:0 0 24px color-mix(in srgb,var(--accent,#52e6a0) 20%,transparent)}
+.maseCustomizeSettings>label{display:block;margin:2px 2px -8px!important;color:var(--text,#f5f7fb)!important;font-size:12px!important;font-weight:750!important;letter-spacing:.025em}
+.maseCustomizeSettings .experienceChoices,.maseCustomizeSettings .themeGrid{gap:9px!important}
+.maseCustomizeSettings .experienceChoices button,.maseCustomizeSettings .themeGrid button{min-height:68px;border-radius:15px!important;border:1px solid var(--border,rgba(255,255,255,.1))!important;background:var(--glass,rgba(255,255,255,.035))!important;transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.maseCustomizeSettings .experienceChoices button.chosen,.maseCustomizeSettings .themeGrid button.chosen{border-color:color-mix(in srgb,var(--accent,#52e6a0) 62%,transparent)!important;background:color-mix(in srgb,var(--accent,#52e6a0) 10%,transparent)!important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent,#52e6a0) 12%,transparent)}
+.maseCustomizeSettings .experienceChoices button:active,.maseCustomizeSettings .themeGrid button:active{transform:scale(.985)}
+.maseCustomizeSettings .customizeToggleRow{padding:13px 14px!important;border-radius:15px!important;border:1px solid var(--border,rgba(255,255,255,.1));background:rgba(255,255,255,.025)}
+.maseCustomizeSettings .customizeToggleRow span b{font-size:12px}
+.maseCustomizeSettings .customizeToggleRow span small{display:block;margin-top:4px;line-height:1.4;color:var(--muted,#9ba6b6)}
+.maseCustomizeSettings .customizeWeather{min-height:46px;justify-content:center;border-radius:14px!important;font-weight:700}
+.maseCustomizeSettings .customizeStatus{margin:-8px 2px 0;font-size:12px;line-height:1.5;color:var(--muted,#9ba6b6)}
+.maseCustomizeSettings .customizeFooterActions{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding-top:5px}
+.maseCustomizeSettings .customizeFooterActions button{min-height:43px;border-radius:13px}
+@media(max-width:420px){.maseCustomizeSettings .customizeFooterActions{grid-template-columns:1fr}.maseCustomizeSettings .experienceChoices button,.maseCustomizeSettings .themeGrid button{min-height:60px}}
+
+.aiPanel{border-color:rgba(150,194,224,.2)!important;box-shadow:0 28px 80px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.1)!important}
+.aiHeader{padding:12px 10px!important;border-bottom:1px solid rgba(255,255,255,.075)!important}
+.aiHeaderIdentity b{letter-spacing:-.02em}
+.aiHeaderIdentity small{margin-top:4px!important}
+.aiMessages{padding:14px 4px 10px!important;scrollbar-width:thin;scroll-behavior:smooth}
+.aiBubble{max-width:min(88%,520px);padding:11px 13px!important;border-radius:17px!important;line-height:1.55!important;overflow-wrap:anywhere}
+.aiBubble.user{border-bottom-right-radius:5px!important;box-shadow:0 5px 15px rgba(0,0,0,.12)}
+.aiBubble.assistant{border-bottom-left-radius:5px!important;box-shadow:0 5px 17px rgba(0,0,0,.13)}
+.aiComposer{gap:8px!important;padding:9px!important;border-radius:21px!important;border:1px solid rgba(158,198,228,.18)!important;box-shadow:0 9px 28px rgba(0,0,0,.16)!important}
+.aiComposer textarea,.aiComposer input{line-height:1.45!important}
+.aiSend{width:42px!important;height:42px!important;border-radius:15px!important;flex:none}
+.aiTyping{margin:2px 0 8px}
+.aiFullCustomize{border-radius:17px!important;padding:12px!important}
+@media(max-width:560px){.aiPanel{border-radius:22px!important}.aiHeader{padding:10px 7px!important}.aiMessages{padding:12px 2px 8px!important}.aiBubble{max-width:92%;font-size:13px!important}.aiComposer{padding:7px!important;border-radius:18px!important}.aiSend{width:40px!important;height:40px!important}}
+
+.iqHome{isolation:isolate}
+.iqHome .iqRow{margin-bottom:clamp(26px,3vw,42px)!important}
+.iqHome .iqRowHead{align-items:end!important;gap:12px!important;margin-bottom:14px!important}
+.iqHome .iqRowHead h2{letter-spacing:-.035em!important}
+.iqHome .iqKicker{font-size:9px!important;letter-spacing:.16em!important}
+.iqHome .iqGrid{gap:clamp(10px,1.4vw,17px)!important}
+.iqHome .iqCard{min-width:0!important;padding:0 0 7px!important;text-align:left!important;transition:transform .2s ease,border-color .2s ease,background .2s ease!important}
+.iqHome .iqCard:focus-visible{outline:2px solid var(--mase-accent,#00cc78)!important;outline-offset:4px}
+.iqHome .iqPoster{overflow:hidden!important;position:relative!important}
+.iqHome .iqPoster img{transition:transform .35s ease,filter .35s ease!important}
+.iqHome .iqCard:hover .iqPoster img{transform:scale(1.035)}
+.iqHome .iqCard>b{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35!important}
+.iqHome .iqCard>small{line-height:1.45!important}
+.iqHome .iqPlay{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.iqHome .iqSearchResults{padding:clamp(10px,2vw,24px)!important;border:1px solid rgba(255,255,255,.07);border-radius:22px;background:linear-gradient(135deg,rgba(255,255,255,.025),transparent 55%)}
+.iqHome .iqSearchResults .iqGrid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(132px,1fr))!important}
+@media(max-width:560px){.iqHome .iqSearchResults{padding:10px!important;border-radius:17px!important}.iqHome .iqSearchResults .iqGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}.iqHome .iqRowHead h2{font-size:clamp(17px,5vw,22px)!important}}
+
+.page.detail{max-width:1180px!important;padding-top:clamp(24px,4vw,52px)!important}
+.page.detail>.back{width:max-content;min-height:40px;padding:9px 13px!important;border:1px solid rgba(255,255,255,.09)!important;border-radius:999px!important;background:rgba(255,255,255,.035)!important;color:#d5dce5!important;transition:background .18s ease,border-color .18s ease}
+.page.detail>.back:hover{background:rgba(255,255,255,.075)!important;border-color:rgba(255,255,255,.2)!important}
+.page.detail .detailHero{padding:clamp(15px,3vw,30px)!important;border:1px solid rgba(255,255,255,.085);border-radius:25px;background:radial-gradient(ellipse at 8% 0%,rgba(0,204,120,.09),transparent 46%),linear-gradient(135deg,rgba(255,255,255,.035),rgba(255,255,255,.012));box-shadow:0 20px 55px rgba(0,0,0,.13)}
+.page.detail .detailHero>.poster{border-radius:17px;overflow:hidden;box-shadow:0 18px 42px rgba(0,0,0,.28)}
+.page.detail .detailHero h1{letter-spacing:-.045em;line-height:1.02}
+.page.detail .chips{gap:8px!important}
+.page.detail .chips span{border-radius:999px!important;padding:7px 11px!important;background:rgba(255,255,255,.035)}
+.page.detail .playerSection{margin-top:26px!important;padding:clamp(14px,2.5vw,24px)!important;border:1px solid rgba(255,255,255,.085);border-radius:22px;background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.012))}
+.page.detail .playerHeading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px!important}
+.page.detail .playerHeading h3{font-size:clamp(16px,2.5vw,21px)!important;line-height:1.35;letter-spacing:-.025em}
+.page.detail .playerActions{gap:7px!important;flex-wrap:wrap;justify-content:flex-end}
+.page.detail .playerActions .icon{width:40px;height:40px;border-radius:13px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.045)}
+.page.detail .episodes{margin-top:24px!important;padding:clamp(14px,2.5vw,22px)!important;border:1px solid rgba(255,255,255,.08);border-radius:22px;background:rgba(255,255,255,.018)}
+.page.detail .episodes .rowHead h2{letter-spacing:-.03em}
+.page.detail .seasonTabs{flex-wrap:wrap}
+.page.detail .seasonTabs button,.page.detail .episodeGrid button{border-radius:13px!important;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.page.detail .episodeGrid button{min-height:58px}
+@media(max-width:640px){.page.detail{padding:20px 10px 100px!important}.page.detail .detailHero{grid-template-columns:108px minmax(0,1fr)!important;gap:14px!important;padding:13px!important;border-radius:19px!important}.page.detail .detailHero>.poster{width:108px!important;border-radius:12px!important}.page.detail .detailHero h1{font-size:clamp(22px,6vw,32px)!important;margin:8px 0 12px!important}.page.detail .detailHero p{font-size:12px;line-height:1.55}.page.detail .playerSection,.page.detail .episodes{margin-top:16px!important;padding:12px!important;border-radius:17px!important}.page.detail .playerHeading{align-items:flex-start}.page.detail .playerActions .icon{width:36px;height:36px;border-radius:11px}.page.detail .seasonTabs{margin:12px 0;gap:6px}.page.detail .episodeGrid{gap:8px!important}}
+@media(max-width:360px){.page.detail .detailHero{grid-template-columns:1fr!important}.page.detail .detailHero>.poster{width:126px!important}.page.detail .playerHeading{display:grid}.page.detail .playerActions{justify-content:flex-start}}
+@media(prefers-reduced-motion:reduce){.telegram,.telegramJoin,.iqHome .iqCard,.iqHome .iqPoster img,.maseCustomizeSettings button,.page.detail .back{transition:none!important}}
