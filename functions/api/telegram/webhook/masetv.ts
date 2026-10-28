@@ -72,6 +72,13 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return sent.ok ? json({ ok: true }) : json({ ok: false, error: "Telegram could not deliver the help reply." }, 502);
   }
 
+  // Reply with the owner's exact social links deterministically, even if the AI provider is unavailable.
+  if (chatType === "private" && !incoming.startsWith("/") && /social|official links|facebook|tiktok|youtube|telegram|follow (?:you|us|masenet|masetv|masemedia)|where can i follow/i.test(incoming) && /link|url|social|follow|channel|account|facebook|tiktok|youtube|telegram/i.test(incoming)) {
+    const socialReply = "MaseNet, MaseTv, and MaseMediaTv are the same platform. Here are our official links:\\n\\nYouTube: https://youtube.com/@masemedia_tv\\nFacebook: https://www.facebook.com/share/1A5pSvKte9/\\nTikTok: https://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E\\nTelegram Channel 1: https://t.me/MaseMediaTv\\nTelegram Channel 2: https://t.me/MoonDramaC\\nTelegram Bot: https://t.me/MaseTv_Bot";
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: socialReply, disable_web_page_preview: true, ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }) });
+    return sent.ok ? json({ ok: true, socialLinks: true }) : json({ ok: false, error: "Telegram could not deliver the social links." }, 502);
+  }
+
   // Treat ordinary greetings and natural-language questions as chat without requiring /ai.
   // Keep likely title/episode searches in the catalog-search flow below.
   const looksLikeCatalogSearch = /\b(?:episode|ep|season|movie|drama|film|s\d+e\d+)\b/i.test(incoming)
