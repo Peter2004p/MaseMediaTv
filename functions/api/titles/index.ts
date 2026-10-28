@@ -45,7 +45,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const grouped = new Map<string, Record<string, unknown>>();
   const standaloneMovies: Record<string, unknown>[] = [];
   for (const rawTitle of titles as Record<string, unknown>[]) {
-    const title = { ...rawTitle, type: normalizeTitleType(rawTitle.type) };
+    const title: Record<string, unknown> = { ...rawTitle, type: normalizeTitleType(rawTitle.type) };
     if (title.type !== "Drama") {
       standaloneMovies.push(title);
       continue;
