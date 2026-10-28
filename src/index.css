@@ -2656,3 +2656,49 @@ button{touch-action:manipulation}
  .app .masenetLiquidDock{width:calc(100% - 28px)!important;padding:4px 6px!important;gap:2px!important}
  .app .masenetLiquidDock button svg{width:22px!important;height:22px!important}
 }
+
+
+/* Final high-specificity override: compact centered dock matching the supplied screenshot */
+html body #root .app nav.masenetLiquidDock{
+  position:fixed!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;
+  bottom:max(12px,env(safe-area-inset-bottom,0px))!important;
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  width:min(760px,calc(100vw - 40px))!important;max-width:760px!important;
+  height:66px!important;min-height:66px!important;max-height:66px!important;
+  box-sizing:border-box!important;padding:7px 12px!important;gap:8px!important;
+  border-radius:999px!important;border:1px solid rgba(204,224,255,.30)!important;
+  background:linear-gradient(110deg,rgba(33,49,76,.84),rgba(20,27,49,.83) 52%,rgba(35,30,58,.80))!important;
+  box-shadow:0 10px 32px rgba(0,0,0,.36),inset 0 1px rgba(255,255,255,.19)!important;
+  backdrop-filter:blur(30px) saturate(170%)!important;-webkit-backdrop-filter:blur(30px) saturate(170%)!important;
+}
+html body #root .app nav.masenetLiquidDock>button{
+  display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;
+  width:100%!important;min-width:0!important;height:48px!important;min-height:48px!important;max-height:48px!important;
+  margin:0!important;padding:2px 3px!important;gap:0!important;border-radius:999px!important;
+  background-color:transparent!important;box-shadow:none!important;
+}
+html body #root .app nav.masenetLiquidDock>button>span:last-child{display:none!important}
+html body #root .app nav.masenetLiquidDock>button.dockNotifications>span:last-child{
+  display:block!important;font-size:10px!important;line-height:11px!important;font-weight:650!important;margin-top:1px!important;
+}
+html body #root .app nav.masenetLiquidDock>button>svg{width:25px!important;height:25px!important;flex:0 0 25px!important;stroke-width:1.8!important}
+html body #root .app nav.masenetLiquidDock>button.dockReels .dockR{
+  display:grid!important;place-items:center!important;width:42px!important;height:42px!important;max-width:42px!important;max-height:42px!important;
+  font-size:35px!important;line-height:1!important;border-radius:14px!important;margin:0!important;
+}
+html body #root .app nav.masenetLiquidDock>button.dockNotifications .dockNotificationBadge{
+  top:0!important;right:calc(50% - 24px)!important;min-width:21px!important;height:21px!important;
+  font-size:10px!important;line-height:21px!important;border:1px solid rgba(255,255,255,.2)!important;
+}
+html body #root .app nav.masenetLiquidDock~.siteLegalFooter{padding-bottom:90px!important}
+@media(max-width:680px){
+ html body #root .app nav.masenetLiquidDock{
+  width:min(420px,calc(100vw - 48px))!important;max-width:420px!important;height:58px!important;min-height:58px!important;max-height:58px!important;
+  padding:4px 8px!important;gap:4px!important;bottom:max(9px,env(safe-area-inset-bottom,0px))!important;
+ }
+ html body #root .app nav.masenetLiquidDock>button{height:46px!important;min-height:46px!important;max-height:46px!important}
+ html body #root .app nav.masenetLiquidDock>button>svg{width:23px!important;height:23px!important;flex-basis:23px!important}
+ html body #root .app nav.masenetLiquidDock>button.dockReels .dockR{width:36px!important;height:36px!important;font-size:30px!important}
+ html body #root .app nav.masenetLiquidDock>button.dockNotifications>span:last-child{font-size:9px!important}
+ html body #root .app nav.masenetLiquidDock>button.dockNotifications .dockNotificationBadge{right:calc(50% - 22px)!important;min-width:19px!important;height:19px!important;line-height:19px!important}
+}
