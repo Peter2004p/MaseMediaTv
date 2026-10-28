@@ -3205,3 +3205,79 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
  .masenetLiquidDock>button:first-child,.masenetLiquidDock>button:nth-child(2),.masenetLiquidDock>button.dockReels,
  .masenetLiquidDock>button:first-child svg,.masenetLiquidDock>button:nth-child(2) svg,.masenetLiquidDock>button.dockReels .dockR{transition:none!important}
 }
+
+
+/* MaseNet 3D iOS-inspired five-button navigation polish */
+.masenetLiquidDock>button{
+  position:relative;isolation:isolate;overflow:hidden;
+  min-width:0;min-height:54px;padding:7px clamp(9px,1.7vw,15px);
+  display:flex;flex:1 1 0;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  border:1px solid rgba(255,255,255,.13);border-radius:18px;
+  color:rgba(239,245,255,.78);
+  background:linear-gradient(148deg,rgba(255,255,255,.105),rgba(255,255,255,.035) 48%,rgba(255,255,255,.018));
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.17),inset 0 -1px 0 rgba(0,0,0,.18),0 6px 14px rgba(0,0,0,.22);
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .24s cubic-bezier(.2,.8,.2,1),background .24s ease,border-color .24s ease,color .24s ease,box-shadow .24s ease,filter .24s ease;
+}
+.masenetLiquidDock>button::after{
+  content:"";position:absolute;inset:1px 1px auto;height:48%;border-radius:inherit;
+  background:linear-gradient(180deg,rgba(255,255,255,.12),transparent);
+  opacity:.6;pointer-events:none;z-index:-1;
+}
+.masenetLiquidDock>button>svg,.masenetLiquidDock>button>.dockR{
+  flex:0 0 auto;transform:translateY(0) scale(1);
+  transition:transform .28s cubic-bezier(.2,.8,.2,1),filter .25s ease;
+}
+.masenetLiquidDock>button>span{
+  font-size:10px;font-weight:700;letter-spacing:.01em;line-height:1.05;white-space:nowrap;
+}
+.masenetLiquidDock>button.dockCustomize{
+  border-color:rgba(111,187,255,.23);
+  background:linear-gradient(150deg,rgba(111,187,255,.12),rgba(255,255,255,.035) 55%,rgba(255,255,255,.015));
+}
+.masenetLiquidDock>button.dockNotifications{
+  border-color:rgba(255,199,111,.25);
+  background:linear-gradient(150deg,rgba(255,199,111,.12),rgba(255,255,255,.035) 55%,rgba(255,255,255,.015));
+}
+.masenetLiquidDock>button.dockCustomize:hover,
+.masenetLiquidDock>button.dockCustomize:focus-visible{
+  color:#fff;border-color:rgba(126,194,255,.65);
+  background:linear-gradient(145deg,rgba(75,160,255,.25),rgba(255,255,255,.055));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 8px 22px rgba(53,135,255,.2);
+}
+.masenetLiquidDock>button.dockNotifications:hover,
+.masenetLiquidDock>button.dockNotifications:focus-visible{
+  color:#fff;border-color:rgba(255,206,127,.65);
+  background:linear-gradient(145deg,rgba(255,184,70,.22),rgba(255,255,255,.055));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 8px 22px rgba(255,170,56,.16);
+}
+.masenetLiquidDock>button.dockCustomize:hover>svg,
+.masenetLiquidDock>button.dockCustomize:focus-visible>svg{transform:translateY(-2px) rotate(-8deg);filter:drop-shadow(0 0 7px rgba(113,184,255,.65))}
+.masenetLiquidDock>button.dockNotifications:hover>svg,
+.masenetLiquidDock>button.dockNotifications:focus-visible>svg{transform:translateY(-2px) rotate(-10deg);filter:drop-shadow(0 0 7px rgba(255,200,112,.65))}
+.masenetLiquidDock>button.dockNotifications .dockNotificationBadge{
+  position:absolute;top:2px;right:5px;z-index:2;min-width:16px;height:16px;padding:0 4px;
+  display:grid;place-items:center;border:1px solid rgba(255,255,255,.6);border-radius:999px;
+  background:linear-gradient(145deg,#ff7b7b,#e83c59);color:#fff;
+  box-shadow:0 2px 9px rgba(245,55,88,.4);font:800 9px/1 ui-sans-serif,system-ui,sans-serif;font-style:normal;
+  animation:dockBadgePop .35s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes dockBadgePop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.13)}100%{transform:scale(1);opacity:1}}
+@keyframes dockButtonEnter{from{opacity:.65;transform:translateY(5px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.masenetLiquidDock>button{animation:dockButtonEnter .38s cubic-bezier(.2,.8,.2,1) both}
+.masenetLiquidDock>button:nth-child(2){animation-delay:.025s}
+.masenetLiquidDock>button:nth-child(3){animation-delay:.05s}
+.masenetLiquidDock>button:nth-child(4){animation-delay:.075s}
+.masenetLiquidDock>button:nth-child(5){animation-delay:.1s}
+.masenetLiquidDock>button:active{transform:translateY(1px) scale(.94);filter:brightness(1.12)}
+.masenetLiquidDock>button:focus-visible{outline:2px solid rgba(154,194,255,.9);outline-offset:3px}
+.masenetLiquidDock>button.dockCustomize:active>svg{transform:rotate(-12deg) scale(.9)}
+.masenetLiquidDock>button.dockNotifications:active>svg{transform:rotate(12deg) scale(.9)}
+@media(max-width:560px){
+  .masenetLiquidDock>button{min-height:50px;padding:6px 5px;gap:3px;border-radius:16px}
+  .masenetLiquidDock>button>span{font-size:9px}
+  .masenetLiquidDock>button.dockNotifications .dockNotificationBadge{top:1px;right:2px;min-width:15px;height:15px;font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  .masenetLiquidDock>button,.masenetLiquidDock>button>svg,.masenetLiquidDock>button>.dockR,.masenetLiquidDock>button.dockNotifications .dockNotificationBadge{animation:none!important;transition:none!important}
+}
