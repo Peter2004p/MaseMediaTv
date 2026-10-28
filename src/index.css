@@ -2461,3 +2461,88 @@ button{touch-action:manipulation}
   .app .maseCustomizeSettings *::before,
   .app .maseCustomizeSettings *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* Mase UI: a distinct, branded one-hand experience */
+.experience-oneui9 .nav,
+.experience-oneui9 .maseReferenceHeader{
+  border-radius:0 0 24px 24px!important;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--panel) 94%,var(--accent) 6%),var(--panel))!important;
+}
+.experience-oneui9 .maseBrief{
+  border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border))!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.16),inset 0 1px rgba(255,255,255,.06)!important;
+}
+.experience-oneui9 .briefHeading h2{letter-spacing:-.055em!important}
+.experience-oneui9 .briefQuick button{border-radius:999px!important;min-height:40px!important}
+.experience-oneui9 .iqCard{border-radius:19px!important}
+.experience-oneui9 .iqCard .poster{border-radius:16px!important}
+
+/* Cinema Pro: make the mode visibly cinematic, not merely a label. */
+.experience-cinema{
+  --cinema-gold:#e9c477;
+  --cinema-ink:#08090d;
+  background:
+    radial-gradient(ellipse at 50% -12%,rgba(181,132,55,.13),transparent 42%),
+    var(--bg)!important;
+}
+.experience-cinema .iqHome{max-width:1540px!important;padding-top:8px!important}
+.experience-cinema .iqHero{
+  min-height:clamp(520px,72vh,760px)!important;
+  border-radius:9px!important;
+  border:1px solid rgba(233,196,119,.28)!important;
+  box-shadow:0 28px 80px rgba(0,0,0,.38)!important;
+  overflow:hidden!important;
+}
+.experience-cinema .iqHero:after{
+  content:"MA SENET CINEMA";position:absolute;z-index:2;top:18px;left:20px;
+  padding:7px 11px;border:1px solid rgba(233,196,119,.42);border-radius:3px;
+  background:rgba(8,9,13,.72);color:var(--cinema-gold);
+  font-size:9px;font-weight:900;letter-spacing:.22em;
+  backdrop-filter:blur(12px);pointer-events:none;
+}
+.experience-cinema .iqHeroCopy h1,
+.experience-cinema .iqHeroCopy h2{
+  font-family:Georgia,"Times New Roman",serif!important;
+  font-weight:800!important;letter-spacing:-.045em!important;
+  text-shadow:0 5px 32px rgba(0,0,0,.8)!important;
+}
+.experience-cinema .iqHeroCopy p{max-width:620px!important;line-height:1.8!important}
+.experience-cinema .iqRowHead{
+  border-bottom:1px solid rgba(233,196,119,.22)!important;
+  padding-bottom:10px!important;margin-bottom:15px!important;
+}
+.experience-cinema .iqRowHead h2{
+  font-family:Georgia,"Times New Roman",serif!important;
+  letter-spacing:-.035em!important;
+}
+.experience-cinema .iqCard{background:transparent!important}
+.experience-cinema .iqCard .poster{
+  border-radius:5px!important;
+  box-shadow:0 10px 28px rgba(0,0,0,.3)!important;
+  outline:1px solid rgba(233,196,119,.12)!important;
+  transition:transform .24s ease,outline-color .24s ease,box-shadow .24s ease!important;
+}
+.experience-cinema .iqCard:hover .poster{
+  transform:translateY(-5px) scale(1.015)!important;
+  outline-color:rgba(233,196,119,.65)!important;
+  box-shadow:0 18px 38px rgba(0,0,0,.45)!important;
+}
+.experience-cinema .iqCard>b{font-weight:800!important;letter-spacing:-.015em!important}
+.experience-cinema .primary{
+  background:linear-gradient(135deg,#f3d99d,#c49a4e)!important;
+  color:#171109!important;border-color:#e9c477!important;
+}
+.experience-cinema .iqCategories{
+  border:1px solid rgba(233,196,119,.2)!important;
+  background:rgba(10,10,13,.9)!important;
+}
+@media(max-width:760px){
+  .experience-cinema .iqHero{min-height:500px!important}
+  .experience-cinema .iqHero:after{top:12px;left:12px;font-size:8px}
+  .experience-cinema .iqGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:13px!important}
+  .experience-cinema .iqRowHead h2{font-size:21px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .experience-cinema .iqCard .poster{transition:none!important}
+}
