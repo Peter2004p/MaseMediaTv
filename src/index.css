@@ -3134,3 +3134,74 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
 @media(max-width:640px){.page.detail{padding:20px 10px 100px!important}.page.detail .detailHero{grid-template-columns:108px minmax(0,1fr)!important;gap:14px!important;padding:13px!important;border-radius:19px!important}.page.detail .detailHero>.poster{width:108px!important;border-radius:12px!important}.page.detail .detailHero h1{font-size:clamp(22px,6vw,32px)!important;margin:8px 0 12px!important}.page.detail .detailHero p{font-size:12px;line-height:1.55}.page.detail .playerSection,.page.detail .episodes{margin-top:16px!important;padding:12px!important;border-radius:17px!important}.page.detail .playerHeading{align-items:flex-start}.page.detail .playerActions .icon{width:36px;height:36px;border-radius:11px}.page.detail .seasonTabs{margin:12px 0;gap:6px}.page.detail .episodeGrid{gap:8px!important}}
 @media(max-width:360px){.page.detail .detailHero{grid-template-columns:1fr!important}.page.detail .detailHero>.poster{width:126px!important}.page.detail .playerHeading{display:grid}.page.detail .playerActions{justify-content:flex-start}}
 @media(prefers-reduced-motion:reduce){.telegram,.telegramJoin,.iqHome .iqCard,.iqHome .iqPoster img,.maseCustomizeSettings button,.page.detail .back{transition:none!important}}
+
+
+/* iOS 27-inspired navigation button refresh — deliberately leaves the dock/bar itself untouched. */
+.app .masenetLiquidDock>button:first-child,
+.app .masenetLiquidDock>button:nth-child(2),
+.app .masenetLiquidDock>button.dockReels{
+  position:relative;isolation:isolate;overflow:hidden;min-width:58px;min-height:54px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  padding:7px 13px;border:1px solid rgba(255,255,255,.11);border-radius:19px;
+  color:rgba(245,248,255,.78);background:linear-gradient(155deg,rgba(255,255,255,.075),rgba(255,255,255,.018));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.11),0 5px 16px rgba(0,0,0,.16);
+  -webkit-tap-highlight-color:transparent;backdrop-filter:blur(18px) saturate(150%);
+  transition:transform .28s cubic-bezier(.2,.8,.2,1),background .25s ease,border-color .25s ease,color .25s ease,box-shadow .25s ease;
+}
+.app .masenetLiquidDock>button:first-child::before,
+.app .masenetLiquidDock>button:nth-child(2)::before,
+.app .masenetLiquidDock>button.dockReels::before{
+  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;opacity:0;transition:opacity .25s ease;pointer-events:none;
+}
+.app .masenetLiquidDock>button:first-child svg,
+.app .masenetLiquidDock>button:nth-child(2) svg,
+.app .masenetLiquidDock>button.dockReels .dockR{flex:0 0 auto;transition:transform .28s cubic-bezier(.2,.8,.2,1),filter .25s ease}
+.app .masenetLiquidDock>button:first-child span,
+.app .masenetLiquidDock>button:nth-child(2) span,
+.app .masenetLiquidDock>button.dockReels>span:last-child{
+  font-size:10px;font-weight:650;letter-spacing:.01em;line-height:1.05;white-space:nowrap;
+}
+.app .masenetLiquidDock>button:first-child.active{
+  color:#fff;border-color:rgba(166,196,255,.48);
+  background:linear-gradient(145deg,rgba(115,154,255,.28),rgba(126,98,232,.16) 55%,rgba(255,255,255,.07));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 0 1px rgba(130,160,255,.08),0 7px 22px rgba(95,115,255,.19);
+}
+.app .masenetLiquidDock>button:first-child.active::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(182,205,255,.18),transparent 70%)}
+.app .masenetLiquidDock>button:first-child.active svg{filter:drop-shadow(0 0 7px rgba(157,190,255,.7))}
+.app .masenetLiquidDock>button:nth-child(2){color:#e8edf7}
+.app .masenetLiquidDock>button:nth-child(2):hover,
+.app .masenetLiquidDock>button:nth-child(2):focus-visible{
+  color:#fff;border-color:rgba(124,229,202,.38);background:linear-gradient(145deg,rgba(70,215,177,.16),rgba(255,255,255,.035));box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 18px rgba(25,190,151,.12)
+}
+.app .masenetLiquidDock>button:nth-child(2):hover svg{transform:translateY(-2px)}
+.app .masenetLiquidDock>button.dockReels{border-color:rgba(255,111,174,.35);color:#fff;background:linear-gradient(150deg,rgba(255,79,145,.18),rgba(125,83,255,.14) 58%,rgba(255,255,255,.035));box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 20px rgba(196,67,178,.13)}
+.app .masenetLiquidDock>button.dockReels::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(255,130,186,.14),transparent 72%)}
+.app .masenetLiquidDock>button.dockReels .dockR{
+  width:27px;height:27px;display:grid;place-items:center;border-radius:10px;
+  font-size:18px;font-weight:900;font-style:italic;line-height:1;letter-spacing:-.09em;
+  color:#fff;background:linear-gradient(145deg,#ff72b2 0%,#ff477c 42%,#895cff 100%);
+  border:1px solid rgba(255,255,255,.46);box-shadow:inset 0 1px 0 rgba(255,255,255,.48),0 3px 12px rgba(239,63,148,.35);
+  text-shadow:0 1px 3px rgba(62,10,67,.35)
+}
+.app .masenetLiquidDock>button.dockReels>span:last-child{color:#ffd9e9}
+.app .masenetLiquidDock>button.dockReels.active{border-color:rgba(255,123,184,.62);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 0 1px rgba(255,91,166,.1),0 8px 25px rgba(225,51,151,.23)}
+.app .masenetLiquidDock>button.dockReels.active .dockR{transform:scale(1.06);filter:drop-shadow(0 0 6px rgba(255,91,166,.55))}
+.app .masenetLiquidDock>button:first-child:active,
+.app .masenetLiquidDock>button:nth-child(2):active,
+.app .masenetLiquidDock>button.dockReels:active{transform:scale(.94)}
+.app .masenetLiquidDock>button:first-child:focus-visible,
+.app .masenetLiquidDock>button:nth-child(2):focus-visible,
+.app .masenetLiquidDock>button.dockReels:focus-visible{outline:2px solid rgba(158,190,255,.9);outline-offset:3px}
+@media(max-width:560px){
+ .app .masenetLiquidDock>button:first-child,
+ .app .masenetLiquidDock>button:nth-child(2),
+ .app .masenetLiquidDock>button.dockReels{min-width:51px;min-height:51px;padding:6px 10px;border-radius:17px;gap:3px}
+ .app .masenetLiquidDock>button:first-child span,
+ .app .masenetLiquidDock>button:nth-child(2) span,
+ .app .masenetLiquidDock>button.dockReels>span:last-child{font-size:9px}
+ .app .masenetLiquidDock>button.dockReels .dockR{width:25px;height:25px;border-radius:9px;font-size:17px}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .masenetLiquidDock>button:first-child,.app .masenetLiquidDock>button:nth-child(2),.app .masenetLiquidDock>button.dockReels,
+ .app .masenetLiquidDock>button:first-child svg,.app .masenetLiquidDock>button:nth-child(2) svg,.app .masenetLiquidDock>button.dockReels .dockR{transition:none!important}
+}
