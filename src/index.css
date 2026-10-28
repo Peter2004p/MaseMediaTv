@@ -3281,3 +3281,106 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
 @media(prefers-reduced-motion:reduce){
   .masenetLiquidDock>button,.masenetLiquidDock>button>svg,.masenetLiquidDock>button>.dockR,.masenetLiquidDock>button.dockNotifications .dockNotificationBadge{animation:none!important;transition:none!important}
 }
+
+/* MaseNet premium five-button finish — button surfaces only; dock geometry stays unchanged. */
+nav.masenetLiquidDock>button{
+  position:relative!important;isolation:isolate!important;overflow:hidden!important;
+  min-width:0!important;min-height:54px!important;flex:1 1 0!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  gap:5px!important;padding:8px 7px!important;border-radius:17px!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  color:#dce5f1!important;
+  background:linear-gradient(155deg,rgba(255,255,255,.15) 0%,rgba(255,255,255,.055) 48%,rgba(12,18,30,.34) 100%)!important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.24),inset 0 -2px 0 rgba(0,0,0,.22),0 5px 0 rgba(0,0,0,.16),0 9px 18px rgba(0,0,0,.22)!important;
+  -webkit-tap-highlight-color:transparent!important;
+  transition:transform .2s cubic-bezier(.2,.8,.2,1),background .2s ease,border-color .2s ease,box-shadow .2s ease,filter .2s ease!important;
+}
+nav.masenetLiquidDock>button::before{
+  content:""!important;position:absolute!important;inset:1px!important;z-index:-1!important;
+  border-radius:inherit!important;pointer-events:none!important;
+  background:linear-gradient(125deg,rgba(255,255,255,.12),transparent 42%,rgba(255,255,255,.015))!important;
+  opacity:1!important;
+}
+nav.masenetLiquidDock>button::after{
+  content:""!important;position:absolute!important;left:22%!important;right:22%!important;top:0!important;height:1px!important;
+  border-radius:99px!important;background:rgba(255,255,255,.55)!important;opacity:.5!important;pointer-events:none!important;
+}
+nav.masenetLiquidDock>button>svg,
+nav.masenetLiquidDock>button>.dockR{
+  width:20px!important;height:20px!important;flex:0 0 auto!important;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.22))!important;
+  transition:transform .2s ease,filter .2s ease!important;
+}
+nav.masenetLiquidDock>button>span{
+  font-size:10px!important;font-weight:750!important;letter-spacing:.015em!important;line-height:1!important;
+  white-space:nowrap!important;text-shadow:0 1px 2px rgba(0,0,0,.22)!important;
+}
+nav.masenetLiquidDock>button:first-child{
+  border-color:rgba(131,169,255,.42)!important;
+  background:linear-gradient(150deg,rgba(108,151,255,.29),rgba(105,112,232,.15) 56%,rgba(255,255,255,.045))!important;
+}
+nav.masenetLiquidDock>button:first-child.active{
+  color:#fff!important;border-color:rgba(169,196,255,.9)!important;
+  background:linear-gradient(145deg,#739bff 0%,#646eea 58%,#8c70ee 100%)!important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.48),inset 0 -2px 0 rgba(34,39,123,.35),0 4px 0 #414ab4,0 9px 22px rgba(94,111,255,.38)!important;
+}
+nav.masenetLiquidDock>button:first-child.active>svg{filter:drop-shadow(0 2px 5px rgba(255,255,255,.42))!important}
+nav.masenetLiquidDock>button:nth-child(2){
+  border-color:rgba(73,226,175,.35)!important;
+  background:linear-gradient(150deg,rgba(31,201,145,.22),rgba(255,255,255,.045) 68%)!important;
+}
+nav.masenetLiquidDock>button:nth-child(2):hover,
+nav.masenetLiquidDock>button:nth-child(2):focus-visible{
+  color:#fff!important;border-color:rgba(98,255,201,.8)!important;
+  background:linear-gradient(145deg,#17b981,#087f70)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -2px 0 rgba(0,52,46,.3),0 4px 0 #075c53,0 9px 20px rgba(0,208,148,.25)!important;
+}
+nav.masenetLiquidDock>button.dockReels{
+  border-color:rgba(255,123,186,.62)!important;
+  background:linear-gradient(150deg,rgba(255,93,163,.24),rgba(132,79,255,.19) 60%,rgba(255,255,255,.045))!important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.28),inset 0 -2px 0 rgba(0,0,0,.22),0 5px 0 rgba(85,28,111,.38),0 9px 19px rgba(207,60,158,.2)!important;
+}
+nav.masenetLiquidDock>button.dockReels .dockR{
+  width:28px!important;height:27px!important;border-radius:9px!important;
+  display:grid!important;place-items:center!important;font-size:18px!important;font-weight:950!important;font-style:italic!important;
+  color:#fff!important;background:linear-gradient(145deg,#ff9bd0 0%,#ff438c 48%,#8c5bff 100%)!important;
+  border:1px solid rgba(255,255,255,.66)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -2px 0 rgba(106,22,104,.24),0 3px 9px rgba(237,58,158,.4)!important;
+}
+nav.masenetLiquidDock>button.dockReels>span:last-child{color:#ffe5f2!important}
+nav.masenetLiquidDock>button.dockCustomize{
+  border-color:rgba(116,184,255,.42)!important;
+  background:linear-gradient(150deg,rgba(65,147,255,.23),rgba(255,255,255,.045) 68%)!important;
+}
+nav.masenetLiquidDock>button.dockCustomize:hover,
+nav.masenetLiquidDock>button.dockCustomize:focus-visible{
+  color:#fff!important;border-color:rgba(149,211,255,.9)!important;
+  background:linear-gradient(145deg,#378cf2,#3659bd)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -2px 0 rgba(24,47,112,.3),0 4px 0 #273f8c,0 9px 20px rgba(54,125,245,.26)!important;
+}
+nav.masenetLiquidDock>button.dockNotifications{
+  border-color:rgba(255,198,111,.42)!important;
+  background:linear-gradient(150deg,rgba(255,177,66,.2),rgba(255,255,255,.045) 68%)!important;
+}
+nav.masenetLiquidDock>button.dockNotifications:hover,
+nav.masenetLiquidDock>button.dockNotifications:focus-visible{
+  color:#fff!important;border-color:rgba(255,220,153,.92)!important;
+  background:linear-gradient(145deg,#ffb84d,#d87925)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -2px 0 rgba(113,49,7,.28),0 4px 0 #9c521d,0 9px 20px rgba(255,161,44,.24)!important;
+}
+nav.masenetLiquidDock>button.dockNotifications .dockNotificationBadge{
+  top:1px!important;right:4px!important;min-width:15px!important;height:15px!important;
+  border:1px solid rgba(255,255,255,.8)!important;box-shadow:0 2px 8px rgba(240,44,79,.5)!important;
+}
+nav.masenetLiquidDock>button:hover{transform:translateY(-2px)!important;filter:brightness(1.08)!important}
+nav.masenetLiquidDock>button:active{transform:translateY(2px) scale(.96)!important;filter:brightness(1.12)!important;box-shadow:inset 0 2px 4px rgba(0,0,0,.22)!important}
+nav.masenetLiquidDock>button:focus-visible{outline:2px solid rgba(175,203,255,.95)!important;outline-offset:3px!important}
+@media(max-width:560px){
+ nav.masenetLiquidDock>button{min-height:50px!important;padding:6px 3px!important;gap:4px!important;border-radius:15px!important}
+ nav.masenetLiquidDock>button>svg{width:19px!important;height:19px!important}
+ nav.masenetLiquidDock>button>span{font-size:9px!important}
+ nav.masenetLiquidDock>button.dockReels .dockR{width:25px!important;height:25px!important;font-size:16px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ nav.masenetLiquidDock>button,nav.masenetLiquidDock>button>svg,nav.masenetLiquidDock>button>.dockR{transition:none!important;animation:none!important}
+}
