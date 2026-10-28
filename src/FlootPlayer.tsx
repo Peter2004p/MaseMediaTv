@@ -70,7 +70,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
-    setError(''); setHlsSubtitleTracks([]); setNativeSubtitleTracks([]); setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = telegramWebView; hlsProbeRef.current = false;
+    setError(''); setHlsSubtitleTracks([]); setNativeSubtitleTracks([]); setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = false; hlsProbeRef.current = false;
     hlsRef.current?.destroy(); hlsRef.current = null;
     if (!src || embed) return;
     if (isHlsSource && !video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -101,7 +101,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
   const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
   const pictureInPicture = async () => { const v = videoRef.current as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null; if (!v) return; try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled && v.requestPictureInPicture) { await v.requestPictureInPicture(); } else { setError('Picture-in-Picture is not supported in this browser or Telegram webview. Use Fullscreen instead.'); } } catch { setError('Picture-in-Picture could not start. Try playing the video first, or use Fullscreen.'); } };
-  const retrySource = () => { setError(''); setRetry(x => x + 1); };
+  const retrySource = () => { proxiedFallbackRef.current = false; hlsProbeRef.current = false; setError(''); setBuffering(true); setRetry(x => x + 1); };
 
   if (isMkvSource && !embed && !moviReady) {
     return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
