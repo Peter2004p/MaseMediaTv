@@ -2788,3 +2788,64 @@ html body #root .app nav.masenetLiquidDock>button.dockNotifications .dockNotific
 .app:has(.ttReelsPage) .aiBubbleButton,
 .app:has(.ttReelsPage) .aiSuggestionBubble{display:none!important;pointer-events:none!important}
 .app:has(.ttReelsPage) .ttReelsPage{z-index:999!important}
+
+
+/* iOS 27-inspired Reels episode drawer: liquid glass, right-side spring entrance, and safe-area-aware controls. */
+.app .ttEpisodesBackdrop{
+ position:fixed;inset:0;z-index:140;display:flex;justify-content:flex-end;align-items:stretch;
+ padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+ background:rgba(3,7,17,.48);backdrop-filter:blur(8px) saturate(125%);-webkit-backdrop-filter:blur(8px) saturate(125%);
+ animation:ttEpisodesBackdropIn .22s ease-out both;overscroll-behavior:contain;
+}
+.app .ttEpisodesDrawer{
+ position:relative;display:flex;flex-direction:column;min-width:0;width:min(420px,calc(100vw - 22px));height:100%;
+ overflow:hidden;color:#f5f7ff;border:1px solid rgba(255,255,255,.17);border-right:0;border-radius:30px 0 0 30px;
+ background:linear-gradient(150deg,rgba(28,37,59,.94),rgba(12,17,31,.97) 54%,rgba(27,21,47,.96));
+ box-shadow:-24px 0 70px rgba(0,0,0,.4),inset 1px 0 rgba(255,255,255,.14),inset 0 1px rgba(255,255,255,.1);
+ backdrop-filter:blur(36px) saturate(175%);-webkit-backdrop-filter:blur(36px) saturate(175%);
+ animation:ttEpisodesDrawerIn .42s cubic-bezier(.18,.86,.24,1) both;contain:layout paint;
+}
+.app .ttEpisodesGrabber{display:none}
+.app .ttEpisodesHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:calc(24px + env(safe-area-inset-top)) 20px 18px;border-bottom:1px solid rgba(255,255,255,.09);background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.015))}
+.app .ttEpisodesHeader>div{min-width:0}
+.app .ttEpisodesHeader small{font-size:9px;letter-spacing:.16em;font-weight:850;color:#b9a6ff}
+.app .ttEpisodesHeader h2{margin:7px 0 5px;font-size:clamp(20px,5vw,25px);line-height:1.12;letter-spacing:-.04em;color:#fff;overflow-wrap:anywhere}
+.app .ttEpisodesHeader p{margin:0;color:rgba(230,237,255,.65);font-size:12px}
+.app .ttEpisodesHeader>button{flex:0 0 38px;width:38px;height:38px;border:1px solid rgba(255,255,255,.14);border-radius:50%;background:rgba(255,255,255,.09);color:#fff;font-size:25px;line-height:1;display:grid;place-items:center}
+.app .ttEpisodesSeasonRail{display:flex;gap:8px;padding:15px 18px 13px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid rgba(255,255,255,.07)}
+.app .ttEpisodesSeasonRail::-webkit-scrollbar{display:none}
+.app .ttEpisodesSeasonRail button{flex:0 0 auto;padding:10px 15px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(255,255,255,.055);color:rgba(240,244,255,.78);font-size:12px;font-weight:750;transition:background .22s,border-color .22s,transform .22s}
+.app .ttEpisodesSeasonRail button.active{background:linear-gradient(135deg,#d8ccff,#a9baff);border-color:rgba(255,255,255,.5);color:#171a2c;box-shadow:0 4px 18px rgba(145,132,255,.23)}
+.app .ttEpisodesList{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:11px 12px 18px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
+.app .ttEpisodeRow{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;margin:5px 0;padding:11px 12px;text-align:left;border:1px solid transparent;border-radius:19px;background:rgba(255,255,255,.035);color:#f5f7ff;transition:background .2s,border-color .2s,transform .2s}
+.app .ttEpisodeRow:active{transform:scale(.985)}
+.app .ttEpisodeRow.isCurrent{background:linear-gradient(110deg,rgba(172,150,255,.18),rgba(255,255,255,.055));border-color:rgba(192,176,255,.42);box-shadow:inset 0 1px rgba(255,255,255,.09)}
+.app .ttEpisodePlay{display:grid;place-items:center;flex:0 0 43px;width:43px;height:43px;border-radius:15px;background:rgba(255,255,255,.08);color:#d5caff}
+.app .ttEpisodeRow.isCurrent .ttEpisodePlay{background:linear-gradient(145deg,#d9ceff,#9daeff);color:#1a1c30}
+.app .ttEpisodeCopy{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+.app .ttEpisodeCopy b{font-size:13px;font-weight:800;color:#fff}
+.app .ttEpisodeCopy small{font-size:11px;line-height:1.35;color:rgba(225,233,252,.65);overflow-wrap:anywhere}
+.app .ttEpisodeRow>svg{flex:0 0 auto;color:rgba(233,238,255,.62)}
+.app .ttEpisodeNow{font-size:8px;letter-spacing:.08em;font-weight:900;color:#d0c3ff;white-space:nowrap}
+.app .ttEpisodesFooter{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.09);background:rgba(5,9,19,.32)}
+.app .ttEpisodesFooter>span{display:flex;align-items:center;gap:7px;font-size:10px;color:rgba(229,235,255,.66)}
+.app .ttEpisodesFooter>span svg{color:#c9baff;flex-shrink:0}
+.app .ttEpisodesFooter>button{display:flex;align-items:center;gap:4px;padding:10px 12px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(255,255,255,.09);color:#fff;font-size:11px;font-weight:750;white-space:nowrap}
+.app .ttReelActions button.ttEpisodesButton.isOpen{color:#d8caff;filter:drop-shadow(0 0 9px rgba(173,145,255,.3))}
+@keyframes ttEpisodesDrawerIn{0%{transform:translate3d(34px,0,0) scale(.985);opacity:.45}70%{transform:translate3d(-3px,0,0) scale(1)}100%{transform:translate3d(0,0,0) scale(1);opacity:1}}
+@keyframes ttEpisodesBackdropIn{from{opacity:0}to{opacity:1}}
+@media(max-width:520px){
+ .app .ttEpisodesBackdrop{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+ .app .ttEpisodesDrawer{width:min(390px,calc(100vw - 16px));border-radius:27px 0 0 27px}
+ .app .ttEpisodesHeader{padding:calc(21px + env(safe-area-inset-top)) 17px 16px}
+ .app .ttEpisodesSeasonRail{padding-left:15px;padding-right:15px}
+ .app .ttEpisodeRow{min-height:68px;padding:10px;border-radius:17px}
+ .app .ttEpisodePlay{width:40px;height:40px;flex-basis:40px;border-radius:13px}
+ .app .ttEpisodesFooter>span{max-width:150px;line-height:1.35}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .ttEpisodesBackdrop,.app .ttEpisodesDrawer{animation:none!important}
+ .app .ttEpisodeRow,.app .ttEpisodesSeasonRail button{transition:none!important}
+}
+html.masenet-low-performance .app .ttEpisodesBackdrop{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(3,7,17,.78)}
+html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit-backdrop-filter:none;animation-duration:.24s}
