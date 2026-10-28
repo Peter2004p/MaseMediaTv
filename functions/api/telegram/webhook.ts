@@ -26,8 +26,8 @@ async function telegramCall(env: Env, method: string, payload: unknown) {
   if (!response.ok || !data.ok) throw new Error(data.description || `Telegram ${method} failed`);
   return data;
 }
-async function sendMessage(env: Env, chatId: string | number, text: string, replyMarkup?: unknown) {
-  await telegramCall(env, "sendMessage", { chat_id: chatId, text: text.slice(0, 4000), disable_web_page_preview: false, ...(replyMarkup ? { reply_markup: replyMarkup } : {}) });
+async function sendMessage(env: Env, chatId: string | number, text: string, replyMarkup?: unknown, parseMode?: "HTML") {
+  await telegramCall(env, "sendMessage", { chat_id: chatId, text: text.slice(0, 4000), disable_web_page_preview: false, ...(parseMode ? { parse_mode: parseMode } : {}), ...(replyMarkup ? { reply_markup: replyMarkup } : {}) });
 }
 async function sendTyping(env: Env, chatId: string | number) {
   try { await telegramCall(env, "sendChatAction", { chat_id: chatId, action: "typing" }); } catch { /* Typing is optional. */ }
@@ -106,7 +106,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     } else if (/^\/app(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "Open MaseNet Mini App:", keyboard);
     } else if (text && !text.startsWith("/") && /social|official links|facebook|tiktok|youtube|telegram|follow (?:you|us|masenet|masetv|masemedia)|where can i follow/i.test(text) && /link|url|social|follow|channel|account|facebook|tiktok|youtube|telegram/i.test(text)) {
-      await sendMessage(env, chatId, "MaseNet, MaseTv, and MaseMediaTv are the same platform. Here are our official links:\\n\\nYouTube: https://youtube.com/@masemedia_tv\\nFacebook: https://www.facebook.com/share/1A5pSvKte9/\\nTikTok: https://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E\\nTelegram Channel 1: https://t.me/MaseMediaTv\\nTelegram Channel 2: https://t.me/MoonDramaC\\nTelegram Bot: https://t.me/MaseTv_Bot", keyboard);
+      const socialReply = "🎬 <b>Stay Connected with MaseMedia TV</b>\n\nMaseNet, MaseTv and MaseMediaTv are names for the same platform. Choose where you’d like to connect with us:\n\n📺 <b>YouTube</b> — Videos and content\nhttps://youtube.com/@masemedia_tv\n\n📘 <b>Facebook</b> — News and updates\nhttps://www.facebook.com/share/1A5pSvKte9/\n\n🎵 <b>TikTok</b> — Short videos and clips\nhttps://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E\n\n📢 <b>Official Telegram Channels</b>\n• <b>MaseMediaTv</b> — Follow our main channel\nhttps://t.me/MaseMediaTv\n• <b>MoonDramaC</b> — Visit our second channel\nhttps://t.me/MoonDramaC\n\n🤖 <b>Telegram Bot</b> — Chat with MaseNet Assistant\nhttps://t.me/MaseTv_Bot\n\nThanks for being part of our community! ❤️";
+      await sendMessage(env, chatId, socialReply, keyboard, "HTML");
     } else if (text && !text.startsWith("/")) {
       await sendTyping(env, chatId);
       let answer: string;
