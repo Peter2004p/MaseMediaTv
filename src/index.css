@@ -2944,3 +2944,8 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
 .app .aiIslandArrow{flex:0 0 15px!important;width:15px!important;height:15px!important;font-size:10px!important}
 .app .aiIslandClose{flex:0 0 16px!important;width:16px!important;height:16px!important;min-height:16px!important;font-size:12px!important}
 @media(max-width:560px){.app .aiDynamicIsland{right:9px!important;width:max-content!important;max-width:calc(100vw - 18px)!important;height:36px!important;min-height:36px!important;max-height:36px!important;padding:3px 7px!important}.app .aiIslandOpen{height:28px!important;min-height:28px!important;max-height:28px!important;gap:5px!important}.app .aiIslandIcon{flex-basis:22px!important;width:22px!important;height:22px!important}.app .aiIslandText{max-width:140px!important}.app .aiIslandText>strong{font-size:9px!important}.app .aiIslandArrow{flex-basis:14px!important;width:14px!important;height:14px!important}.app .aiIslandClose{flex-basis:15px!important;width:15px!important;height:15px!important;min-height:15px!important}}
+
+
+/* Anchor the AI suggestion island to the actual floating AI launcher position. */
+.app .aiDynamicIsland{right:auto!important;bottom:auto!important;}
+@media(max-width:560px){.app .aiDynamicIsland{right:auto!important;bottom:auto!important}}
