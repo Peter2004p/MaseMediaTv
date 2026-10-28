@@ -34,9 +34,9 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
           }}
         >
           <div aria-hidden="true" style={{ fontSize: '42px' }}>◈</div>
-          <h1 style={{ margin: 0, fontSize: 'clamp(22px, 5vw, 32px)' }}>MaseNet needs a quick refresh</h1>
+          <h1 style={{ margin: 0, fontSize: 'clamp(22px, 5vw, 32px)' }}>Something went wrong</h1>
           <p style={{ maxWidth: '420px', color: '#aeb7c9', lineHeight: 1.6 }}>
-            Something unexpected interrupted this page. Your account and saved library have not been intentionally changed.
+            MaseNet ran into a temporary issue. Your profile and saved titles remain safe. Reload the page to continue.
           </p>
           <button
             type="button"
@@ -52,7 +52,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
               cursor: 'pointer',
             }}
           >
-            Refresh MaseNet
+            Reload MaseNet
           </button>
         </main>
       );
