@@ -206,7 +206,8 @@ function HomepageBroadcasts({broadcasts,compact=false}:{broadcasts:Broadcast[];c
 }
 
 function Home(p:{titles:Title[];all:Title[];featured?:Title;heroSettings:HeroSettings;movies:Title[];dramas:Title[];continueWatching:Title[];myList:Title[];rows:string[];go:(x:string)=>void;query:string;setQuery:(x:string)=>void;searchOpen:boolean;experienceMode:'standard'|'oneui9'|'ios27'|'cinema';broadcasts:Broadcast[];catalogError:string;requestMissingTitle:(query:string)=>Promise<void>}) {
- const [libraryFilter,setLibraryFilter]=useState<'all'|'movies'|'dramas'|'miniseries'|'anime'|'mylist'>('all');\n const featured = p.heroSettings.featuredTitleId ? p.all.find(t=>t.id===p.heroSettings.featuredTitleId)||p.featured : p.featured;
+ const [libraryFilter,setLibraryFilter]=useState<'all'|'movies'|'dramas'|'miniseries'|'anime'|'mylist'>('all');
+ const featured = p.heroSettings.featuredTitleId ? p.all.find(t=>t.id===p.heroSettings.featuredTitleId)||p.featured : p.featured;
  const [heroIndex,setHeroIndex]=useState(0);
  const heroSlides=useMemo(()=>p.all.slice(0,5),[p.all]);
  useEffect(()=>{if(heroSlides.length<2)return;const timer=window.setInterval(()=>setHeroIndex(i=>(i+1)%heroSlides.length),6500);return()=>window.clearInterval(timer)},[heroSlides.length]);
