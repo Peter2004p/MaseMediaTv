@@ -3,16 +3,19 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
-  state = { hasError: false };
+type ErrorBoundaryState = { hasError: boolean; message: string };
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, message: '' };
+
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+    const message = error instanceof Error ? error.message : String(error || 'Unknown rendering error');
+    return { hasError: true, message: message.slice(0, 500) };
   }
 
-  componentDidCatch(error: Error, _info: ErrorInfo) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     // Keep diagnostics local; never send user content or session details to a third party.
-    console.error('MaseNet interface encountered an unexpected error.', error.message);
+    console.error('MaseNet interface encountered an unexpected error.', error, info.componentStack);
   }
 
   render() {
@@ -23,7 +26,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
           style={{
             minHeight: '100dvh',
             display: 'grid',
-            placeContent: 'center',
+            alignContent: 'center',
             justifyItems: 'center',
             gap: '14px',
             padding: '28px',
@@ -34,10 +37,30 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
           }}
         >
           <div aria-hidden="true" style={{ fontSize: '42px' }}>◈</div>
-          <h1 style={{ margin: 0, fontSize: 'clamp(22px, 5vw, 32px)' }}>Something went wrong</h1>
+          <h1 style={{ margin: 0, fontSize: 'clamp(22px, 5vw, 32px)' }}>MaseNet encountered an error</h1>
           <p style={{ maxWidth: '420px', color: '#aeb7c9', lineHeight: 1.6 }}>
-            MaseNet ran into a temporary issue. Your profile and saved titles remain safe. Reload the page to continue.
+            Your profile and saved titles have not been intentionally changed. The technical detail below is shown to help diagnose this issue.
           </p>
+          <pre
+            style={{
+              boxSizing: 'border-box',
+              width: 'min(100%, 620px)',
+              maxHeight: '28dvh',
+              overflow: 'auto',
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+              padding: '14px',
+              borderRadius: '12px',
+              border: '1px solid #ffffff25',
+              background: '#111722',
+              color: '#ffd8a8',
+              textAlign: 'left',
+              fontSize: '12px',
+              lineHeight: 1.5,
+            }}
+          >
+            {this.state.message || 'Unknown rendering error'}
+          </pre>
           <button
             type="button"
             onClick={() => window.location.reload()}
@@ -61,10 +84,13 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
   }
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <AppErrorBoundary>
-      <App />
-    </AppErrorBoundary>
-  </StrictMode>
-);
+const root = document.getElementById('root');
+if (root) {
+  createRoot(root).render(
+    <StrictMode>
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
+    </StrictMode>
+  );
+}
