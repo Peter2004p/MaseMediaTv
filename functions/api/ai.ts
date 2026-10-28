@@ -18,7 +18,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   let titles: Array<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}> = [];
   try {
     const rows = await env.DB.prepare(
-      "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 100"
+      "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC"
     ).all<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
     titles = rows.results || [];
   } catch (error) {
