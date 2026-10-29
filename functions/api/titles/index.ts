@@ -126,21 +126,37 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`).run();
       const targets = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1").all<{chat_id:string}>();
-      const appUrl = (config.TELEGRAM_MINI_APP_URL || config.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
-      const itemUrl = appUrl.startsWith("https://") ? "\n\nOpen MaseNet: " + appUrl : "";
+      // Telegram notifications must open the Mini App, not the public website.
+      // startapp is passed through Telegram's configured main Mini App for this bot.
+      const botUsername = "MaseTv_Bot";
+      const appLink = "https://t.me/" + botUsername + "?startapp=" + encodeURIComponent("title_" + String(title.id || id));
       const announcement = isNewTitle
-        ? "🎬 NEW " + (kind === "drama" ? "DRAMA" : "MOVIE") + " ON MASETV\n\n" + String(title.name).trim().slice(0,180) + (title.year ? " (" + String(title.year).slice(0,4) + ")" : "") + (typeof title.description === "string" && title.description.trim() ? "\n\n" + title.description.trim().slice(0,500) : "") + itemUrl
-        : "🍿 NEW EPISODE\n\n" + String(title.name).trim().slice(0,180) + "\n" + newEpisodes.map(ep => "Season " + String(ep.season || 1) + " · Episode " + String(ep.episode || "?") + (ep.title ? " — " + String(ep.title).slice(0,100) : "")).join("\n") + itemUrl;
+        ? "🎬 NEW " + (kind === "drama" ? "DRAMA" : "MOVIE") + " ON MASETV\n\n" + String(title.name).trim().slice(0,180) + (title.year ? " (" + String(title.year).slice(0,4) + ")" : "") + (typeof title.description === "string" && title.description.trim() ? "\n\n" + title.description.trim().slice(0,500) : "") + "\n\n▶️ Watch in MaseNet on Telegram: " + appLink
+        : "🍿 NEW EPISODE\n\n" + String(title.name).trim().slice(0,180) + "\n" + newEpisodes.map(ep => "Season " + String(ep.season || 1) + " · Episode " + String(ep.episode || "?") + (ep.title ? " — " + String(ep.title).slice(0,100) : "")).join("\n") + "\n\n▶️ Open in MaseNet on Telegram: " + appLink;
       telegramNotifications.attempted = true;
       for (const target of targets.results || []) {
         try {
-          const response = await fetch("https://api.telegram.org/bot" + token + "/sendMessage", {
-            method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ chat_id: target.chat_id, text: announcement, disable_web_page_preview: false })
+          const poster = typeof title.posterUrl === "string" ? title.posterUrl.trim() : "";
+          const canSendPoster = isNewTitle && /^https:\/\//i.test(poster);
+          const method = canSendPoster ? "sendPhoto" : "sendMessage";
+          const payload = canSendPoster
+            ? { chat_id: target.chat_id, photo: poster, caption: announcement.slice(0,1024) }
+            : { chat_id: target.chat_id, text: announcement, disable_web_page_preview: true };
+          const response = await fetch("https://api.telegram.org/bot" + token + "/" + method, {
+            method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload)
           });
           const data = await response.json().catch(() => ({})) as {ok?:boolean;description?:string};
           if (response.ok && data.ok) telegramNotifications.delivered++;
           else {
+            // If Telegram cannot fetch the poster URL, still deliver the Mini App link as text.
+            if (canSendPoster) {
+              const fallback = await fetch("https://api.telegram.org/bot" + token + "/sendMessage", {
+                method: "POST", headers: { "content-type": "application/json" },
+                body: JSON.stringify({ chat_id: target.chat_id, text: announcement, disable_web_page_preview: true })
+              }).catch(() => null);
+              const fallbackData = fallback ? await fallback.json().catch(() => ({})) as {ok?:boolean;description?:string} : {};
+              if (fallback?.ok && fallbackData.ok) { telegramNotifications.delivered++; continue; }
+            }
             telegramNotifications.failed++;
             if (/blocked by the user|chat not found|bot was kicked|user is deactivated/i.test(String(data.description || ""))) {
               await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(target.chat_id).run();
