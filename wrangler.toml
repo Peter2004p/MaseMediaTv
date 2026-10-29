@@ -15,3 +15,16 @@ bucket_name = "masenet-posters"
 
 [ai]
 binding = "AI"
+
+# Preview-only bindings required by `wrangler pages deploy --preview`.
+# Keep preview resources separate from production resources.
+[[previews.d1_databases]]
+binding = "DB"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[[previews.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "masenet-preview-media"
+
+[previews.ai]
+binding = "AI"
