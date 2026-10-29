@@ -3480,3 +3480,35 @@ nav.masenetLiquidDock>button.dockReels>span:last-child{
 nav.masenetLiquidDock>button.dockReels:hover,
 nav.masenetLiquidDock>button.dockReels:focus-visible{color:#fff!important}
 @media(max-width:560px){nav.masenetLiquidDock>button.dockReels .dockR{font-size:26px!important}}
+
+
+/* MaseNet responsiveness and low-power device tuning */
+html { scroll-behavior: smooth; }
+img, video, canvas, svg { max-width: 100%; }
+img { height: auto; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button, a { touch-action: manipulation; }
+:focus-visible { outline: 2px solid #d2ad60; outline-offset: 3px; }
+@media (max-width: 768px) {
+  /* Large blur layers are expensive to composite on many mobile GPUs. */
+  .nav, .searchDock, .side, .telegram, .aiDock, .player {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .nav, .glass {
+    box-shadow: 0 5px 18px rgba(0,0,0,.14);
+  }
+  .page { padding-top: 28px; }
+  .grid { gap: 12px; }
+  .card .poster { transition: none; }
+  .primary, .secondary { transition: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
