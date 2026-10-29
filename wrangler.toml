@@ -15,3 +15,7 @@ bucket_name = "masenet-posters"
 
 [ai]
 binding = "AI"
+
+# Worker Preview configuration. Preview uses its own environment settings
+# when configured; no placeholder resource IDs are declared here.
+[previews]
