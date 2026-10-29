@@ -139,7 +139,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           const poster = typeof title.posterUrl === "string" ? title.posterUrl.trim() : "";
           const canSendPoster = isNewTitle && /^https:\/\//i.test(poster);
           const method = canSendPoster ? "sendPhoto" : "sendMessage";
-          const payload = canSendPoster
+          const payload: Record<string, unknown> = canSendPoster
             ? { chat_id: target.chat_id, photo: poster, caption: announcement.slice(0,1024) }
             : { chat_id: target.chat_id, text: announcement, disable_web_page_preview: true };
           const response = await fetch("https://api.telegram.org/bot" + token + "/" + method, {
