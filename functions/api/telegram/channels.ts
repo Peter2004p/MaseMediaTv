@@ -36,6 +36,13 @@ export const onRequestPost: PagesFunction<TelegramEnv> = async ({ request, env }
   if (!env.TELEGRAM_BOT_TOKEN) return json({ error: "Telegram bot token is not configured on Cloudflare." }, 503);
   let body: Record<string, unknown>;
   try { body = await request.json() as Record<string, unknown>; } catch { return json({ error: "Enter a Telegram channel username or link." }, 400); }
+  if (body.action === "disable") {
+    const chatId = String(body.chatId || "").trim();
+    if (!chatId) return json({ error: "A channel ID is required." }, 400);
+    await ensureSubscribers(env);
+    await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=? AND chat_type IN ('channel','supergroup')").bind(chatId).run();
+    return json({ ok: true });
+  }
   const chatInput = normalizeChatInput(body.channel);
   if (!chatInput) return json({ error: "Enter a valid public channel username, t.me channel link, or numeric channel ID." }, 400);
   const chat = await telegram<{id:number;type:string;title?:string;username?:string}>(env.TELEGRAM_BOT_TOKEN, "getChat", { chat_id: chatInput });
