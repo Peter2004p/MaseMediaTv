@@ -194,3 +194,49 @@
  .welcomeProVisual:hover .welcomeVisualPosterMain,.welcomeProVisual:hover .welcomeVisualPosterLeft,.welcomeProVisual:hover .welcomeVisualPosterRight{transform:none}
  *{scroll-behavior:auto!important}
 }
+
+
+/* Six-page, story-style first-visit onboarding */
+.welcomeStoryGate{display:flex;align-items:center;justify-content:center;overflow:hidden;background:#07080d}
+.welcomeStoryShell{position:relative;z-index:1;width:min(760px,100%);min-height:100dvh;padding:clamp(18px,4vh,38px) clamp(18px,5vw,42px) 24px;display:flex;flex-direction:column}
+.welcomeStoryTop{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.welcomeStorySkip{border:1px solid #ffffff24;background:#ffffff0b;color:#d7d8e2;border-radius:999px;padding:9px 14px;font:inherit;font-size:12px;cursor:pointer}
+.welcomeStorySkip span{font-size:17px;margin-left:7px}
+.welcomeStoryProgress{display:flex;gap:5px;margin-top:clamp(24px,5vh,42px)}
+.welcomeStoryTrack{height:3px;flex:1;background:#ffffff30;border-radius:9px;overflow:hidden}
+.welcomeStoryTrack i{display:block;height:100%;width:0;background:#fff;border-radius:9px}
+.welcomeStoryTrack i.isDone{width:100%}
+.welcomeStoryTrack i.isCurrent{animation:welcomeStoryFill 6.5s linear forwards}
+@keyframes welcomeStoryFill{from{width:0}to{width:100%}}
+.welcomeStoryCounter{margin-top:12px;text-align:right;color:#fff;font-size:12px;font-weight:800;letter-spacing:.12em}
+.welcomeStoryCounter span{color:#777b8c;font-weight:500}
+.welcomeStoryCard{flex:1;display:flex;flex-direction:column;justify-content:center;gap:clamp(24px,5vh,42px);padding:clamp(28px,6vh,58px) 0 28px;animation:welcomeStoryIn .35s ease both}
+@keyframes welcomeStoryIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.welcomeStoryArtwork{position:relative;isolation:isolate;overflow:hidden;min-height:clamp(180px,34vh,300px);border:1px solid #ffffff1c;border-radius:28px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 45%,#7353b6 0,#282044 36%,#10111d 75%)}
+.welcomeStoryArtwork2{background:radial-gradient(circle at 50% 45%,#a44e64 0,#402039 40%,#10111d 78%)}
+.welcomeStoryArtwork3{background:radial-gradient(circle at 50% 45%,#347f91 0,#1b354b 42%,#10111d 78%)}
+.welcomeStoryArtwork4{background:radial-gradient(circle at 50% 45%,#497e9b 0,#202e50 42%,#10111d 78%)}
+.welcomeStoryArtwork5{background:radial-gradient(circle at 50% 45%,#8063a7 0,#30274e 42%,#10111d 78%)}
+.welcomeStoryArtwork6{background:radial-gradient(circle at 50% 45%,#9c6a45 0,#49302e 42%,#10111d 78%)}
+.welcomeStoryAura{position:absolute;width:48%;aspect-ratio:1;border-radius:50%;background:#d8c0ff55;filter:blur(50px)}
+.welcomeStorySymbol{position:relative;z-index:1;font-size:clamp(76px,15vw,132px);filter:drop-shadow(0 12px 35px #0008);animation:welcomeStoryFloat 4s ease-in-out infinite}
+@keyframes welcomeStoryFloat{50%{transform:translateY(-9px) scale(1.04)}}
+.welcomeStoryOrbit{position:absolute;width:54%;height:60%;border:1px solid #ffffff36;border-radius:50%;transform:rotate(-22deg)}
+.welcomeStoryOrbitB{width:70%;height:42%;transform:rotate(28deg);border-color:#ffffff1c}
+.welcomeStoryArtwork>b{position:absolute;bottom:16px;right:20px;font-size:10px;letter-spacing:.22em;color:#ffffffa0}
+.welcomeStoryArtwork>b span{color:#bda3ff}
+.welcomeStoryCopy{max-width:620px;margin:0 auto;width:100%;text-align:center}
+.welcomeStoryCopy .welcomeProEyebrow{justify-content:center;font-size:10px}
+.welcomeStoryCopy h1{font-size:clamp(34px,7vw,58px);line-height:1.02;letter-spacing:-.05em;margin:16px 0;color:#fff}
+.welcomeStoryCopy .welcomeProLead{margin:0 auto;max-width:520px;font-size:clamp(14px,2vw,17px);line-height:1.65;color:#b9bbca}
+.welcomeStoryTag{display:inline-block;margin-top:22px;padding:8px 12px;border:1px solid #ffffff24;border-radius:999px;color:#d7c9ff;font-size:9px;font-weight:800;letter-spacing:.16em}
+.welcomeStoryControls{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:10px}
+.welcomeStoryBack{border:1px solid #ffffff25;background:#ffffff08;color:#f2f2f7;border-radius:999px;padding:13px 20px;font:inherit;font-size:13px;cursor:pointer}
+.welcomeStoryBack:disabled{opacity:.35;cursor:default}
+.welcomeStoryNext{min-width:145px;justify-content:center}
+.welcomeStoryHint{text-align:center;color:#777b8c;font-size:10px;margin:14px 0 0}
+.welcomeStoryTapZones{position:absolute;inset:105px 0 100px;display:grid;grid-template-columns:1fr 1fr;pointer-events:none}
+.welcomeStoryTapZones button{pointer-events:auto;border:0;background:transparent;cursor:pointer}
+@media(min-width:700px){.welcomeStoryCard{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:34px}.welcomeStoryArtwork{min-height:310px}.welcomeStoryCopy{text-align:left}.welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start}.welcomeStoryCopy .welcomeProLead{margin:0}.welcomeStoryTapZones{inset:105px 0 100px}}
+@media(max-height:650px){.welcomeStoryShell{padding-top:14px;padding-bottom:14px}.welcomeStoryProgress{margin-top:18px}.welcomeStoryCard{padding:18px 0;gap:16px}.welcomeStoryArtwork{min-height:150px}.welcomeStoryHint{margin-top:8px}}
+@media(prefers-reduced-motion:reduce){.welcomeStorySymbol,.welcomeStoryCard{animation:none}.welcomeStoryTrack i.isCurrent{animation-duration:0s;animation-fill-mode:forwards;width:100%}}
