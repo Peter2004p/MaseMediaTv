@@ -74,8 +74,20 @@ export default function App(){
  const [route,setRoute]=useState(window.location.hash||'#/home');
  const [shareFeedback,setShareFeedback]=useState('');
  const [welcomeOpen,setWelcomeOpen]=useState(()=>{try{return localStorage.getItem('masenet-welcome-seen')!=='true'}catch{return true}});
+ const [welcomePage,setWelcomePage]=useState(0);
+ const [welcomePaused,setWelcomePaused]=useState(false);
+ const welcomeTouchStart=useRef<{x:number;y:number}|null>(null);
+ const welcomePages=[
+  {eyebrow:'WELCOME TO MASE NET',title:'Your entertainment, all in one place.',description:'A home for discovering movies, dramas and the stories you will love.',icon:'✦',tag:'DISCOVER MORE'},
+  {eyebrow:'CHINESE DRAMAS & MOVIES',title:'Find your next favourite story.',description:'Explore Chinese dramas, films and new releases across a growing entertainment library.',icon:'🎬',tag:'MOVIES · C-DRAMAS'},
+  {eyebrow:'K-DRAMAS & ANIME',title:'Explore worlds beyond the ordinary.',description:'Discover Korean dramas, anime and more collections to match your mood.',icon:'🌙',tag:'K-DRAMA · ANIME'},
+  {eyebrow:'A BETTER WAY TO WATCH',title:'Streaming made for your screen.',description:'Enjoy a smooth viewing experience with playback options designed for mobile and desktop.',icon:'▶',tag:'STREAM YOUR WAY'},
+  {eyebrow:'YOUR WATCHING, YOUR WAY',title:'Subtitles and downloads in reach.',description:'Find available subtitle options and download links, then continue discovering across your devices.',icon:'☁',tag:'SUBTITLES · DOWNLOADS'},
+  {eyebrow:'YOUR ENTERTAINMENT, OUR PRIORITY',title:'Ready to make Mase Net yours?',description:'Explore the library, build your watchlist and get started with Mase Net today.',icon:'♥',tag:'LET THE DISCOVERY BEGIN'}
+ ];
  const [welcomeBusy,setWelcomeBusy]=useState(false);
  const [welcomeError,setWelcomeError]=useState('');
+ useEffect(()=>{if(!welcomeOpen||welcomePaused||welcomePage===welcomePages.length-1)return;const timer=window.setTimeout(()=>setWelcomePage(p=>Math.min(p+1,welcomePages.length-1)),6500);return()=>window.clearTimeout(timer)},[welcomeOpen,welcomePaused,welcomePage]);
  const telegramWebApp=(window as unknown as {Telegram?:{WebApp?:{initData?:string;ready?:()=>void;expand?:()=>void}}}).Telegram?.WebApp;
  const inTelegramMiniApp=Boolean(telegramWebApp?.initData);
  const finishWelcome=()=>{try{localStorage.setItem('masenet-welcome-seen','true')}catch{}setWelcomeOpen(false);go('#/home')};
@@ -172,41 +184,33 @@ export default function App(){
  async function telegramLogin():Promise<boolean>{if(authBusy)return false;setAuthError('');if(!inTelegramMiniApp||!telegramWebApp?.initData){setAuthError('Open MaseNet from the Telegram Mini App, then tap Continue with Telegram to sign in securely.');return false}setAuthBusy(true);try{const r=await api.post('/api/auth/telegram',{initData:telegramWebApp.initData});if(!r.data?.user)throw new Error('Telegram sign-in could not be verified. Please try again from the Telegram Mini App.');setViewer({...r.data.user,provider:'telegram'});try{localStorage.setItem('masenet-welcome-seen','true')}catch{}setWelcomeOpen(false);return true}catch(e){setAuthError(e instanceof Error?e.message:'Telegram sign-in could not be completed. Please try again.');return false}finally{setAuthBusy(false)}}
  async function signOut(){try{await auth.signOut()}catch{}setViewer(null)}
 
- if(welcomeOpen)return <main className="welcomeGate welcomePro" aria-label="Welcome to MaseNet">
+ if(welcomeOpen)return <main className="welcomeGate welcomePro welcomeStoryGate" aria-label="Welcome to MaseNet onboarding" onMouseDown={()=>setWelcomePaused(true)} onMouseUp={()=>setWelcomePaused(false)} onMouseLeave={()=>setWelcomePaused(false)} onTouchStart={e=>{welcomeTouchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};setWelcomePaused(true)}} onTouchEnd={e=>{const start=welcomeTouchStart.current;welcomeTouchStart.current=null;setWelcomePaused(false);if(!start)return;const dx=e.changedTouches[0].clientX-start.x;const dy=e.changedTouches[0].clientY-start.y;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)){setWelcomePage(p=>Math.max(0,Math.min(welcomePages.length-1,p+(dx<0?1:-1))))}}}>
   <div className="welcomeBackdrop"><span className="welcomeGlow welcomeGlowOne"/><span className="welcomeGlow welcomeGlowTwo"/><span className="welcomeOrb welcomeOrbOne"/><span className="welcomeOrb welcomeOrbTwo"/></div>
-  <div className="welcomeShell welcomeProShell">
-   <header className="welcomeProHeader">
-    <a className="welcomeProBrand" href="#/home" onClick={e=>e.preventDefault()} aria-label="MaseNet home"><img src="/masemediatv-logo.svg" alt=""/><span><b>MaseNet</b><small>ENTERTAINMENT, REIMAGINED</small></span></a>
-    <div className="welcomeProHeaderActions"><span className="welcomeLive"><i/> YOUR ENTERTAINMENT HUB</span><button className="welcomeHeaderSignIn" onClick={()=>void welcomeSignup()} disabled={welcomeBusy}>{welcomeBusy?'Please wait…':inTelegramMiniApp?'Continue with Telegram':'Sign in'}</button></div>
-   </header>
-   <section className="welcomeProHero">
-    <div className="welcomeProCopy">
-     <div className="welcomeProEyebrow"><span>✦</span> MOVIES · DRAMAS · REELS · AI</div>
-     <h1>Your next story.<br/><em>Your kind of entertainment.</em></h1>
-     <p className="welcomeProLead">Discover something worth watching. Explore movies and dramas, find your next favourite, and get personal recommendations — all in one connected experience.</p>
-     <div className="welcomeProActions"><button className="welcomePrimary welcomeProPrimary" onClick={()=>void welcomeSignup()} disabled={welcomeBusy}>{welcomeBusy?'Connecting securely…':inTelegramMiniApp?'Continue with Telegram':'Get started for free'} <span>↗</span></button><a className="welcomeExploreLink" href="https://t.me/MaseTv_Bot" target="_blank" rel="noreferrer">Explore the Telegram bot <span>→</span></a></div>
+  <div className="welcomeStoryShell">
+   <div className="welcomeStoryTop">
+    <a className="welcomeProBrand" href="#/home" onClick={e=>e.preventDefault()} aria-label="MaseNet"><img src="/masemediatv-logo.svg" alt=""/><span><b>MaseNet</b><small>ENTERTAINMENT, REIMAGINED</small></span></a>
+    <button className="welcomeStorySkip" onClick={finishWelcome}>Skip tour <span>×</span></button>
+   </div>
+   <div className="welcomeStoryProgress" aria-label={`Page ${welcomePage+1} of 6`}>
+    {welcomePages.map((page,i)=><span className="welcomeStoryTrack" key={page.eyebrow}><i className={i<welcomePage?'isDone':i===welcomePage?'isCurrent':''} style={i===welcomePage?{animationPlayState:welcomePaused?'paused':'running'}:undefined}/></span>)}
+   </div>
+   <div className="welcomeStoryCounter">{String(welcomePage+1).padStart(2,'0')} <span>/ 06</span></div>
+   <section className="welcomeStoryCard" key={welcomePage}>
+    <div className={`welcomeStoryArtwork welcomeStoryArtwork${welcomePage+1}`} aria-hidden="true"><div className="welcomeStoryAura"/><span className="welcomeStorySymbol">{welcomePages[welcomePage].icon}</span><span className="welcomeStoryOrbit welcomeStoryOrbitA"/><span className="welcomeStoryOrbit welcomeStoryOrbitB"/><b>MASE<span>NET</span></b></div>
+    <div className="welcomeStoryCopy">
+     <div className="welcomeProEyebrow"><span>✦</span> {welcomePages[welcomePage].eyebrow}</div>
+     <h1>{welcomePages[welcomePage].title}</h1>
+     <p className="welcomeProLead">{welcomePages[welcomePage].description}</p>
+     <span className="welcomeStoryTag">{welcomePages[welcomePage].tag}</span>
      {welcomeError&&<p className="welcomeError" role="alert">{welcomeError}</p>}
-     <div className="welcomeProTrust"><span><i>✓</i> Built for mobile</span><span><i>✓</i> Website + Telegram</span><span><i>✓</i> One entertainment hub</span></div>
-    </div>
-    <div className="welcomeProVisual" aria-label="MaseNet entertainment experience preview">
-     <div className="welcomeVisualGlow"/>
-     <div className="welcomeVisualTop"><span><i/> NOW DISCOVERING</span><span>MASE<span className="welcomeAccent">NET</span> ORIGINAL EXPERIENCE</span></div>
-     <div className="welcomeVisualPosters">
-      <article className="welcomeVisualPoster welcomeVisualPosterBack welcomeVisualPosterLeft"><img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80" alt="" loading="lazy"/><span>DRAMA COLLECTION</span><b>Stories<br/>that stay.</b></article>
-      <article className="welcomeVisualPoster welcomeVisualPosterMain"><img src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy"/><div className="welcomePosterOverlay"><span>THE MASE NET EXPERIENCE</span><b>Find your<br/>next favourite.</b><small>Movies · Series · More</small></div><div className="welcomePosterPlay">▶</div></article>
-      <article className="welcomeVisualPoster welcomeVisualPosterBack welcomeVisualPosterRight"><img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=500&q=80" alt="" loading="lazy"/><span>CONNECTED VIEWING</span><b>Watch<br/>your way.</b></article>
-     </div>
-     <div className="welcomeVisualBottom"><span className="welcomeVisualAvatar">M</span><span><b>One home for entertainment</b><small>Discover · Save · Watch · Repeat</small></span><span className="welcomeVisualArrow">↗</span></div>
     </div>
    </section>
-   <section className="welcomeProFeatures" aria-label="MaseNet features">
-    <article><span className="welcomeFeatureIcon">▶</span><div><b>Movies & dramas</b><p>Explore the library and find what to watch next.</p></div></article>
-    <article><span className="welcomeFeatureIcon">✦</span><div><b>Personal AI assistant</b><p>Get ideas and recommendations for your mood.</p></div></article>
-    <article><span className="welcomeFeatureIcon">▰</span><div><b>Connected with Telegram</b><p>Reach MaseNet through the website, Mini App, or bot.</p></div></article>
-    <article><span className="welcomeFeatureIcon">◉</span><div><b>Reels & discovery</b><p>Explore short-form entertainment in one place.</p></div></article>
-   </section>
-   <footer className="welcomeProFooter"><span>© MaseNet <span className="welcomeFooterDot">•</span> Your entertainment, connected</span><nav><a href="/privacy.html" target="_blank" rel="noreferrer">Privacy</a><a href="https://t.me/MaseMediaTv" target="_blank" rel="noreferrer">Community</a><a href="https://t.me/MaseTv_Bot" target="_blank" rel="noreferrer">Telegram bot</a></nav></footer>
-   <p className="welcomeProLegal">By continuing, you acknowledge the <a href="/privacy.html" target="_blank" rel="noreferrer">Privacy Policy</a>. Sign-in is handled securely by the selected provider.</p>
+   <div className="welcomeStoryControls">
+    <button className="welcomeStoryBack" onClick={()=>setWelcomePage(p=>Math.max(0,p-1))} disabled={welcomePage===0}>Back</button>
+    {welcomePage===welcomePages.length-1?<button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>void welcomeSignup()} disabled={welcomeBusy}>{welcomeBusy?'Connecting securely…':inTelegramMiniApp?'Continue with Telegram':'Get started'} <span>↗</span></button>:<button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>setWelcomePage(p=>Math.min(p+1,welcomePages.length-1))}>Next <span>→</span></button>}
+   </div>
+   <p className="welcomeStoryHint">Tap the right side to continue · Swipe to navigate · Hold to pause</p>
+   <div className="welcomeStoryTapZones"><button aria-label="Previous page" onClick={()=>setWelcomePage(p=>Math.max(0,p-1))}/><button aria-label="Next page" onClick={()=>setWelcomePage(p=>Math.min(p+1,welcomePages.length-1))}/></div>
   </div>
  </main>
  const content=route==='#/notifications'?<NotificationsPage items={notificationItems} readIds={readNotificationIds} setReadIds={setReadNotificationIds} go={go}/>:route==='#/my-list'?<WatchlistPage titles={myList} setSaved={setSaved} go={go}/>:route.startsWith('#/title/')?(selected?(selected.episodes?.length?<Detail title={selected} go={go} progress={progress} setProgress={setProgress} completed={completed} setCompleted={setCompleted} saved={saved} setSaved={setSaved}/>:<main className="page detail"><button className="back" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Library</button><section className="detailHero"><Poster title={selected}/><div><small className="eyebrow">{selected.type} · {selected.year}</small><h1>{selected.name}</h1><p>{selected.description||'No description has been added yet.'}</p><div className="chips"><span>{selected.quality}</span><span>{selected.type==='Drama'?'Drama library':'Movie library'}</span></div></div></section><section className="emptyState"><h2>No playable episodes yet</h2><p>This title is in your library, but it has no episode/video URL saved. An admin can add the episode links in the dashboard.</p></section></main>):<main className="page detail"><section className="emptyState"><h2>{titlesLoaded?'Title not found':'Loading video…'}</h2><p>{titlesLoaded?'This title could not be matched to the catalog. Return to the library and open it again.':'MaseNet is loading the title and its playback details.'}</p><button className="secondary" onClick={()=>go('#/home')}><ArrowLeft size={14}/> Back to library</button></section></main>):route==='#/reels'?<Reels titles={titles} go={go} saved={saved} setSaved={setSaved} viewerName={viewer?.name||viewer?.email?.split('@')[0]||''} viewerId={viewer?.userId||''}/>:route==='#/admin' && !canAdmin?<Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} catalogError={catalogError} requestMissingTitle={requestMissingTitle}/>:(route==='#/admin-statistics'||route==='#/admin') && canAdmin?<Admin isOwner={isAdmin} restricted={isBulkAdmin} titles={titles} onCreate={createTitle} onUpdate={updateTitle} onDelete={deleteTitle} tab={isBulkAdmin?'bulkUrl':route==='#/admin-statistics'?'statistics':adminTab} setTab={setAdminTab} rows={homepageRows} setRows={setHomepageRows} saveRows={saveRows} broadcasts={broadcasts} setBroadcasts={setBroadcasts} heroSettings={heroSettings} setHeroSettings={setHeroSettings} telegramStatus={telegramStatus} setTelegramStatus={setTelegramStatus}/>:<><Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} broadcasts={broadcasts} catalogError={catalogError} requestMissingTitle={requestMissingTitle}/></>;
