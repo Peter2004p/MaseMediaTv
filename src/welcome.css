@@ -240,3 +240,61 @@
 @media(min-width:700px){.welcomeStoryCard{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:34px}.welcomeStoryArtwork{min-height:310px}.welcomeStoryCopy{text-align:left}.welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start}.welcomeStoryCopy .welcomeProLead{margin:0}.welcomeStoryTapZones{inset:105px 0 100px}}
 @media(max-height:650px){.welcomeStoryShell{padding-top:14px;padding-bottom:14px}.welcomeStoryProgress{margin-top:18px}.welcomeStoryCard{padding:18px 0;gap:16px}.welcomeStoryArtwork{min-height:150px}.welcomeStoryHint{margin-top:8px}}
 @media(prefers-reduced-motion:reduce){.welcomeStorySymbol,.welcomeStoryCard{animation:none}.welcomeStoryTrack i.isCurrent{animation-duration:0s;animation-fill-mode:forwards;width:100%}}
+
+
+
+/* Premium editorial onboarding refresh */
+.welcomeStoryGate{background:#080a0c;color:#f7f4ed}
+.welcomeStoryGate .welcomeBackdrop{background:radial-gradient(ellipse at 72% 48%,#b58a4930,transparent 38%),radial-gradient(ellipse at 12% 12%,#1b594b40,transparent 34%),linear-gradient(135deg,#080b0a,#101513 55%,#090b0b)}
+.welcomeStoryShell{width:min(1180px,100%);min-height:100svh;padding:clamp(22px,4vh,42px) clamp(22px,5vw,72px) 30px}
+.welcomeStoryTop{padding-bottom:18px;border-bottom:1px solid #ffffff18}
+.welcomeStoryTop .welcomeProBrand img{width:43px;height:43px}
+.welcomeStoryTop .welcomeProBrand b{font-size:20px;letter-spacing:-.055em}
+.welcomeStoryTop .welcomeProBrand small{color:#a5b1a9;font-size:8px;letter-spacing:.16em}
+.welcomeStorySkip{border:1px solid #d6bd8b55;background:#ffffff08;color:#e8dfcf;padding:10px 17px;letter-spacing:.02em}
+.welcomeStorySkip:hover{background:#c4a66c18;border-color:#c4a66c}
+.welcomeStoryProgress{gap:7px;margin-top:24px}
+.welcomeStoryTrack{height:2px;background:#ffffff25}
+.welcomeStoryTrack i{background:#d6b77b}
+.welcomeStoryCounter{color:#e6c88f;font-size:11px;letter-spacing:.16em;margin-top:15px}
+.welcomeStoryCounter span{color:#7f8982}
+.welcomeStoryCard{min-height:0;gap:clamp(30px,6vw,84px);padding:clamp(28px,5vh,54px) 0 34px;animation:welcomeStoryIn .5s cubic-bezier(.2,.75,.25,1) both}
+.welcomeStoryArtwork{min-height:clamp(300px,48vh,510px);border:1px solid #d9c18b35;border-radius:5px;background:linear-gradient(145deg,#233b34,#111b18 54%,#10100e);box-shadow:0 28px 80px #0008;overflow:hidden}
+.welcomeStoryArtwork:before{content:"";position:absolute;inset:12px;border:1px solid #e3c98b38;pointer-events:none}
+.welcomeStoryArtwork1{background:radial-gradient(ellipse at 50% 42%,#5c755f 0,#263e34 36%,#101714 78%)}
+.welcomeStoryArtwork2{background:radial-gradient(ellipse at 48% 45%,#a66b4e 0,#533b31 40%,#171311 80%)}
+.welcomeStoryArtwork3{background:radial-gradient(ellipse at 50% 42%,#527d83 0,#253d46 42%,#111719 82%)}
+.welcomeStoryArtwork4{background:radial-gradient(ellipse at 50% 45%,#6c7e82 0,#34474a 40%,#111719 82%)}
+.welcomeStoryArtwork5{background:radial-gradient(ellipse at 50% 45%,#87765a 0,#443b2e 42%,#151411 82%)}
+.welcomeStoryArtwork6{background:radial-gradient(ellipse at 50% 45%,#9a7c4e 0,#51402b 42%,#17130e 82%)}
+.welcomeStoryAura{width:65%;background:#e3c58c42;filter:blur(75px)}
+.welcomeStorySymbol{display:none}
+.welcomeStoryOrbit{width:70%;height:68%;border-color:#e4d0a144}
+.welcomeStoryOrbitB{width:88%;height:45%;border-color:#ffffff20}
+.welcomeStoryArtwork>b{display:none}
+.welcomeEditorialFrame{position:absolute;inset:28px;display:flex;flex-direction:column;justify-content:space-between;z-index:2}
+.welcomeEditorialIndex{font-size:10px;letter-spacing:.2em;color:#e9d5aa}
+.welcomeEditorialWordmark{font-family:Georgia,serif;font-size:clamp(24px,4vw,44px);letter-spacing:.16em;color:#f7f0df;text-align:center;text-shadow:0 8px 35px #0008}
+.welcomeEditorialWordmark span{color:#dfbd79}
+.welcomeEditorialVisual{position:relative;display:flex;align-items:center;justify-content:center;flex:1;min-height:150px;gap:clamp(9px,2vw,20px);padding:22px}
+.welcomeEditorialVisual i{display:block;width:27%;height:70%;border:1px solid #f2dfb35c;border-radius:3px;background:linear-gradient(155deg,#d4b17b66,#18241f 48%,#080c0a);box-shadow:0 22px 42px #0008;transform:rotate(-8deg)}
+.welcomeEditorialVisual i:nth-child(2){height:92%;width:34%;transform:translateY(-5px);background:linear-gradient(155deg,#f0d5a866,#3b5144 48%,#101512);z-index:1}
+.welcomeEditorialVisual i:nth-child(3){transform:rotate(8deg);background:linear-gradient(155deg,#b7c9c266,#1d3337 48%,#0b1011)}
+.welcomeEditorialCaption{font-size:9px;letter-spacing:.23em;color:#ead6ad;text-align:center}
+.welcomeStoryCopy{max-width:560px;text-align:left}
+.welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start;color:#d8b879;font-size:10px;letter-spacing:.22em}
+.welcomeStoryCopy h1{font-family:Georgia,'Times New Roman',serif;font-size:clamp(42px,5.4vw,72px);font-weight:500;line-height:1.02;letter-spacing:-.045em;color:#f6f1e7;margin:20px 0}
+.welcomeStoryCopy .welcomeProLead{font-size:clamp(15px,1.45vw,18px);line-height:1.85;color:#b7c0b9;margin:0;max-width:470px}
+.welcomeStoryTag{border:0;border-left:2px solid #c9a66b;border-radius:0;padding:4px 0 4px 12px;color:#d9c18f;font-size:9px;letter-spacing:.2em;margin-top:25px}
+.welcomeStoryControls{border-top:1px solid #ffffff1c;padding-top:22px}
+.welcomeStoryBack{border:1px solid #ffffff35;background:transparent;color:#e8e4da;padding:14px 23px;border-radius:3px}
+.welcomeStoryNext{border-radius:3px!important;min-width:170px;padding:15px 24px!important;background:linear-gradient(110deg,#d9bd84,#b58a4e)!important;color:#17140f!important;box-shadow:0 12px 35px #c29d5b25!important;font-weight:800}
+.welcomeStoryNext:hover{filter:brightness(1.08);transform:translateY(-2px)}
+.welcomeStoryHint{color:#89938b;letter-spacing:.06em;font-size:10px;margin-top:13px}
+.welcomeStoryCopy h1,.welcomeStoryCopy p,.welcomeStoryTag{animation:welcomeEditorialRise .55s both}
+.welcomeStoryCopy p{animation-delay:.07s}.welcomeStoryTag{animation-delay:.13s}
+@keyframes welcomeEditorialRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@media(min-width:700px){.welcomeStoryCard{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr)}.welcomeStoryArtwork{min-height:clamp(390px,55vh,560px)}.welcomeStoryCopy{text-align:left}.welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start}.welcomeStoryCopy .welcomeProLead{margin:0}}
+@media(max-width:699px){.welcomeStoryShell{padding:18px 19px max(22px,env(safe-area-inset-bottom))}.welcomeStoryCard{gap:25px;padding:27px 0 22px}.welcomeStoryArtwork{min-height:clamp(220px,33svh,310px)}.welcomeEditorialFrame{inset:22px}.welcomeStoryCopy{text-align:left}.welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start}.welcomeStoryCopy h1{font-size:clamp(39px,10vw,54px);margin:14px 0}.welcomeStoryCopy .welcomeProLead{font-size:14px;line-height:1.72}.welcomeStoryTag{margin-top:16px}.welcomeStoryControls{padding-top:17px}.welcomeStoryNext{min-width:140px}.welcomeStoryHint{font-size:9px}}
+@media(max-height:720px) and (min-width:700px){.welcomeStoryArtwork{min-height:330px}.welcomeStoryCard{padding:22px 0}.welcomeStoryShell{padding-top:16px;padding-bottom:18px}}
+@media(prefers-reduced-motion:reduce){.welcomeStoryCopy h1,.welcomeStoryCopy p,.welcomeStoryTag{animation:none!important}.welcomeEditorialVisual i{transform:none!important}}
