@@ -36,7 +36,8 @@ async function sendTyping(env: Env, chatId: string | number) {
 async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:string;name:string;kind:string;year:number|null;episodeLabels:string[]}>> {
   const query = message.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   if (query.length < 2) return [];
-  const stopWords = new Set(["find","search","looking","for","movie","movies","drama","dramas","series","episode","episodes","title","please","show","me","watch","want","get","a","an","the","of","is","in","on"]);\n  const terms = query.split(/\s+/).filter((word) => word.length > 1 && !stopWords.has(word));
+  const stopWords = new Set(["find","search","looking","for","movie","movies","drama","dramas","series","episode","episodes","title","please","show","me","watch","want","get","a","an","the","of","is","in","on"]);
+  const terms = query.split(/\s+/).filter((word) => word.length > 1 && !stopWords.has(word));
   try {
     const rows = await env.DB.prepare(
       "SELECT id,name,kind,year,metadata_json FROM titles ORDER BY created_at DESC LIMIT 600"
