@@ -298,3 +298,63 @@
 @media(max-width:699px){.welcomeStoryShell{padding:18px 19px max(22px,env(safe-area-inset-bottom))}.welcomeStoryCard{gap:25px;padding:27px 0 22px}.welcomeStoryArtwork{min-height:clamp(220px,33svh,310px)}.welcomeEditorialFrame{inset:22px}.welcomeStoryCopy{text-align:left}.welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start}.welcomeStoryCopy h1{font-size:clamp(39px,10vw,54px);margin:14px 0}.welcomeStoryCopy .welcomeProLead{font-size:14px;line-height:1.72}.welcomeStoryTag{margin-top:16px}.welcomeStoryControls{padding-top:17px}.welcomeStoryNext{min-width:140px}.welcomeStoryHint{font-size:9px}}
 @media(max-height:720px) and (min-width:700px){.welcomeStoryArtwork{min-height:330px}.welcomeStoryCard{padding:22px 0}.welcomeStoryShell{padding-top:16px;padding-bottom:18px}}
 @media(prefers-reduced-motion:reduce){.welcomeStoryCopy h1,.welcomeStoryCopy p,.welcomeStoryTag{animation:none!important}.welcomeEditorialVisual i{transform:none!important}}
+
+/* Cinematic image-led onboarding: replaces the rejected abstract poster treatment */
+.welcomeStoryGate{background:#050608!important;color:#fff}
+.welcomeStoryGate .welcomeBackdrop{background:#050608!important;opacity:.55}
+.welcomeStoryShell{width:min(1280px,100%);padding:clamp(18px,3vh,32px) clamp(18px,4vw,64px) 24px}
+.welcomeStoryTop{border:0;padding:0 0 12px}
+.welcomeStoryTop .welcomeProBrand img{width:38px;height:38px}
+.welcomeStoryTop .welcomeProBrand b{font-family:inherit;font-size:19px;letter-spacing:-.04em}
+.welcomeStoryTop .welcomeProBrand small{font-size:8px;letter-spacing:.17em;color:#c2c5cc}
+.welcomeStorySkip{background:#11151dbb;border:1px solid #ffffff28;color:#f5f6f8;backdrop-filter:blur(18px);border-radius:999px}
+.welcomeStoryProgress{margin-top:18px;gap:5px}
+.welcomeStoryTrack{height:2px;background:#ffffff40}
+.welcomeStoryTrack i{background:#f5f5f5}
+.welcomeStoryCounter{color:#fff;margin-top:9px}
+.welcomeStoryCard{position:relative;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(300px,.85fr);align-items:center;gap:clamp(26px,5vw,76px);padding:clamp(22px,4vh,42px) 0;min-height:0}
+.welcomeStoryArtwork{grid-column:1;grid-row:1;min-height:clamp(360px,59vh,650px);height:100%;border:0;border-radius:24px;overflow:hidden;background:#111;box-shadow:0 28px 90px #0009}
+.welcomeStoryArtwork:before{display:none}
+.welcomeCinematicImage{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;transform:scale(1.015);animation:welcomeImageReveal .9s cubic-bezier(.2,.7,.2,1) both}
+.welcomeCinematicShade{position:absolute;inset:0;background:linear-gradient(180deg,#03050966 0%,transparent 34%,#03050912 55%,#030509b8 100%),linear-gradient(90deg,#03050922,transparent 65%)}
+.welcomeCinematicBrand{position:absolute;inset:auto 25px 24px;display:flex;flex-direction:column;gap:9px;color:#fff}
+.welcomeCinematicBrand>span{font-size:clamp(26px,4vw,43px);font-weight:850;letter-spacing:.12em;text-shadow:0 3px 20px #0008}
+.welcomeCinematicBrand>span span{color:#d9b66f}
+.welcomeCinematicBrand small{font-size:9px;letter-spacing:.2em;color:#f5ead8}
+.welcomeCinematicNumber{position:absolute;right:23px;top:22px;color:#fff;font-size:10px;letter-spacing:.18em;text-shadow:0 2px 12px #000}
+.welcomeStoryCopy{grid-column:2;grid-row:1;max-width:490px;text-align:left;margin:0}
+.welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start;color:#d8b875;font-size:10px;letter-spacing:.2em}
+.welcomeStoryCopy h1{font-family:inherit;font-weight:760;font-size:clamp(38px,5.1vw,68px);line-height:1.02;letter-spacing:-.055em;margin:18px 0;color:#fff}
+.welcomeStoryCopy .welcomeProLead{margin:0;max-width:430px;color:#b9c0cc;font-size:clamp(15px,1.5vw,18px);line-height:1.75}
+.welcomeStoryTag{display:inline-flex;border:1px solid #ffffff22;border-radius:999px;background:#ffffff0a;padding:10px 14px;color:#e6d3a9;font-size:9px;letter-spacing:.16em;margin-top:24px}
+.welcomeStoryControls{border-top:1px solid #ffffff20;padding-top:17px}
+.welcomeStoryBack{border-radius:999px;background:#ffffff0a}
+.welcomeStoryNext{border-radius:999px!important;background:linear-gradient(110deg,#e4c782,#bd9650)!important;color:#17130b!important;min-width:158px}
+.welcomeStoryHint{color:#7f8794}
+@keyframes welcomeImageReveal{from{opacity:.5;transform:scale(1.06)}to{opacity:1;transform:scale(1.015)}}
+@media(max-width:760px){
+ .welcomeStoryShell{padding:14px 16px max(18px,env(safe-area-inset-bottom))}
+ .welcomeStoryTop .welcomeProBrand img{width:34px;height:34px}
+ .welcomeStoryProgress{margin-top:15px}
+ .welcomeStoryCard{display:flex;flex-direction:column;align-items:stretch;gap:20px;padding:20px 0 16px}
+ .welcomeStoryArtwork{min-height:clamp(215px,33svh,310px);height:clamp(215px,33svh,310px);border-radius:19px}
+ .welcomeCinematicBrand{inset:auto 17px 17px;gap:6px}
+ .welcomeCinematicBrand>span{font-size:27px}
+ .welcomeCinematicBrand small{font-size:8px}
+ .welcomeCinematicNumber{top:15px;right:16px}
+ .welcomeStoryCopy{max-width:none}
+ .welcomeStoryCopy .welcomeProEyebrow{font-size:9px}
+ .welcomeStoryCopy h1{font-size:clamp(34px,9.2vw,47px);margin:11px 0}
+ .welcomeStoryCopy .welcomeProLead{font-size:13px;line-height:1.58}
+ .welcomeStoryTag{margin-top:13px;padding:8px 11px}
+ .welcomeStoryControls{padding-top:13px}
+ .welcomeStoryHint{margin-top:8px}
+}
+@media(max-height:700px) and (max-width:760px){
+ .welcomeStoryArtwork{min-height:185px;height:185px}
+ .welcomeStoryCard{gap:14px;padding:14px 0 10px}
+ .welcomeStoryCopy h1{font-size:32px;margin:8px 0}
+ .welcomeStoryCopy .welcomeProLead{font-size:12px}
+ .welcomeStoryTag{margin-top:8px}
+}
+@media(prefers-reduced-motion:reduce){.welcomeCinematicImage{animation:none}}
