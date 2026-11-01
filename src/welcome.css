@@ -1526,3 +1526,26 @@ html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!importa
 @media(prefers-reduced-motion:reduce){
  .welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark,.welcomeAdExperience .welcomeAdBackdropArt:before{animation:none!important}
 }
+
+/* Story-style gestures and animated status progress */
+.welcomeAdExperience .welcomeStoryTrack{position:relative!important;overflow:hidden!important}
+.welcomeAdExperience .welcomeStoryTrack i{
+ display:block!important;height:100%!important;max-width:100%!important;border-radius:99px!important;
+ background:linear-gradient(90deg,#72d9ff,#c7a8ff)!important;transition:none!important;
+}
+.welcomeAdExperience .welcomeStatusTapZones{
+ position:absolute!important;z-index:12!important;inset:0!important;display:flex!important;
+ pointer-events:none!important;
+}
+.welcomeAdExperience .welcomeStatusTapZones button{
+ display:block!important;width:50%!important;height:100%!important;padding:0!important;margin:0!important;
+ border:0!important;border-radius:0!important;background:transparent!important;
+ opacity:0!important;pointer-events:auto!important;touch-action:pan-y!important;
+}
+.welcomeAdExperience .welcomeStatusTapZones button:focus-visible{
+ opacity:1!important;outline:2px solid #9bdfff!important;outline-offset:-8px!important;
+}
+.welcomeAdExperience.isPaused .welcomeStoryTrack i{filter:brightness(1.18)!important}
+.welcomeAdExperience.isPaused .welcomeEcosystemMock,
+.welcomeAdExperience.isPaused .welcomeWelcomeMark,
+.welcomeAdExperience.isPaused .welcomeAdBackdropArt:before{animation-play-state:paused!important}
