@@ -203,6 +203,7 @@ export default function App(){
    <div className="welcomeStoryCounter">{String(welcomePage+1).padStart(2,'0')} <span>/ 06</span></div>
    <section className={`welcomeStoryCard welcomeEditorialCard welcomeEditorialPage${welcomePage+1}`} key={welcomePage}>
     <div className={`welcomeStoryArtwork welcomeStoryArtwork${welcomePage+1} welcomeIOSVisual welcomeIOSVisual${welcomePage+1}`} aria-hidden="true">
+     <img className="welcomeScenePhoto" src={welcomeFallbackArtwork[welcomePage]} alt="" loading="eager" decoding="async"/>
 <div className="welcomeIOSVisualTop"><span>MASE NET</span><span>0{welcomePage+1} / 06</span></div>
 <div className={`welcomeMotionScene welcomeMotionScene${welcomePage+1}`} aria-hidden="true">
 {welcomePage===0?<><i className="welcomeOrbit welcomeOrbitA"/><i className="welcomeOrbit welcomeOrbitB"/><i className="welcomeSceneParticle particleA"/><i className="welcomeSceneParticle particleB"/><i className="welcomeSceneParticle particleC"/></>:welcomePage===1?<><i className="welcomeSearchSweep"/><i className="welcomeSearchPulse"/><i className="welcomeSceneSpark sparkA"/><i className="welcomeSceneSpark sparkB"/></>:welcomePage===2?<><i className="welcomePlaybackBeam"/><i className="welcomePlaybackProgress"/><i className="welcomePlaybackWave waveA"/><i className="welcomePlaybackWave waveB"/><i className="welcomePlaybackWave waveC"/></>:welcomePage===3?<><i className="welcomeAiHalo"/><i className="welcomeTypingDots"><b/><b/><b/></i><i className="welcomeAiSignal signalA"/><i className="welcomeAiSignal signalB"/></>:welcomePage===4?<><i className="welcomeTelegramOrbit orbitA"/><i className="welcomeTelegramOrbit orbitB"/><i className="welcomeTelegramNode nodeA">✈</i><i className="welcomeTelegramNode nodeB">◎</i></>:<><i className="welcomeManagerSweep"/><i className="welcomeManagerBar barA"/><i className="welcomeManagerBar barB"/><i className="welcomeManagerBar barC"/><i className="welcomeManagerPulse"/></>}
@@ -217,10 +218,10 @@ export default function App(){
      {welcomeError&&<p className="welcomeError" role="alert">{welcomeError}</p>}
     </div>
    </section>
-   <div className="welcomeStoryControls welcomeAdControls">
-    <button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>welcomePage===welcomePages.length-1?void welcomeSignup():finishWelcome()} disabled={welcomePage===welcomePages.length-1&&welcomeBusy}>{welcomePage===welcomePages.length-1?(welcomeBusy?'Connecting securely…':inTelegramMiniApp?'Continue with Telegram':'Get started'):'Explore MaseNet'} <span>↗</span></button>
-   </div>
-   <p className="welcomeStoryHint welcomeAdHint">A six-scene MaseNet experience · Plays automatically</p>
+   {welcomePage===welcomePages.length-1&&<div className="welcomeStoryControls welcomeAdControls">
+    <button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>void welcomeSignup()} disabled={welcomeBusy}>{welcomeBusy?'Connecting securely…':inTelegramMiniApp?'Continue with Telegram':'Get started'} <span>↗</span></button>
+   </div>}
+   <p className="welcomeStoryHint welcomeAdHint">MaseNet · Your entertainment world</p>
    
   </div>
  </main>
