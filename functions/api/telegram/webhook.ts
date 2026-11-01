@@ -36,7 +36,7 @@ async function sendTyping(env: Env, chatId: string | number) {
 async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:string;name:string;kind:string;year:number|null;episodeLabels:string[]}>> {
   const query = message.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   if (query.length < 2) return [];
-  const terms = query.split(/\s+/).filter((word) => word.length > 1);
+  const stopWords = new Set(["find","search","looking","for","movie","movies","drama","dramas","series","episode","episodes","title","please","show","me","watch","want","get","a","an","the","of","is","in","on"]);\n  const terms = query.split(/\s+/).filter((word) => word.length > 1 && !stopWords.has(word));
   try {
     const rows = await env.DB.prepare(
       "SELECT id,name,kind,year,metadata_json FROM titles ORDER BY created_at DESC LIMIT 600"
@@ -63,7 +63,7 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
       else if (normalizedName.includes(query)) score += 24;
       else if (query.includes(normalizedName) && normalizedName.length > 3) score += 15;
       if (haystack.includes(query)) score += 18;
-      score += terms.filter((term) => haystack.includes(term)).length * 3;
+      score += terms.filter((term) => haystack.includes(term)).length * 6;
       return {id:String(row.id),name,kind:String(row.kind || "Title"),year:row.year == null ? null : Number(row.year),episodeLabels,score};
     }).filter((item) => item.score >= 6);
     ranked.sort((a,b)=>b.score-a.score || a.name.localeCompare(b.name));
@@ -133,6 +133,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const active = disablesAlerts ? 0 : 1;
       await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title,active=excluded.active,updated_at=datetime('now'),chat_type='private'").bind(chatId,title,active).run();
       const alertNote = startPayload === "alerts_on" ? "\n\n🔔 New-title alerts are enabled." : disablesAlerts ? "\n\n🔕 New-title alerts are paused." : "";
+      const titleStart = startPayload.match(/^title_([a-zA-Z0-9_-]{1,100})$/);
+      if (titleStart) {
+        const selected = await env.DB.prepare("SELECT name,kind,year FROM titles WHERE id=?").bind(titleStart[1]).first<{name:string;kind:string;year:number|null}>();
+        if (selected) {
+          await sendMessage(env, chatId, "🎬 <b>" + String(selected.name).replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" + (selected.year ? " (" + selected.year + ")" : "") + "\\n" + String(selected.kind || "Title") + "\\n\\nOpen the MaseNet Mini App to view the title and available episodes.", keyboard, "HTML");
+          return json({ ok: true, openedTitle: true });
+        }
+      }
       await sendMessage(env, chatId, "Welcome to MaseNet 🎬\n\nI can help with movies, dramas, episodes, Reels, and using MaseNet. Chat normally with me, or tap Open MaseNet to browse the Mini App.\n\nCommands: /app, /help, /notifications_on, /notifications_off, /privacy" + alertNote, keyboard);
     } else if (/^\/notifications_off(?:@\w+)?$/i.test(text)) {
       await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
@@ -155,7 +163,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const resultText = "🎬 <b>Found in the MaseNet library</b>\\n\\n" + matches.map((item) =>
           "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
           (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
-          (item.episodeLabels.length ? "\\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "")
+          (item.episodeLabels.length ? "\\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "") +
+          "\\n  <a href=\\"https://t.me/MaseTv_Bot?start=title_" + encodeURIComponent(item.id) + "\\">Open in Telegram</a>"
         ).join("\\n\\n") + "\\n\\nOpen the MaseNet Mini App to browse the catalogue and play available titles.";
         await sendMessage(env, chatId, resultText, keyboard, "HTML");
         return json({ ok: true, searchMatches: matches.length });
