@@ -1243,3 +1243,98 @@ html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!importa
  .welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{animation:none!important}
  .welcomeAdExperience .welcomeStoryCard,.welcomeAdExperience .welcomeStoryCopy{animation:none!important}
 }
+
+
+/* MaseNet silent six-scene product commercial — reference-led motion pass */
+.welcomeAdExperience{isolation:isolate;overflow:hidden;background:#fbfcfd!important}
+.welcomeAdExperience .welcomeBackdrop{display:none!important}
+.welcomeAdExperience .welcomeStoryCard{background:transparent!important}
+.welcomeAdExperience .welcomeAdBackdropArt{z-index:1;overflow:visible}
+.welcomeAdExperience .welcomeAdBackdropArt:before,
+.welcomeAdExperience .welcomeAdBackdropArt:after{
+ content:"";position:absolute;display:block;pointer-events:none;z-index:1;
+ width:min(78vw,980px);height:min(23vw,290px);left:50%;top:37%;
+ border-radius:999px;filter:blur(.2px) drop-shadow(0 30px 35px #8ca9a044);
+ transform:translate(-50%,-50%) rotate(-28deg);
+ background:linear-gradient(100deg,#ff9eaa 0%,#ffd36e 23%,#8fe4bf 48%,#82c9ff 73%,#c6a0ff 100%);
+ opacity:.82;animation:masenetSilkRibbon 7s ease-in-out infinite alternate;
+}
+.welcomeAdExperience .welcomeAdBackdropArt:after{
+ width:min(67vw,820px);height:min(16vw,190px);top:64%;left:52%;
+ transform:translate(-50%,-50%) rotate(25deg);
+ background:linear-gradient(100deg,#b6a1ff,#8bd5ff 38%,#8de9c4 72%,#ffe08c);
+ opacity:.66;animation:masenetSilkRibbon2 8s ease-in-out infinite alternate;
+}
+.welcomeAdExperience .welcomeAdBackdropArt i{z-index:2;filter:blur(.2px) drop-shadow(0 24px 34px #708c9a30);animation:masenetGlossyFloat 6s ease-in-out infinite alternate}
+.welcomeAdExperience .welcomeAdBackdropArt i:nth-child(1){left:-3%;top:18%;width:clamp(100px,20vw,245px);height:clamp(100px,20vw,245px)}
+.welcomeAdExperience .welcomeAdBackdropArt i:nth-child(2){right:-2%;top:25%;width:clamp(80px,16vw,190px);height:clamp(80px,16vw,190px);animation-delay:-2s}
+.welcomeAdExperience .welcomeAdBackdropArt i:nth-child(3){left:4%;bottom:12%;animation-delay:-3s}
+.welcomeAdExperience .welcomeAdBackdropArt i:nth-child(4){right:4%;bottom:9%;animation-delay:-1s}
+.welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{
+ z-index:8!important;left:50%!important;right:auto!important;top:43%!important;
+ width:clamp(250px,31vw,420px)!important;height:min(61vh,730px)!important;min-height:390px;
+ padding:34px 19px 22px!important;border:9px solid #202a28!important;border-radius:48px!important;
+ transform:translate(-50%,-50%) rotate(-5deg)!important;
+ background:linear-gradient(160deg,#fff 0%,#f6faf8 100%)!important;
+ box-shadow:0 45px 110px #243d3233,0 10px 28px #243d3222,inset 0 1px #fff!important;
+ animation:masenetAdPhoneMove 5.2s cubic-bezier(.45,0,.25,1) infinite!important;
+}
+.welcomeAdExperience .welcomeEcosystemMock:before,.welcomeAdExperience .welcomeWelcomeMark:before{top:9px;width:78px;height:18px;background:#202a28}
+.welcomeAdExperience .welcomeWelcomeMark img{width:104px;height:104px}
+.welcomeAdExperience .welcomeWelcomeMark span{font-size:30px;letter-spacing:.15em}
+.welcomeAdExperience .welcomeWelcomeMark small{font-size:9px;letter-spacing:.2em}
+.welcomeAdExperience .welcomeMockSearch{font-size:12px;padding:15px;border-radius:15px}
+.welcomeAdExperience .welcomeMockPoster{height:clamp(120px,19vh,190px);border-radius:13px}
+.welcomeAdExperience .welcomePlaybackScreen{min-height:clamp(180px,26vh,270px);display:grid;place-items:center}
+.welcomeAdExperience .welcomePlaybackPills span{font-size:8px;padding:8px 10px}
+.welcomeAdExperience .welcomeAiBubble,.welcomeAdExperience .welcomeAiReply,.welcomeAdExperience .welcomeTelegramCard,.welcomeAdExperience .welcomeManagerGrid>div{font-size:11px;padding:14px;border-radius:15px}
+.welcomeAdExperience .welcomeAiHeader b,.welcomeAdExperience .welcomeTelegramTop b,.welcomeAdExperience .welcomeManagerTop b{font-size:12px}
+.welcomeAdExperience .welcomeStoryCopy{z-index:16;left:clamp(20px,7vw,100px);right:clamp(20px,7vw,100px);bottom:clamp(34px,6vh,70px);width:auto;max-width:900px;text-align:left;color:#18251f;animation:masenetReferenceCopy .65s .08s both}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start;color:#258b60!important;font-size:9px;letter-spacing:.19em}
+.welcomeAdExperience .welcomeStoryCopy h1{max-width:780px;margin:9px 0 7px!important;color:#17271f!important;font-size:clamp(25px,4.2vw,54px)!important;line-height:.98!important;letter-spacing:-.055em!important;text-shadow:none!important}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProLead{margin:0;color:#66766d!important;font-size:clamp(11px,1.15vw,15px)!important;line-height:1.45!important;max-width:600px;text-shadow:none!important}
+.welcomeAdExperience .welcomeStoryTag{margin-top:9px;padding:6px 10px;background:#ffffffd9!important;border:1px solid #dbe9e1!important;color:#258b60!important;font-size:7px;letter-spacing:.14em}
+.welcomeAdExperience .welcomeStoryProgress{z-index:35}
+.welcomeAdExperience .welcomeStoryCounter{z-index:35}
+.welcomeAdExperience .welcomeStoryControls{z-index:40}
+.welcomeAdExperience .welcomeStoryCard{animation:masenetCommercialCut .65s cubic-bezier(.2,.7,.2,1) both}
+.welcomeAdExperience .welcomeStoryArtwork{z-index:1}
+.welcomeAdExperience .welcomeStoryArtwork:after{display:none!important}
+.welcomeAdExperience .welcomeAdBackdropArt1:before{background:linear-gradient(100deg,#ff9a9f,#ffd477 32%,#a3eac4 66%,#8acbff)}
+.welcomeAdExperience .welcomeAdBackdropArt2:before{background:linear-gradient(100deg,#9bd7ff,#b6a0ff 45%,#ffb9d1)}
+.welcomeAdExperience .welcomeAdBackdropArt3:before{background:linear-gradient(100deg,#ffb98b,#ffdf85 40%,#9fe4c4)}
+.welcomeAdExperience .welcomeAdBackdropArt4:before{background:linear-gradient(100deg,#b8a6ff,#89cfff 45%,#a3ead1)}
+.welcomeAdExperience .welcomeAdBackdropArt5:before{background:linear-gradient(100deg,#84d8ff,#9eafff 45%,#a7f0d3)}
+.welcomeAdExperience .welcomeAdBackdropArt6:before{background:linear-gradient(100deg,#b7a5ff,#86d5ff 40%,#a1e9bd)}
+.welcomeAdExperience .welcomeAdBackdropArt1:after{filter:blur(.2px)}
+.welcomeAdExperience .welcomeStoryControls{left:clamp(20px,7vw,100px);right:clamp(20px,7vw,100px);bottom:calc(14px + env(safe-area-inset-bottom));width:auto;justify-content:flex-start}
+.welcomeAdExperience .welcomeStoryNext{min-width:210px;min-height:44px;border-radius:999px!important;background:#16271f!important;color:#fff!important;box-shadow:0 12px 30px #1b392a22!important}
+@keyframes masenetSilkRibbon{0%{transform:translate(-56%,-42%) rotate(-32deg) scale(.88)}100%{transform:translate(-44%,-55%) rotate(-15deg) scale(1.12)}}
+@keyframes masenetSilkRibbon2{0%{transform:translate(-45%,-45%) rotate(18deg) scale(1.08)}100%{transform:translate(-55%,-55%) rotate(34deg) scale(.88)}}
+@keyframes masenetGlossyFloat{0%{translate:0 10px;rotate:-10deg}100%{translate:0 -18px;rotate:12deg}}
+@keyframes masenetAdPhoneMove{0%,100%{translate:0 0;rotate:-4deg}50%{translate:0 -13px;rotate:2deg}}
+@media(max-width:760px){
+ .welcomeAdExperience .welcomeStoryTop{top:max(12px,env(safe-area-inset-top));left:15px;right:15px}
+ .welcomeAdExperience .welcomeStoryProgress{top:calc(max(12px,env(safe-area-inset-top)) + 49px);left:15px;right:15px}
+ .welcomeAdExperience .welcomeStoryCounter{top:calc(max(12px,env(safe-area-inset-top)) + 61px);right:16px}
+ .welcomeAdExperience .welcomeAdBackdropArt:before{width:125vw;height:42vw;top:35%}
+ .welcomeAdExperience .welcomeAdBackdropArt:after{width:110vw;height:32vw;top:58%}
+ .welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{
+  top:39%!important;width:clamp(218px,59vw,290px)!important;height:min(48vh,470px)!important;min-height:310px;
+  padding:27px 14px 16px!important;border-width:8px!important;border-radius:38px!important;
+ }
+ .welcomeAdExperience .welcomeWelcomeMark img{width:74px;height:74px}
+ .welcomeAdExperience .welcomeWelcomeMark span{font-size:23px}
+ .welcomeAdExperience .welcomeMockPoster{height:clamp(85px,13vh,125px)}
+ .welcomeAdExperience .welcomePlaybackScreen{min-height:clamp(130px,19vh,180px)}
+ .welcomeAdExperience .welcomeStoryCopy{left:20px;right:20px;bottom:clamp(73px,10vh,96px);width:auto;text-align:center}
+ .welcomeAdExperience .welcomeStoryCopy .welcomeProEyebrow{justify-content:center;font-size:7px}
+ .welcomeAdExperience .welcomeStoryCopy h1{font-size:clamp(22px,6vw,31px)!important;line-height:1.02!important;margin:7px auto 5px!important}
+ .welcomeAdExperience .welcomeStoryCopy .welcomeProLead{font-size:10px!important;line-height:1.35!important;max-width:440px}
+ .welcomeAdExperience .welcomeStoryTag{margin-top:6px;padding:5px 8px;font-size:6px}
+ .welcomeAdExperience .welcomeStoryControls{left:20px;right:20px;bottom:calc(12px + env(safe-area-inset-bottom));justify-content:center}
+ .welcomeAdExperience .welcomeStoryNext{width:100%;max-width:330px;min-height:41px}
+}
+@media(prefers-reduced-motion:reduce){
+ .welcomeAdExperience .welcomeAdBackdropArt:before,.welcomeAdExperience .welcomeAdBackdropArt:after,.welcomeAdExperience .welcomeAdBackdropArt i,.welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{animation:none!important}
+}
