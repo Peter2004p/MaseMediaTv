@@ -137,7 +137,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       if (titleStart) {
         const selected = await env.DB.prepare("SELECT name,kind,year FROM titles WHERE id=?").bind(titleStart[1]).first<{name:string;kind:string;year:number|null}>();
         if (selected) {
-          await sendMessage(env, chatId, "🎬 <b>" + String(selected.name).replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" + (selected.year ? " (" + selected.year + ")" : "") + "\\n" + String(selected.kind || "Title") + "\\n\\nOpen the MaseNet Mini App to view the title and available episodes.", keyboard, "HTML");
+          await sendMessage(env, chatId, "🎬 <b>" + String(selected.name).replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" + (selected.year ? " (" + selected.year + ")" : "") + "\n" + String(selected.kind || "Title") + "\n\nOpen the MaseNet Mini App to view the title and available episodes.", keyboard, "HTML");
           return json({ ok: true, openedTitle: true });
         }
       }
@@ -160,12 +160,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     } else if (text && !text.startsWith("/")) {
       const matches = await findCatalogMatches(env, text);
       if (matches.length) {
-        const resultText = "🎬 <b>Found in the MaseNet library</b>\\n\\n" + matches.map((item) =>
+        const resultText = "🎬 <b>Found in the MaseNet library</b>\n\n" + matches.map((item) =>
           "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
           (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
-          (item.episodeLabels.length ? "\\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "") +
-          "\\n  <a href=\\"https://t.me/MaseTv_Bot?start=title_" + encodeURIComponent(item.id) + "\\">Open in Telegram</a>"
-        ).join("\\n\\n") + "\\n\\nOpen the MaseNet Mini App to browse the catalogue and play available titles.";
+          (item.episodeLabels.length ? "\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "") +
+          "\n  <a href=\"https://t.me/MaseTv_Bot?start=title_" + encodeURIComponent(item.id) + "\">Open in Telegram</a>"
+        ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles.";
         await sendMessage(env, chatId, resultText, keyboard, "HTML");
         return json({ ok: true, searchMatches: matches.length });
       }
