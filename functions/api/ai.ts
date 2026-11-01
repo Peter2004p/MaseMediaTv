@@ -39,7 +39,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   } catch (error) {
     console.error("MaseNet AI catalogue lookup failed", error instanceof Error ? error.message : "unknown error");
   }
-  const history = Array.isArray(body.history) ? body.history.slice(-8).map(item => ({ role: item?.role === "assistant" ? "assistant" as const : "user" as const, content: String(item?.content || "").trim().slice(0, 1200) })).filter(item => item.content).slice(-8) : [];\n  const q = message.toLowerCase();
+  const history = Array.isArray(body.history) ? body.history.slice(-8).map(item => ({ role: item?.role === "assistant" ? "assistant" as const : "user" as const, content: String(item?.content || "").trim().slice(0, 1200) })).filter(item => item.content).slice(-8) : [];
+  const q = message.toLowerCase();
 
   // Stable brand aliases and verified public links should not depend on model recall.
   if (!imageInputs.length && /social media|social links|official links|youtube|telegram|instagram|facebook|tiktok|follow (?:you|us|masenet|masetv|masemedia)|where can i follow|your channels/i.test(q) && /link|url|social|follow|channel|account|youtube|telegram|instagram|facebook|tiktok/i.test(q)) {
