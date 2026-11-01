@@ -85,7 +85,7 @@ export default function App(){
  ];
  const [welcomeBusy,setWelcomeBusy]=useState(false);
  const [welcomeError,setWelcomeError]=useState('');
- useEffect(()=>{if(!welcomeOpen||welcomePage>=welcomePages.length-1)return;const timer=window.setTimeout(()=>setWelcomePage(p=>Math.min(p+1,welcomePages.length-1)),2500);return()=>window.clearTimeout(timer)},[welcomeOpen,welcomePage,welcomePages.length]);
+ useEffect(()=>{if(!welcomeOpen||welcomePage>=welcomePages.length-1)return;const timer=window.setTimeout(()=>setWelcomePage(p=>Math.min(p+1,welcomePages.length-1)),5500);return()=>window.clearTimeout(timer)},[welcomeOpen,welcomePage,welcomePages.length]);
  const telegramWebApp=(window as unknown as {Telegram?:{WebApp?:{initData?:string;ready?:()=>void;expand?:()=>void}}}).Telegram?.WebApp;
  const inTelegramMiniApp=Boolean(telegramWebApp?.initData);
  const finishWelcome=()=>{try{localStorage.setItem('masenet-welcome-seen','true')}catch{}setWelcomeOpen(false);go('#/home')};
@@ -218,9 +218,11 @@ export default function App(){
      {welcomeError&&<p className="welcomeError" role="alert">{welcomeError}</p>}
     </div>
    </section>
-   {welcomePage===welcomePages.length-1&&<div className="welcomeStoryControls welcomeAdControls">
-    <button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>void welcomeSignup()} disabled={welcomeBusy}>{welcomeBusy?'Connecting securely…':inTelegramMiniApp?'Continue with Telegram':'Get started'} <span>↗</span></button>
-   </div>}
+   <div className="welcomeStoryControls welcomeAdControls">
+    {welcomePage<welcomePages.length-1?
+     <button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>setWelcomePage(p=>Math.min(p+1,welcomePages.length-1))}>Next <span>→</span></button>:
+     <button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>void welcomeSignup()} disabled={welcomeBusy}>{welcomeBusy?'Connecting securely…':inTelegramMiniApp?'Continue with Telegram':'Get started'} <span>↗</span></button>}
+   </div>
    <p className="welcomeStoryHint welcomeAdHint">MaseNet · Your entertainment world</p>
    
   </div>
