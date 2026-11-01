@@ -819,3 +819,99 @@
 @media(max-width:560px){.welcomeOrbit{width:185px;height:185px}.welcomeOrbitB{width:230px;height:230px}.welcomeTelegramOrbit{width:220px;height:140px}.welcomeTelegramOrbit.orbitB{width:245px;height:165px}.welcomeAiHalo{width:170px;height:170px}}
 @media(prefers-reduced-motion:reduce){.welcomeMotionScene *{animation:none!important;transition:none!important}.welcomeMotionScene{display:none!important}}
 html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!important;box-shadow:none!important}
+
+
+/* Reference-led onboarding art direction: bright, cinematic iPhone product-film look. */
+.welcomeStoryGate{background:#f5f6f8!important;color:#17191e}
+.welcomeStoryGate .welcomeBackdrop{background:radial-gradient(ellipse at 12% 15%,#d9f4ed 0,transparent 34%),radial-gradient(ellipse at 90% 80%,#e7e1fb 0,transparent 35%),linear-gradient(145deg,#fbfcfd,#f1f3f6)!important}
+.welcomeStoryGate .welcomeGlow,.welcomeStoryGate .welcomeOrb{opacity:.12}
+.welcomeStoryShell{width:min(900px,100%);padding:clamp(14px,3vh,28px) clamp(17px,4vw,38px) 18px}
+.welcomeStoryGate .welcomeProBrand{color:#17191e}
+.welcomeStoryGate .welcomeProBrand img{filter:none}
+.welcomeStoryGate .welcomeProBrand small{color:#7a808a}
+.welcomeStoryGate .welcomeStorySkip{border-color:#17191e20;background:#ffffffc9;color:#333943;box-shadow:0 5px 18px #27313b0a}
+.welcomeStoryProgress{margin-top:clamp(17px,3vh,28px)}
+.welcomeStoryTrack{height:3px;background:#1d26301c}
+.welcomeStoryTrack i{background:#1b242c}
+.welcomeStoryCounter{color:#242a32}
+.welcomeStoryCounter span{color:#9097a1}
+.welcomeStoryCard{gap:clamp(16px,3vh,28px);padding:clamp(17px,3vh,30px) 0 18px}
+.welcomeStoryArtwork{min-height:0;height:clamp(250px,42vh,420px);border:1px solid #dce1e8;border-radius:30px;background:#fff;box-shadow:0 22px 65px #25324712;overflow:hidden}
+.welcomeStoryArtwork:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 110%,#d8e9ed80,transparent 60%),linear-gradient(135deg,#ffffff 0%,#f6f8fa 58%,#edf2f5 100%)}
+.welcomeStoryArtwork2:before{background:radial-gradient(ellipse at 80% 20%,#ffe7d5 0,transparent 42%),linear-gradient(135deg,#fff,#f8f3f0)}
+.welcomeStoryArtwork3:before{background:radial-gradient(ellipse at 15% 20%,#d8eaff 0,transparent 45%),linear-gradient(135deg,#fff,#eef5fc)}
+.welcomeStoryArtwork4:before{background:radial-gradient(ellipse at 80% 15%,#e6dcff 0,transparent 45%),linear-gradient(135deg,#fff,#f4f0ff)}
+.welcomeStoryArtwork5:before{background:radial-gradient(ellipse at 20% 15%,#d8f1ff 0,transparent 48%),linear-gradient(135deg,#fff,#edf7fb)}
+.welcomeStoryArtwork6:before{background:radial-gradient(ellipse at 75% 18%,#ffe8c9 0,transparent 48%),linear-gradient(135deg,#fff,#faf4e9)}
+.welcomeIOSVisual{padding:30px;isolation:isolate}
+.welcomeIOSVisual:after{z-index:0;background:linear-gradient(145deg,#ffffff08,transparent 55%,#17212b08)}
+.welcomeIOSVisualTop{color:#6c7782}
+.welcomeWelcomeMark,.welcomeFinalMark{position:relative;z-index:2;color:#18212a}
+.welcomeWelcomeMark img{filter:drop-shadow(0 12px 20px #142b2520)}
+.welcomeWelcomeMark>span{color:#17251f}
+.welcomeWelcomeMark small,.welcomeFinalMark small{color:#718078}
+.welcomeStoryCopy .welcomeProEyebrow{color:#438b70}
+.welcomeStoryCopy .welcomeProEyebrow span{background:#e8f6ef;border-color:#bfe8d2;color:#38845f}
+.welcomeStoryCopy h1{color:#171c22}
+.welcomeStoryCopy .welcomeProLead{color:#66717c}
+.welcomeStoryTag{border-color:#dce3e8;background:#ffffffc9;color:#547365;border-radius:999px}
+.welcomeStoryControls{border-color:#dfe4e9}
+.welcomeStoryBack{background:#ffffff;color:#343b43;border-color:#d8dee4}
+.welcomeStoryNext{background:linear-gradient(110deg,#c8f4df,#8be2bd)!important;color:#10251b!important;box-shadow:0 10px 25px #55ba8b25!important}
+.welcomeStoryHint{color:#8a929a}
+.welcomeEcosystemMock,.welcomeToolsMock{z-index:2;background:linear-gradient(145deg,#ffffffed,#f4f7f8ed);border:1px solid #dce5e7;box-shadow:0 24px 55px #293e4a20,inset 0 1px #ffffff;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.welcomeEcosystemMock:before{background:linear-gradient(130deg,#ffffff70,transparent 48%,#00b87908)}
+.welcomeMockSearch{border-color:#d4e4dc;background:#f7fbf8;color:#318d67}
+.welcomeMockSearch span{color:#677b70}
+.welcomeMockPoster{box-shadow:0 13px 25px #182d2830;border-color:#ffffff}
+.welcomeEcosystemMock>small{color:#688477}
+.welcomePlaybackScreen{background:radial-gradient(ellipse at 50% 42%,#315c4a,#142a22 65%,#0a1712);box-shadow:inset 0 0 35px #0007}
+.welcomeAiHeader,.welcomeTelegramTop,.welcomeManagerTop{color:#1c2b25;border-color:#dce7e0}
+.welcomeAiHeader>span,.welcomeTelegramTop>span,.welcomeManagerTop>span{background:#e4f7ed;border-color:#bfe8d1;color:#248b61}
+.welcomeAiHeader>i,.welcomeTelegramTop>i,.welcomeManagerTop>i{color:#2c9a68}
+.welcomeAiBubble{background:#e7f5ee;border-color:#d2e9dc;color:#245d42}
+.welcomeAiReply{background:#f6faf7;border-color:#dcebe1;color:#52675c}
+.welcomeAiInput,.welcomeTelegramInput{background:#f7faf8;border-color:#dce6df;color:#738078}
+.welcomeAiInput span,.welcomeTelegramInput span{background:#36bf82;color:#fff}
+.welcomeTelegramCard{background:linear-gradient(120deg,#e9f8ef,#f8fbf9);border-color:#cde9d8}
+.welcomeTelegramCard small{color:#26865b}.welcomeTelegramCard b{color:#20352a}.welcomeTelegramCard span{color:#62766a}
+.welcomeTelegramCard.botCard{background:linear-gradient(120deg,#eaf4ff,#f9fbff);border-color:#d2e4f8}
+.welcomeTelegramCard.botCard small{color:#397bb8}
+.welcomeManagerGrid>div{background:#f8faf9;border-color:#dce7e0}
+.welcomeManagerGrid b{color:#273a30}.welcomeManagerGrid small{color:#738078}.welcomeManagerGrid span{color:#2d9869}
+.welcomeMotionScene{z-index:1}
+.welcomeOrbit{border-color:#74c6a36b;box-shadow:0 0 35px #63b99620,inset 0 0 25px #63b99612}
+.welcomeOrbitB{border-color:#9ab8e66b}
+.welcomeSceneParticle{background:#4bc58e;box-shadow:0 0 18px 5px #4bc58e55}
+.welcomeSceneParticle.particleB{background:#7ea8e9;box-shadow:0 0 18px 5px #7ea8e955}
+.welcomeSearchSweep{background:linear-gradient(transparent,#66c99b,#ffffff,transparent);box-shadow:0 0 22px 5px #68c99b45}
+.welcomeSearchPulse{border-color:#61bb9566}
+.welcomeSceneSpark{background:#e9a45e;box-shadow:0 0 15px 4px #e9a45e55}
+.welcomePlaybackBeam{background:linear-gradient(115deg,transparent 25%,#a9d9ff20 48%,#ffffffa0 50%,#a9d9ff20 52%,transparent 75%)}
+.welcomePlaybackProgress{background:#d4e4dc}.welcomePlaybackProgress:after{background:#50c28d;box-shadow:0 0 13px #8df5be}
+.welcomePlaybackWave{background:#50c28d;box-shadow:0 0 12px #53e9a0}
+.welcomeAiHalo{border-color:#a995e866;box-shadow:0 0 50px #a98cff22,inset 0 0 40px #a98cff12}
+.welcomeTypingDots b{background:#987be0}
+.welcomeAiSignal{background:#987be0;box-shadow:0 0 18px 5px #b9a4ff55}
+.welcomeTelegramOrbit{border-color:#74bce866}.welcomeTelegramOrbit.orbitB{border-color:#71cda766}
+.welcomeTelegramNode{background:#ffffffed;color:#3d8fc8;border-color:#b7d9ef;box-shadow:0 8px 25px #38566a20}
+.welcomeManagerSweep{background:linear-gradient(90deg,transparent,#edc77b20,#edc77b55,transparent)}
+.welcomeManagerBar{background:linear-gradient(#edc77b,#b58c4b);box-shadow:0 0 18px #e8d09b35}
+.welcomeManagerPulse{background:#49c58c;box-shadow:0 0 0 0 #49c58c55}
+@media(min-width:761px){
+ .welcomeStoryCard{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(300px,.92fr);align-items:center;gap:clamp(28px,5vw,58px)}
+ .welcomeStoryArtwork{height:clamp(340px,54vh,500px);grid-row:1}
+ .welcomeStoryCopy{max-width:440px}
+ .welcomeStoryCounter{margin-top:8px}
+}
+@media(max-width:760px){
+ .welcomeStoryGate{overflow-y:auto;align-items:stretch}
+ .welcomeStoryShell{min-height:100dvh}
+ .welcomeStoryArtwork{height:clamp(230px,36svh,360px);min-height:230px;border-radius:26px}
+ .welcomeIOSVisual{padding:19px}
+ .welcomeIOSVisualTop{top:16px;left:18px;right:18px}
+ .welcomeStoryCopy h1{font-size:clamp(32px,8.5vw,44px)}
+ .welcomeStoryCopy .welcomeProLead{font-size:13px;line-height:1.6}
+ .welcomeStoryControls{padding-top:12px}
+}
+@media(prefers-reduced-motion:reduce){.welcomeStoryCard{animation:none!important}.welcomeMotionScene *{animation:none!important}}
