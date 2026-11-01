@@ -184,6 +184,14 @@ export default function App(){
  async function telegramLogin():Promise<boolean>{if(authBusy)return false;setAuthError('');if(!inTelegramMiniApp||!telegramWebApp?.initData){setAuthError('Open MaseNet from the Telegram Mini App, then tap Continue with Telegram to sign in securely.');return false}setAuthBusy(true);try{const r=await api.post('/api/auth/telegram',{initData:telegramWebApp.initData});if(!r.data?.user)throw new Error('Telegram sign-in could not be verified. Please try again from the Telegram Mini App.');setViewer({...r.data.user,provider:'telegram'});try{localStorage.setItem('masenet-welcome-seen','true')}catch{}setWelcomeOpen(false);return true}catch(e){setAuthError(e instanceof Error?e.message:'Telegram sign-in could not be completed. Please try again.');return false}finally{setAuthBusy(false)}}
  async function signOut(){try{await auth.signOut()}catch{}setViewer(null)}
 
+ const welcomeArtwork=[
+  'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1800&q=85',
+  'https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1800&q=85',
+  'https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=1800&q=85',
+  'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1800&q=85',
+  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=85',
+  'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1800&q=85'
+ ];
  if(welcomeOpen)return <main className="welcomeGate welcomePro welcomeStoryGate" aria-label="Welcome to MaseNet onboarding" onMouseDown={()=>setWelcomePaused(true)} onMouseUp={()=>setWelcomePaused(false)} onMouseLeave={()=>setWelcomePaused(false)} onTouchStart={e=>{welcomeTouchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};setWelcomePaused(true)}} onTouchEnd={e=>{const start=welcomeTouchStart.current;welcomeTouchStart.current=null;setWelcomePaused(false);if(!start)return;const dx=e.changedTouches[0].clientX-start.x;const dy=e.changedTouches[0].clientY-start.y;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)){setWelcomePage(p=>Math.max(0,Math.min(welcomePages.length-1,p+(dx<0?1:-1))))}}}>
   <div className="welcomeBackdrop"><span className="welcomeGlow welcomeGlowOne"/><span className="welcomeGlow welcomeGlowTwo"/><span className="welcomeOrb welcomeOrbOne"/><span className="welcomeOrb welcomeOrbTwo"/></div>
   <div className="welcomeStoryShell">
@@ -196,7 +204,7 @@ export default function App(){
    </div>
    <div className="welcomeStoryCounter">{String(welcomePage+1).padStart(2,'0')} <span>/ 06</span></div>
    <section className={`welcomeStoryCard welcomeEditorialCard welcomeEditorialPage${welcomePage+1}`} key={welcomePage}>
-    <div className={`welcomeStoryArtwork welcomeStoryArtwork${welcomePage+1} welcomeEditorialArtwork`} aria-hidden="true"><div className="welcomeStoryAura"/><div className="welcomeEditorialFrame"><span className="welcomeEditorialIndex">0{welcomePage+1} / 06</span><span className="welcomeEditorialWordmark">MASE<span>NET</span></span><div className="welcomeEditorialVisual"><i/><i/><i/></div><span className="welcomeEditorialCaption">{welcomePages[welcomePage].tag}</span></div><span className="welcomeStoryOrbit welcomeStoryOrbitA"/><span className="welcomeStoryOrbit welcomeStoryOrbitB"/></div>
+    <div className={`welcomeStoryArtwork welcomeStoryArtwork${welcomePage+1} welcomeEditorialArtwork`} aria-hidden="true"><img className="welcomeCinematicImage" src={welcomeArtwork[welcomePage]} alt="" fetchPriority={welcomePage===0?"high":"auto"}/><div className="welcomeCinematicShade"/><div className="welcomeCinematicBrand"><span>MASE<span>NET</span></span><small>{welcomePages[welcomePage].tag}</small></div><span className="welcomeCinematicNumber">0{welcomePage+1} / 06</span></div>
     <div className="welcomeStoryCopy">
      <div className="welcomeProEyebrow"><span>✦</span> {welcomePages[welcomePage].eyebrow}</div>
      <h1>{welcomePages[welcomePage].title}</h1>
