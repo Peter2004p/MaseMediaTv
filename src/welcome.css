@@ -420,3 +420,113 @@
  .welcomeStoryTag{margin-top:11px!important}
 }
 @media(prefers-reduced-motion:reduce){.welcomeCinematicImage{animation:none!important;transform:none!important}}
+
+
+/* MaseNet onboarding v4 — refined iOS editorial interface */
+.welcomeStoryGate{
+ background:#f2f2f7!important;color:#17181d!important;overflow-y:auto!important;
+ font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif!important;
+}
+.welcomeStoryGate .welcomeBackdrop{background:radial-gradient(ellipse at 50% 0%,#fff 0%,#f2f2f7 72%)!important;opacity:1!important}
+.welcomeStoryGate .welcomeGlow,.welcomeStoryGate .welcomeOrb{display:none!important}
+.welcomeStoryShell{
+ box-sizing:border-box;width:min(1180px,100%);min-height:100svh;height:auto;margin:0 auto;
+ padding:max(26px,env(safe-area-inset-top)) clamp(20px,5vw,66px) max(22px,env(safe-area-inset-bottom));
+ display:flex;flex-direction:column;position:relative;z-index:1;
+}
+.welcomeStoryTop{display:flex;align-items:center;justify-content:space-between;padding:0 0 24px!important}
+.welcomeStoryTop .welcomeProBrand{gap:11px}
+.welcomeStoryTop .welcomeProBrand img{width:38px;height:38px;filter:none}
+.welcomeStoryTop .welcomeProBrand b{font-size:18px!important;letter-spacing:-.055em;color:#17181d!important;font-weight:780}
+.welcomeStoryTop .welcomeProBrand small{font-size:8px!important;letter-spacing:.16em;color:#777985!important}
+.welcomeStorySkip{border:1px solid #d8d9df!important;background:#ffffffb8!important;color:#343640!important;border-radius:999px!important;padding:9px 15px!important;font-size:12px!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.welcomeStoryProgress{display:flex;gap:5px;margin:0!important;flex:0 0 auto}
+.welcomeStoryTrack{height:3px!important;border-radius:99px;background:#d7d8df!important;overflow:hidden}
+.welcomeStoryTrack i{background:#191a20!important;border-radius:99px;box-shadow:none!important}
+.welcomeStoryCounter{margin:10px 0 0!important;color:#888a94!important;font-size:10px!important;letter-spacing:.16em}
+.welcomeStoryCard{
+ flex:1 0 auto;min-height:clamp(480px,65vh,690px)!important;
+ display:grid!important;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr)!important;
+ align-items:stretch;gap:0!important;margin:24px 0 20px!important;padding:0!important;
+ overflow:hidden;border:1px solid #e1e2e8;border-radius:28px;background:#fff!important;
+ box-shadow:0 18px 55px #25283a0d!important;
+}
+.welcomeStoryArtwork{
+ position:relative!important;inset:auto!important;grid-column:1;grid-row:1;
+ width:100%;height:100%!important;min-height:480px!important;display:block!important;
+ overflow:hidden;border:0!important;border-radius:0!important;background:#17191f!important;box-shadow:none!important;
+}
+.welcomeCinematicImage{
+ position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;
+ transform:scale(1.015);filter:saturate(.86);animation:welcomeSoftReveal .75s ease both;
+}
+.welcomeCinematicShade{position:absolute;inset:0;background:linear-gradient(180deg,#080a1026 0%,transparent 45%,#080a106b 100%)!important}
+.welcomeCinematicBrand{inset:auto auto 25px 27px!important;gap:7px!important}
+.welcomeCinematicBrand>span{font-size:13px!important;letter-spacing:.2em!important;font-weight:800}
+.welcomeCinematicBrand>span span{color:#fff!important}
+.welcomeCinematicBrand small{font-size:8px!important;letter-spacing:.16em;color:#ffffffd9!important}
+.welcomeCinematicNumber{top:23px!important;right:24px!important;color:#ffffffd9!important;font-size:9px!important;letter-spacing:.17em}
+.welcomeStoryCopy{
+ grid-column:2!important;grid-row:1!important;align-self:center!important;justify-self:stretch;
+ max-width:none!important;margin:0!important;padding:clamp(28px,5vw,70px)!important;
+ text-align:left!important;position:relative;z-index:2;
+}
+.welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start;color:#777985!important;font-size:9px!important;letter-spacing:.19em!important}
+.welcomeStoryCopy .welcomeProEyebrow span{color:#8b744c!important}
+.welcomeStoryCopy h1{
+ max-width:490px;color:#17181d!important;font-size:clamp(38px,5.1vw,67px)!important;
+ line-height:1.015!important;letter-spacing:-.065em!important;font-weight:760!important;
+ margin:19px 0 17px!important;text-wrap:balance;text-shadow:none!important;
+}
+.welcomeStoryCopy .welcomeProLead{max-width:420px!important;color:#686a75!important;font-size:clamp(14px,1.35vw,17px)!important;line-height:1.72!important;text-shadow:none!important}
+.welcomeStoryTag{
+ display:inline-flex;margin-top:25px!important;padding:9px 12px!important;
+ border:1px solid #e5e5e9!important;border-radius:999px!important;background:#f7f7f9!important;
+ color:#555762!important;font-size:8px!important;letter-spacing:.16em!important;backdrop-filter:none!important;
+}
+.welcomeStoryControls{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0!important;border:0!important}
+.welcomeStoryBack{
+ min-width:105px;min-height:46px;border:1px solid #d9dae0!important;border-radius:999px!important;
+ background:#ffffff!important;color:#343640!important;font-size:13px!important;
+}
+.welcomeStoryBack:disabled{opacity:.42}
+.welcomeStoryNext{
+ min-width:158px!important;min-height:48px!important;border:0!important;border-radius:999px!important;
+ background:#17181d!important;color:#fff!important;font-size:13px!important;font-weight:650!important;
+ box-shadow:0 7px 18px #17181d20!important;
+}
+.welcomeStoryNext span{margin-left:8px}
+.welcomeStoryHint{margin:12px 0 0!important;text-align:center;color:#92939c!important;font-size:9px!important;letter-spacing:.015em}
+.welcomeError{color:#b42318!important}
+@keyframes welcomeSoftReveal{from{opacity:.65;transform:scale(1.04)}to{opacity:1;transform:scale(1.015)}}
+@media(max-width:760px){
+ .welcomeStoryShell{min-height:100svh;padding:max(14px,env(safe-area-inset-top)) 15px max(16px,env(safe-area-inset-bottom))}
+ .welcomeStoryTop{padding-bottom:17px!important}
+ .welcomeStoryTop .welcomeProBrand img{width:34px;height:34px}
+ .welcomeStoryTop .welcomeProBrand b{font-size:17px!important}
+ .welcomeStorySkip{padding:8px 12px!important;font-size:11px!important}
+ .welcomeStoryCard{
+  min-height:0!important;flex:1 0 auto;grid-template-columns:1fr!important;grid-template-rows:minmax(210px,34svh) auto!important;
+  margin:17px 0 16px!important;border-radius:23px;
+ }
+ .welcomeStoryArtwork{grid-column:1!important;grid-row:1!important;min-height:0!important;height:100%!important}
+ .welcomeCinematicBrand{inset:auto auto 16px 17px!important}
+ .welcomeCinematicNumber{top:16px!important;right:17px!important}
+ .welcomeStoryCopy{grid-column:1!important;grid-row:2!important;padding:clamp(22px,5vw,30px)!important}
+ .welcomeStoryCopy .welcomeProEyebrow{font-size:8px!important}
+ .welcomeStoryCopy h1{font-size:clamp(35px,9vw,49px)!important;line-height:1.02!important;margin:12px 0!important}
+ .welcomeStoryCopy .welcomeProLead{font-size:13px!important;line-height:1.62!important}
+ .welcomeStoryTag{margin-top:15px!important;padding:8px 10px!important}
+ .welcomeStoryControls{gap:10px}
+ .welcomeStoryBack{min-width:88px;min-height:45px}
+ .welcomeStoryNext{min-width:140px!important;min-height:46px!important}
+ .welcomeStoryHint{font-size:8px!important;margin-top:9px!important}
+}
+@media(max-height:700px) and (max-width:760px){
+ .welcomeStoryCard{grid-template-rows:minmax(160px,27svh) auto!important}
+ .welcomeStoryCopy{padding:17px 19px 19px!important}
+ .welcomeStoryCopy h1{font-size:clamp(31px,7.7vw,40px)!important;margin:8px 0!important}
+ .welcomeStoryCopy .welcomeProLead{font-size:12px!important}
+ .welcomeStoryTag{margin-top:10px!important}
+}
+@media(prefers-reduced-motion:reduce){.welcomeCinematicImage{animation:none!important;transform:none!important}}
