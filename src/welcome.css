@@ -1549,3 +1549,13 @@ html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!importa
 .welcomeAdExperience.isPaused .welcomeEcosystemMock,
 .welcomeAdExperience.isPaused .welcomeWelcomeMark,
 .welcomeAdExperience.isPaused .welcomeAdBackdropArt:before{animation-play-state:paused!important}
+
+
+/* Compact social/legal rail: stays in normal header flow and never overlays story content or controls */
+.welcomeSocialRail{position:relative;z-index:30;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin:10px auto 12px;width:100%;max-width:760px;pointer-events:auto}
+.welcomeSocialRail a{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:28px;padding:5px 9px;border:1px solid rgba(210,220,240,.13);border-radius:999px;background:rgba(255,255,255,.045);color:#cbd3df;text-decoration:none;font-size:10px;font-weight:650;line-height:1;white-space:nowrap;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:background .18s,border-color .18s,color .18s}
+.welcomeSocialRail a:hover,.welcomeSocialRail a:focus-visible{background:rgba(120,190,255,.12);border-color:rgba(120,190,255,.4);color:#fff;outline:none}
+.welcomeSocialRail a svg{flex:0 0 auto;opacity:.9}
+.welcomeSocialRail .welcomePrivacyLink{color:#a9e7d1;border-color:rgba(84,239,170,.22);background:rgba(84,239,170,.055)}
+@media(max-width:390px){.welcomeSocialRail{gap:5px;margin:8px auto 9px}.welcomeSocialRail a{min-height:26px;padding:5px 7px;font-size:9px;gap:4px}.welcomeSocialRail a svg{width:12px;height:12px}}
+@media(prefers-reduced-motion:reduce){.welcomeSocialRail a{transition:none}}
