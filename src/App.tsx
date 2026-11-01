@@ -87,7 +87,7 @@ export default function App(){
  ];
  const [welcomeBusy,setWelcomeBusy]=useState(false);
  const [welcomeError,setWelcomeError]=useState('');
- useEffect(()=>{if(!welcomeOpen||welcomePaused||welcomePage===welcomePages.length-1)return;const timer=window.setTimeout(()=>setWelcomePage(p=>Math.min(p+1,welcomePages.length-1)),6500);return()=>window.clearTimeout(timer)},[welcomeOpen,welcomePaused,welcomePage]);
+ useEffect(()=>{if(!welcomeOpen)return;const timer=window.setTimeout(()=>setWelcomePage(p=>(p+1)%welcomePages.length),5600);return()=>window.clearTimeout(timer)},[welcomeOpen,welcomePage,welcomePages.length]);
  const telegramWebApp=(window as unknown as {Telegram?:{WebApp?:{initData?:string;ready?:()=>void;expand?:()=>void}}}).Telegram?.WebApp;
  const inTelegramMiniApp=Boolean(telegramWebApp?.initData);
  const finishWelcome=()=>{try{localStorage.setItem('masenet-welcome-seen','true')}catch{}setWelcomeOpen(false);go('#/home')};
@@ -192,7 +192,7 @@ export default function App(){
   'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=85',
   'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1800&q=85'
  ];
- if(welcomeOpen)return <main className="welcomeGate welcomePro welcomeStoryGate" aria-label="Welcome to MaseNet onboarding" onMouseDown={()=>setWelcomePaused(true)} onMouseUp={()=>setWelcomePaused(false)} onMouseLeave={()=>setWelcomePaused(false)} onTouchStart={e=>{welcomeTouchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};setWelcomePaused(true)}} onTouchEnd={e=>{const start=welcomeTouchStart.current;welcomeTouchStart.current=null;setWelcomePaused(false);if(!start)return;const dx=e.changedTouches[0].clientX-start.x;const dy=e.changedTouches[0].clientY-start.y;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)){setWelcomePage(p=>Math.max(0,Math.min(welcomePages.length-1,p+(dx<0?1:-1))))}}}>
+ if(welcomeOpen)return <main className="welcomeGate welcomePro welcomeStoryGate welcomeAdExperience" aria-label="MaseNet promotional experience">
   <div className="welcomeBackdrop"><span className="welcomeGlow welcomeGlowOne"/><span className="welcomeGlow welcomeGlowTwo"/><span className="welcomeOrb welcomeOrbOne"/><span className="welcomeOrb welcomeOrbTwo"/></div>
   <div className="welcomeStoryShell">
    <div className="welcomeStoryTop">
@@ -200,7 +200,7 @@ export default function App(){
     <button className="welcomeStorySkip" onClick={finishWelcome}>Skip tour <span>×</span></button>
    </div>
    <div className="welcomeStoryProgress" aria-label={`Page ${welcomePage+1} of 6`}>
-    {welcomePages.map((page,i)=><span className="welcomeStoryTrack" key={page.eyebrow}><i className={i<welcomePage?'isDone':i===welcomePage?'isCurrent':''} style={i===welcomePage?{animationPlayState:welcomePaused?'paused':'running'}:undefined}/></span>)}
+    {welcomePages.map((page,i)=><span className="welcomeStoryTrack" key={page.eyebrow}><i className={i<welcomePage?'isDone':i===welcomePage?'isCurrent':''} /></span>)}
    </div>
    <div className="welcomeStoryCounter">{String(welcomePage+1).padStart(2,'0')} <span>/ 06</span></div>
    <section className={`welcomeStoryCard welcomeEditorialCard welcomeEditorialPage${welcomePage+1}`} key={welcomePage}>
@@ -219,11 +219,10 @@ export default function App(){
      {welcomeError&&<p className="welcomeError" role="alert">{welcomeError}</p>}
     </div>
    </section>
-   <div className="welcomeStoryControls">
-    <button className="welcomeStoryBack" onClick={()=>setWelcomePage(p=>Math.max(0,p-1))} disabled={welcomePage===0}>Back</button>
-    {welcomePage===welcomePages.length-1?<button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>void welcomeSignup()} disabled={welcomeBusy}>{welcomeBusy?'Connecting securely…':inTelegramMiniApp?'Continue with Telegram':'Get started'} <span>↗</span></button>:<button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>setWelcomePage(p=>Math.min(p+1,welcomePages.length-1))}>Next <span>→</span></button>}
+   <div className="welcomeStoryControls welcomeAdControls">
+    <button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={finishWelcome}>Explore MaseNet <span>↗</span></button>
    </div>
-   <p className="welcomeStoryHint">Tap the right side to continue · Swipe to navigate · Hold to pause</p>
+   <p className="welcomeStoryHint welcomeAdHint">A six-scene MaseNet experience · Plays automatically</p>
    
   </div>
  </main>
