@@ -530,3 +530,94 @@
  .welcomeStoryTag{margin-top:10px!important}
 }
 @media(prefers-reduced-motion:reduce){.welcomeCinematicImage{animation:none!important;transform:none!important}}
+
+
+/* MaseNet onboarding v3 — quiet iOS-inspired editorial design */
+.welcomeStoryGate{
+ background:#f4f5f7!important;color:#17191e!important;overflow-y:auto!important;
+ font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif!important;
+}
+.welcomeStoryGate .welcomeBackdrop{background:radial-gradient(ellipse at 50% 0%,#fff 0%,#f4f5f7 68%)!important;opacity:1}
+.welcomeStoryGate .welcomeGlow,.welcomeStoryGate .welcomeOrb{display:none!important}
+.welcomeStoryShell{
+ box-sizing:border-box;width:min(100%,1040px)!important;height:auto!important;min-height:100svh!important;
+ margin:0 auto!important;padding:max(22px,env(safe-area-inset-top)) clamp(18px,4vw,42px) max(20px,env(safe-area-inset-bottom))!important;
+ display:flex!important;flex-direction:column!important;position:relative;z-index:1;
+}
+.welcomeStoryTop{padding:0 2px 22px!important}
+.welcomeStoryTop .welcomeProBrand{gap:10px!important}
+.welcomeStoryTop .welcomeProBrand img{width:36px!important;height:36px!important;filter:none!important}
+.welcomeStoryTop .welcomeProBrand b{font-size:18px!important;letter-spacing:-.045em!important;color:#17191e!important;font-weight:750!important}
+.welcomeStoryTop .welcomeProBrand small{font-size:7px!important;letter-spacing:.14em!important;color:#777d87!important}
+.welcomeStorySkip{padding:9px 14px!important;border-radius:999px!important;background:#ffffff!important;border:1px solid #e3e5e9!important;color:#515762!important;font-size:12px!important;box-shadow:0 2px 8px #18202a08;backdrop-filter:none!important}
+.welcomeStoryProgress{gap:5px!important;margin:0!important}
+.welcomeStoryTrack{height:3px!important;border-radius:20px!important;background:#dfe2e7!important;overflow:hidden}
+.welcomeStoryTrack i{border-radius:20px!important;background:#17191e!important;box-shadow:none!important}
+.welcomeStoryCounter{margin:10px 0 0!important;color:#858b95!important;font-size:10px!important;letter-spacing:.13em!important}
+.welcomeStoryCard{
+ flex:1 0 auto!important;min-height:0!important;display:grid!important;
+ grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr)!important;align-items:stretch!important;
+ gap:0!important;margin:20px 0 22px!important;padding:10px!important;
+ border:1px solid #e8eaee!important;border-radius:30px!important;overflow:hidden!important;
+ background:#fff!important;box-shadow:0 18px 55px #2027330b!important;
+}
+.welcomeStoryArtwork{
+ position:relative!important;inset:auto!important;grid-column:1!important;grid-row:1!important;
+ width:100%!important;height:auto!important;min-height:clamp(360px,54vh,560px)!important;
+ border:0!important;border-radius:22px!important;overflow:hidden!important;
+ background:#171b23!important;box-shadow:none!important;
+}
+.welcomeCinematicImage{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;filter:saturate(.82)!important;transform:none!important;animation:welcomeIOSImage .65s ease-out both!important}
+.welcomeCinematicShade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,#10151a28 0%,transparent 40%,#10151a45 100%)!important}
+.welcomeCinematicBrand{inset:auto 22px 21px!important;gap:6px!important;opacity:1!important}
+.welcomeCinematicBrand>span{font-size:17px!important;letter-spacing:.2em!important;font-weight:800!important}
+.welcomeCinematicBrand>span span{color:#f0d18d!important}
+.welcomeCinematicBrand small{font-size:8px!important;letter-spacing:.15em!important;color:#fff!important}
+.welcomeCinematicNumber{top:20px!important;right:21px!important;color:#fff!important;font-size:9px!important;letter-spacing:.14em!important}
+.welcomeStoryCopy{
+ grid-column:2!important;grid-row:1!important;position:relative!important;z-index:2!important;
+ align-self:center!important;max-width:500px!important;margin:0!important;padding:clamp(28px,5vw,58px)!important;
+ text-align:left!important;
+}
+.welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start!important;color:#8a6b35!important;font-size:9px!important;letter-spacing:.16em!important;font-weight:750!important}
+.welcomeStoryCopy .welcomeProEyebrow span{color:#b18b4d!important}
+.welcomeStoryCopy h1{margin:17px 0 14px!important;color:#17191e!important;font-size:clamp(34px,4.5vw,56px)!important;line-height:1.04!important;letter-spacing:-.06em!important;font-weight:760!important;text-shadow:none!important;text-wrap:balance}
+.welcomeStoryCopy .welcomeProLead{max-width:410px!important;margin:0!important;color:#6e747e!important;font-size:clamp(14px,1.35vw,16px)!important;line-height:1.7!important;text-shadow:none!important}
+.welcomeStoryTag{display:inline-flex!important;margin-top:22px!important;padding:8px 11px!important;border:1px solid #e8e1d5!important;border-radius:999px!important;background:#faf8f4!important;color:#8a6b35!important;font-size:8px!important;letter-spacing:.13em!important;backdrop-filter:none!important}
+.welcomeStoryControls{flex:0 0 auto!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;border:0!important;padding:0 2px!important}
+.welcomeStoryBack{min-width:100px!important;min-height:46px!important;border:1px solid #dfe2e7!important;border-radius:999px!important;background:#fff!important;color:#343943!important;font-size:13px!important}
+.welcomeStoryNext{min-width:158px!important;min-height:48px!important;border:0!important;border-radius:999px!important;background:#17191e!important;color:#fff!important;font-size:13px!important;font-weight:650!important;box-shadow:0 6px 16px #17191e18!important}
+.welcomeStoryHint{margin:12px 0 0!important;text-align:center!important;color:#9a9fa7!important;font-size:9px!important;letter-spacing:.01em!important}
+.welcomeStoryBack:disabled{opacity:.38}
+.welcomeStoryBack:active,.welcomeStoryNext:active,.welcomeStorySkip:active{transform:scale(.98)}
+@keyframes welcomeIOSImage{from{opacity:.65;transform:scale(1.015)}to{opacity:1;transform:scale(1)}}
+@media(max-width:760px){
+ .welcomeStoryShell{width:100%!important;min-height:100svh!important;padding:max(15px,env(safe-area-inset-top)) 15px max(15px,env(safe-area-inset-bottom))!important}
+ .welcomeStoryTop{padding-bottom:17px!important}
+ .welcomeStoryTop .welcomeProBrand img{width:33px!important;height:33px!important}
+ .welcomeStoryTop .welcomeProBrand b{font-size:16px!important}
+ .welcomeStorySkip{padding:8px 12px!important;font-size:11px!important}
+ .welcomeStoryCard{display:flex!important;flex-direction:column!important;gap:0!important;margin:15px 0 17px!important;padding:8px!important;border-radius:25px!important}
+ .welcomeStoryArtwork{width:100%!important;height:clamp(210px,35svh,310px)!important;min-height:clamp(210px,35svh,310px)!important;border-radius:19px!important}
+ .welcomeCinematicBrand{inset:auto 16px 16px!important}
+ .welcomeCinematicBrand>span{font-size:14px!important}
+ .welcomeCinematicNumber{top:16px!important;right:16px!important}
+ .welcomeStoryCopy{max-width:none!important;padding:25px 19px 25px!important}
+ .welcomeStoryCopy .welcomeProEyebrow{font-size:8px!important}
+ .welcomeStoryCopy h1{font-size:clamp(34px,9vw,45px)!important;line-height:1.03!important;margin:12px 0 11px!important}
+ .welcomeStoryCopy .welcomeProLead{font-size:14px!important;line-height:1.62!important}
+ .welcomeStoryTag{margin-top:15px!important;padding:7px 10px!important;font-size:8px!important}
+ .welcomeStoryControls{gap:10px!important}
+ .welcomeStoryBack{min-width:86px!important;min-height:44px!important}
+ .welcomeStoryNext{min-width:140px!important;min-height:46px!important}
+ .welcomeStoryHint{font-size:8px!important;margin-top:9px!important}
+}
+@media(max-height:700px) and (max-width:760px){
+ .welcomeStoryShell{min-height:100svh!important}
+ .welcomeStoryArtwork{height:clamp(175px,29svh,230px)!important;min-height:clamp(175px,29svh,230px)!important}
+ .welcomeStoryCopy{padding:18px 18px 19px!important}
+ .welcomeStoryCopy h1{font-size:clamp(30px,7.5vw,38px)!important;margin:9px 0!important}
+ .welcomeStoryCopy .welcomeProLead{font-size:12px!important}
+ .welcomeStoryTag{margin-top:10px!important}
+}
+@media(prefers-reduced-motion:reduce){.welcomeCinematicImage{animation:none!important}}
