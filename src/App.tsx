@@ -202,6 +202,14 @@ export default function App(){
     <a className="welcomeProBrand" href="#/home" onClick={e=>e.preventDefault()} aria-label="MaseNet"><img src="/masemediatv-logo.svg" alt=""/><span><b>MaseNet</b><small>ENTERTAINMENT, REIMAGINED</small></span></a>
     <button className="welcomeStorySkip" onClick={finishWelcome}>Skip tour <span>×</span></button>
    </div>
+   <nav className="welcomeSocialRail" aria-label="MaseNet social media and legal links">
+    <a href="https://www.youtube.com/@masemedia_tv" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><Youtube size={14}/><span>YouTube</span></a>
+    <a href="https://www.facebook.com/share/1A5pSvKte9/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Facebook size={14}/><span>Facebook</span></a>
+    <a href="https://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><Music2 size={14}/><span>TikTok</span></a>
+    <a href="https://t.me/MaseMediaTv" target="_blank" rel="noopener noreferrer" aria-label="Telegram Channel"><Send size={14}/><span>Telegram</span></a>
+    <a href="https://t.me/MoonDramaC" target="_blank" rel="noopener noreferrer" aria-label="Telegram Channel 2"><Send size={14}/><span>Channel 2</span></a>
+    <a className="welcomePrivacyLink" href="/privacy.html" target="_blank" rel="noopener noreferrer"><ShieldCheck size={14}/><span>Privacy</span></a>
+   </nav>
    <div className="welcomeStoryProgress" aria-label={`Page ${welcomePage+1} of 6`}>
     {welcomePages.map((page,i)=><span className="welcomeStoryTrack" key={page.eyebrow}><i className={i<welcomePage?'isDone':i===welcomePage?'isCurrent':''} style={{width:i<welcomePage?'100%':i===welcomePage?String(welcomeProgress)+'%':'0%'}} /></span>)}
    </div>
