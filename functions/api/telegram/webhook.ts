@@ -95,7 +95,7 @@ async function makeAIReply(env: Env, message: string, firstName: string, appUrl:
       } catch { /* Ignore malformed legacy episode metadata. */ }
       return "- " + title.name + (title.year ? " (" + title.year + ")" : "") + " [" + title.kind + "]" +
         (title.description ? ": " + title.description.slice(0,120) : "") + (episodes ? " | Episodes: " + episodes : "");
-    }).join("\\n").slice(0,12000);
+    }).join("\n").slice(0,12000);
   } catch (error) {
     console.error("Telegram AI catalogue context failed", error instanceof Error ? error.message : "unknown error");
   }
@@ -113,7 +113,7 @@ async function makeAIReply(env: Env, message: string, firstName: string, appUrl:
         "Help users understand the MaseNet website, Telegram Mini App, movies, dramas, episodes, Reels, subtitles, and playback troubleshooting.",
         "Use the current MaseNet catalogue context below as the source of truth for title and episode availability. If a title is not listed, say that you could not verify it in the current library. Do not invent title matches, episodes, or playback links.",
         "Shared administrator AI instructions: " + (sharedInstructions || "(No additional owner instructions have been saved.)"),
-        "Current MaseNet catalogue (public title metadata):\\n" + (catalogueContext || "(The catalogue could not be loaded.)"),
+        "Current MaseNet catalogue (public title metadata):\n" + (catalogueContext || "(The catalogue could not be loaded.)"),
         "Do not claim to search a live catalogue, see account activity, send alerts, or perform an action unless the information is provided or the action has actually happened.",
         "Do not invent movie availability, streaming links, episode details, or website capabilities. If uncertain, say so and offer the MaseNet app link.",
         "Keep replies helpful and concise, ideally under 120 words. Do not mention OpenAI or Cloudflare unless explicitly asked.",
