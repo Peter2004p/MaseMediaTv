@@ -1559,3 +1559,28 @@ html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!importa
 .welcomeSocialRail .welcomePrivacyLink{color:#a9e7d1;border-color:rgba(84,239,170,.22);background:rgba(84,239,170,.055)}
 @media(max-width:390px){.welcomeSocialRail{gap:5px;margin:8px auto 9px}.welcomeSocialRail a{min-height:26px;padding:5px 7px;font-size:9px;gap:4px}.welcomeSocialRail a svg{width:12px;height:12px}}
 @media(prefers-reduced-motion:reduce){.welcomeSocialRail a{transition:none}}
+
+
+/* Mobile-safe social shortcuts: one icon row above the primary CTA, never over the brand/header */
+.welcomeAdExperience .welcomeSocialRail{
+ position:absolute!important;z-index:55!important;top:auto!important;left:50%!important;right:auto!important;
+ bottom:calc(86px + env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;
+ display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:center!important;
+ width:max-content!important;max-width:calc(100% - 32px)!important;gap:8px!important;margin:0!important;padding:6px 9px!important;
+ border:1px solid rgba(255,255,255,.12)!important;border-radius:999px!important;
+ background:rgba(8,12,20,.46)!important;-webkit-backdrop-filter:blur(18px)!important;backdrop-filter:blur(18px)!important;
+}
+.welcomeAdExperience .welcomeSocialRail a{
+ width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;
+ padding:0!important;gap:0!important;border-radius:50%!important;font-size:0!important;line-height:0!important;
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+}
+.welcomeAdExperience .welcomeSocialRail a svg{width:16px!important;height:16px!important;opacity:1!important}
+.welcomeAdExperience .welcomeSocialRail a span{display:none!important}
+@media(max-width:390px){
+ .welcomeAdExperience .welcomeSocialRail{gap:5px!important;padding:5px 7px!important;bottom:calc(82px + env(safe-area-inset-bottom))!important}
+ .welcomeAdExperience .welcomeSocialRail a{width:31px!important;height:31px!important;min-width:31px!important;min-height:31px!important}
+}
+@media(max-height:700px){
+ .welcomeAdExperience .welcomeSocialRail{bottom:calc(78px + env(safe-area-inset-bottom))!important}
+}
