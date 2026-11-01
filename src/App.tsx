@@ -75,8 +75,6 @@ export default function App(){
  const [shareFeedback,setShareFeedback]=useState('');
  const [welcomeOpen,setWelcomeOpen]=useState(()=>{try{return localStorage.getItem('masenet-welcome-seen')!=='true'}catch{return true}});
  const [welcomePage,setWelcomePage]=useState(0);
- const [welcomePaused,setWelcomePaused]=useState(false);
- const welcomeTouchStart=useRef<{x:number;y:number}|null>(null);
  const welcomePages=[
   {eyebrow:'WELCOME TO THE MASENET ECOSYSTEM',title:'One entertainment world. Three ways to explore.',description:'Discover MaseNet on the website, inside the Telegram Mini App, and through the MaseNet Telegram bot — with a consistent experience across screens.',icon:'✦',tag:'WEBSITE · MINI APP · BOT'},
   {eyebrow:'THE MASENET LIBRARY',title:'Search movies and dramas with ease.',description:'Explore the catalogue, find a specific title or episode, and discover movies, C-dramas, K-dramas, anime and more from one organised library.',icon:'⌕',tag:'SMART SEARCH · MOVIES · DRAMAS'},
@@ -220,7 +218,7 @@ export default function App(){
     </div>
    </section>
    <div className="welcomeStoryControls welcomeAdControls">
-    <button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={finishWelcome}>Explore MaseNet <span>↗</span></button>
+    <button className="welcomePrimary welcomeProPrimary welcomeStoryNext" onClick={()=>welcomePage===welcomePages.length-1?void welcomeSignup():finishWelcome()} disabled={welcomePage===welcomePages.length-1&&welcomeBusy}>{welcomePage===welcomePages.length-1?(welcomeBusy?'Connecting securely…':inTelegramMiniApp?'Continue with Telegram':'Get started'):'Explore MaseNet'} <span>↗</span></button>
    </div>
    <p className="welcomeStoryHint welcomeAdHint">A six-scene MaseNet experience · Plays automatically</p>
    
