@@ -22,7 +22,7 @@ const episodeSearchText = (metadataJson: string): string => {
 };
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
-  const body = await request.json().catch(() => ({})) as { message?: unknown; images?: Array<{data?:unknown;mimeType?:unknown}>; audios?: Array<{data?:unknown;mimeType?:unknown}>; adminMode?: boolean; viewerName?: string };
+  const body = await request.json().catch(() => ({})) as { message?: unknown; images?: Array<{data?:unknown;mimeType?:unknown}>; audios?: Array<{data?:unknown;mimeType?:unknown}>; adminMode?: boolean; viewerName?: string; history?: Array<{role?:unknown;content?:unknown}> };
   // Verify admin identity from the secure session cookie; ignore client claims for permissions.
   const authenticatedAdmin = await currentAdmin(request, env);
   const message = String(body.message || "").trim().slice(0, 2000);
@@ -39,7 +39,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   } catch (error) {
     console.error("MaseNet AI catalogue lookup failed", error instanceof Error ? error.message : "unknown error");
   }
-  const q = message.toLowerCase();
+  const history = Array.isArray(body.history) ? body.history.slice(-8).map(item => ({ role: item?.role === "assistant" ? "assistant" as const : "user" as const, content: String(item?.content || "").trim().slice(0, 1200) })).filter(item => item.content).slice(-8) : [];\n  const q = message.toLowerCase();
 
   // Stable brand aliases and verified public links should not depend on model recall.
   if (!imageInputs.length && /social media|social links|official links|youtube|telegram|instagram|facebook|tiktok|follow (?:you|us|masenet|masetv|masemedia)|where can i follow|your channels/i.test(q) && /link|url|social|follow|channel|account|youtube|telegram|instagram|facebook|tiktok/i.test(q)) {
@@ -92,7 +92,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         body: JSON.stringify({
           model: env.OPENAI_MODEL || "gpt-4o-mini",
           instructions,
-          input: message,
+          input: [...history, { role: "user", content: message }],
           max_output_tokens: 700
         })
       });
@@ -136,7 +136,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
     try {
       const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: message }]
+        messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: message }]
       });
       const answer = typeof result === "string" ? result : String(result?.response || "");
       if (answer.trim()) return json({ text: answer.trim().slice(0, 5000) });
