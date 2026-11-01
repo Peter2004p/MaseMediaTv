@@ -88,7 +88,8 @@ export default function App(){
  ];
  const [welcomeBusy,setWelcomeBusy]=useState(false);
  const [welcomeError,setWelcomeError]=useState('');
- useEffect(()=>{welcomeElapsed.current=0;setWelcomeProgress(0);if(!welcomeOpen||welcomePaused||welcomePage>=welcomePages.length-1)return;const timer=window.setInterval(()=>{welcomeElapsed.current=Math.min(5500,welcomeElapsed.current+50);setWelcomeProgress(welcomeElapsed.current/5500*100);if(welcomeElapsed.current>=5500){window.clearInterval(timer);setWelcomePage(p=>Math.min(p+1,welcomePages.length-1));}},50);return()=>window.clearInterval(timer)},[welcomeOpen,welcomePage,welcomePaused,welcomePages.length]);
+ useEffect(()=>{if(!welcomeOpen||welcomePaused||welcomePage>=welcomePages.length-1)return;const timer=window.setInterval(()=>{welcomeElapsed.current=Math.min(5500,welcomeElapsed.current+50);setWelcomeProgress(welcomeElapsed.current/5500*100);if(welcomeElapsed.current>=5500){window.clearInterval(timer);setWelcomePage(p=>Math.min(p+1,welcomePages.length-1));}},50);return()=>window.clearInterval(timer)},[welcomeOpen,welcomePage,welcomePaused,welcomePages.length]);
+ useEffect(()=>{welcomeElapsed.current=0;setWelcomeProgress(0)},[welcomePage]);
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(!welcomeOpen)return;if(e.key==='ArrowRight')setWelcomePage(p=>Math.min(p+1,welcomePages.length-1));if(e.key==='ArrowLeft')setWelcomePage(p=>Math.max(0,p-1));};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[welcomeOpen,welcomePages.length]);
  const telegramWebApp=(window as unknown as {Telegram?:{WebApp?:{initData?:string;ready?:()=>void;expand?:()=>void}}}).Telegram?.WebApp;
  const inTelegramMiniApp=Boolean(telegramWebApp?.initData);
