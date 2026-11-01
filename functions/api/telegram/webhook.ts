@@ -75,7 +75,30 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
   }
 }
 async function makeAIReply(env: Env, message: string, firstName: string, appUrl: string): Promise<string> {
-  if (!env.OPENAI_API_KEY) return "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet app here: " + appUrl;
+  if (!env.OPENAI_API_KEY) return "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet Mini App using the button below.";
+  let sharedInstructions = "";
+  let catalogueContext = "";
+  try {
+    const setting = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key='ai_instructions'").first<{value_json:string}>();
+    if (setting?.value_json) sharedInstructions = String(JSON.parse(setting.value_json).instructions || "").slice(0, 4000);
+  } catch { /* Optional shared AI instructions. */ }
+  try {
+    const rows = await env.DB.prepare("SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 80").all<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
+    catalogueContext = (rows.results || []).map((title) => {
+      let episodes = "";
+      try {
+        const metadata = JSON.parse(title.metadata_json || "{}") as {episodes?:Array<{title?:unknown;name?:unknown;season?:unknown;episode?:unknown}>};
+        episodes = (Array.isArray(metadata.episodes) ? metadata.episodes : []).slice(0,12).map((ep) => {
+          const number = Number(ep.episode) || 0;
+          return [String(ep.title || ep.name || "").trim(), number ? "S" + (Number(ep.season) || 1) + "E" + number : ""].filter(Boolean).join(" ");
+        }).filter(Boolean).join(", ");
+      } catch { /* Ignore malformed legacy episode metadata. */ }
+      return "- " + title.name + (title.year ? " (" + title.year + ")" : "") + " [" + title.kind + "]" +
+        (title.description ? ": " + title.description.slice(0,120) : "") + (episodes ? " | Episodes: " + episodes : "");
+    }).join("\\n").slice(0,12000);
+  } catch (error) {
+    console.error("Telegram AI catalogue context failed", error instanceof Error ? error.message : "unknown error");
+  }
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
@@ -88,6 +111,9 @@ async function makeAIReply(env: Env, message: string, firstName: string, appUrl:
         "When asked for the Telegram bot link, provide https://t.me/MaseTv_Bot, not a channel link.",
         "Reply naturally to ordinary messages, not only commands. If someone says hey/hello, greet them and ask how you can help.",
         "Help users understand the MaseNet website, Telegram Mini App, movies, dramas, episodes, Reels, subtitles, and playback troubleshooting.",
+        "Use the current MaseNet catalogue context below as the source of truth for title and episode availability. If a title is not listed, say that you could not verify it in the current library. Do not invent title matches, episodes, or playback links.",
+        "Shared administrator AI instructions: " + (sharedInstructions || "(No additional owner instructions have been saved.)"),
+        "Current MaseNet catalogue (public title metadata):\\n" + (catalogueContext || "(The catalogue could not be loaded.)"),
         "Do not claim to search a live catalogue, see account activity, send alerts, or perform an action unless the information is provided or the action has actually happened.",
         "Do not invent movie availability, streaming links, episode details, or website capabilities. If uncertain, say so and offer the MaseNet app link.",
         "Keep replies helpful and concise, ideally under 120 words. Do not mention OpenAI or Cloudflare unless explicitly asked.",
