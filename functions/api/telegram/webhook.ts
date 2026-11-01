@@ -3,6 +3,7 @@ interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   TELEGRAM_WEBAPP_URL?: string;
+  TELEGRAM_MINI_APP_URL?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
 }
@@ -31,6 +32,46 @@ async function sendMessage(env: Env, chatId: string | number, text: string, repl
 }
 async function sendTyping(env: Env, chatId: string | number) {
   try { await telegramCall(env, "sendChatAction", { chat_id: chatId, action: "typing" }); } catch { /* Typing is optional. */ }
+}
+async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:string;name:string;kind:string;year:number|null;episodeLabels:string[]}>> {
+  const query = message.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+  if (query.length < 2) return [];
+  const terms = query.split(/\\s+/).filter((word) => word.length > 1);
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT id,name,kind,year,metadata_json FROM titles ORDER BY created_at DESC LIMIT 600"
+    ).all<{id:string;name:string;kind:string;year:number|null;metadata_json:string}>();
+    const ranked = (rows.results || []).map((row) => {
+      const name = String(row.name || "");
+      const normalizedName = name.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+      let episodeText = "";
+      const episodeLabels: string[] = [];
+      try {
+        const metadata = JSON.parse(row.metadata_json || "{}") as {episodes?:Array<{title?:unknown;name?:unknown;season?:unknown;episode?:unknown}>};
+        for (const ep of Array.isArray(metadata.episodes) ? metadata.episodes : []) {
+          const epName = String(ep.title || ep.name || "").trim();
+          const season = Number(ep.season) || 1;
+          const number = Number(ep.episode) || 0;
+          const label = [epName, number ? "S" + season + "E" + number : ""].filter(Boolean).join(" · ");
+          if (label) episodeLabels.push(label);
+          episodeText += " " + label;
+        }
+      } catch { /* A malformed legacy metadata row should not break search. */ }
+      const haystack = (normalizedName + " " + episodeText).normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+      let score = 0;
+      if (normalizedName === query) score += 30;
+      else if (normalizedName.includes(query)) score += 24;
+      else if (query.includes(normalizedName) && normalizedName.length > 3) score += 15;
+      if (haystack.includes(query)) score += 18;
+      score += terms.filter((term) => haystack.includes(term)).length * 3;
+      return {id:String(row.id),name,kind:String(row.kind || "Title"),year:row.year == null ? null : Number(row.year),episodeLabels,score};
+    }).filter((item) => item.score >= 6);
+    ranked.sort((a,b)=>b.score-a.score || a.name.localeCompare(b.name));
+    return ranked.slice(0,5).map(({score,...item})=>item);
+  } catch (error) {
+    console.error("Telegram catalogue search failed", error instanceof Error ? error.message : "unknown error");
+    return [];
+  }
 }
 async function makeAIReply(env: Env, message: string, firstName: string, appUrl: string): Promise<string> {
   if (!env.OPENAI_API_KEY) return "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet app here: " + appUrl;
@@ -81,7 +122,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const chatType = String(chat.type);
   const text = typeof message?.text === "string" ? message.text.trim() : "";
   const title = chatTitle(chat);
-  const appUrl = env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev";
+  const appUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
   const keyboard = { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: appUrl } }]] };
 
   if (chatType === "private") {
@@ -109,12 +150,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const socialReply = "🎬 <b>Stay Connected with MaseMedia TV</b>\n\nMaseNet, MaseTv and MaseMediaTv are names for the same platform. Choose where you’d like to connect with us:\n\n📺 <b>YouTube</b> — Videos and content\nhttps://youtube.com/@masemedia_tv\n\n📘 <b>Facebook</b> — News and updates\nhttps://www.facebook.com/share/1A5pSvKte9/\n\n🎵 <b>TikTok</b> — Short videos and clips\nhttps://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E\n\n📢 <b>Official Telegram Channels</b>\n• <b>MaseMediaTv</b> — Follow our main channel\nhttps://t.me/MaseMediaTv\n• <b>MoonDramaC</b> — Visit our second channel\nhttps://t.me/MoonDramaC\n\n🤖 <b>Telegram Bot</b> — Chat with MaseNet Assistant\nhttps://t.me/MaseTv_Bot\n\nThanks for being part of our community! ❤️";
       await sendMessage(env, chatId, socialReply, keyboard, "HTML");
     } else if (text && !text.startsWith("/")) {
+      const matches = await findCatalogMatches(env, text);
+      if (matches.length) {
+        const resultText = "🎬 <b>Found in the MaseNet library</b>\\n\\n" + matches.map((item) =>
+          "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
+          (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
+          (item.episodeLabels.length ? "\\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "")
+        ).join("\\n\\n") + "\\n\\nOpen the MaseNet Mini App to browse the catalogue and play available titles.";
+        await sendMessage(env, chatId, resultText, keyboard, "HTML");
+        return json({ ok: true, searchMatches: matches.length });
+      }
       await sendTyping(env, chatId);
       let answer: string;
       try {
         answer = await makeAIReply(env, text, String(chat?.first_name || ""), appUrl);
       } catch {
-        answer = "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open MaseNet here: " + appUrl;
+        answer = "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open the MaseNet Mini App using the button below.";
       }
       await sendMessage(env, chatId, answer, keyboard);
     } else if (text.startsWith("/")) {
