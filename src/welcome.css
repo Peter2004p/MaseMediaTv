@@ -960,3 +960,102 @@ html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!importa
  .welcomeAdExperience .welcomeStoryCard,.welcomeAdExperience .welcomeStoryCopy{animation:none!important}
  .welcomeAdExperience .welcomeStoryTrack i.isCurrent{animation:none!important;width:100%}
 }
+
+
+/* Rebuild the six scenes as a bright, image-led product commercial. */
+.welcomeAdExperience{
+ background:#f5f7f8!important;
+ color:#18231f!important;
+}
+.welcomeAdExperience .welcomeBackdrop{
+ background:
+  radial-gradient(ellipse at 5% 10%,#d9f5e8 0,transparent 34%),
+  radial-gradient(ellipse at 95% 90%,#dceeff 0,transparent 36%),
+  linear-gradient(135deg,#f9fbfa,#eef3f5 55%,#f7f8fa)!important;
+}
+.welcomeAdExperience .welcomeOrb{border-color:#ffffff80;box-shadow:0 0 0 45px #ffffff40,0 0 0 90px #ffffff24}
+.welcomeAdExperience .welcomeStoryTop{border:0;padding-bottom:0}
+.welcomeAdExperience .welcomeProBrand b{color:#17251e}
+.welcomeAdExperience .welcomeProBrand small{color:#718078}
+.welcomeAdExperience .welcomeStorySkip{background:#ffffffc9;border-color:#dbe4df;color:#43534a;box-shadow:0 8px 24px #1d30200c}
+.welcomeAdExperience .welcomeStoryTrack{background:#dce4e1}
+.welcomeAdExperience .welcomeStoryTrack i{background:#19a66b}
+.welcomeAdExperience .welcomeStoryCounter{color:#219568}
+.welcomeAdExperience .welcomeStoryCounter span{color:#9ba7a1}
+.welcomeAdExperience .welcomeStoryCard{grid-template-columns:minmax(0,1.12fr) minmax(280px,.88fr);gap:clamp(28px,5vw,82px)}
+.welcomeAdExperience .welcomeStoryArtwork{
+ position:relative;isolation:isolate;overflow:hidden;
+ height:min(62vh,650px);min-height:280px;
+ border:1px solid #ffffffd9;border-radius:clamp(22px,3vw,38px);
+ background:#dfe9e5!important;
+ box-shadow:0 30px 85px #344b411f,0 4px 14px #344b410d;
+}
+.welcomeAdExperience .welcomeScenePhoto{
+ position:absolute;inset:0;z-index:0;width:100%;height:100%;
+ object-fit:cover;object-position:center;
+ filter:saturate(1.04) contrast(1.02);
+ transform:scale(1.035);
+ animation:masenetPhotoDrift 7s ease-in-out both;
+}
+.welcomeAdExperience .welcomeStoryArtwork:after{
+ content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+ background:linear-gradient(180deg,#07140e40 0%,transparent 30%,#07140e12 62%,#07140e65 100%);
+}
+.welcomeAdExperience .welcomeIOSVisualTop{z-index:5;color:#fff;text-shadow:0 2px 10px #0008}
+.welcomeAdExperience .welcomeMotionScene{z-index:2;pointer-events:none}
+.welcomeAdExperience .welcomeEcosystemMock{
+ position:relative;z-index:4;width:min(76%,430px);margin:auto;
+ border-radius:24px;background:#ffffffed!important;
+ border:1px solid #ffffff!important;
+ box-shadow:0 30px 75px #07140e50,inset 0 1px #fff;
+ transform:rotate(-2deg);
+ animation:masenetDeviceFloat 5s ease-in-out infinite;
+}
+.welcomeAdExperience .welcomeWelcomeMark{
+ position:relative;z-index:4;width:min(64%,360px);padding:26px 18px;
+ border-radius:28px;background:#ffffffeb;backdrop-filter:blur(18px);
+ box-shadow:0 25px 70px #07140e40;display:grid;justify-items:center;gap:12px;
+ animation:masenetDeviceFloat 5s ease-in-out infinite;
+}
+.welcomeAdExperience .welcomeWelcomeMark img{width:clamp(62px,9vw,100px);height:auto}
+.welcomeAdExperience .welcomeWelcomeMark span{font-size:clamp(24px,4vw,40px);font-weight:950;letter-spacing:.12em;color:#173d2d}
+.welcomeAdExperience .welcomeWelcomeMark small{font-size:9px;letter-spacing:.2em;color:#3a8a68}
+.welcomeAdExperience .welcomeStoryCopy{max-width:560px;text-align:left}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProEyebrow{justify-content:flex-start;color:#148858}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProEyebrow>span{background:#e2f7ec;border-color:#c5ebd6;color:#15935d}
+.welcomeAdExperience .welcomeStoryCopy h1{
+ color:#14221b;font-family:inherit;font-weight:900;
+ font-size:clamp(42px,5.6vw,82px);letter-spacing:-.065em;
+ line-height:.96;margin:18px 0 17px;text-wrap:balance;
+}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProLead{color:#58685f;font-size:clamp(15px,1.45vw,19px);line-height:1.72}
+.welcomeAdExperience .welcomeStoryTag{display:inline-flex;border:1px solid #cfe6d8;border-radius:999px;background:#ffffffb8;color:#198458;padding:9px 13px;font-size:9px;letter-spacing:.15em}
+.welcomeAdExperience .welcomeCinematicNumber{z-index:5;color:#fff;opacity:.32;text-shadow:0 3px 24px #0008}
+.welcomeAdExperience .welcomeStoryControls{margin-top:0}
+.welcomeAdExperience .welcomeStoryNext{
+ background:linear-gradient(110deg,#1a9e66,#42d795)!important;color:#fff!important;
+ box-shadow:0 13px 32px #159b6335!important;border-radius:999px!important;
+}
+.welcomeAdExperience .welcomeAdHint{color:#718078}
+@keyframes masenetPhotoDrift{from{transform:scale(1.035)}to{transform:scale(1.12)}}
+@keyframes masenetDeviceFloat{0%,100%{translate:0 0}50%{translate:0 -9px}}
+@media(max-width:760px){
+ .welcomeAdExperience{height:100svh;min-height:100svh}
+ .welcomeAdExperience .welcomeStoryShell{padding:calc(12px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom))}
+ .welcomeAdExperience .welcomeStoryCard{display:flex;flex-direction:column;justify-content:center;gap:clamp(12px,2vh,20px)}
+ .welcomeAdExperience .welcomeStoryArtwork{height:clamp(235px,39svh,380px);min-height:220px;width:100%;flex:0 0 auto}
+ .welcomeAdExperience .welcomeEcosystemMock{width:min(84%,370px);border-radius:19px}
+ .welcomeAdExperience .welcomeWelcomeMark{width:min(70%,290px);padding:18px 14px;border-radius:22px}
+ .welcomeAdExperience .welcomeStoryCopy{width:100%;max-width:none;text-align:left}
+ .welcomeAdExperience .welcomeStoryCopy h1{font-size:clamp(34px,9.2vw,50px);margin:10px 0}
+ .welcomeAdExperience .welcomeStoryCopy .welcomeProLead{font-size:13px;line-height:1.58}
+ .welcomeAdExperience .welcomeStoryTag{margin-top:10px}
+ .welcomeAdExperience .welcomeCinematicNumber{font-size:58px}
+}
+@media(max-height:700px) and (min-width:761px){
+ .welcomeAdExperience .welcomeStoryArtwork{height:48vh;min-height:220px}
+ .welcomeAdExperience .welcomeStoryCopy h1{font-size:clamp(36px,4.5vw,62px)}
+}
+@media(prefers-reduced-motion:reduce){
+ .welcomeAdExperience .welcomeScenePhoto,.welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{animation:none!important;transform:none!important;translate:none!important}
+}
