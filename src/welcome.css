@@ -818,4 +818,4 @@
 @keyframes masenetStatusPulse{0%{box-shadow:0 0 0 0 #9be7b355}100%{box-shadow:0 0 0 14px #9be7b300}}
 @media(max-width:560px){.welcomeOrbit{width:185px;height:185px}.welcomeOrbitB{width:230px;height:230px}.welcomeTelegramOrbit{width:220px;height:140px}.welcomeTelegramOrbit.orbitB{width:245px;height:165px}.welcomeAiHalo{width:170px;height:170px}}
 @media(prefers-reduced-motion:reduce){.welcomeMotionScene *{animation:none!important;transition:none!important}.welcomeMotionScene{display:none!important}}
-@media(.masenet-low-performance){.welcomeMotionScene *{animation-duration:8s!important;box-shadow:none!important}}
+html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!important;box-shadow:none!important}
