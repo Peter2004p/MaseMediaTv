@@ -47,16 +47,20 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   if (!imageInputs.length && /recommend|available|library|drama|movie|search|find|episode/.test(q)) {
-    const words = q.split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 2);
-    const matches = titles.filter(t => {
-      const haystack = (t.name + " " + t.kind + " " + (t.description || "") + " " + episodeSearchText(t.metadata_json)).toLowerCase();
-      return haystack.includes(q) || words.some(w => haystack.includes(w));
-    });
+    const stopWords = new Set(["the","and","for","with","from","that","this","what","where","when","how","can","you","me","please","show","find","search","look","looking","available","library","movie","movies","drama","dramas","episode","episodes","season","recommend","recommendation","watch","want","need","is","are","in","on","of","to","a","an"]);
+    const words = q.split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 1 && !stopWords.has(w));
+    const ranked = titles.map(t => {
+      const titleText = (t.name + " " + episodeSearchText(t.metadata_json)).toLowerCase();
+      const exact = titleText.includes(q);
+      const matched = words.filter(w => titleText.includes(w));
+      const score = exact ? 100 : matched.length;
+      return { title:t, score };
+    }).filter(x => x.score > 0 && (x.score === 100 || x.score >= Math.max(1, Math.ceil(words.length * 0.6)))).sort((a,b) => b.score-a.score);
     if (!titles.length) {
       return json({ text: "The MaseNet library is currently empty, so I could not find matching titles. Please try again later or contact the site administrator." });
     }
-    if (matches.length) {
-      return json({ text: "Here are matching titles in the MaseNet library:\n" + matches.slice(0, 5).map(t => "• " + t.name + (t.year ? " (" + t.year + ")" : "") + " — " + t.kind).join("\n") });
+    if (ranked.length) {
+      return json({ text: "Here are matching titles in the MaseNet library:\n" + ranked.slice(0, 5).map(x => "• " + x.title.name + (x.title.year ? " (" + x.title.year + ")" : "") + " — " + x.title.kind).join("\n") });
     }
   }
 
