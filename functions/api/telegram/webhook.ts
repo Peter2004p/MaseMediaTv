@@ -34,16 +34,16 @@ async function sendTyping(env: Env, chatId: string | number) {
   try { await telegramCall(env, "sendChatAction", { chat_id: chatId, action: "typing" }); } catch { /* Typing is optional. */ }
 }
 async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:string;name:string;kind:string;year:number|null;episodeLabels:string[]}>> {
-  const query = message.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+  const query = message.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   if (query.length < 2) return [];
-  const terms = query.split(/\\s+/).filter((word) => word.length > 1);
+  const terms = query.split(/\s+/).filter((word) => word.length > 1);
   try {
     const rows = await env.DB.prepare(
       "SELECT id,name,kind,year,metadata_json FROM titles ORDER BY created_at DESC LIMIT 600"
     ).all<{id:string;name:string;kind:string;year:number|null;metadata_json:string}>();
     const ranked = (rows.results || []).map((row) => {
       const name = String(row.name || "");
-      const normalizedName = name.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+      const normalizedName = name.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
       let episodeText = "";
       const episodeLabels: string[] = [];
       try {
@@ -57,7 +57,7 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
           episodeText += " " + label;
         }
       } catch { /* A malformed legacy metadata row should not break search. */ }
-      const haystack = (normalizedName + " " + episodeText).normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+      const haystack = (normalizedName + " " + episodeText).normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
       let score = 0;
       if (normalizedName === query) score += 30;
       else if (normalizedName.includes(query)) score += 24;
