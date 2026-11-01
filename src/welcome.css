@@ -763,3 +763,59 @@
 .welcomeManagerGrid span{color:#6de6a8;font-size:8px}
 @media(max-width:560px){.welcomeEcosystemMock{width:94%;padding:13px;border-radius:18px}.welcomePlaybackScreen{min-height:145px}.welcomeMockResults{padding:18px 0 14px}.welcomeManagerGrid{gap:7px}.welcomeManagerGrid>div{padding:10px 8px}}
 @media(prefers-reduced-motion:reduce){.welcomeEcosystemMock *{animation:none!important;transition:none!important}}
+
+
+/* Six distinct cinematic motion scenes — these animate the scene content, not page transitions. */
+.welcomeMotionScene{position:absolute;z-index:0;inset:0;overflow:hidden;pointer-events:none;perspective:900px}
+.welcomeMotionScene>*{position:absolute;display:block;pointer-events:none}
+.welcomeMotionScene1{background:radial-gradient(ellipse at 50% 50%,#d7b66b12,transparent 55%)}
+.welcomeOrbit{left:50%;top:50%;width:230px;height:230px;border:1px solid #e9d19a55;border-radius:50%;transform:translate(-50%,-50%) rotateX(66deg);box-shadow:0 0 35px #d7b66b12,inset 0 0 25px #d7b66b10;animation:masenetOrbitSpin 12s linear infinite}
+.welcomeOrbitB{width:290px;height:290px;border-color:#b9d8ff35;transform:translate(-50%,-50%) rotateX(68deg) rotateZ(58deg);animation-duration:17s;animation-direction:reverse}
+.welcomeSceneParticle{left:50%;top:50%;width:7px;height:7px;border-radius:50%;background:#f3d99c;box-shadow:0 0 18px 5px #f3d99c66;animation:masenetParticleFloat 5s ease-in-out infinite}
+.particleA{margin:-105px 0 0 -115px}.particleB{margin:75px 0 0 108px;animation-delay:-1.8s;background:#b8d9ff;box-shadow:0 0 18px 5px #b8d9ff66}.particleC{margin:110px 0 0 -85px;animation-delay:-3.2s}
+.welcomeMotionScene2{background:radial-gradient(ellipse at 50% 54%,#cba66c12,transparent 62%)}
+.welcomeSearchSweep{top:20%;bottom:20%;left:8%;width:2px;background:linear-gradient(transparent,#d7ba82,#fff2cf,transparent);box-shadow:0 0 22px 5px #d7ba8245;animation:masenetSearchScan 4.5s ease-in-out infinite}
+.welcomeSearchPulse{left:50%;top:48%;width:110px;height:110px;border:1px solid #e6c58a55;border-radius:50%;transform:translate(-50%,-50%);animation:masenetRadar 3.2s ease-out infinite}
+.welcomeSceneSpark{width:5px;height:5px;border-radius:50%;background:#f2d6a0;box-shadow:0 0 15px 4px #f2d6a044;animation:masenetSpark 3s ease-in-out infinite}
+.sparkA{left:17%;top:34%}.sparkB{right:17%;bottom:27%;animation-delay:-1.4s}
+.welcomeMotionScene3{background:radial-gradient(ellipse at 50% 55%,#35d69b12,transparent 60%)}
+.welcomePlaybackBeam{inset:0;background:linear-gradient(115deg,transparent 25%,#baffdb0c 48%,#d5ffec22 50%,#baffdb0c 52%,transparent 75%);transform:translateX(-100%);animation:masenetPlaybackLight 5s ease-in-out infinite}
+.welcomePlaybackProgress{left:12%;right:12%;bottom:17%;height:3px;border-radius:9px;background:#ffffff24;overflow:hidden}
+.welcomePlaybackProgress:after{content:"";display:block;width:38%;height:100%;border-radius:9px;background:#a9f6ce;box-shadow:0 0 13px #8df5be;animation:masenetProgress 7s ease-in-out infinite}
+.welcomePlaybackWave{bottom:28%;left:50%;width:1px;height:18px;border-radius:8px;background:#9ef3c5;box-shadow:0 0 12px #53e9a0;transform-origin:center;animation:masenetWave .85s ease-in-out infinite alternate}
+.waveA{margin-left:-30px}.waveB{height:28px;animation-delay:-.4s}.waveC{margin-left:30px;height:13px;animation-delay:-.65s}
+.welcomeMotionScene4{background:radial-gradient(ellipse at 50% 45%,#b9a4ff12,transparent 62%)}
+.welcomeAiHalo{left:50%;top:47%;width:210px;height:210px;border:1px solid #c4b4ff40;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 50px #a98cff18,inset 0 0 40px #a98cff0b;animation:masenetAiBreathe 4s ease-in-out infinite}
+.welcomeAiHalo:before,.welcomeAiHalo:after{content:"";position:absolute;inset:18px;border:1px solid #c4b4ff25;border-radius:50%}.welcomeAiHalo:after{inset:38px}
+.welcomeTypingDots{left:50%;top:24%;display:flex;gap:6px;transform:translateX(-50%)}
+.welcomeTypingDots b{width:5px;height:5px;border-radius:50%;background:#d7caff;animation:masenetTyping 1s ease-in-out infinite}.welcomeTypingDots b:nth-child(2){animation-delay:.16s}.welcomeTypingDots b:nth-child(3){animation-delay:.32s}
+.welcomeAiSignal{width:6px;height:6px;border-radius:50%;background:#c8b6ff;box-shadow:0 0 18px 5px #b9a4ff55;animation:masenetSignal 3.8s ease-in-out infinite}
+.signalA{left:22%;top:43%}.signalB{right:22%;bottom:28%;animation-delay:-1.9s}
+.welcomeMotionScene5{background:radial-gradient(ellipse at 50% 50%,#7bbcff12,transparent 62%)}
+.welcomeTelegramOrbit{left:50%;top:50%;width:260px;height:160px;border:1px solid #9ed5ff44;border-radius:50%;transform:translate(-50%,-50%) rotate(-25deg);animation:masenetOrbitSpin 12s linear infinite}
+.welcomeTelegramOrbit.orbitB{width:290px;height:190px;transform:translate(-50%,-50%) rotate(58deg);animation-duration:16s;animation-direction:reverse;border-color:#8eeacb35}
+.welcomeTelegramNode{left:50%;top:50%;display:grid;place-items:center;width:34px;height:34px;border:1px solid #b8e4ff66;border-radius:12px;background:#14283dcc;color:#b8e4ff;font-style:normal;box-shadow:0 8px 25px #0005;animation:masenetNodeFloat 4s ease-in-out infinite}
+.nodeA{margin:-92px 0 0 108px}.nodeB{margin:76px 0 0 -125px;animation-delay:-2s;color:#a6f4d0;border-color:#a6f4d066}
+.welcomeMotionScene6{background:radial-gradient(ellipse at 50% 48%,#e0c28b12,transparent 62%)}
+.welcomeManagerSweep{top:12%;bottom:12%;left:0;width:42%;background:linear-gradient(90deg,transparent,#e9d19a0c,#e9d19a22,transparent);transform:skewX(-18deg) translateX(-130%);animation:masenetManagerSweep 5s ease-in-out infinite}
+.welcomeManagerBar{bottom:18%;width:7px;border-radius:8px 8px 2px 2px;background:linear-gradient(#e8d09b,#8f754b);box-shadow:0 0 18px #e8d09b22;transform-origin:bottom;animation:masenetBar 2.8s ease-in-out infinite alternate}
+.barA{left:25%;height:27%}.barB{left:50%;height:43%;animation-delay:-.9s}.barC{right:25%;height:34%;animation-delay:-1.7s}
+.welcomeManagerPulse{right:16%;top:19%;width:8px;height:8px;border-radius:50%;background:#9be7b3;box-shadow:0 0 0 0 #9be7b355;animation:masenetStatusPulse 2s ease-out infinite}
+@keyframes masenetOrbitSpin{to{rotate:360deg}}
+@keyframes masenetParticleFloat{0%,100%{translate:0 0;opacity:.45}50%{translate:0 -18px;opacity:1}}
+@keyframes masenetSearchScan{0%{transform:translateX(0);opacity:0}15%,85%{opacity:1}100%{transform:translateX(78vw);opacity:0}}
+@keyframes masenetRadar{0%{scale:.35;opacity:.7}100%{scale:2.2;opacity:0}}
+@keyframes masenetSpark{0%,100%{transform:scale(.5);opacity:.25}50%{transform:scale(1.5);opacity:1}}
+@keyframes masenetPlaybackLight{0%,15%{transform:translateX(-100%)}65%,100%{transform:translateX(100%)}}
+@keyframes masenetProgress{0%{transform:translateX(-10%)}70%,100%{transform:translateX(170%)}}
+@keyframes masenetWave{to{transform:scaleY(.35);opacity:.55}}
+@keyframes masenetAiBreathe{0%,100%{scale:.92;opacity:.5}50%{scale:1.08;opacity:1}}
+@keyframes masenetTyping{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-6px);opacity:1}}
+@keyframes masenetSignal{0%,100%{transform:scale(.65);opacity:.35}50%{transform:scale(1.4);opacity:1}}
+@keyframes masenetNodeFloat{0%,100%{translate:0 0}50%{translate:0 -12px}}
+@keyframes masenetManagerSweep{0%,15%{transform:skewX(-18deg) translateX(-130%)}75%,100%{transform:skewX(-18deg) translateX(330%)}}
+@keyframes masenetBar{from{scale:1 .65}to{scale:1 1.08}}
+@keyframes masenetStatusPulse{0%{box-shadow:0 0 0 0 #9be7b355}100%{box-shadow:0 0 0 14px #9be7b300}}
+@media(max-width:560px){.welcomeOrbit{width:185px;height:185px}.welcomeOrbitB{width:230px;height:230px}.welcomeTelegramOrbit{width:220px;height:140px}.welcomeTelegramOrbit.orbitB{width:245px;height:165px}.welcomeAiHalo{width:170px;height:170px}}
+@media(prefers-reduced-motion:reduce){.welcomeMotionScene *{animation:none!important;transition:none!important}.welcomeMotionScene{display:none!important}}
+@media(.masenet-low-performance){.welcomeMotionScene *{animation-duration:8s!important;box-shadow:none!important}}
