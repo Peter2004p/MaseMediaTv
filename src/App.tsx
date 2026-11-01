@@ -75,6 +75,9 @@ export default function App(){
  const [shareFeedback,setShareFeedback]=useState('');
  const [welcomeOpen,setWelcomeOpen]=useState(()=>{try{return localStorage.getItem('masenet-welcome-seen')!=='true'}catch{return true}});
  const [welcomePage,setWelcomePage]=useState(0);
+ const [welcomePaused,setWelcomePaused]=useState(false);
+ const [welcomeProgress,setWelcomeProgress]=useState(0);
+ const welcomeElapsed=useRef(0);
  const welcomePages=[
   {eyebrow:'WELCOME TO THE MASENET ECOSYSTEM',title:'One entertainment world. Three ways to explore.',description:'Discover MaseNet on the website, inside the Telegram Mini App, and through the MaseNet Telegram bot — with a consistent experience across screens.',icon:'✦',tag:'WEBSITE · MINI APP · BOT'},
   {eyebrow:'THE MASENET LIBRARY',title:'Search movies and dramas with ease.',description:'Explore the catalogue, find a specific title or episode, and discover movies, C-dramas, K-dramas, anime and more from one organised library.',icon:'⌕',tag:'SMART SEARCH · MOVIES · DRAMAS'},
@@ -85,7 +88,8 @@ export default function App(){
  ];
  const [welcomeBusy,setWelcomeBusy]=useState(false);
  const [welcomeError,setWelcomeError]=useState('');
- useEffect(()=>{if(!welcomeOpen||welcomePage>=welcomePages.length-1)return;const timer=window.setTimeout(()=>setWelcomePage(p=>Math.min(p+1,welcomePages.length-1)),5500);return()=>window.clearTimeout(timer)},[welcomeOpen,welcomePage,welcomePages.length]);
+ useEffect(()=>{welcomeElapsed.current=0;setWelcomeProgress(0);if(!welcomeOpen||welcomePaused||welcomePage>=welcomePages.length-1)return;const timer=window.setInterval(()=>{welcomeElapsed.current=Math.min(5500,welcomeElapsed.current+50);setWelcomeProgress(welcomeElapsed.current/5500*100);if(welcomeElapsed.current>=5500){window.clearInterval(timer);setWelcomePage(p=>Math.min(p+1,welcomePages.length-1));}},50);return()=>window.clearInterval(timer)},[welcomeOpen,welcomePage,welcomePaused,welcomePages.length]);
+ useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(!welcomeOpen)return;if(e.key==='ArrowRight')setWelcomePage(p=>Math.min(p+1,welcomePages.length-1));if(e.key==='ArrowLeft')setWelcomePage(p=>Math.max(0,p-1));};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[welcomeOpen,welcomePages.length]);
  const telegramWebApp=(window as unknown as {Telegram?:{WebApp?:{initData?:string;ready?:()=>void;expand?:()=>void}}}).Telegram?.WebApp;
  const inTelegramMiniApp=Boolean(telegramWebApp?.initData);
  const finishWelcome=()=>{try{localStorage.setItem('masenet-welcome-seen','true')}catch{}setWelcomeOpen(false);go('#/home')};
@@ -190,7 +194,7 @@ export default function App(){
   'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=85',
   'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1800&q=85'
  ];
- if(welcomeOpen)return <main className="welcomeGate welcomePro welcomeStoryGate welcomeAdExperience" aria-label="MaseNet promotional experience">
+ if(welcomeOpen)return <main className={`welcomeGate welcomePro welcomeStoryGate welcomeAdExperience${welcomePaused?' isPaused':''}`} aria-label="MaseNet promotional experience" onPointerDown={()=>setWelcomePaused(true)} onPointerUp={()=>setWelcomePaused(false)} onPointerCancel={()=>setWelcomePaused(false)} onPointerLeave={()=>setWelcomePaused(false)}>
   <div className="welcomeBackdrop"><span className="welcomeGlow welcomeGlowOne"/><span className="welcomeGlow welcomeGlowTwo"/><span className="welcomeOrb welcomeOrbOne"/><span className="welcomeOrb welcomeOrbTwo"/></div>
   <div className="welcomeStoryShell">
    <div className="welcomeStoryTop">
@@ -198,9 +202,13 @@ export default function App(){
     <button className="welcomeStorySkip" onClick={finishWelcome}>Skip tour <span>×</span></button>
    </div>
    <div className="welcomeStoryProgress" aria-label={`Page ${welcomePage+1} of 6`}>
-    {welcomePages.map((page,i)=><span className="welcomeStoryTrack" key={page.eyebrow}><i className={i<welcomePage?'isDone':i===welcomePage?'isCurrent':''} /></span>)}
+    {welcomePages.map((page,i)=><span className="welcomeStoryTrack" key={page.eyebrow}><i className={i<welcomePage?'isDone':i===welcomePage?'isCurrent':''} style={{width:i<welcomePage?'100%':i===welcomePage?String(welcomeProgress)+'%':'0%'}} /></span>)}
    </div>
    <div className="welcomeStoryCounter">{String(welcomePage+1).padStart(2,'0')} <span>/ 06</span></div>
+   <div className="welcomeStatusTapZones" aria-label="Onboarding page navigation">
+    <button type="button" aria-label="Previous page" onClick={()=>{setWelcomePage(p=>Math.max(0,p-1));setWelcomeProgress(0)}} />
+    <button type="button" aria-label="Next page" onClick={()=>{setWelcomePage(p=>Math.min(p+1,welcomePages.length-1));setWelcomeProgress(0)}} />
+   </div>
    <section className={`welcomeStoryCard welcomeEditorialCard welcomeEditorialPage${welcomePage+1}`} key={welcomePage}>
     <div className={`welcomeStoryArtwork welcomeStoryArtwork${welcomePage+1} welcomeIOSVisual welcomeIOSVisual${welcomePage+1}`} aria-hidden="true">
      <div className={`welcomeAdBackdropArt welcomeAdBackdropArt${welcomePage+1}`} aria-hidden="true"><i/><i/><i/><i/></div>
