@@ -1338,3 +1338,146 @@ html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!importa
 @media(prefers-reduced-motion:reduce){
  .welcomeAdExperience .welcomeAdBackdropArt:before,.welcomeAdExperience .welcomeAdBackdropArt:after,.welcomeAdExperience .welcomeAdBackdropArt i,.welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{animation:none!important}
 }
+
+
+/* FINAL ALIGNMENT FIX — one centered composition across desktop and mobile */
+.welcomeAdExperience{
+ position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;
+ min-height:100dvh!important;overflow:hidden!important;background:#f8fafb!important;
+ display:block!important;
+}
+.welcomeAdExperience .welcomeBackdrop{display:block!important;position:absolute;inset:0;opacity:1!important;background:
+ radial-gradient(ellipse at 50% 38%,#e7f5ee 0%,transparent 43%),
+ linear-gradient(180deg,#fff 0%,#f8fbf9 58%,#f4f8f6 100%)!important}
+.welcomeAdExperience .welcomeStoryShell{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+ min-height:100%!important;max-width:none!important;margin:0!important;padding:0!important;
+ display:block!important;overflow:hidden!important;
+}
+.welcomeAdExperience .welcomeStoryTop{
+ position:absolute!important;z-index:50!important;top:max(16px,env(safe-area-inset-top))!important;
+ left:clamp(18px,4vw,54px)!important;right:clamp(18px,4vw,54px)!important;
+ display:flex!important;align-items:center!important;justify-content:space-between!important;
+ border:0!important;padding:0!important;
+}
+.welcomeAdExperience .welcomeProBrand{display:flex!important;align-items:center!important;gap:10px!important}
+.welcomeAdExperience .welcomeProBrand img{width:36px!important;height:36px!important;object-fit:contain}
+.welcomeAdExperience .welcomeProBrand b{color:#17251e!important;font-size:17px!important}
+.welcomeAdExperience .welcomeProBrand small{color:#78877f!important;font-size:7px!important}
+.welcomeAdExperience .welcomeStorySkip{background:#fff!important;border:1px solid #e2eae5!important;color:#405047!important}
+.welcomeAdExperience .welcomeStoryProgress{
+ position:absolute!important;z-index:50!important;top:calc(max(16px,env(safe-area-inset-top)) + 49px)!important;
+ left:clamp(18px,4vw,54px)!important;right:clamp(18px,4vw,54px)!important;
+ display:flex!important;margin:0!important;gap:5px!important;
+}
+.welcomeAdExperience .welcomeStoryTrack{height:3px!important;background:#dfe9e3!important}
+.welcomeAdExperience .welcomeStoryTrack i{background:#19a66b!important}
+.welcomeAdExperience .welcomeStoryCounter{position:absolute!important;top:calc(max(16px,env(safe-area-inset-top)) + 59px)!important;right:clamp(18px,4vw,54px)!important;color:#29966a!important;margin:0!important}
+.welcomeAdExperience .welcomeStoryCard{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+ min-height:0!important;margin:0!important;padding:0!important;display:block!important;
+ background:transparent!important;overflow:hidden!important;animation:masenetCleanScene .45s ease both!important;
+}
+.welcomeAdExperience .welcomeStoryArtwork{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+ min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+ overflow:hidden!important;background:transparent!important;display:block!important;
+}
+.welcomeAdExperience .welcomeScenePhoto,.welcomeAdExperience .welcomeIOSVisualTop{display:none!important}
+.welcomeAdExperience .welcomeAdBackdropArt{position:absolute!important;inset:0!important;overflow:hidden!important;opacity:.75}
+.welcomeAdExperience .welcomeAdBackdropArt:before{
+ content:""!important;position:absolute!important;display:block!important;
+ width:min(68vw,820px)!important;height:min(18vw,210px)!important;left:50%!important;top:37%!important;
+ border-radius:999px!important;transform:translate(-50%,-50%) rotate(-24deg)!important;
+ background:linear-gradient(100deg,#ffc5c7,#ffe5a6 34%,#b9ebd0 66%,#b9ddff)!important;
+ opacity:.62!important;filter:blur(1px)!important;animation:none!important;
+}
+.welcomeAdExperience .welcomeAdBackdropArt:after{display:none!important}
+.welcomeAdExperience .welcomeAdBackdropArt i{display:none!important}
+.welcomeAdExperience .welcomeMotionScene{display:none!important}
+.welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{
+ position:absolute!important;z-index:8!important;left:50%!important;right:auto!important;
+ top:39%!important;bottom:auto!important;margin:0!important;
+ width:clamp(230px,27vw,340px)!important;height:min(51vh,510px)!important;min-height:330px!important;
+ padding:32px 17px 20px!important;border:8px solid #202a26!important;border-radius:42px!important;
+ transform:translate(-50%,-50%) rotate(-2deg)!important;
+ background:linear-gradient(160deg,#fff,#f5f9f6)!important;
+ box-shadow:0 28px 75px #1e3b2d24,0 7px 20px #1e3b2d16!important;
+ animation:masenetPhoneFloat 5s ease-in-out infinite!important;
+}
+.welcomeAdExperience .welcomeEcosystemMock:before,.welcomeAdExperience .welcomeWelcomeMark:before{
+ content:""!important;position:absolute!important;top:8px!important;left:50%!important;
+ transform:translateX(-50%)!important;width:68px!important;height:15px!important;border-radius:0 0 12px 12px!important;background:#202a26!important;
+}
+.welcomeAdExperience .welcomeWelcomeMark img{width:84px!important;height:84px!important;object-fit:contain}
+.welcomeAdExperience .welcomeWelcomeMark span{font-size:25px!important}
+.welcomeAdExperience .welcomeWelcomeMark small{font-size:8px!important}
+.welcomeAdExperience .welcomeMockPoster{height:clamp(95px,15vh,150px)!important}
+.welcomeAdExperience .welcomePlaybackScreen{min-height:clamp(145px,22vh,220px)!important}
+.welcomeAdExperience .welcomeStoryCopy{
+ position:absolute!important;z-index:20!important;top:69%!important;left:50%!important;right:auto!important;
+ bottom:auto!important;width:min(88%,760px)!important;max-width:760px!important;margin:0!important;
+ padding:0!important;transform:translate(-50%,-50%)!important;text-align:center!important;
+ color:#17251e!important;animation:none!important;
+}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProEyebrow{display:flex!important;justify-content:center!important;color:#24895e!important;font-size:9px!important;letter-spacing:.18em!important}
+.welcomeAdExperience .welcomeStoryCopy h1{
+ display:block!important;width:100%!important;max-width:760px!important;margin:9px auto 7px!important;
+ text-align:center!important;color:#17251e!important;font-size:clamp(27px,4.1vw,48px)!important;
+ line-height:1.04!important;letter-spacing:-.045em!important;text-shadow:none!important;
+}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProLead{
+ display:block!important;max-width:600px!important;margin:0 auto!important;text-align:center!important;
+ color:#66766e!important;font-size:clamp(12px,1.25vw,15px)!important;line-height:1.5!important;
+}
+.welcomeAdExperience .welcomeStoryTag{
+ display:inline-block!important;margin:10px auto 0!important;padding:6px 11px!important;
+ border:1px solid #dce9e1!important;border-radius:999px!important;background:#fff!important;
+ color:#28885f!important;font-size:7px!important;letter-spacing:.13em!important;
+}
+.welcomeAdExperience .welcomeError{color:#b42318!important;text-align:center!important}
+.welcomeAdExperience .welcomeStoryControls{
+ position:absolute!important;z-index:60!important;left:50%!important;right:auto!important;
+ top:auto!important;bottom:calc(22px + env(safe-area-inset-bottom))!important;
+ width:min(88%,340px)!important;margin:0!important;padding:0!important;
+ transform:translateX(-50%)!important;display:flex!important;justify-content:center!important;
+ border:0!important;
+}
+.welcomeAdExperience .welcomeStoryNext{
+ display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;
+ width:100%!important;min-width:0!important;min-height:50px!important;padding:0 24px!important;
+ border:0!important;border-radius:999px!important;background:#17271f!important;color:#fff!important;
+ box-shadow:0 10px 26px #17271f20!important;
+}
+.welcomeAdExperience .welcomeAdHint{display:none!important}
+@keyframes masenetCleanScene{from{opacity:0}to{opacity:1}}
+@keyframes masenetPhoneFloat{0%,100%{margin-top:0}50%{margin-top:-8px}}
+@media(max-width:760px){
+ .welcomeAdExperience .welcomeStoryTop{left:16px!important;right:16px!important}
+ .welcomeAdExperience .welcomeStoryProgress{left:16px!important;right:16px!important}
+ .welcomeAdExperience .welcomeStoryCounter{right:16px!important}
+ .welcomeAdExperience .welcomeAdBackdropArt:before{width:112vw!important;height:34vw!important;top:35%!important}
+ .welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{
+  top:37%!important;width:clamp(205px,57vw,260px)!important;height:min(43vh,390px)!important;min-height:285px!important;
+  padding:25px 13px 14px!important;border-width:7px!important;border-radius:34px!important;
+ }
+ .welcomeAdExperience .welcomeWelcomeMark img{width:67px!important;height:67px!important}
+ .welcomeAdExperience .welcomeWelcomeMark span{font-size:21px!important}
+ .welcomeAdExperience .welcomeMockPoster{height:clamp(74px,11vh,100px)!important}
+ .welcomeAdExperience .welcomePlaybackScreen{min-height:clamp(112px,16vh,145px)!important}
+ .welcomeAdExperience .welcomeStoryCopy{top:68%!important;width:calc(100% - 36px)!important}
+ .welcomeAdExperience .welcomeStoryCopy .welcomeProEyebrow{font-size:7px!important}
+ .welcomeAdExperience .welcomeStoryCopy h1{font-size:clamp(23px,6.2vw,32px)!important;margin:7px auto 5px!important}
+ .welcomeAdExperience .welcomeStoryCopy .welcomeProLead{font-size:11px!important;line-height:1.4!important}
+ .welcomeAdExperience .welcomeStoryTag{margin-top:7px!important;font-size:6px!important}
+ .welcomeAdExperience .welcomeStoryControls{width:calc(100% - 42px)!important;bottom:calc(14px + env(safe-area-inset-bottom))!important}
+ .welcomeAdExperience .welcomeStoryNext{min-height:46px!important}
+}
+@media(max-height:650px){
+ .welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{top:34%!important;height:38vh!important;min-height:230px!important}
+ .welcomeAdExperience .welcomeStoryCopy{top:66%!important}
+ .welcomeAdExperience .welcomeStoryControls{bottom:calc(10px + env(safe-area-inset-bottom))!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{animation:none!important}
+}
