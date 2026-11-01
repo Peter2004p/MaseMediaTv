@@ -1116,3 +1116,130 @@ html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!importa
 @media(prefers-reduced-motion:reduce){
  .welcomeAdExperience .welcomeScenePhoto,.welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{animation:none!important}
 }
+
+
+/* Reference-led rebuild: bright vertical product advert, not a dark full-screen slideshow. */
+.welcomeAdExperience{
+ background:#f8fafb!important;
+ color:#17231d!important;
+}
+.welcomeAdExperience .welcomeBackdrop{
+ background:
+  radial-gradient(ellipse at 18% 22%,#dff7e9 0,transparent 34%),
+  radial-gradient(ellipse at 86% 65%,#e1efff 0,transparent 34%),
+  linear-gradient(145deg,#fff 0%,#f4f8f6 52%,#f7f9fc 100%)!important;
+}
+.welcomeAdExperience .welcomeStoryShell{width:100%;max-width:none;height:100%;min-height:0;padding:0;justify-content:flex-start}
+.welcomeAdExperience .welcomeStoryTop{position:absolute;z-index:30;top:max(18px,env(safe-area-inset-top));left:clamp(18px,4vw,54px);right:clamp(18px,4vw,54px);padding:0;border:0}
+.welcomeAdExperience .welcomeProBrand b{color:#17251e!important}
+.welcomeAdExperience .welcomeProBrand small{color:#74837b!important}
+.welcomeAdExperience .welcomeStorySkip{background:#ffffffd9!important;border:1px solid #dce7e1!important;color:#415249!important;box-shadow:0 7px 22px #173b2b0d}
+.welcomeAdExperience .welcomeStoryProgress{position:absolute;z-index:30;top:calc(max(18px,env(safe-area-inset-top)) + 55px);left:clamp(18px,4vw,54px);right:clamp(18px,4vw,54px);margin:0;gap:5px}
+.welcomeAdExperience .welcomeStoryTrack{height:3px;background:#dce7e2}
+.welcomeAdExperience .welcomeStoryTrack i{background:#16a66b}
+.welcomeAdExperience .welcomeStoryTrack i.isCurrent{animation:masenetAdProgress 2.5s linear forwards}
+.welcomeAdExperience .welcomeStoryCounter{position:absolute;z-index:30;top:calc(max(18px,env(safe-area-inset-top)) + 66px);right:clamp(18px,4vw,54px);color:#239567;font-size:10px}
+.welcomeAdExperience .welcomeStoryCard{position:absolute;inset:0;display:block!important;min-height:0;margin:0;padding:0!important;animation:masenetReferenceScene .55s cubic-bezier(.2,.75,.25,1) both}
+.welcomeAdExperience .welcomeStoryArtwork{
+ position:absolute;inset:0;width:100%;height:100%!important;min-height:0!important;
+ border:0;border-radius:0;box-shadow:none;background:transparent!important;overflow:hidden;
+}
+.welcomeAdExperience .welcomeScenePhoto{display:none!important}
+.welcomeAdExperience .welcomeStoryArtwork:after{display:none!important}
+.welcomeAdExperience .welcomeAdBackdropArt{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.welcomeAdExperience .welcomeAdBackdropArt i{position:absolute;display:block;border-radius:999px;filter:drop-shadow(0 18px 24px #6c9a8420);opacity:.95}
+.welcomeAdExperience .welcomeAdBackdropArt i:nth-child(1){width:clamp(90px,17vw,210px);height:clamp(90px,17vw,210px);left:7%;top:22%;background:linear-gradient(145deg,#ffb5a8,#ff7c83);transform:rotate(28deg);border-radius:38% 62% 55% 45%}
+.welcomeAdExperience .welcomeAdBackdropArt i:nth-child(2){width:clamp(72px,13vw,165px);height:clamp(72px,13vw,165px);right:8%;top:28%;background:linear-gradient(145deg,#ffe58d,#ffbd52);transform:rotate(-24deg);border-radius:55% 45% 36% 64%}
+.welcomeAdExperience .welcomeAdBackdropArt i:nth-child(3){width:clamp(52px,10vw,125px);height:clamp(52px,10vw,125px);left:12%;bottom:16%;background:linear-gradient(145deg,#a8d7ff,#6b9ff0);transform:rotate(19deg);border-radius:50% 42% 58% 46%}
+.welcomeAdExperience .welcomeAdBackdropArt i:nth-child(4){width:clamp(62px,11vw,140px);height:clamp(62px,11vw,140px);right:10%;bottom:13%;background:linear-gradient(145deg,#baf2d4,#52ce9b);transform:rotate(-18deg);border-radius:43% 57% 44% 56%}
+.welcomeAdExperience .welcomeAdBackdropArt2 i:nth-child(1),.welcomeAdExperience .welcomeAdBackdropArt5 i:nth-child(1){background:linear-gradient(145deg,#b6e6ff,#6caff4)}
+.welcomeAdExperience .welcomeAdBackdropArt2 i:nth-child(2),.welcomeAdExperience .welcomeAdBackdropArt6 i:nth-child(2){background:linear-gradient(145deg,#f8d6ff,#c49cf4)}
+.welcomeAdExperience .welcomeAdBackdropArt3 i:nth-child(1),.welcomeAdExperience .welcomeAdBackdropArt4 i:nth-child(3){background:linear-gradient(145deg,#ffe4a0,#ffab61)}
+.welcomeAdExperience .welcomeAdBackdropArt4 i:nth-child(2),.welcomeAdExperience .welcomeAdBackdropArt6 i:nth-child(4){background:linear-gradient(145deg,#b4f1d6,#55c995)}
+.welcomeAdExperience .welcomeIOSVisualTop{position:absolute;z-index:6;top:calc(max(18px,env(safe-area-inset-top)) + 88px);left:50%;right:auto;transform:translateX(-50%);color:#91a098;text-shadow:none;font-size:8px;letter-spacing:.2em}
+.welcomeAdExperience .welcomeMotionScene{display:none}
+.welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{
+ position:absolute!important;z-index:8;left:50%!important;right:auto!important;top:47%!important;
+ width:clamp(205px,28vw,290px)!important;height:min(55vh,610px)!important;min-height:350px;
+ margin:0!important;padding:26px 15px 18px!important;
+ transform:translate(-50%,-50%) rotate(-4deg)!important;
+ border:8px solid #18201d!important;border-radius:38px!important;
+ background:linear-gradient(160deg,#fff,#f5f8f6)!important;
+ box-shadow:0 38px 90px #243d3229,0 8px 22px #243d3218,inset 0 1px #fff!important;
+ animation:masenetReferencePhone 4.8s ease-in-out infinite!important;
+ overflow:hidden;
+}
+.welcomeAdExperience .welcomeEcosystemMock:before,.welcomeAdExperience .welcomeWelcomeMark:before{
+ content:"";position:absolute;z-index:10;top:8px;left:50%;width:68px;height:16px;
+ transform:translateX(-50%);border-radius:999px;background:#18201d;
+}
+.welcomeAdExperience .welcomeWelcomeMark{display:flex!important;flex-direction:column;justify-content:center;align-items:center;gap:16px}
+.welcomeAdExperience .welcomeWelcomeMark img{width:82px;height:82px;object-fit:contain}
+.welcomeAdExperience .welcomeWelcomeMark span{font-size:26px;color:#173d2d;letter-spacing:.13em}
+.welcomeAdExperience .welcomeWelcomeMark small{font-size:8px;color:#4b9b75;letter-spacing:.16em}
+.welcomeAdExperience .welcomeSearchMock,.welcomeAdExperience .welcomePlaybackMock,.welcomeAdExperience .welcomeAiMock,.welcomeAdExperience .welcomeTelegramMock,.welcomeAdExperience .welcomeManagerMock{display:flex;flex-direction:column;justify-content:center;gap:15px}
+.welcomeAdExperience .welcomeMockSearch{padding:12px 10px;border-radius:12px;background:#edf4f0;color:#65766d;font-size:10px}
+.welcomeAdExperience .welcomeMockResults{display:flex;gap:7px;justify-content:center}
+.welcomeAdExperience .welcomeMockPoster{height:125px;flex:1;border-radius:9px;background:linear-gradient(145deg,#e8b7a4,#8d667a);box-shadow:0 7px 16px #213d3020}
+.welcomeAdExperience .welcomeMockPoster.posterDrama{background:linear-gradient(145deg,#9bc7d0,#3f7181)}
+.welcomeAdExperience .welcomeMockPoster.posterAnime{background:linear-gradient(145deg,#d9b4ee,#8263b0)}
+.welcomeAdExperience .welcomePlaybackScreen{min-height:190px;border-radius:17px;background:linear-gradient(145deg,#1a392d,#0a1510);color:#fff}
+.welcomeAdExperience .welcomePlaybackPills{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.welcomeAdExperience .welcomePlaybackPills span{padding:6px 7px;border-radius:999px;background:#e9f4ed;color:#27865b;font-size:7px}
+.welcomeAdExperience .welcomeAiHeader,.welcomeAdExperience .welcomeTelegramTop,.welcomeAdExperience .welcomeManagerTop{display:flex;align-items:center;gap:8px}
+.welcomeAdExperience .welcomeAiHeader b,.welcomeAdExperience .welcomeTelegramTop b,.welcomeAdExperience .welcomeManagerTop b{font-size:10px;color:#1a3427}
+.welcomeAdExperience .welcomeAiHeader i,.welcomeAdExperience .welcomeTelegramTop i,.welcomeAdExperience .welcomeManagerTop i{margin-left:auto;color:#2ba36d;font-size:7px}
+.welcomeAdExperience .welcomeAiBubble,.welcomeAdExperience .welcomeAiReply,.welcomeAdExperience .welcomeTelegramCard,.welcomeAdExperience .welcomeManagerGrid>div{padding:11px;border-radius:12px;background:#eef5f0;color:#31483c;font-size:9px;line-height:1.5}
+.welcomeAdExperience .welcomeAiReply{background:#e4f5eb}
+.welcomeAdExperience .welcomeAiInput,.welcomeAdExperience .welcomeTelegramInput{padding:10px;border-radius:999px;background:#f0f3f1;color:#718078;font-size:8px}
+.welcomeAdExperience .welcomeTelegramCard{display:grid;gap:6px}
+.welcomeAdExperience .welcomeTelegramCard b{font-size:12px;color:#20392c}
+.welcomeAdExperience .welcomeManagerGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.welcomeAdExperience .welcomeManagerGrid>div{display:grid;gap:5px}
+.welcomeAdExperience .welcomeManagerGrid>div b{font-size:7px;color:#287a55}
+.welcomeAdExperience .welcomeManagerGrid>div small,.welcomeAdExperience .welcomeManagerGrid>div span{font-size:7px;color:#718078}
+.welcomeAdExperience .welcomeStoryCopy{
+ position:absolute;z-index:15;left:50%;right:auto;bottom:clamp(92px,11vh,132px);
+ transform:translateX(-50%);width:min(88%,780px);max-width:780px;text-align:center;
+ color:#17251e;animation:masenetReferenceCopy .55s .08s both;
+}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProEyebrow{justify-content:center;color:#239567!important;font-size:8px;letter-spacing:.17em}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProEyebrow>span{background:#e5f7ed!important;border:1px solid #c8ead7!important;color:#239567!important}
+.welcomeAdExperience .welcomeStoryCopy h1{margin:9px auto 7px!important;max-width:780px;color:#16251d!important;font-size:clamp(23px,3.8vw,42px)!important;line-height:1.04!important;letter-spacing:-.05em!important;text-shadow:none!important}
+.welcomeAdExperience .welcomeStoryCopy .welcomeProLead{margin:0 auto;color:#69786f!important;font-size:clamp(11px,1.2vw,14px)!important;line-height:1.45!important;max-width:590px;text-shadow:none!important}
+.welcomeAdExperience .welcomeStoryTag{margin-top:9px;padding:6px 10px;background:#ffffffc9!important;border:1px solid #dcebe2!important;color:#2b8b60!important;font-size:7px;letter-spacing:.12em}
+.welcomeAdExperience .welcomeCinematicNumber{display:none}
+.welcomeAdExperience .welcomeStoryControls{position:absolute;z-index:35;left:50%;right:auto;bottom:calc(20px + env(safe-area-inset-bottom));width:min(88%,340px);transform:translateX(-50%);justify-content:center}
+.welcomeAdExperience .welcomeStoryNext{width:100%;min-height:47px;background:linear-gradient(110deg,#149d65,#45d392)!important;color:#fff!important;border-radius:999px!important;box-shadow:0 12px 28px #169d6635!important}
+.welcomeAdExperience .welcomeAdHint{display:none}
+@keyframes masenetReferenceScene{from{opacity:0;transform:scale(1.018)}to{opacity:1;transform:scale(1)}}
+@keyframes masenetReferenceCopy{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
+@keyframes masenetReferencePhone{0%,100%{margin-top:0;rotate:-1.5deg}50%{margin-top:-9px;rotate:1.5deg}}
+@media(max-width:760px){
+ .welcomeAdExperience .welcomeStoryTop{top:max(12px,env(safe-area-inset-top));left:15px;right:15px}
+ .welcomeAdExperience .welcomeStoryProgress{top:calc(max(12px,env(safe-area-inset-top)) + 50px);left:15px;right:15px}
+ .welcomeAdExperience .welcomeStoryCounter{top:calc(max(12px,env(safe-area-inset-top)) + 61px);right:16px}
+ .welcomeAdExperience .welcomeIOSVisualTop{top:calc(max(12px,env(safe-area-inset-top)) + 82px)}
+ .welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{
+  top:43%!important;width:clamp(190px,57vw,245px)!important;height:min(45vh,455px)!important;min-height:320px;
+  padding:23px 12px 15px!important;border-width:7px!important;border-radius:34px!important;
+ }
+ .welcomeAdExperience .welcomeWelcomeMark img{width:65px;height:65px}
+ .welcomeAdExperience .welcomeWelcomeMark span{font-size:22px}
+ .welcomeAdExperience .welcomeMockPoster{height:92px}
+ .welcomeAdExperience .welcomePlaybackScreen{min-height:145px}
+ .welcomeAdExperience .welcomeStoryCopy{bottom:clamp(91px,12vh,118px);width:calc(100% - 34px)}
+ .welcomeAdExperience .welcomeStoryCopy h1{font-size:clamp(22px,6.2vw,31px)!important;margin:8px auto 6px!important}
+ .welcomeAdExperience .welcomeStoryCopy .welcomeProLead{font-size:11px!important;line-height:1.4!important}
+ .welcomeAdExperience .welcomeStoryTag{margin-top:7px;font-size:6px}
+ .welcomeAdExperience .welcomeStoryControls{bottom:calc(13px + env(safe-area-inset-bottom));width:calc(100% - 38px)}
+ .welcomeAdExperience .welcomeStoryNext{min-height:43px}
+ .welcomeAdExperience .welcomeAdBackdropArt i:nth-child(1){left:-12%;top:25%}
+ .welcomeAdExperience .welcomeAdBackdropArt i:nth-child(2){right:-12%;top:26%}
+ .welcomeAdExperience .welcomeAdBackdropArt i:nth-child(3){left:-8%;bottom:23%}
+ .welcomeAdExperience .welcomeAdBackdropArt i:nth-child(4){right:-8%;bottom:20%}
+}
+@media(prefers-reduced-motion:reduce){
+ .welcomeAdExperience .welcomeEcosystemMock,.welcomeAdExperience .welcomeWelcomeMark{animation:none!important}
+ .welcomeAdExperience .welcomeStoryCard,.welcomeAdExperience .welcomeStoryCopy{animation:none!important}
+}
