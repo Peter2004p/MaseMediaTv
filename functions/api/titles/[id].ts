@@ -14,7 +14,7 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
     const base = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(id).first<{id:string;name:string;kind:string}>();
     if (!base) return json({ error: "Series record not found." }, 404);
     const candidates = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(base.kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
-    const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+    const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
     const episodeId = String(body.episodeId || "");
     const replacement = body.episode && typeof body.episode === "object" ? body.episode as Record<string, unknown> : null;
     for (const row of candidates.results || []) {
@@ -47,7 +47,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
     const base = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(id).first<{id:string;name:string;kind:string}>();
     if (!base) return json({ error: "Series record not found." }, 404);
     const candidates = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(base.kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
-    const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+    const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
     const episodeId = url.searchParams.get("episodeId") || "";
     for (const row of candidates.results || []) {
       if (norm(row.name) !== norm(base.name)) continue;
