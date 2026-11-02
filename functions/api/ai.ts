@@ -29,6 +29,42 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const imageInputs = Array.isArray(body.images) ? body.images.slice(0, 3).filter((x) => typeof x?.data === "string" && typeof x?.mimeType === "string" && String(x.mimeType).startsWith("image/") && String(x.data).length <= 5_000_000) as Array<{data:string;mimeType:string}> : [];
   if (!message && !imageInputs.length) return json({ text: "Tell me what you would like help with, or attach an image or screenshot." });
 
+  // Destructive library actions are available only to the authenticated owner.
+  // The assistant executes only explicit delete commands with an exact title match.
+  if (!imageInputs.length && /\\b(delete|remove)\\b/i.test(message)) {
+    if (authenticatedAdmin?.role !== "owner") {
+      return json({ text: "Deleting videos or episodes through MaseNet AI is restricted to the signed-in MaseNet owner. Please sign in with the owner account." }, 403);
+    }
+    const normalizeTitle = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+    const episodeMatch = message.match(/\\b(?:delete|remove)\\s+(?:the\\s+)?(?:episode|ep)\\s*#?\\s*(\\d+)\\s+(?:from|of|in)\\s+["“]?(.+?)["”]?[.!?]*$/i);
+    const titleMatch = message.match(/\\b(?:delete|remove)\\s+(?:(?:the|this)\\s+)?(?:video|movie|drama|series|title)\\s+["“]?(.+?)["”]?[.!?]*$/i);
+    if (episodeMatch) {
+      const episodeNumber = Number(episodeMatch[1]);
+      const requestedTitle = episodeMatch[2].trim();
+      const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind='drama'").all<{id:string;name:string;kind:string;metadata_json:string}>();
+      const selected = (rows.results || []).find(row => normalizeTitle(row.name) === normalizeTitle(requestedTitle));
+      if (!selected) return json({ text: "I couldn't find an exact drama title named “" + requestedTitle + "”. Nothing was deleted." }, 404);
+      let metadata: Record<string, unknown>;
+      try { metadata = JSON.parse(selected.metadata_json || "{}") as Record<string, unknown>; } catch { metadata = {}; }
+      const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Array<Record<string, unknown>> : [];
+      const matchIndex = episodes.findIndex(ep => Number(ep.episode) === episodeNumber);
+      if (matchIndex < 0) return json({ text: "I found “" + selected.name + "”, but episode " + episodeNumber + " was not present. Nothing was deleted." }, 404);
+      const removed = episodes[matchIndex];
+      metadata.episodes = episodes.filter((_, index) => index !== matchIndex);
+      await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(metadata), selected.id).run();
+      return json({ text: "Deleted episode " + episodeNumber + " from “" + selected.name + "”. " + (episodes.length - 1) + " episode(s) remain." , deleted: true, title: selected.name, episode: episodeNumber });
+    }
+    if (titleMatch) {
+      const requestedTitle = titleMatch[1].trim();
+      const rows = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE kind IN ('movie','drama')").all<{id:string;name:string;kind:string}>();
+      const matching = (rows.results || []).filter(row => normalizeTitle(row.name) === normalizeTitle(requestedTitle));
+      if (!matching.length) return json({ text: "I couldn't find an exact movie or drama title named “" + requestedTitle + "”. Nothing was deleted." }, 404);
+      await env.DB.batch(matching.map(row => env.DB.prepare("DELETE FROM titles WHERE id=?").bind(row.id)));
+      return json({ text: "Deleted “" + matching[0].name + "” from the library, including its stored episodes. " + matching.length + " matching title record(s) removed.", deleted: true, title: matching[0].name });
+    }
+    return json({ text: "I can delete an exact title using “Delete the drama [title]” or an episode using “Delete episode [number] from [title]”. Please include the exact title. Nothing was deleted." });
+  }
+
   // A catalog/schema mismatch should never crash the entire assistant.
   let titles: Array<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}> = [];
   try {
