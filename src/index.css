@@ -3539,3 +3539,25 @@ button, a { touch-action: manipulation; }
  .app .iqCard,.app .heroMini,.app button{transition-duration:140ms}
  .app .iqCard:hover,.app .heroMini:hover{transform:none}
 }
+
+
+/* MaseNet AI responsiveness pass: avoid per-frame React updates while dragging,
+   expensive animated scrolling, and oversized chat media work on mobile. */
+.app .aiDock{will-change:auto!important;transition:transform .14s ease,box-shadow .14s ease!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.app .aiDock.ai-motion-float,.app .aiDock.ai-motion-orbit,.app .aiDock.ai-motion-pulse{animation-duration:6s!important}
+.app .aiDock:active{transition:none!important}
+.app .aiSide,.app .aiSide .aiPanel,.app .aiSide .aiMessages{overscroll-behavior:contain!important}
+.app .aiSide .aiMessages{scroll-behavior:auto!important;overflow-anchor:none!important;contain:layout paint}
+.app .aiSide .aiBubble{content-visibility:auto;contain-intrinsic-size:auto 72px}
+.app .aiSide .aiTyping{contain:layout paint}
+.app .aiSide .aiComposer{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+@media(max-width:700px){
+ .app .aiDock{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 5px 16px rgba(0,0,0,.28)!important}
+ .app .aiDock .aiCartoon{filter:none!important;box-shadow:none!important}
+ .app .aiSide{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 12px 36px rgba(0,0,0,.42)!important}
+ .app .aiSide .aiMessages{scrollbar-width:none!important}
+ .app .aiSide .aiMessages::-webkit-scrollbar{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .aiDock,.app .aiDock *,.app .aiSide,.app .aiSide *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
