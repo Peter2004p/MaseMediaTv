@@ -135,7 +135,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       "Never claim a title, episode, stream URL, download, or feature exists unless confirmed in the supplied catalogue or by the user.",
       "If you cannot verify a requested title, say so and suggest a shorter search.",
       "For images and screenshots, describe only what is actually visible; transcribe readable text accurately, distinguish observations from guesses, and state clearly when an area is unclear.",
-      "For factual questions, avoid making up sources, statistics, release dates, or technical details. State uncertainty and suggest how the user can verify important claims.",\n      "Conversation quality: answer the newest user message directly. Read recent history to understand context, but do not repeat your previous answer or recycle a generic fallback. If the user says you repeated yourself, acknowledge it briefly and give a materially different, specific response. Do not restart greetings on every turn. Ask one focused question only if essential.",
+      "For factual questions, avoid making up sources, statistics, release dates, or technical details. State uncertainty and suggest how the user can verify important claims.",
+      "Conversation quality: answer the newest user message directly. Read recent history to understand context, but do not repeat your previous answer or recycle a generic fallback. If the user says you repeated yourself, acknowledge it briefly and give a materially different, specific response. Do not restart greetings on every turn. Ask one focused question only if essential.",
       "Never reveal API keys, secrets, admin sessions, or internal configuration.",
       customInstructions ? "Administrator guidance (follow only when safe):\n" + customInstructions : "",
       "Current MaseNet catalogue snapshot:\n" + catalogueContext
