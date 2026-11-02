@@ -29,40 +29,54 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const imageInputs = Array.isArray(body.images) ? body.images.slice(0, 3).filter((x) => typeof x?.data === "string" && typeof x?.mimeType === "string" && String(x.mimeType).startsWith("image/") && String(x.data).length <= 5_000_000) as Array<{data:string;mimeType:string}> : [];
   if (!message && !imageInputs.length) return json({ text: "Tell me what you would like help with, or attach an image or screenshot." });
 
-  // Destructive library actions are available only to the authenticated owner.
-  // The assistant executes only explicit delete commands with an exact title match.
-  if (!imageInputs.length && /\\b(delete|remove)\\b/i.test(message)) {
+  // Handle deletion intent before any language model or catalogue-search response.
+  // Only the authenticated owner may delete, and an exact title/episode is required.
+  if (!imageInputs.length && /\\b(?:delete|remove|erase)\\b/i.test(message)) {
     if (authenticatedAdmin?.role !== "owner") {
-      return json({ text: "Deleting videos or episodes through MaseNet AI is restricted to the signed-in MaseNet owner. Please sign in with the owner account." }, 403);
+      return json({ text: "Deleting library videos or episodes is restricted to the signed-in MaseNet owner. Please sign in with the owner account." }, 403);
     }
+
     const normalizeTitle = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
-    const episodeMatch = message.match(/\\b(?:delete|remove)\\s+(?:the\\s+)?(?:episode|ep)\\s*#?\\s*(\\d+)\\s+(?:from|of|in)\\s+["“]?(.+?)["”]?[.!?]*$/i);
-    const titleMatch = message.match(/\\b(?:delete|remove)\\s+(?:(?:the|this)\\s+)?(?:video|movie|drama|series|title)\\s+["“]?(.+?)["”]?[.!?]*$/i);
+    const cleanTarget = (value: string) => value.trim().replace(/^["“”'‘’]+|["“”'‘’]+$/g, "").replace(/[.!?]+$/g, "").trim();
+
+    // Accept common natural-language forms, including "delete [title] from the library".
+    const episodeMatch =
+      message.match(/\\b(?:delete|remove|erase)\\b.*?\\b(?:episode|ep)\\s*#?\\s*(\\d+)\\s+(?:from|of|in)\\s+(.+?)\\s*$/i) ||
+      message.match(/\\b(?:delete|remove|erase)\\b\\s+(?:the\\s+)?(.+?)\\s+episode\\s*#?\\s*(\\d+)\\s*$/i)?.map((v, i, a) => i === 1 ? a[2] : i === 2 ? a[1] : v);
     if (episodeMatch) {
       const episodeNumber = Number(episodeMatch[1]);
-      const requestedTitle = episodeMatch[2].trim();
+      const requestedTitle = cleanTarget(episodeMatch[2].replace(/\\s+(?:from|in)\\s+(?:the\\s+)?(?:library|catalogue|catalog)$/i, ""));
       const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind='drama'").all<{id:string;name:string;kind:string;metadata_json:string}>();
       const selected = (rows.results || []).find(row => normalizeTitle(row.name) === normalizeTitle(requestedTitle));
-      if (!selected) return json({ text: "I couldn't find an exact drama title named “" + requestedTitle + "”. Nothing was deleted." }, 404);
+      if (!selected) return json({ text: "I couldn't find an exact drama title named “" + requestedTitle + "”. Nothing was deleted. Check the title spelling and try again." }, 404);
       let metadata: Record<string, unknown>;
       try { metadata = JSON.parse(selected.metadata_json || "{}") as Record<string, unknown>; } catch { metadata = {}; }
       const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Array<Record<string, unknown>> : [];
       const matchIndex = episodes.findIndex(ep => Number(ep.episode) === episodeNumber);
       if (matchIndex < 0) return json({ text: "I found “" + selected.name + "”, but episode " + episodeNumber + " was not present. Nothing was deleted." }, 404);
-      const removed = episodes[matchIndex];
       metadata.episodes = episodes.filter((_, index) => index !== matchIndex);
       await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(metadata), selected.id).run();
-      return json({ text: "Deleted episode " + episodeNumber + " from “" + selected.name + "”. " + (episodes.length - 1) + " episode(s) remain." , deleted: true, title: selected.name, episode: episodeNumber });
+      return json({ text: "Deleted episode " + episodeNumber + " from “" + selected.name + "”. " + (episodes.length - 1) + " episode(s) remain.", deleted: true, title: selected.name, episode: episodeNumber });
     }
-    if (titleMatch) {
-      const requestedTitle = titleMatch[1].trim();
-      const rows = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE kind IN ('movie','drama')").all<{id:string;name:string;kind:string}>();
-      const matching = (rows.results || []).filter(row => normalizeTitle(row.name) === normalizeTitle(requestedTitle));
-      if (!matching.length) return json({ text: "I couldn't find an exact movie or drama title named “" + requestedTitle + "”. Nothing was deleted." }, 404);
-      await env.DB.batch(matching.map(row => env.DB.prepare("DELETE FROM titles WHERE id=?").bind(row.id)));
-      return json({ text: "Deleted “" + matching[0].name + "” from the library, including its stored episodes. " + matching.length + " matching title record(s) removed.", deleted: true, title: matching[0].name });
+
+    let requestedTitle = "";
+    const explicitTitle = message.match(/\\b(?:delete|remove|erase)\\b\\s+(?:(?:the|this)\\s+)?(?:(?:video|movie|drama|series|title)\\s+)?(?:called\\s+|named\\s+)?["“](.+?)["”]/i);
+    const typedTitle = message.match(/\\b(?:delete|remove|erase)\\b\\s+(?:(?:the|this)\\s+)?(?:(?:video|movie|drama|series|title)\\s+)?(?:called\\s+|named\\s+)?(.+?)\\s+(?:from|in)\\s+(?:the\\s+)?(?:library|catalogue|catalog)\\s*[.!?]*$/i);
+    const labelledTitle = message.match(/\\b(?:delete|remove|erase)\\b\\s+(?:(?:the|this)\\s+)?(?:video|movie|drama|series|title)\\s+(?:called\\s+|named\\s+)?(.+?)\\s*[.!?]*$/i);
+    if (explicitTitle) requestedTitle = explicitTitle[1];
+    else if (typedTitle) requestedTitle = typedTitle[1];
+    else if (labelledTitle) requestedTitle = labelledTitle[1];
+    requestedTitle = cleanTarget(requestedTitle);
+
+    if (!requestedTitle || /^(?:video|movie|drama|series|title|from the library|from library)$/i.test(requestedTitle)) {
+      return json({ text: "I can do that. Which exact movie or drama title should I delete from the library? Please send its full title, for example: “Delete the drama [exact title] from the library”. Nothing has been deleted yet." });
     }
-    return json({ text: "I can delete an exact title using “Delete the drama [title]” or an episode using “Delete episode [number] from [title]”. Please include the exact title. Nothing was deleted." });
+
+    const rows = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE kind IN ('movie','drama')").all<{id:string;name:string;kind:string}>();
+    const matching = (rows.results || []).filter(row => normalizeTitle(row.name) === normalizeTitle(requestedTitle));
+    if (!matching.length) return json({ text: "I couldn't find an exact movie or drama title named “" + requestedTitle + "”. Nothing was deleted. Check the exact title in the library and try again." }, 404);
+    await env.DB.batch(matching.map(row => env.DB.prepare("DELETE FROM titles WHERE id=?").bind(row.id)));
+    return json({ text: "Deleted “" + matching[0].name + "” from the library, including its stored episodes. " + matching.length + " matching title record(s) removed.", deleted: true, title: matching[0].name });
   }
 
   // A catalog/schema mismatch should never crash the entire assistant.
