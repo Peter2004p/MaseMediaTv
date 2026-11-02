@@ -25,7 +25,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const body = await request.json().catch(() => ({})) as { message?: unknown; images?: Array<{data?:unknown;mimeType?:unknown}>; audios?: Array<{data?:unknown;mimeType?:unknown}>; adminMode?: boolean; viewerName?: string; history?: Array<{role?:unknown;content?:unknown}> };
   // Verify admin identity from the secure session cookie; ignore client claims for permissions.
   const authenticatedAdmin = await currentAdmin(request, env);
-  const message = String(body.message || "").split(/\\n\\nResponse preference:/i)[0].trim().slice(0, 2000);
+  const message = String(body.message || "").split(/\n\nResponse preference:/i)[0].trim().slice(0, 2000);
   const imageInputs = Array.isArray(body.images) ? body.images.slice(0, 3).filter((x) => typeof x?.data === "string" && typeof x?.mimeType === "string" && String(x.mimeType).startsWith("image/") && String(x.data).length <= 5_000_000) as Array<{data:string;mimeType:string}> : [];
   if (!message && !imageInputs.length) return json({ text: "Tell me what you would like help with, or attach an image or screenshot." });
 
