@@ -31,21 +31,21 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   // Handle deletion intent before any language model or catalogue-search response.
   // Only the authenticated owner may delete, and an exact title/episode is required.
-  if (!imageInputs.length && /\\b(?:delete|remove|erase)\\b/i.test(message)) {
+  if (!imageInputs.length && /\b(?:delete|remove|erase)\b/i.test(message)) {
     if (authenticatedAdmin?.role !== "owner") {
       return json({ text: "Deleting library videos or episodes is restricted to the signed-in MaseNet owner. Please sign in with the owner account." }, 403);
     }
 
-    const normalizeTitle = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+    const normalizeTitle = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
     const cleanTarget = (value: string) => value.trim().replace(/^["“”'‘’]+|["“”'‘’]+$/g, "").replace(/[.!?]+$/g, "").trim();
 
     // Accept common natural-language forms, including "delete [title] from the library".
     const episodeMatch =
-      message.match(/\\b(?:delete|remove|erase)\\b.*?\\b(?:episode|ep)\\s*#?\\s*(\\d+)\\s+(?:from|of|in)\\s+(.+?)\\s*$/i) ||
-      message.match(/\\b(?:delete|remove|erase)\\b\\s+(?:the\\s+)?(.+?)\\s+episode\\s*#?\\s*(\\d+)\\s*$/i)?.map((v, i, a) => i === 1 ? a[2] : i === 2 ? a[1] : v);
+      message.match(/\b(?:delete|remove|erase)\b.*?\b(?:episode|ep)\s*#?\s*(\d+)\s+(?:from|of|in)\s+(.+?)\s*$/i) ||
+      message.match(/\b(?:delete|remove|erase)\b\s+(?:the\s+)?(.+?)\s+episode\s*#?\s*(\d+)\s*$/i)?.map((v, i, a) => i === 1 ? a[2] : i === 2 ? a[1] : v);
     if (episodeMatch) {
       const episodeNumber = Number(episodeMatch[1]);
-      const requestedTitle = cleanTarget(episodeMatch[2].replace(/\\s+(?:from|in)\\s+(?:the\\s+)?(?:library|catalogue|catalog)$/i, ""));
+      const requestedTitle = cleanTarget(episodeMatch[2].replace(/\s+(?:from|in)\s+(?:the\s+)?(?:library|catalogue|catalog)$/i, ""));
       const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind='drama'").all<{id:string;name:string;kind:string;metadata_json:string}>();
       const selected = (rows.results || []).find(row => normalizeTitle(row.name) === normalizeTitle(requestedTitle));
       if (!selected) return json({ text: "I couldn't find an exact drama title named “" + requestedTitle + "”. Nothing was deleted. Check the title spelling and try again." }, 404);
@@ -60,9 +60,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     }
 
     let requestedTitle = "";
-    const explicitTitle = message.match(/\\b(?:delete|remove|erase)\\b\\s+(?:(?:the|this)\\s+)?(?:(?:video|movie|drama|series|title)\\s+)?(?:called\\s+|named\\s+)?["“](.+?)["”]/i);
-    const typedTitle = message.match(/\\b(?:delete|remove|erase)\\b\\s+(?:(?:the|this)\\s+)?(?:(?:video|movie|drama|series|title)\\s+)?(?:called\\s+|named\\s+)?(.+?)\\s+(?:from|in)\\s+(?:the\\s+)?(?:library|catalogue|catalog)\\s*[.!?]*$/i);
-    const labelledTitle = message.match(/\\b(?:delete|remove|erase)\\b\\s+(?:(?:the|this)\\s+)?(?:video|movie|drama|series|title)\\s+(?:called\\s+|named\\s+)?(.+?)\\s*[.!?]*$/i);
+    const explicitTitle = message.match(/\b(?:delete|remove|erase)\b\s+(?:(?:the|this)\s+)?(?:(?:video|movie|drama|series|title)\s+)?(?:called\s+|named\s+)?["“](.+?)["”]/i);
+    const typedTitle = message.match(/\b(?:delete|remove|erase)\b\s+(?:(?:the|this)\s+)?(?:(?:video|movie|drama|series|title)\s+)?(?:called\s+|named\s+)?(.+?)\s+(?:from|in)\s+(?:the\s+)?(?:library|catalogue|catalog)\s*[.!?]*$/i);
+    const labelledTitle = message.match(/\b(?:delete|remove|erase)\b\s+(?:(?:the|this)\s+)?(?:video|movie|drama|series|title)\s+(?:called\s+|named\s+)?(.+?)\s*[.!?]*$/i);
     if (explicitTitle) requestedTitle = explicitTitle[1];
     else if (typedTitle) requestedTitle = typedTitle[1];
     else if (labelledTitle) requestedTitle = labelledTitle[1];
