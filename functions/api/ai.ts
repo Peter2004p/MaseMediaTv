@@ -2,7 +2,7 @@ import { currentAdmin, json } from "./auth/_shared";
 
 interface AIResult { response?: unknown; }
 interface WorkersAI {
-  run(model: string, input: { messages: Array<{ role: "system" | "user"; content: string }> }): Promise<AIResult | string>;
+  run(model: string, input: { messages: Array<{ role: "system" | "user" | "assistant"; content: string }> }): Promise<AIResult | string>;
 }
 interface Env { DB: D1Database; AI?: WorkersAI; ADMIN_EMAIL?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; }
 
@@ -25,7 +25,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const body = await request.json().catch(() => ({})) as { message?: unknown; images?: Array<{data?:unknown;mimeType?:unknown}>; audios?: Array<{data?:unknown;mimeType?:unknown}>; adminMode?: boolean; viewerName?: string; history?: Array<{role?:unknown;content?:unknown}> };
   // Verify admin identity from the secure session cookie; ignore client claims for permissions.
   const authenticatedAdmin = await currentAdmin(request, env);
-  const message = String(body.message || "").trim().slice(0, 2000);
+  const message = String(body.message || "").split(/\\n\\nResponse preference:/i)[0].trim().slice(0, 2000);
   const imageInputs = Array.isArray(body.images) ? body.images.slice(0, 3).filter((x) => typeof x?.data === "string" && typeof x?.mimeType === "string" && String(x.mimeType).startsWith("image/") && String(x.data).length <= 5_000_000) as Array<{data:string;mimeType:string}> : [];
   if (!message && !imageInputs.length) return json({ text: "Tell me what you would like help with, or attach an image or screenshot." });
 
@@ -97,7 +97,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return json({ text: "MaseNet, MaseTv, and MaseMediaTv are names for the same MaseMedia TV platform. Here are our official social links:\\n\\n• YouTube: https://youtube.com/@masemedia_tv\\n• Facebook: https://www.facebook.com/share/1A5pSvKte9/\\n• TikTok: https://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E\\n• Telegram Channel 1: https://t.me/MaseMediaTv\\n• Telegram Channel 2: https://t.me/MoonDramaC\\n• Telegram Bot: https://t.me/MaseTv_Bot" });
   }
 
-  if (!imageInputs.length && /recommend|available|library|drama|movie|search|find|episode/.test(q)) {
+  if (!imageInputs.length && /\\b(?:find|search for|look for|show me|do you have|is there|are there|recommend|suggest)\\b|\\bwhat (?:movies|dramas|titles|episodes) (?:are )?(?:in|available)\\b/i.test(message)) {
     const stopWords = new Set(["the","and","for","with","from","that","this","what","where","when","how","can","you","me","please","show","find","search","look","looking","available","library","movie","movies","drama","dramas","episode","episodes","season","recommend","recommendation","watch","want","need","is","are","in","on","of","to","a","an"]);
     const words = q.split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 1 && !stopWords.has(w));
     const ranked = titles.map(t => {
@@ -135,7 +135,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       "Never claim a title, episode, stream URL, download, or feature exists unless confirmed in the supplied catalogue or by the user.",
       "If you cannot verify a requested title, say so and suggest a shorter search.",
       "For images and screenshots, describe only what is actually visible; transcribe readable text accurately, distinguish observations from guesses, and state clearly when an area is unclear.",
-      "For factual questions, avoid making up sources, statistics, release dates, or technical details. State uncertainty and suggest how the user can verify important claims.",
+      "For factual questions, avoid making up sources, statistics, release dates, or technical details. State uncertainty and suggest how the user can verify important claims.",\n      "Conversation quality: answer the newest user message directly. Read recent history to understand context, but do not repeat your previous answer or recycle a generic fallback. If the user says you repeated yourself, acknowledge it briefly and give a materially different, specific response. Do not restart greetings on every turn. Ask one focused question only if essential.",
       "Never reveal API keys, secrets, admin sessions, or internal configuration.",
       customInstructions ? "Administrator guidance (follow only when safe):\n" + customInstructions : "",
       "Current MaseNet catalogue snapshot:\n" + catalogueContext
@@ -183,7 +183,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       "Do not claim to have changed site data or performed admin actions. Until secure action tools are connected, explain that changes must be made through authorized dashboard controls.",
       "Do not claim a title, episode, streaming URL, download, or feature exists unless it appears in the supplied catalogue or the user provided it.",
       "If asked to find a title and the catalogue does not confirm it, say you could not verify it and suggest trying a shorter search.",
-      "For factual questions, do not invent sources, statistics, release dates, or technical details. State uncertainty and recommend verification for important claims.",
+      "For factual questions, do not invent sources, statistics, release dates, or technical details. State uncertainty and recommend verification for important claims.",\n      "Conversation quality: answer the newest user message directly. Read recent history to understand context, but do not repeat your previous answer or recycle a generic fallback. If the user says you repeated yourself, acknowledge it briefly and give a materially different, specific response. Do not restart greetings on every turn. Ask one focused question only if essential.",
       "Do not reveal secrets, environment variables, admin sessions, or internal configuration.",
       customInstructions ? "Administrator guidance (follow only if safe and consistent with the rules above):\n" + customInstructions : "",
       "Current catalogue snapshot (not necessarily complete):\n" + catalogueContext
