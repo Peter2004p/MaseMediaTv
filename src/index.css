@@ -3512,3 +3512,30 @@ button, a { touch-action: manipulation; }
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Performance pass: reduce expensive paint/compositing work, especially in Telegram's in-app WebView. */
+.telegram-mini-app .glass,
+.telegram-mini-app .nav,
+.telegram-mini-app .side,
+.telegram-mini-app .searchDock,
+.telegram-mini-app .iqCategories,
+.telegram-mini-app .aiPanel,
+.telegram-mini-app .aiDock{backdrop-filter:blur(10px) saturate(115%)!important;-webkit-backdrop-filter:blur(10px) saturate(115%)!important}
+.telegram-mini-app .iqCard,
+.telegram-mini-app .heroMini,
+.telegram-mini-app .primary,
+.telegram-mini-app .secondary{transition-duration:130ms!important}
+.telegram-mini-app .iqCard:hover,
+.telegram-mini-app .heroMini:hover{transform:none!important}
+.telegram-mini-app .aiDockHalo,
+.telegram-mini-app .aiDock .aiCartoon{animation:none!important}
+.telegram-mini-app .iqHome .iqRow{content-visibility:auto;contain-intrinsic-size:auto 300px}
+.telegram-mini-app img{content-visibility:auto}
+.telegram-mini-app .maseNativePlayer,
+.telegram-mini-app video{contain:layout paint}
+@media(max-width:700px){
+ .app .glass,.app .nav,.app .side,.app .searchDock,.app .iqCategories{backdrop-filter:blur(12px) saturate(125%);-webkit-backdrop-filter:blur(12px) saturate(125%)}
+ .app .iqCard,.app .heroMini,.app button{transition-duration:140ms}
+ .app .iqCard:hover,.app .heroMini:hover{transform:none}
+}
