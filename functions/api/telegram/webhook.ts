@@ -3,6 +3,7 @@ interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   TELEGRAM_WEBAPP_URL?: string;
+  TELEGRAM_MINI_APP_URL?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
 }
@@ -32,8 +33,72 @@ async function sendMessage(env: Env, chatId: string | number, text: string, repl
 async function sendTyping(env: Env, chatId: string | number) {
   try { await telegramCall(env, "sendChatAction", { chat_id: chatId, action: "typing" }); } catch { /* Typing is optional. */ }
 }
+async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:string;name:string;kind:string;year:number|null;episodeLabels:string[]}>> {
+  const query = message.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  if (query.length < 2) return [];
+  const stopWords = new Set(["find","search","looking","for","movie","movies","drama","dramas","series","episode","episodes","title","please","show","me","watch","want","get","a","an","the","of","is","in","on"]);
+  const terms = query.split(/\s+/).filter((word) => word.length > 1 && !stopWords.has(word));
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT id,name,kind,year,metadata_json FROM titles ORDER BY created_at DESC LIMIT 600"
+    ).all<{id:string;name:string;kind:string;year:number|null;metadata_json:string}>();
+    const ranked = (rows.results || []).map((row) => {
+      const name = String(row.name || "");
+      const normalizedName = name.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+      let episodeText = "";
+      const episodeLabels: string[] = [];
+      try {
+        const metadata = JSON.parse(row.metadata_json || "{}") as {episodes?:Array<{title?:unknown;name?:unknown;season?:unknown;episode?:unknown}>};
+        for (const ep of Array.isArray(metadata.episodes) ? metadata.episodes : []) {
+          const epName = String(ep.title || ep.name || "").trim();
+          const season = Number(ep.season) || 1;
+          const number = Number(ep.episode) || 0;
+          const label = [epName, number ? "S" + season + "E" + number : ""].filter(Boolean).join(" · ");
+          if (label) episodeLabels.push(label);
+          episodeText += " " + label;
+        }
+      } catch { /* A malformed legacy metadata row should not break search. */ }
+      const haystack = (normalizedName + " " + episodeText).normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+      let score = 0;
+      if (normalizedName === query) score += 30;
+      else if (normalizedName.includes(query)) score += 24;
+      else if (query.includes(normalizedName) && normalizedName.length > 3) score += 15;
+      if (haystack.includes(query)) score += 18;
+      score += terms.filter((term) => haystack.includes(term)).length * 6;
+      return {id:String(row.id),name,kind:String(row.kind || "Title"),year:row.year == null ? null : Number(row.year),episodeLabels,score};
+    }).filter((item) => item.score >= 6);
+    ranked.sort((a,b)=>b.score-a.score || a.name.localeCompare(b.name));
+    return ranked.slice(0,5).map(({score,...item})=>item);
+  } catch (error) {
+    console.error("Telegram catalogue search failed", error instanceof Error ? error.message : "unknown error");
+    return [];
+  }
+}
 async function makeAIReply(env: Env, message: string, firstName: string, appUrl: string): Promise<string> {
-  if (!env.OPENAI_API_KEY) return "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet app here: " + appUrl;
+  if (!env.OPENAI_API_KEY) return "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet Mini App using the button below.";
+  let sharedInstructions = "";
+  let catalogueContext = "";
+  try {
+    const setting = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key='ai_instructions'").first<{value_json:string}>();
+    if (setting?.value_json) sharedInstructions = String(JSON.parse(setting.value_json).instructions || "").slice(0, 4000);
+  } catch { /* Optional shared AI instructions. */ }
+  try {
+    const rows = await env.DB.prepare("SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 80").all<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
+    catalogueContext = (rows.results || []).map((title) => {
+      let episodes = "";
+      try {
+        const metadata = JSON.parse(title.metadata_json || "{}") as {episodes?:Array<{title?:unknown;name?:unknown;season?:unknown;episode?:unknown}>};
+        episodes = (Array.isArray(metadata.episodes) ? metadata.episodes : []).slice(0,12).map((ep) => {
+          const number = Number(ep.episode) || 0;
+          return [String(ep.title || ep.name || "").trim(), number ? "S" + (Number(ep.season) || 1) + "E" + number : ""].filter(Boolean).join(" ");
+        }).filter(Boolean).join(", ");
+      } catch { /* Ignore malformed legacy episode metadata. */ }
+      return "- " + title.name + (title.year ? " (" + title.year + ")" : "") + " [" + title.kind + "]" +
+        (title.description ? ": " + title.description.slice(0,120) : "") + (episodes ? " | Episodes: " + episodes : "");
+    }).join("\n").slice(0,12000);
+  } catch (error) {
+    console.error("Telegram AI catalogue context failed", error instanceof Error ? error.message : "unknown error");
+  }
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
@@ -46,6 +111,9 @@ async function makeAIReply(env: Env, message: string, firstName: string, appUrl:
         "When asked for the Telegram bot link, provide https://t.me/MaseTv_Bot, not a channel link.",
         "Reply naturally to ordinary messages, not only commands. If someone says hey/hello, greet them and ask how you can help.",
         "Help users understand the MaseNet website, Telegram Mini App, movies, dramas, episodes, Reels, subtitles, and playback troubleshooting.",
+        "Use the current MaseNet catalogue context below as the source of truth for title and episode availability. If a title is not listed, say that you could not verify it in the current library. Do not invent title matches, episodes, or playback links.",
+        "Shared administrator AI instructions: " + (sharedInstructions || "(No additional owner instructions have been saved.)"),
+        "Current MaseNet catalogue (public title metadata):\n" + (catalogueContext || "(The catalogue could not be loaded.)"),
         "Do not claim to search a live catalogue, see account activity, send alerts, or perform an action unless the information is provided or the action has actually happened.",
         "Do not invent movie availability, streaming links, episode details, or website capabilities. If uncertain, say so and offer the MaseNet app link.",
         "Keep replies helpful and concise, ideally under 120 words. Do not mention OpenAI or Cloudflare unless explicitly asked.",
@@ -81,8 +149,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const chatType = String(chat.type);
   const text = typeof message?.text === "string" ? message.text.trim() : "";
   const title = chatTitle(chat);
-  const appUrl = env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev";
-  const keyboard = { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: appUrl } }]] };
+  const appUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
+  const keyboard = { inline_keyboard: [[{ text: "Launch MaseNet Mini App", web_app: { url: appUrl } }]] };
 
   if (chatType === "private") {
     const startMatch = text.match(/^\/start(?:@\w+)?(?:\s+([\w-]+))?$/i);
@@ -92,6 +160,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const active = disablesAlerts ? 0 : 1;
       await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title,active=excluded.active,updated_at=datetime('now'),chat_type='private'").bind(chatId,title,active).run();
       const alertNote = startPayload === "alerts_on" ? "\n\n🔔 New-title alerts are enabled." : disablesAlerts ? "\n\n🔕 New-title alerts are paused." : "";
+      const titleStart = startPayload.match(/^title_([a-zA-Z0-9_-]{1,100})$/);
+      if (titleStart) {
+        const selected = await env.DB.prepare("SELECT name,kind,year FROM titles WHERE id=?").bind(titleStart[1]).first<{name:string;kind:string;year:number|null}>();
+        if (selected) {
+          await sendMessage(env, chatId, "🎬 <b>" + String(selected.name).replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" + (selected.year ? " (" + selected.year + ")" : "") + "\n" + String(selected.kind || "Title") + "\n\nOpen the MaseNet Mini App to view the title and available episodes.", keyboard, "HTML");
+          return json({ ok: true, openedTitle: true });
+        }
+      }
       await sendMessage(env, chatId, "Welcome to MaseNet 🎬\n\nI can help with movies, dramas, episodes, Reels, and using MaseNet. Chat normally with me, or tap Open MaseNet to browse the Mini App.\n\nCommands: /app, /help, /notifications_on, /notifications_off, /privacy" + alertNote, keyboard);
     } else if (/^\/notifications_off(?:@\w+)?$/i.test(text)) {
       await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
@@ -109,12 +185,23 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const socialReply = "🎬 <b>Stay Connected with MaseMedia TV</b>\n\nMaseNet, MaseTv and MaseMediaTv are names for the same platform. Choose where you’d like to connect with us:\n\n📺 <b>YouTube</b> — Videos and content\nhttps://youtube.com/@masemedia_tv\n\n📘 <b>Facebook</b> — News and updates\nhttps://www.facebook.com/share/1A5pSvKte9/\n\n🎵 <b>TikTok</b> — Short videos and clips\nhttps://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E\n\n📢 <b>Official Telegram Channels</b>\n• <b>MaseMediaTv</b> — Follow our main channel\nhttps://t.me/MaseMediaTv\n• <b>MoonDramaC</b> — Visit our second channel\nhttps://t.me/MoonDramaC\n\n🤖 <b>Telegram Bot</b> — Chat with MaseNet Assistant\nhttps://t.me/MaseTv_Bot\n\nThanks for being part of our community! ❤️";
       await sendMessage(env, chatId, socialReply, keyboard, "HTML");
     } else if (text && !text.startsWith("/")) {
+      const matches = await findCatalogMatches(env, text);
+      if (matches.length) {
+        const resultText = "🎬 <b>Found in the MaseNet library</b>\n\n" + matches.map((item) =>
+          "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
+          (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
+          (item.episodeLabels.length ? "\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "") +
+          "\n  <a href=\"https://t.me/MaseTv_Bot?start=title_" + encodeURIComponent(item.id) + "\">Open in Telegram</a>"
+        ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles.";
+        await sendMessage(env, chatId, resultText, keyboard, "HTML");
+        return json({ ok: true, searchMatches: matches.length });
+      }
       await sendTyping(env, chatId);
       let answer: string;
       try {
         answer = await makeAIReply(env, text, String(chat?.first_name || ""), appUrl);
       } catch {
-        answer = "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open MaseNet here: " + appUrl;
+        answer = "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open the MaseNet Mini App using the button below.";
       }
       await sendMessage(env, chatId, answer, keyboard);
     } else if (text.startsWith("/")) {
