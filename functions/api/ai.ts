@@ -119,7 +119,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     let customInstructions = "";
     try {
       const setting = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key='ai_instructions'").first<{value_json:string}>();
-      if (setting?.value_json) customInstructions = String(JSON.parse(setting.value_json).instructions || "").slice(0, 4000);
+      if (setting?.value_json) customInstructions = String(JSON.parse(setting.value_json).instructions || "").slice(0, 8000);
     } catch { /* Optional site setting. */ }
     const catalogueContext = titles.slice(0, 60).map(t =>
       "- " + t.name + (t.year ? " (" + t.year + ")" : "") + " [" + t.kind + "]" + (t.description ? ": " + t.description.slice(0, 180) : "") + (episodeSearchText(t.metadata_json) ? " | Episodes: " + episodeSearchText(t.metadata_json).slice(0, 300) : "")
@@ -168,7 +168,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     let customInstructions = "";
     try {
       const setting = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key='ai_instructions'").first<{value_json:string}>();
-      if (setting?.value_json) customInstructions = String(JSON.parse(setting.value_json).instructions || "").slice(0, 4000);
+      if (setting?.value_json) customInstructions = String(JSON.parse(setting.value_json).instructions || "").slice(0, 8000);
     } catch { /* Optional setting; keep assistant available if it is absent. */ }
 
     const catalogueContext = titles.slice(0, 60).map(t =>

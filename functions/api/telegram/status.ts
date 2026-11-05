@@ -18,6 +18,12 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
   }
 
   try {
+    const meResponse = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getMe");
+    const meData = await meResponse.json().catch(() => ({})) as { ok?: boolean; description?: string; result?: { username?: string; first_name?: string } };
+    if (!meResponse.ok || !meData.ok || !meData.result) {
+      return json({ ok: false, configured: true, botApiConnected: false, connected: false, error: meData.description || "Telegram could not verify the bot token." }, 502);
+    }
+    const botUsername = meData.result.username || "";
     const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getWebhookInfo");
     const data = await response.json().catch(() => ({})) as {
       ok?: boolean;
@@ -31,7 +37,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
       };
     };
     if (!response.ok || !data.ok || !data.result) {
-      return json({ ok: false, error: data.description || "Telegram could not return webhook status." }, 502);
+      return json({ ok: false, configured: true, botApiConnected: true, connected: false, username: botUsername, error: data.description || "Bot token is valid, but Telegram could not return webhook status." }, 502);
     }
 
     let info = data.result;
@@ -72,6 +78,10 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
     return json({
       ok: true,
       botConfigured: true,
+      configured: true,
+      botApiConnected: true,
+      connected: Boolean(urlMatches && env.TELEGRAM_WEBHOOK_SECRET),
+      username: botUsername,
       webhookConfigured: Boolean(info.url),
       webhookUrl: info.url || "",
       webhookMatchesThisDeployment: urlMatches,
@@ -84,6 +94,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
       allowedUpdates: info.allowed_updates ?? [],
       autoRepairAttempted,
       autoRepairSucceeded,
+      error: !urlMatches ? "Bot token is valid, but the webhook is not connected to this live MaseNet site." : !env.TELEGRAM_WEBHOOK_SECRET ? "Bot token is valid, but TELEGRAM_WEBHOOK_SECRET is not configured." : info.last_error_message || "",
       note: info.last_error_message
         ? "Telegram reports a delivery error. Review lastErrorMessage and check the deployed webhook route and secrets."
         : !urlMatches
