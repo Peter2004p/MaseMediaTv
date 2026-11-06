@@ -23,7 +23,7 @@ async function generateCaption(env: Env, title: string, description: string, kin
   const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const text = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\n").trim();
   if (!text) throw new Error("Gemini returned an empty promo caption.");
-  return text.replace(/https?:\\/\\/\\S+/gi, "").trim().slice(0, 700);
+  return text.split(/\\s+/).filter(part => !part.startsWith("https://") && !part.startsWith("http://")).join(" ").trim().slice(0, 700);
 }
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
