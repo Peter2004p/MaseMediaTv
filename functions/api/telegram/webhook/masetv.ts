@@ -582,7 +582,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   if (query) {
     const needle = normalize(query).slice(0, 100);
     const sql = await env.DB.prepare(
-      "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 500"
+      "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC"
     ).all<{ name: string; kind: string; year: number | null; description: string | null; metadata_json: string }>();
     const titleMatches: string[] = [];
     const episodeMatches: string[] = [];
@@ -609,7 +609,6 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
           episodeMatches.push("• " + name + (item.year ? " (" + item.year + ")" : "") + (label ? " — " + label : "") + (epName ? " " + epName : ""));
         }
       }
-      if (titleMatches.length >= 5 && episodeMatches.length >= 5) break;
     }
     const combined = [...new Set([...episodeMatches, ...titleMatches])].slice(0, 5);
     if (combined.length) {
@@ -623,7 +622,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       reply = "I couldn't find “" + query.slice(0, 100) + "” in the MaseNet catalog yet. I've recorded this request so the admin can review what users want. Try a shorter title or check again later.";
       // A catalog miss must not end the conversation. Treat the unmatched message as a
       // normal chat turn and let the AI respond, while being honest that the title was not found.
-      const chatSystem = "You are MaseNet's friendly Telegram AI assistant. MaseNet, MaseTv, and MaseMediaTv (MaseMedia TV) are alternate names for the same platform. The catalog lookup did not find a match for the user's message, but the user may be chatting rather than searching for a title. Respond naturally and keep the conversation going. If they ask for official social links, share only verified YouTube https://youtube.com/@masemedia_tv and Telegram bot https://t.me/MaseTv_Bot. Do not invent Instagram, Facebook, TikTok, or other handles. If their message clearly asks for a movie/drama/episode title, briefly say it was not found in the current catalog and suggest another spelling or title. Never invent catalog entries or streaming links. Never reveal secrets or private admin data. Keep the reply concise and friendly.";
+      const chatSystem = "You are MaseNet's friendly Telegram AI assistant. MaseNet, MaseTv, and MaseMediaTv (MaseMedia TV) are alternate names for the same platform. The catalog lookup did not find a match for the user's message, but the user may be chatting rather than searching for a title. Respond naturally and keep the conversation going. Never include any website URL, Pages URL, raw Mini App URL, or Floot URL in your reply; the Telegram Mini App launch button is attached separately. If they ask for official social links, share only verified YouTube https://youtube.com/@masemedia_tv and Telegram bot https://t.me/MaseTv_Bot. Do not invent Instagram, Facebook, TikTok, or other handles. If their message clearly asks for a movie/drama/episode title, briefly say it was not found in the current catalog and suggest another spelling or title. Never invent catalog entries or streaming links. Never reveal secrets or private admin data. Keep the reply concise and friendly.";
       if (env.AI) {
         for (const model of ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
           try {
@@ -670,7 +669,13 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       chat_id: chatId,
-      text: reply.slice(0, 3900),
+      text: reply
+        .replace(/https?:\/\/(?:[a-z0-9-]+\.)*masetv-cloudflare-migration\.pages\.dev[^\s<>]*/gi, "")
+        .replace(/https?:\/\/(?:[a-z0-9-]+\.)*masenet\.floot\.app[^\s<>]*/gi, "")
+        .replace(/https?:\/\/[^\s<>]*pages\.dev[^\s<>]*/gi, "")
+        .replace(/https?:\/\/[^\s<>]*floot\.app[^\s<>]*/gi, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim().slice(0, 3900),
       disable_web_page_preview: true,
       ...(replyMarkup ? { reply_markup: replyMarkup } : {})
     })
