@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 import './title-page.css';
+import './netflix-theme.css';
 
 type ErrorBoundaryState = { hasError: boolean; message: string };
 
