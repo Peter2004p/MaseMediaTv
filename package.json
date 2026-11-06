@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json"
+    "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json",
+    "test:telegram-e2e": "node scripts/telegram-access-e2e.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.469.0",
