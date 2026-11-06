@@ -140,9 +140,44 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
             providerError = "OpenAI returned invalid JSON response: " + bodyText.slice(0,500);
           }
         }
-        if (!visionData) throw new Error(providerError || "No vision model could review the screenshot.");
-        const raw = visionData.output_text || (visionData.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==="output_text"||typeof x.text==="string").map(x=>x.text||"").join("\n");
-        const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
+        // Responses API is the primary vision path. If it errors or returns an
+        // unparseable payload, retry through Chat Completions before declaring failure.
+        let parsed: {passed?:boolean;reason?:string} | undefined;
+        if (visionData) {
+          const raw = visionData.output_text || (visionData.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==="output_text"||typeof x.text==="string").map(x=>x.text||"").join("\n");
+          const match = raw.match(/\{[\s\S]*\}/)?.[0];
+          if (match) {
+            try { parsed = JSON.parse(match) as {passed?:boolean;reason?:string}; }
+            catch { providerError = "Responses API returned unreadable verification JSON."; }
+          } else {
+            providerError = "Responses API returned no readable verification result.";
+          }
+        }
+        if (!parsed) {
+          const fallback = await fetch("https://api.openai.com/v1/chat/completions", {
+            method:"POST",
+            headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},
+            body:JSON.stringify({
+              model:"gpt-4o-mini",
+              temperature:0,
+              response_format:{type:"json_object"},
+              messages:[
+                {role:"system",content:"You verify a YouTube subscription screenshot for MaseNet. Inspect the full image, including any embedded screenshot. Return JSON only: {\\"passed\\":boolean,\\"reason\\":string}. Accept when the official channel is visibly named MaseMediaTV or MaseMedia TV, or handle @MaseMedia_Tv / @masemedia_tv with case/spacing/underscore variations, AND the action visibly says Subscribed. The visible channel name plus Subscribed control is sufficient if the handle is blurry. Do not require the handle to be perfectly legible. Reject only if the channel is clearly different, the button says Subscribe, or no subscription state is visible."},
+                {role:"user",content:[
+                  {type:"text",text:"Does this image visibly show the MaseMediaTV YouTube channel with an active Subscribed state?"},
+                  {type:"image_url",image_url:{url:dataUrl,detail:"high"}}
+                ]}
+              ]
+            })
+          });
+          const fallbackText = await fallback.text();
+          if (!fallback.ok) throw new Error("Both vision paths failed. Responses API: "+(providerError||"no result")+"; Chat Completions HTTP "+fallback.status+": "+fallbackText.slice(0,500));
+          const fallbackData = JSON.parse(fallbackText) as {choices?:Array<{message?:{content?:string}}>};
+          const fallbackRaw = fallbackData.choices?.[0]?.message?.content || "";
+          const fallbackMatch = fallbackRaw.match(/\{[\s\S]*\}/)?.[0];
+          if (!fallbackMatch) throw new Error("Vision fallback returned no structured result.");
+          parsed = JSON.parse(fallbackMatch) as {passed?:boolean;reason?:string};
+        }
         if (parsed.passed !== true) {
           await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"❌ Your screenshot did not clearly confirm an active subscription to the MaseMedia TV YouTube channel. "+String(parsed.reason||"Please open the channel page so its name and Subscribed button are both visible, then send a fresh screenshot with caption: YouTube.")})});
           return json({ok:true,verified:false,platform:"youtube"});
