@@ -70,7 +70,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     caption = `🎬 Discover ${selected.name}${year ? ` (${year})` : ""} on MaseNet!\n\n${description.slice(0, 430)}\n\nTap the button below to explore and watch on MaseNet.`;
   }
 
-  const miniAppLaunchUrl = "https://t.me/MaseTv_Bot?startapp=home";\n  // Telegram Mini App deep link works in channel notifications too; never expose the Pages origin.\n  const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: miniAppLaunchUrl }]] };\n  const targets = new Set<string>();
+  const miniAppLaunchUrl = "https://t.me/MaseTv_Bot?startapp=home";
+  // Telegram Mini App deep link works in channel notifications too; never expose the Pages origin.\n  const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: miniAppLaunchUrl }]] };\n  const targets = new Set<string>();
   targets.add("@MaseMediaTv");
   const subs = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND chat_type='private'").all<{ chat_id: string }>();
   for (const row of subs.results || []) if (row.chat_id) targets.add(String(row.chat_id));
