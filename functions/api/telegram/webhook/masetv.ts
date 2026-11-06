@@ -1,6 +1,6 @@
 import { json } from "../../auth/_shared";
 
-interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; ADMIN_TELEGRAM_CHAT_ID?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; }
+interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; ADMIN_TELEGRAM_CHAT_ID?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; GEMINI_API_KEY?: string; }
 type Episode = { title?: string; season?: number | string; episode?: number | string; name?: string };
 type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; year?: number | string; description?: string; episodes?: Episode[] };
 
@@ -227,15 +227,49 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
             })
           });
           const fallbackText = await fallback.text();
-          if (!fallback.ok) throw new Error("Both vision paths failed. Responses API: "+(providerError||"no result")+"; Chat Completions HTTP "+fallback.status+": "+fallbackText.slice(0,500));
-          const fallbackData = JSON.parse(fallbackText) as {choices?:Array<{message?:{content?:string}}>};
-          const fallbackRaw = fallbackData.choices?.[0]?.message?.content || "";
-          const fallbackMatch = fallbackRaw.match(/\{[\s\S]*\}/)?.[0];
-          if (!fallbackMatch) throw new Error("Vision fallback returned no structured result.");
-          parsed = JSON.parse(fallbackMatch) as {passed?:boolean;reason?:string};
+          if (!fallback.ok) {
+            providerError = "OpenAI Chat Completions HTTP "+fallback.status+": "+fallbackText.slice(0,500);
+            console.error("MaseNet OpenAI secondary vision path failed:",providerError);
+          } else {
+            try {
+              const fallbackData = JSON.parse(fallbackText) as {choices?:Array<{message?:{content?:string}}>};
+              const fallbackRaw = fallbackData.choices?.[0]?.message?.content || "";
+              const fallbackMatch = fallbackRaw.match(/\{[\s\S]*\}/)?.[0];
+              if (fallbackMatch) parsed = JSON.parse(fallbackMatch) as {passed?:boolean;reason?:string};
+              else providerError = "OpenAI Chat Completions returned no structured result.";
+            } catch { providerError = "OpenAI Chat Completions returned invalid JSON."; }
+          }
         }
-        if (parsed.passed !== true) {
-          const queued = await requestAdminScreenshotReview(String(parsed.reason || "AI could not confidently confirm subscription."));
+        // Independent Gemini vision backup: retry both provider errors and OpenAI false negatives.
+        if (parsed?.passed !== true && env.GEMINI_API_KEY) {
+          try {
+            const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
+              method:"POST",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify({
+                contents:[{role:"user",parts:[
+                  {text:"You are the backup MaseNet YouTube subscription screenshot verifier. Inspect the entire image, including an embedded YouTube screenshot inside Telegram. Accept only if the official YouTube channel is visibly identified by MaseMediaTV or MaseMedia TV or handle @MaseMedia_Tv / @masemedia_tv (case/spacing/underscore variations are acceptable), AND its subscription control visibly says Subscribed. The display name plus Subscribed control is sufficient if the small handle is blurry. Reject if the channel is clearly different, button says Subscribe, or no subscription state is visible. Never trust the caption. Return JSON only: {passed:boolean,reason:string}. This is visual evidence, not cryptographic proof."},
+                  {inline_data:{mime_type:mime,data:btoa(binary)}}
+                ]}],
+                generationConfig:{temperature:0,responseMimeType:"application/json",maxOutputTokens:160}
+              })
+            });
+            const geminiText=await geminiResponse.text();
+            if (!geminiResponse.ok) throw new Error("Gemini vision HTTP "+geminiResponse.status+": "+geminiText.slice(0,500));
+            const geminiData=JSON.parse(geminiText) as {candidates?:Array<{content?:{parts?:Array<{text?:string}>}}>};
+            const geminiRaw=geminiData.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("\n")||"";
+            const geminiMatch=geminiRaw.match(/\{[\s\S]*\}/)?.[0];
+            if (!geminiMatch) throw new Error("Gemini returned no structured verification result.");
+            const geminiParsed=JSON.parse(geminiMatch) as {passed?:boolean;reason?:string};
+            console.log("MaseNet Gemini backup verification result:",geminiParsed.passed===true?"passed":"not_passed");
+            if (geminiParsed.passed===true) parsed=geminiParsed;
+            else if (!parsed) parsed=geminiParsed;
+          } catch(geminiError) {
+            console.error("MaseNet Gemini backup failed:",geminiError instanceof Error?geminiError.message:String(geminiError));
+          }
+        }
+        if (parsed?.passed !== true) {
+          const queued = await requestAdminScreenshotReview(String(parsed?.reason || "OpenAI and Gemini could not confidently confirm subscription."));
           await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:queued?"⏳ Your screenshot has been sent to the MaseNet admin for manual approval. I'll notify you when a decision is made.":"❌ Your screenshot could not be confirmed, and admin review is not configured. Please contact the MaseNet admin."})});
           return json({ok:true,verified:false,adminReviewPending:queued});
         }
