@@ -27,28 +27,6 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   try { user = JSON.parse(params.get("user") || "null"); } catch {}
   if (!user?.id) return json({ error: "Telegram user data missing" }, 401);
 
-  // The bot and Mini App use the same D1 verification record so approval in either
-  // experience unlocks both. Always refresh channel membership with Telegram.
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (
-    chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0,
-    masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )`).run();
-  const chatId = String(user.id);
-  const existing = await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number}>();
-  const membership = { masemedia:false, moondramac:false };
-  for (const [channel,key] of [["@MaseMediaTv","masemedia"],["@MoonDramaC","moondramac"]] as const) {
-    try {
-      const response = await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/getChatMember?chat_id="+encodeURIComponent(channel)+"&user_id="+encodeURIComponent(chatId));
-      const result = await response.json().catch(()=>({})) as {ok?:boolean;result?:{status?:string}};
-      membership[key] = !!response.ok && !!result.ok && ["member","administrator","creator"].includes(String(result.result?.status||""));
-    } catch {}
-  }
-  await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,updated_at) VALUES (?,?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,updated_at=datetime('now')").bind(chatId,membership.masemedia?1:0,membership.moondramac?1:0).run();
-  const youtubeOk = !!existing?.youtube_ok;
-  const allVerified = youtubeOk && membership.masemedia && membership.moondramac;
-  if (!allVerified) return json({error:"Complete MaseNet access verification first.",verificationRequired:true,youtubeVerified:youtubeOk,membership,missing:[!youtubeOk?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)},403);
-
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS site_users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL DEFAULT '', picture TEXT NOT NULL DEFAULT '', provider TEXT NOT NULL DEFAULT 'google', created_at TEXT NOT NULL DEFAULT (datetime('now')), last_login_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS site_user_sessions (id_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES site_users(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
   const userId = await sha256("masetv-user-telegram:" + String(user.id));
