@@ -6,7 +6,7 @@ type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; y
 
 const normalize = (value: unknown) => String(value ?? "").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
-export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
+const handleTelegramUpdate = async ({ request, env }: { request: Request; env: Env }) => {
   if (!env.TELEGRAM_BOT_TOKEN) return json({ ok: false, error: "Bot token not configured" }, 503);
   if (!env.TELEGRAM_WEBHOOK_SECRET) return json({ ok: false, error: "Webhook secret is not configured" }, 503);
   if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TELEGRAM_WEBHOOK_SECRET) return json({ ok: false }, 401);
@@ -477,4 +477,41 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   });
   if (!send.ok) return json({ ok: false, error: "Telegram could not deliver the search reply." }, 502);
   return json({ ok: true });
+};
+
+
+// Never let an unhandled application/database/provider exception become Telegram's
+// repeated 502 delivery loop. Log the real exception, notify the affected private chat,
+// and acknowledge the update after the fallback notification attempt.
+export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
+  try {
+    return await handleTelegramUpdate({ request, env });
+  } catch (error) {
+    const detail = error instanceof Error ? error.stack || error.message : String(error);
+    console.error("MaseNet Telegram webhook crashed:", detail);
+    if (env.TELEGRAM_BOT_TOKEN) {
+      try {
+        const update = await request.clone().json() as {
+          message?: { chat?: { id?: number | string; type?: string } };
+          edited_message?: { chat?: { id?: number | string; type?: string } };
+        };
+        const message = update.message || update.edited_message;
+        const chatId = message?.chat?.id;
+        if (chatId && message?.chat?.type === "private") {
+          await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: "MaseNet is experiencing a temporary service problem. Your message reached the bot, but one of its services failed. Please try again shortly."
+            })
+          });
+        }
+      } catch (notifyError) {
+        console.error("MaseNet Telegram crash notification failed:", notifyError instanceof Error ? notifyError.message : String(notifyError));
+      }
+    }
+    // Acknowledge the update so Telegram does not keep retrying a crashing request.
+    return json({ ok: true, recovered: true });
+  }
 };
