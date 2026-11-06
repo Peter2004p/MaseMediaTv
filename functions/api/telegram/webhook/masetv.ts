@@ -48,7 +48,10 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     });
     return json({ok:true,adminDecision:approve?"approved":"rejected"});
   }
-  const msg = update.message || update.edited_message || update.channel_post;
+  // Never let the user-facing AI process channel broadcasts or post replies into channels.
+  // Channel updates are acknowledged and ignored; private bot conversations remain supported.
+  if (update.channel_post || update.edited_channel_post) return json({ ok: true, ignored: "channel_post" });
+  const msg = update.message || update.edited_message;
   const chatId = msg?.chat?.id;
   const incoming = String(msg?.text || (msg as any)?.caption || "").trim();
   const photo = (msg as any)?.photo as Array<{file_id:string;file_size?:number}> | undefined;
