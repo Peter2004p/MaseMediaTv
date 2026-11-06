@@ -92,7 +92,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       }
       if (!env.OPENAI_API_KEY) {
         await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"YouTube screenshot verification is temporarily unavailable. Please try again later; your access remains locked."})});
-        return json({ok:false,error:"Screenshot verification provider is not configured."},503);
+        return json({ok:true,verificationAttempted:true,verified:false,reason:"provider_not_configured"});
       }
       try {
         const largest = photo[photo.length-1];
@@ -151,7 +151,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       } catch(error) {
         console.error("MaseNet YouTube screenshot verification failed:",error instanceof Error?error.message:String(error));
         await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"I couldn't verify that YouTube screenshot right now. Please try again. Your access remains locked."})});
-        return json({ok:false,error:"YouTube screenshot verification failed."},502);
+        return json({ok:true,verificationAttempted:true,verified:false});
       }
     }
     const membership = await checkTelegramMembership();
