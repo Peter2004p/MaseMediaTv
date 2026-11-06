@@ -81,10 +81,10 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   // "Any new drama/movie?" is a request for recent catalogue additions, not a literal title search.
   if (chatType === "private" && !incoming.startsWith("/") &&
-      /\\b(?:new|latest|recent|recently added|just added|added recently)\\b/i.test(incoming) &&
-      /\\b(?:movies?|dramas?|films?|titles?)\\b/i.test(incoming)) {
-    const wantsMovies = /\\bmovies?|films?\\b/i.test(incoming);
-    const wantsDramas = /\\bdramas?\\b/i.test(incoming);
+      /\b(?:new|latest|recent|recently added|just added|added recently)\b/i.test(incoming) &&
+      /\b(?:movies?|dramas?|films?|titles?)\b/i.test(incoming)) {
+    const wantsMovies = /\bmovies?|films?\\b/i.test(incoming);
+    const wantsDramas = /\bdramas?\\b/i.test(incoming);
     const kinds = wantsMovies && !wantsDramas ? ["movie"] : wantsDramas && !wantsMovies ? ["drama"] : ["movie", "drama"];
     const placeholders = kinds.map(() => "?").join(",");
     const recent = await env.DB.prepare(
