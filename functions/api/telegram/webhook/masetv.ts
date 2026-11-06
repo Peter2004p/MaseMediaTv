@@ -333,7 +333,15 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
           !membership.masemedia ? "• Join https://t.me/MaseMediaTv" : "",
           !membership.moondramac ? "• Join https://t.me/MoonDramaC" : ""
         ].filter(Boolean).join("\n");
-        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🔒 MaseNet is locked. Complete the checks below:\\n"+missing+"\\n\\nAfter joining both Telegram channels, send /verify. Your verification is shared with the Mini App.",reply_markup:verificationKeyboard(!!(await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number}>())?.youtube_ok,membership)}))});
+        const currentAccess = await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number}>();
+        const lockedReply = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+          method:"POST", headers:{"content-type":"application/json"},
+          body:JSON.stringify({
+            chat_id:chatId,
+            text:"🔒 MaseNet is locked. Complete the checks below:\n"+missing+"\n\nAfter joining both Telegram channels, send /verify. Your verification is shared with the Mini App.",
+            reply_markup:verificationKeyboard(!!currentAccess?.youtube_ok,membership)
+          })
+        });
       } else {
         await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"YouTube screenshot accepted. Telegram membership status: "+(membership.masemedia?"✅":"❌")+" MaseMediaTv · "+(membership.moondramac?"✅":"❌")+" MoonDramaC"+((membership.masemedia&&membership.moondramac)?"\n\n🎉 All checks passed! Your MaseNet bot and Telegram AI are now unlocked.":"\n\nJoin any missing channel, then send /verify.")})});
       }
