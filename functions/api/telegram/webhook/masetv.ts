@@ -131,6 +131,10 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     }
     // The user must still be a channel member; revoke the gate if they leave later.
     await env.DB.prepare("UPDATE telegram_subscribers SET active=1,updated_at=datetime('now') WHERE chat_id=?").bind(String(chatId)).run().catch(()=>undefined);
+    if (photo?.length || command === "/verify") {
+      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🎉 MaseNet verification complete! Your Telegram bot, movie/drama search and Telegram AI are now unlocked. Send a title to search or ask me anything about MaseNet." , ...(replyMarkup ? {reply_markup:replyMarkup} : {})})});
+      return json({ok:true,verified:true,accessGranted:true});
+    }
   }
 
   if (chatType === "private" && command === "/notifications_off") {
