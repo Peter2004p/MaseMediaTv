@@ -227,12 +227,18 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
             })
           });
           const fallbackText = await fallback.text();
-          if (!fallback.ok) throw new Error("Both vision paths failed. Responses API: "+(providerError||"no result")+"; Chat Completions HTTP "+fallback.status+": "+fallbackText.slice(0,500));
-          const fallbackData = JSON.parse(fallbackText) as {choices?:Array<{message?:{content?:string}}>};
-          const fallbackRaw = fallbackData.choices?.[0]?.message?.content || "";
-          const fallbackMatch = fallbackRaw.match(/\{[\s\S]*\}/)?.[0];
-          if (!fallbackMatch) throw new Error("Vision fallback returned no structured result.");
-          parsed = JSON.parse(fallbackMatch) as {passed?:boolean;reason?:string};
+          if (!fallback.ok) {
+            providerError = "OpenAI Chat Completions HTTP "+fallback.status+": "+fallbackText.slice(0,500);
+            console.error("MaseNet OpenAI secondary vision path failed:",providerError);
+          } else {
+            try {
+              const fallbackData = JSON.parse(fallbackText) as {choices?:Array<{message?:{content?:string}}>};
+              const fallbackRaw = fallbackData.choices?.[0]?.message?.content || "";
+              const fallbackMatch = fallbackRaw.match(/\{[\s\S]*\}/)?.[0];
+              if (fallbackMatch) parsed = JSON.parse(fallbackMatch) as {passed?:boolean;reason?:string};
+              else providerError = "OpenAI Chat Completions returned no structured result.";
+            } catch { providerError = "OpenAI Chat Completions returned invalid JSON."; }
+          }
         }
         // Independent Gemini vision backup: retry both provider errors and OpenAI false negatives.
         if (parsed?.passed !== true && env.GEMINI_API_KEY) {
