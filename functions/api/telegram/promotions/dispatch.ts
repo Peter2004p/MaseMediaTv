@@ -7,7 +7,7 @@ interface Env {
   TELEGRAM_MINI_APP_URL?: string;
 }
 
-type PromoTitle = { name: string; kind: string; year: number | null; description: string; poster_url: string; created_at?: string };
+type PromoTitle = { name: string; kind: string; year: number | null; description: string; poster_url: string; metadata_json: string; created_at?: string };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 
@@ -38,20 +38,30 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   )`).run();
 
   const query = await env.DB.prepare(
-    "SELECT name,kind,year,description,poster_url,created_at FROM titles ORDER BY created_at DESC LIMIT 60"
+    "SELECT name,kind,year,description,poster_url,metadata_json,created_at FROM titles ORDER BY created_at DESC LIMIT 60"
   ).all<PromoTitle>();
   const titles = query.results || [];
   if (!titles.length) return json({ ok: true, skipped: "catalogue_empty" });
 
   const history = await env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-7 days')").all<{ title_name: string }>();
   const recentlySent = new Set((history.results || []).map(row => row.title_name.toLocaleLowerCase()));
-  const selected = titles.find(row => !recentlySent.has(row.name.toLocaleLowerCase())) || titles[0];
-
-  const description = String(selected.description || "").trim();
-  const poster = String(selected.poster_url || "").trim();
-  if (!poster.startsWith("https://")) return json({ ok: false, error: "Selected title has no valid HTTPS poster image", title: selected.name }, 422);
+  const candidates = titles.map(row => {
+    let metadata: Record<string, unknown> = {};
+    try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
+    return {
+      row,
+      description: String(row.description || metadata.description || "").trim(),
+      poster: String(row.poster_url || metadata.posterUrl || "").trim(),
+      year: String(row.year || metadata.year || "").trim()
+    };
+  }).filter(item => item.poster.startsWith("https://") && item.description.length > 0);
+  if (!candidates.length) return json({ ok: false, skipped: "no_titles_with_poster_and_description" }, 422);
+  const selectedItem = candidates.find(item => !recentlySent.has(item.row.name.toLocaleLowerCase())) || candidates[0];
+  const selected = selectedItem.row;
+  const description = selectedItem.description;
+  const poster = selectedItem.poster;
   const kind = /movie/i.test(selected.kind) ? "movie" : "drama";
-  const year = String(selected.year || "").trim();
+  const year = selectedItem.year;
   let caption: string;
   try {
     caption = await generateCaption(env, selected.name, description, kind, year);
