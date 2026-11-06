@@ -12,14 +12,15 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TELEGRAM_WEBHOOK_SECRET) return json({ ok: false }, 401);
 
   const update = await request.json().catch(() => ({})) as {
-    message?: { chat?: { id?: number | string; type?: string }; text?: string };
+    message?: { chat?: { id?: number | string; type?: string }; text?: string; caption?: string; photo?: Array<{file_id:string;file_size?:number}> };
     edited_message?: { chat?: { id?: number | string; type?: string }; text?: string };
     channel_post?: { chat?: { id?: number | string; type?: string }; text?: string };
   };
   const msg = update.message || update.edited_message || update.channel_post;
   const chatId = msg?.chat?.id;
-  const incoming = String(msg?.text || "").trim();
-  if (!chatId || !incoming) return json({ ok: true });
+  const incoming = String(msg?.text || (msg as any)?.caption || "").trim();
+  const photo = (msg as any)?.photo as Array<{file_id:string;file_size?:number}> | undefined;
+  if (!chatId || (!incoming && !photo?.length)) return json({ ok: true });
 
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
@@ -51,9 +52,91 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     } catch (error) {
       console.error("MaseNet Telegram private subscription failed:", error instanceof Error ? error.message : String(error));
     }
-    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({chat_id:chatId,text:"Welcome to MaseNet 🎬\n\nYou are now subscribed to new movie, drama and episode alerts. Chat normally with me, or tap Open MaseNet to browse.\n\nCommands: /app, /help, /notifications_on, /notifications_off", ...(replyMarkup ? {reply_markup:replyMarkup} : {})}) });
-    return sent.ok ? json({ok:true,subscribed:true}) : json({ok:false,error:"Telegram could not deliver the welcome message."},502);
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (
+      chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0,
+      masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`).run();
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({chat_id:chatId,text:"🎬 Welcome to MaseNet!\n\nBefore using the bot, library search or Telegram AI, please follow all three official channels and submit one screenshot for each. Add one of these captions to every screenshot: YouTube, MaseMediaTv, or MoonDramaC.\n\n📺 YouTube: https://youtube.com/@masemedia_tv\n📢 Telegram: https://t.me/MaseMediaTv\n📢 Telegram: https://t.me/MoonDramaC\n\nI’ll check each screenshot and verify Telegram channel membership. Access stays locked until all three checks pass.", ...(replyMarkup ? {reply_markup:replyMarkup} : {})}) });
+    return sent.ok ? json({ok:true,verificationRequired:true}) : json({ok:false,error:"Telegram could not deliver the verification instructions."},502);
   }
+  // Mandatory screenshot evidence gate for private bot users. Telegram membership is
+  // corroborated with getChatMember; YouTube is an AI-reviewed screenshot and is not
+  // represented as an official YouTube API subscription check.
+  if (chatType === "private") {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (
+      chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0,
+      masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`).run();
+    if (photo?.length) {
+      const platform = /youtube/i.test(incoming) ? "youtube" : /masemediatv/i.test(incoming) ? "masemedia" : /moondramac/i.test(incoming) ? "moondramac" : "";
+      if (!platform) {
+        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"Please resend this screenshot with one caption: YouTube, MaseMediaTv, or MoonDramaC."})});
+        return json({ok:true,verificationRequired:true});
+      }
+      if (!env.OPENAI_API_KEY) {
+        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"Screenshot verification is temporarily unavailable. Please try again later; your access remains locked."})});
+        return json({ok:false,error:"Screenshot verification provider is not configured."},503);
+      }
+      try {
+        const largest = photo[photo.length-1];
+        const fileInfoResponse = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getFile?file_id=" + encodeURIComponent(largest.file_id));
+        const fileInfo = await fileInfoResponse.json() as {ok?:boolean;result?:{file_path?:string}};
+        if (!fileInfoResponse.ok || !fileInfo.ok || !fileInfo.result?.file_path) throw new Error("Telegram could not provide the screenshot file.");
+        const imageResponse = await fetch("https://api.telegram.org/file/bot" + env.TELEGRAM_BOT_TOKEN + "/" + fileInfo.result.file_path);
+        if (!imageResponse.ok) throw new Error("Could not download the submitted screenshot.");
+        const bytes = new Uint8Array(await imageResponse.arrayBuffer());
+        if (bytes.length > 5_000_000) throw new Error("Screenshot is too large. Please send a compressed screenshot.");
+        let binary = "";
+        for (let i=0;i<bytes.length;i+=0x8000) binary += String.fromCharCode(...bytes.subarray(i,i+0x8000));
+        const dataUrl = "data:image/jpeg;base64," + btoa(binary);
+        const expected = platform === "youtube" ? "YouTube channel @masemedia_tv" : platform === "masemedia" ? "Telegram channel @MaseMediaTv" : "Telegram channel @MoonDramaC";
+        const visionResponse = await fetch("https://api.openai.com/v1/responses", {
+          method:"POST",headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},
+          body:JSON.stringify({model:env.OPENAI_MODEL || "gpt-4o-mini",instructions:"You review subscription screenshots for MaseNet access. Inspect the image only. Determine whether it visibly shows the exact requested channel/account and a clear subscribed/joined state (for example Subscribed, Following, Joined, or equivalent). Reject search results, channel pages with a Subscribe/Join button, cropped/unclear images, unrelated channels, edited-looking composites, and screenshots without visible status. Do not infer status from the user's caption. Return only JSON: {\"passed\":true|false,\"reason\":\"brief reason\"}. A screenshot is visual evidence, not cryptographic proof.",input:[{role:"user",content:[{type:"input_text",text:"Check for: "+expected+". The user's caption selected this platform: "+platform+"."},{type:"input_image",image_url:dataUrl}]}],max_output_tokens:120}),
+        });
+        const visionData = await visionResponse.json().catch(()=>({})) as {output_text?:string;output?:Array<{content?:Array<{text?:string}>}>};
+        if (!visionResponse.ok) throw new Error("AI screenshot review is unavailable right now.");
+        const raw = visionData.output_text || (visionData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("\n");
+        const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
+        if (parsed.passed !== true) {
+          await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"❌ Screenshot not verified for "+expected+". "+String(parsed.reason||"Please submit a clearer screenshot showing the joined/subscribed status.")+"\n\nYou can try again with a fresh screenshot."})});
+          return json({ok:true,verified:false,platform});
+        }
+        const column = platform === "youtube" ? "youtube_ok" : platform === "masemedia" ? "masemedia_ok" : "moondramac_ok";
+        await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,"+column+",updated_at) VALUES (?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET "+column+"=1,updated_at=datetime('now')").bind(String(chatId)).run();
+        const status = await env.DB.prepare("SELECT youtube_ok,masemedia_ok,moondramac_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number;masemedia_ok:number;moondramac_ok:number}>();
+        const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"✅ Screenshot accepted for "+expected+".\n\nProgress: "+Number(status?.youtube_ok||0)+"/1 YouTube, "+Number(status?.masemedia_ok||0)+"/1 MaseMediaTv, "+Number(status?.moondramac_ok||0)+"/1 MoonDramaC.\n\n"+(status?.youtube_ok && status?.masemedia_ok && status?.moondramac_ok ? "All screenshots accepted. Checking your Telegram channel memberships now…" : "Please submit the remaining screenshots with the matching captions.")})});
+        if (!sent.ok) return json({ok:false,error:"Could not send verification result."},502);
+      } catch(error) {
+        console.error("MaseNet screenshot verification failed:",error instanceof Error?error.message:String(error));
+        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"I couldn't check that screenshot right now. Please try again in a moment. Your access is still locked."})});
+        return json({ok:false,error:"Screenshot verification failed."},502);
+      }
+    }
+    const access = await env.DB.prepare("SELECT youtube_ok,masemedia_ok,moondramac_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number;masemedia_ok:number;moondramac_ok:number}>();
+    if (!access || !access.youtube_ok || !access.masemedia_ok || !access.moondramac_ok) {
+      if (!photo?.length) await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🔒 MaseNet bot and AI are locked until you complete channel verification. Follow the channels, then send each screenshot with its matching caption: YouTube, MaseMediaTv, or MoonDramaC.\n\nYouTube: https://youtube.com/@masemedia_tv\nMaseMediaTv: https://t.me/MaseMediaTv\nMoonDramaC: https://t.me/MoonDramaC"})});
+      return json({ok:true,verificationRequired:true});
+    }
+    // Verify actual Telegram membership as well as screenshot evidence.
+    for (const channel of ["@MaseMediaTv","@MoonDramaC"]) {
+      const memberResponse = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getChatMember?chat_id=" + encodeURIComponent(channel) + "&user_id=" + encodeURIComponent(String(chatId)));
+      const memberData = await memberResponse.json().catch(()=>({})) as {ok?:boolean;result?:{status?:string}};
+      if (!memberResponse.ok || !memberData.ok || !["member","administrator","creator"].includes(String(memberData.result?.status||""))) {
+        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"Your screenshots were accepted, but Telegram could not confirm that you joined "+channel+". Please join it and send /verify again. The bot must be an administrator in both channels for automatic membership checks."})});
+        return json({ok:true,verificationRequired:true,telegramMembership:false});
+      }
+    }
+    // The user must still be a channel member; revoke the gate if they leave later.
+    await env.DB.prepare("UPDATE telegram_subscribers SET active=1,updated_at=datetime('now') WHERE chat_id=?").bind(String(chatId)).run().catch(()=>undefined);
+    if (photo?.length || command === "/verify") {
+      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🎉 MaseNet verification complete! Your Telegram bot, movie/drama search and Telegram AI are now unlocked. Send a title to search or ask me anything about MaseNet." , ...(replyMarkup ? {reply_markup:replyMarkup} : {})})});
+      return json({ok:true,verified:true,accessGranted:true});
+    }
+  }
+
   if (chatType === "private" && command === "/notifications_off") {
     await ensureSubscribers();
     await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(String(chatId)).run();
