@@ -427,8 +427,24 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         { role: "system", content: systemPrompt + (adminInstructions ? "\n\nAdditional owner guidance (must not override safety, privacy, or catalog-truth rules): " + adminInstructions : "") },
         { role: "user", content: prompt.slice(0, 3000) }
       ];
+      // Gemini is the active primary conversational AI; Workers AI remains a resilient fallback.
+      if (env.GEMINI_API_KEY) {
+        try {
+          const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: messages[0].content + "\\n\\nUser: " + prompt.slice(0, 3000) }] }], generationConfig: { temperature: 0.55, maxOutputTokens: 700 } })
+          });
+          if (!geminiResponse.ok) throw new Error("Gemini chat HTTP " + geminiResponse.status + ": " + (await geminiResponse.text()).slice(0, 400));
+          const geminiData = await geminiResponse.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+          const geminiAnswer = geminiData.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\\n").trim();
+          if (geminiAnswer) answer = geminiAnswer;
+          else throw new Error("Gemini returned an empty response.");
+        } catch (error) {
+          console.error("MaseNet Gemini primary chat failed; falling back to Workers AI:", error instanceof Error ? error.message : String(error));
+        }
+      }
       // Retry model errors and handle both common Workers AI response shapes.
-      for (const model of ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
+      if (!answer) for (const model of ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
         try {
           const result = await env.AI.run(model, { messages, max_tokens: 700 });
           if (result && typeof result === "object") {
