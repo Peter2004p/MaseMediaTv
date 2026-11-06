@@ -56,7 +56,10 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
 
   const requestAdminScreenshotReview = async (reason: string) => {
     const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
-    if (!adminId || chatType !== "private" || !photo?.length) return false;
+    if (!adminId || chatType !== "private" || !photo?.length) {
+      console.error("MaseNet admin review unavailable:", JSON.stringify({adminIdConfigured:!!adminId,chatType,hasPhoto:!!photo?.length}));
+      return false;
+    }
     const messageId = Number((msg as any)?.message_id || 0);
     if (messageId) {
       const forwarded = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/forwardMessage", {
@@ -76,6 +79,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         ]]}
       })
     });
+    if (!sent.ok) console.error("MaseNet admin review message failed:", sent.status, (await sent.text()).slice(0,700));
     return sent.ok;
   };
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
@@ -146,10 +150,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"Please send only your YouTube subscription screenshot with the exact caption: YouTube. Telegram channel screenshots are not needed; I check both Telegram memberships automatically."})});
         return json({ok:true,verificationRequired:true});
       }
-      if (!env.OPENAI_API_KEY) {
-        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"YouTube screenshot verification is temporarily unavailable. Please try again later; your access remains locked."})});
-        return json({ok:true,verificationAttempted:true,verified:false,reason:"provider_not_configured"});
-      }
+      // Continue even without OpenAI: Gemini and the admin-review fallback must still run.
       try {
         const largest = photo[photo.length-1];
         const fileInfoResponse = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getFile?file_id=" + encodeURIComponent(largest.file_id));
