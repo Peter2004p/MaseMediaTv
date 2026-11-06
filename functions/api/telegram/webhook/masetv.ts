@@ -97,30 +97,54 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       try {
         const largest = photo[photo.length-1];
         const fileInfoResponse = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getFile?file_id=" + encodeURIComponent(largest.file_id));
-        const fileInfo = await fileInfoResponse.json() as {ok?:boolean;result?:{file_path?:string}};
-        if (!fileInfoResponse.ok || !fileInfo.ok || !fileInfo.result?.file_path) throw new Error("Telegram could not provide the screenshot file.");
+        const fileInfo = await fileInfoResponse.json().catch(() => ({})) as {ok?:boolean;description?:string;result?:{file_path?:string}};
+        if (!fileInfoResponse.ok || !fileInfo.ok || !fileInfo.result?.file_path) {
+          throw new Error("Telegram getFile failed: " + String(fileInfo.description || fileInfoResponse.status));
+        }
         const imageResponse = await fetch("https://api.telegram.org/file/bot" + env.TELEGRAM_BOT_TOKEN + "/" + fileInfo.result.file_path);
-        if (!imageResponse.ok) throw new Error("Could not download the screenshot.");
+        if (!imageResponse.ok) throw new Error("Telegram image download failed: HTTP " + imageResponse.status);
         const bytes = new Uint8Array(await imageResponse.arrayBuffer());
-        if (bytes.length > 5_000_000) throw new Error("Screenshot is too large. Please send a compressed screenshot.");
+        if (!bytes.length || bytes.length > 10_000_000) throw new Error("Screenshot must be a valid image under 10 MB.");
+        const responseMime = (imageResponse.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+        const extension = fileInfo.result.file_path.toLowerCase().split(".").pop();
+        const mime = responseMime.startsWith("image/") ? responseMime :
+          extension === "png" ? "image/png" : extension === "webp" ? "image/webp" : "image/jpeg";
         let binary = "";
         for (let i=0;i<bytes.length;i+=0x8000) binary += String.fromCharCode(...bytes.subarray(i,i+0x8000));
-        const dataUrl = "data:image/jpeg;base64," + btoa(binary);
-        const visionResponse = await fetch("https://api.openai.com/v1/responses", {
-          method:"POST",headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},
-          body:JSON.stringify({
-            model:env.OPENAI_MODEL || "gpt-4o-mini",
-            instructions:"You verify YouTube subscription screenshots for MaseNet. Inspect the image itself. Pass only if it clearly shows the exact YouTube channel @masemedia_tv (MaseMedia TV) and an active Subscribed state. Reject a Subscribe button, search result, unrelated channel, cropped/unclear image, or screenshot without visible subscription status. Never trust the user's caption as evidence. Return only JSON: {\"passed\":true|false,\"reason\":\"brief reason\"}. This is visual evidence, not cryptographic proof of a subscription.",
-            input:[{role:"user",content:[{type:"input_text",text:"Verify that this screenshot visibly shows the YouTube channel @masemedia_tv in a Subscribed state."},{type:"input_image",image_url:dataUrl}]}],
-            max_output_tokens:120
-          })
-        });
-        const visionData = await visionResponse.json().catch(()=>({})) as {output_text?:string;output?:Array<{content?:Array<{text?:string}>}>};
-        if (!visionResponse.ok) throw new Error("AI screenshot review is unavailable right now.");
-        const raw = visionData.output_text || (visionData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("\n");
+        const dataUrl = "data:" + mime + ";base64," + btoa(binary);
+        const configuredModel = (env.OPENAI_MODEL || "gpt-4o-mini").trim();
+        const models = [...new Set([configuredModel, "gpt-4o-mini"])];
+        let visionData: {output_text?:string;output?:Array<{content?:Array<{text?:string;type?:string}>}>} | undefined;
+        let providerError = "";
+        for (const model of models) {
+          const visionResponse = await fetch("https://api.openai.com/v1/responses", {
+            method:"POST",headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},
+            body:JSON.stringify({
+              model,
+              instructions:"You verify YouTube subscription screenshots for MaseNet. Inspect the image itself. Accept when it clearly shows the MaseMedia TV / MaseMediaTV YouTube channel (handle @masemedia_tv if legible) AND an active Subscribed state. The channel display name may be shown as MaseMedia TV even if the small handle is difficult to read. Reject a Subscribe button, search result, unrelated channel, cropped/unclear image, or screenshot without visible subscription status. Never trust the user's caption as evidence. Return only JSON with passed (boolean) and reason (short string). This is visual evidence, not cryptographic proof of a subscription.",
+              input:[{role:"user",content:[{type:"input_text",text:"Does this screenshot visibly show the MaseMedia TV YouTube channel in an active Subscribed state?"},{type:"input_image",image_url:dataUrl,detail:"high"}]}],
+              text:{format:{type:"json_object"}},
+              max_output_tokens:160
+            })
+          });
+          const bodyText = await visionResponse.text();
+          if (!visionResponse.ok) {
+            providerError = "OpenAI vision request failed (HTTP " + visionResponse.status + "): " + bodyText.slice(0,700);
+            console.error("MaseNet YouTube screenshot provider error:", providerError);
+            continue;
+          }
+          try {
+            visionData = JSON.parse(bodyText) as typeof visionData;
+            break;
+          } catch {
+            providerError = "OpenAI returned invalid JSON response: " + bodyText.slice(0,500);
+          }
+        }
+        if (!visionData) throw new Error(providerError || "No vision model could review the screenshot.");
+        const raw = visionData.output_text || (visionData.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==="output_text"||typeof x.text==="string").map(x=>x.text||"").join("\n");
         const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
         if (parsed.passed !== true) {
-          await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"❌ Your YouTube screenshot was not verified. "+String(parsed.reason||"Please send a clear screenshot showing @masemedia_tv as Subscribed.")+"\n\nYou can submit a new screenshot with caption: YouTube."})});
+          await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"❌ Your screenshot did not clearly confirm an active subscription to the MaseMedia TV YouTube channel. "+String(parsed.reason||"Please open the channel page so its name and Subscribed button are both visible, then send a fresh screenshot with caption: YouTube.")})});
           return json({ok:true,verified:false,platform:"youtube"});
         }
         await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=1,updated_at=datetime('now')").bind(String(chatId)).run();
