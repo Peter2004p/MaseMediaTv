@@ -28,11 +28,6 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 .app .nav nav button:hover,.app .navActions .icon:hover{background:#ffffff12;color:#fff}
 .app .nav nav button:focus-visible,.app .navActions .icon:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .app .maseSearchToggle,.app .maseProfileButton{border:1px solid #ffffff22;background:#ffffff0b}
-.app .primary,.app .iqHeroActions .primary{background:var(--mn-red);border:0;color:white;box-shadow:0 5px 20px #e5091438}
-.app .primary:hover,.app .iqHeroActions .primary:hover{background:var(--mn-red-bright);filter:none}
-.app .secondary{background:#333;border:0;color:#fff}
-.app .secondary:hover{background:#454545}
-.app .page{color:var(--mn-text)}
 .app .iqHome{max-width:1600px;padding:0 clamp(14px,4vw,58px) 90px;background:transparent}
 .app .iqHome .iqHero{
   position:relative;isolation:isolate;display:flex;align-items:flex-end;min-height:clamp(470px,56vw,690px);
@@ -100,7 +95,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 .app .iqHome .iqPlay{inset:auto 9px 9px auto;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#e50914;color:#fff;opacity:0;transform:scale(.9)}
 .app .iqHome .iqPlay svg{width:15px;height:15px;padding:0;border:0;background:transparent}
 .app .iqHome .iqCard:hover .iqPlay{opacity:1;transform:scale(1)}
-.app .iqHome .iqMeta,.app .iqHome .folderBadge{top:7px;right:7px;padding:4px 6px;border:0;border-radius:3px;background:#080cde;color:#fff;font-size:8px;font-weight:850}
+.app .iqHome .iqMeta,.app .iqHome .folderBadge{top:7px;right:7px;padding:4px 6px;border:0;border-radius:3px;background:#e50914;color:#fff;font-size:8px;font-weight:850}
 .app .iqHome .seriesCard .iqPoster:after{background:#e50914;border:0;color:#fff}
 .app .iqHome .iqCard>b{display:block;margin:8px 3px 3px;color:#eee;font-size:11px;line-height:1.35;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .app .iqHome .iqCard>small{display:block;margin:0 3px 5px;color:#999;font-size:9px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -139,8 +134,6 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 .app .maseUtilityHead h1,.app .maseUtilityHead h2{color:#fff;font-weight:850;letter-spacing:-.05em}
 .app .maseNotificationItem,.app .maseWatchlistCard{background:#151515;border:1px solid #ffffff18;border-radius:7px;color:#eee}
 .app .maseNotificationItem:hover,.app .maseWatchlistCard:hover{border-color:#e5091466;background:#1c1c1c}
-.app .maseWatchlistCopy .primary{background:#e50914;color:#fff}
-.app .detail{color:#f5f5f1}
 .app .detail>.back{border-radius:4px;background:#202020;border-color:#ffffff1b;color:#eee}
 .app .detailHero{border-radius:8px;border:1px solid #ffffff18;background:#151515;box-shadow:0 18px 55px #0008}
 .app .detailHero:before{background:linear-gradient(120deg,#e5091412,transparent 45%)}
@@ -156,7 +149,6 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 .app .aiComposer{border-radius:6px;background:#101010;border-color:#ffffff24}
 .app .aiSend{background:#e50914;color:#fff;border-radius:5px}
 .app .telegramChipEditor{background:#171717;border-color:#ffffff20}
-.app :is(button,a,input,select,textarea):focus-visible{outline:2px solid #fff;outline-offset:3px}
 @media(min-width:1100px){
  .app .iqHome .iqHero{min-height:clamp(560px,58vw,740px)}
  .app .iqHome .iqHeroCopy{padding-bottom:48px}
