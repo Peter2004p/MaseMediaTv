@@ -1,0 +1,235 @@
+/* MaseNet cinematic streaming identity — Netflix-inspired, original MaseNet styling.
+   Deliberately excludes every playback/player element and its descendants. */
+:root{
+  --mn-red:#e50914;
+  --mn-red-bright:#f6121d;
+  --mn-bg:#080808;
+  --mn-panel:#171717;
+  --mn-panel-2:#222;
+  --mn-text:#f5f5f1;
+  --mn-muted:#a3a3a3;
+}
+html,body{background:var(--mn-bg);color:var(--mn-text)}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.app{--mase-accent:var(--mn-red);--mase-accent-soft:#e5091424;background:var(--mn-bg);background-image:radial-gradient(ellipse at 50% -22%,#e5091412,transparent 42%);color:var(--mn-text)}
+.app .nav{
+  position:sticky;top:0;z-index:40;max-width:none;width:100%;margin:0;padding:13px clamp(16px,4vw,58px);
+  min-height:68px;gap:clamp(14px,2.8vw,36px);border:0;border-radius:0;
+  background:linear-gradient(180deg,rgba(0,0,0,.96),rgba(0,0,0,.82));
+  box-shadow:none;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)
+}
+.app .brand{gap:11px}
+.app .brandLogo{width:34px;height:34px;object-fit:contain}
+.app .brandName{font-size:19px;font-weight:850;letter-spacing:-.055em;color:#fff}
+.app .nav nav{gap:5px}
+.app .nav nav button,.app .navActions .icon{
+  min-height:38px;padding:9px 12px;border-radius:7px;color:#ddd;font-size:12px;font-weight:650
+}
+.app .nav nav button:hover,.app .navActions .icon:hover{background:#ffffff12;color:#fff}
+.app .nav nav button:focus-visible,.app .navActions .icon:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.app .maseSearchToggle,.app .maseProfileButton{border:1px solid #ffffff22;background:#ffffff0b}
+.app .primary,.app .iqHeroActions .primary{background:var(--mn-red);border:0;color:white;box-shadow:0 5px 20px #e5091438}
+.app .primary:hover,.app .iqHeroActions .primary:hover{background:var(--mn-red-bright);filter:none}
+.app .secondary{background:#333;border:0;color:#fff}
+.app .secondary:hover{background:#454545}
+.app .page{color:var(--mn-text)}
+.app .iqHome{max-width:1600px;padding:0 clamp(14px,4vw,58px) 90px;background:transparent}
+.app .iqHome .iqHero{
+  position:relative;isolation:isolate;display:flex;align-items:flex-end;min-height:clamp(470px,56vw,690px);
+  margin:0 calc(clamp(14px,4vw,58px)*-1) 20px;padding:clamp(28px,6vw,82px);
+  border:0;border-radius:0 0 18px 18px;overflow:hidden;
+  background:linear-gradient(90deg,#080808 0%,#080808d9 34%,#08080835 76%,#08080810 100%),#111;
+  box-shadow:none
+}
+.app .iqHome .iqHeroPoster{position:absolute;inset:0;z-index:-2;left:0;right:0;top:0;bottom:0;width:100%;height:100%;opacity:.84;filter:saturate(.94) contrast(1.06);transform:none}
+.app .iqHome .iqHeroPoster .poster,.app .iqHome .iqHeroPoster .posterImage,.app .iqHome .iqHeroPoster .heroCustomImage{width:100%;height:100%;max-width:none;object-fit:cover;object-position:center 28%;border-radius:0;transform:none}
+.app .iqHome .iqHeroPoster .posterAura,.app .iqHome .iqHeroPoster .poster b,.app .iqHome .iqHeroPoster .poster small,.app .iqHome .iqHeroPoster .poster i,.app .iqHome .iqHeroPoster .poster span{display:none}
+.app .iqHome .iqHeroShade{
+  position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,#080808 0%,#080808e8 25%,#08080890 52%,#08080820 100%),linear-gradient(0deg,#080808 0%,#080808c9 13%,transparent 68%);
+}
+.app .iqHome .iqHeroCopy{position:relative;z-index:3;width:min(720px,72%);max-width:720px;padding:30px 0 55px;align-self:flex-end}
+.app .iqHome .iqTags{gap:7px;margin-bottom:18px}
+.app .iqHome .iqTags span{padding:6px 9px;border:1px solid #ffffff38;border-radius:3px;background:#111c;color:#eee;font-size:9px;letter-spacing:.12em}
+.app .iqHome .iqTags span:first-child{background:var(--mn-red);border-color:var(--mn-red);color:#fff}
+.app .iqHome .iqHero h1{max-width:760px;margin:0 0 17px;font-size:clamp(38px,6vw,76px);line-height:.98;font-weight:900;letter-spacing:-.065em;color:#fff;text-shadow:0 4px 30px #000c}
+.app .iqHome .iqHeroCopy p{max-width:590px;color:#e5e5e5;font-size:clamp(13px,1.35vw,17px);line-height:1.6;text-shadow:0 2px 15px #000;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.app .iqHome .iqHeroActions{gap:10px;margin-top:23px}
+.app .iqHome .iqHeroActions button{min-height:46px;padding:0 22px;border-radius:5px;font-size:13px;font-weight:800}
+.app .iqHome .iqHeroActions .primary{background:#fff;color:#111;box-shadow:none}
+.app .iqHome .iqHeroActions .primary:hover{background:#dedede}
+.app .iqHome .iqHeroActions .secondary{background:#ffffff32;color:#fff;border:1px solid #ffffff25;backdrop-filter:blur(8px)}
+.app .iqHome .iqHeroDots{display:flex;gap:7px;margin-top:20px}
+.app .iqHome .iqHeroDots button{width:20px;height:3px;border:0;border-radius:2px;background:#777;padding:0}
+.app .iqHome .iqHeroDots button.active{width:36px;background:var(--mn-red)}
+.app .iqHome .iqHeroRail{z-index:4;background:#111c;border:1px solid #ffffff20;border-radius:8px;backdrop-filter:blur(14px);box-shadow:0 8px 35px #0008}
+.app .iqHome .heroMini{border-radius:5px;color:#fff}
+.app .iqHome .heroMini.active,.app .iqHome .heroMini:hover{background:#ffffff18;border-color:#e5091480}
+.app .iqHome .heroMini .poster{border-radius:3px}
+.app .iqHome .iqPrimaryDock{display:none}
+.app .iqHome .iqCategories{
+  position:sticky;top:68px;z-index:20;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
+  margin:0 0 28px;padding:10px 0;border:0;border-bottom:1px solid #ffffff1c;border-radius:0;
+  background:#080808ed;box-shadow:none;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)
+}
+.app .iqHome .iqCategories::-webkit-scrollbar{display:none}
+.app .iqHome .iqCategories button{flex:0 0 auto;padding:9px 14px;border:0;border-radius:4px;background:transparent;color:#c7c7c7;font-size:12px;font-weight:650}
+.app .iqHome .iqCategories button.active,.app .iqHome .iqCategories button:hover{background:#ffffff14;color:#fff;box-shadow:inset 0 -2px var(--mn-red)}
+.app .iqHome .maseDiscoverySelect{color:#aaa}
+.app .iqHome .maseDiscoverySelect select{background:#181818;border:1px solid #444;color:#eee;border-radius:4px}
+.app .iqHome .iqQuickCategories{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 34px}
+.app .iqHome .iqQuickCategories button{min-height:84px;display:grid;grid-template-columns:42px 1fr;grid-template-rows:auto auto;align-content:center;align-items:center;column-gap:12px;padding:14px;border:1px solid #ffffff17;border-radius:7px;background:linear-gradient(135deg,#1b1b1b,#101010);color:#fff;text-align:left}
+.app .iqHome .iqQuickCategories button>span{grid-row:1/3;display:grid;place-items:center;width:40px;height:40px;border-radius:5px;background:#e509141c;color:#ff5b62;font-size:20px}
+.app .iqHome .iqQuickCategories button b{font-size:13px}
+.app .iqHome .iqQuickCategories button small{color:#999;font-size:10px}
+.app .iqHome .iqRow{margin:0 0 clamp(30px,4vw,48px)}
+.app .iqHome .iqRowHead{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:14px}
+.app .iqHome .iqKicker{color:#e35b61;font-size:9px;letter-spacing:.18em;font-weight:850}
+.app .iqHome .iqRowHead h2{margin:5px 0 0;color:#f5f5f1;font-size:clamp(19px,2.2vw,25px);line-height:1.15;font-weight:750;letter-spacing:-.035em}
+.app .iqHome .rowMore{padding:7px 10px;border:1px solid #ffffff25;border-radius:4px;background:#171717;color:#eee;font-size:10px}
+.app .iqHome .rowMore:hover{border-color:#e50914;background:#222;color:#fff;transform:translateX(2px)}
+.app .iqHome .iqGrid{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 13px;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#555 transparent}
+.app .iqHome .iqGrid::-webkit-scrollbar{height:5px}
+.app .iqHome .iqGrid::-webkit-scrollbar-thumb{background:#444;border-radius:10px}
+.app .iqHome .iqCard{flex:0 0 clamp(135px,14.2vw,205px);min-width:0;padding:0 0 5px;border:1px solid transparent;border-radius:6px;background:transparent;color:#f5f5f1;text-align:left;scroll-snap-align:start;overflow:hidden}
+.app .iqHome .iqCard:hover{transform:scale(1.035);z-index:2;border-color:#ffffff20;background:#171717;box-shadow:0 12px 28px #0009}
+.app .iqHome .iqPoster{aspect-ratio:2/2.85;border-radius:4px;background:#191919;box-shadow:0 7px 20px #0008}
+.app .iqHome .iqPoster>.poster{width:100%;height:100%;border-radius:4px}
+.app .iqHome .iqPoster .posterImage{width:100%;height:100%;object-fit:cover;transition:filter .2s,transform .25s}
+.app .iqHome .iqCard:hover .iqPoster .posterImage{transform:scale(1.04);filter:brightness(1.08)}
+.app .iqHome .iqPlay{inset:auto 9px 9px auto;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#e50914;color:#fff;opacity:0;transform:scale(.9)}
+.app .iqHome .iqPlay svg{width:15px;height:15px;padding:0;border:0;background:transparent}
+.app .iqHome .iqCard:hover .iqPlay{opacity:1;transform:scale(1)}
+.app .iqHome .iqMeta,.app .iqHome .folderBadge{top:7px;right:7px;padding:4px 6px;border:0;border-radius:3px;background:#080cde;color:#fff;font-size:8px;font-weight:850}
+.app .iqHome .seriesCard .iqPoster:after{background:#e50914;border:0;color:#fff}
+.app .iqHome .iqCard>b{display:block;margin:8px 3px 3px;color:#eee;font-size:11px;line-height:1.35;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .iqHome .iqCard>small{display:block;margin:0 3px 5px;color:#999;font-size:9px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .iqHome .iqSearchResults{padding:20px 0;border:0;border-radius:0;background:transparent}
+.app .iqHome .maseBrief,.app .iqHome .maseTelegramBanner,.app .iqHome .maseYoutubeHub{border:1px solid #ffffff1a;border-radius:7px;background:#151515;box-shadow:none}
+.app .iqHome .maseBrief h2,.app .iqHome .maseYoutubeCopy h2{color:#fff}
+.app .iqHome .maseTelegramBanner{color:#fff}
+.app .iqHome .iqEmptySearch{border:1px solid #ffffff18;border-radius:8px;background:#141414}
+.app .iqHome .iqEmptySearch button{border-radius:4px;background:#e50914;color:#fff}
+.app .iqHome .iqHeroEmpty{min-height:430px}
+.app .iqHome .iqHeroEmpty .iqHeroCopy{width:min(680px,100%)}
+.app .searchDock{top:72px;max-width:680px;border:1px solid #ffffff24;border-radius:7px;background:#151515f5;box-shadow:0 18px 50px #000a}
+.app .searchDock input{color:#fff}
+.app .searchDockResults{border-radius:7px;background:#151515}
+.app .searchDockResult{border-bottom:1px solid #ffffff14;color:#fff}
+.app .searchDockResult:hover{background:#ffffff0d}
+.app .searchDockNoResults{color:#aaa}
+.app .telegram{background:#161616ed;border:1px solid #ffffff20;border-radius:7px;box-shadow:0 8px 30px #0008}
+.app .telegram a{color:#fff}
+.app .aiDock{background:var(--mn-red);border:2px solid #ff777d;color:#fff;box-shadow:0 8px 30px #e5091450}
+.app .aiCartoon{filter:saturate(.65)}
+.app .backdrop{background:#000b;backdrop-filter:blur(10px)}
+.app .side{border:1px solid #ffffff1a;border-radius:12px;background:#171717;box-shadow:0 20px 70px #000b}
+.app .side h2{font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-weight:800;letter-spacing:-.04em}
+.app .sideHead small{color:#ef555d}
+.app .side .icon{border:1px solid #ffffff20;background:#ffffff0b;color:#fff}
+.app .profileProAvatar,.app .avatar{background:var(--mn-red);color:#fff}
+.app .settings button,.app .themeGrid button{border:1px solid #ffffff16;background:#222;color:#eee}
+.app .settings button.chosen,.app .themeGrid button.chosen{border-color:#e50914;background:#e509141c;color:#fff}
+.app .siteLegalFooter{background:#080808;border-top:1px solid #ffffff16;color:#999!important}
+.app .siteLegalFooter button,.app .siteLegalFooter a{border-radius:4px!important}
+.app .masenetLiquidDock{background:#111e;border:1px solid #ffffff20;box-shadow:0 8px 35px #000a;backdrop-filter:blur(16px)}
+.app .masenetLiquidDock button.active{color:#fff;background:#e5091424}
+.app .masenetLiquidDock button.active:after{background:var(--mn-red)}
+.app .maseUtilityPage{max-width:1240px}
+.app .maseUtilityHead h1,.app .maseUtilityHead h2{color:#fff;font-weight:850;letter-spacing:-.05em}
+.app .maseNotificationItem,.app .maseWatchlistCard{background:#151515;border:1px solid #ffffff18;border-radius:7px;color:#eee}
+.app .maseNotificationItem:hover,.app .maseWatchlistCard:hover{border-color:#e5091466;background:#1c1c1c}
+.app .maseWatchlistCopy .primary{background:#e50914;color:#fff}
+.app .detail{color:#f5f5f1}
+.app .detail>.back{border-radius:4px;background:#202020;border-color:#ffffff1b;color:#eee}
+.app .detailHero{border-radius:8px;border:1px solid #ffffff18;background:#151515;box-shadow:0 18px 55px #0008}
+.app .detailHero:before{background:linear-gradient(120deg,#e5091412,transparent 45%)}
+.app .detailHero .eyebrow{color:#ff646b}
+.app .detailHero h1{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#fff;font-weight:850}
+.app .detailHero p{color:#c2c2c2}
+.app .detailHero .chips span{border-radius:3px;background:#252525;color:#ddd}
+.app .detailHero .chips span:first-child{border-color:#e5091466;background:#e509141c;color:#ffb4b7}
+.app .maseUtilityHead,.app .maseUtilityPage .emptyState{color:#fff}
+.app .emptyState{border:1px solid #ffffff18;border-radius:8px;background:#141414}
+.app .backdrop .aiBubble.user{background:#e50914;color:#fff}
+.app .backdrop .aiBubble.assistant{background:#292929;color:#f2f2f2}
+.app .aiComposer{border-radius:6px;background:#101010;border-color:#ffffff24}
+.app .aiSend{background:#e50914;color:#fff;border-radius:5px}
+.app .telegramChipEditor{background:#171717;border-color:#ffffff20}
+.app :is(button,a,input,select,textarea):focus-visible{outline:2px solid #fff;outline-offset:3px}
+@media(min-width:1100px){
+ .app .iqHome .iqHero{min-height:clamp(560px,58vw,740px)}
+ .app .iqHome .iqHeroCopy{padding-bottom:48px}
+ .app .iqHome .iqGrid{gap:14px}
+ .app .iqHome .iqCard{flex-basis:clamp(150px,13.4vw,210px)}
+}
+@media(max-width:900px){
+ .app .nav{padding-inline:18px}
+ .app .iqHome .iqHero{min-height:560px}
+ .app .iqHome .iqHeroCopy{width:min(680px,90%)}
+ .app .iqHome .iqQuickCategories{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .app .iqHome .iqGrid{gap:10px}
+}
+@media(max-width:680px){
+ .app .nav{min-height:56px;padding:7px 12px;background:#080808f2;gap:8px}
+ .app .brandLogo{width:29px;height:29px}
+ .app .brandName{font-size:16px}
+ .app .navActions{margin-left:auto}
+ .app .navActions .icon{min-height:36px;padding:8px}
+ .app .iqHome{padding:0 10px 82px}
+ .app .iqHome .iqHero{min-height:clamp(480px,137vw,620px);margin:0 -10px 15px;padding:22px 16px 24px;border-radius:0 0 12px 12px}
+ .app .iqHome .iqHeroPoster{opacity:.82}
+ .app .iqHome .iqHeroPoster .posterImage,.app .iqHome .iqHeroPoster .heroCustomImage{object-position:center 22%}
+ .app .iqHome .iqHeroShade{background:linear-gradient(0deg,#080808 0%,#080808f2 16%,#080808a8 43%,#08080820 82%),linear-gradient(90deg,#08080855,transparent)}
+ .app .iqHome .iqHeroCopy{width:100%;padding:155px 0 6px}
+ .app .iqHome .iqTags{margin-bottom:11px}
+ .app .iqHome .iqTags span{font-size:8px;padding:5px 7px}
+ .app .iqHome .iqHero h1{font-size:clamp(30px,9vw,45px);line-height:1.02;margin-bottom:10px}
+ .app .iqHome .iqHeroCopy p{font-size:12px;line-height:1.5;-webkit-line-clamp:3}
+ .app .iqHome .iqHeroActions{margin-top:15px;gap:8px}
+ .app .iqHome .iqHeroActions button{min-height:41px;padding:0 14px;font-size:11px}
+ .app .iqHome .iqHeroDots{margin-top:14px}
+ .app .iqHome .iqHeroRail{display:none}
+ .app .iqHome .iqPrimaryDock{display:flex;position:sticky;top:56px;z-index:18;justify-content:space-around;gap:3px;margin:0 -10px 12px;padding:8px 4px;border-bottom:1px solid #ffffff1a;background:#080808ee;backdrop-filter:blur(14px)}
+ .app .iqHome .iqPrimaryDock button{display:grid;justify-items:center;gap:3px;min-width:0;padding:5px 8px;border:0;border-radius:5px;background:transparent;color:#aaa;font-size:9px}
+ .app .iqHome .iqPrimaryDock button svg{width:17px;height:17px}
+ .app .iqHome .iqPrimaryDock button.active{color:#fff;background:#e509141c}
+ .app .iqHome .iqPrimaryDock button.active svg{color:#ff6269}
+ .app .iqHome .iqCategories{top:106px;gap:3px;margin:0 -10px 18px;padding:7px 10px;border-bottom:1px solid #ffffff1a}
+ .app .iqHome .iqCategories button{padding:8px 10px;font-size:10px}
+ .app .iqHome .iqQuickCategories{gap:7px;margin-bottom:24px}
+ .app .iqHome .iqQuickCategories button{min-height:68px;padding:9px;grid-template-columns:32px 1fr;column-gap:8px}
+ .app .iqHome .iqQuickCategories button>span{width:30px;height:30px;font-size:16px}
+ .app .iqHome .iqQuickCategories button b{font-size:10px}
+ .app .iqHome .iqQuickCategories button small{font-size:8px}
+ .app .iqHome .iqRow{margin-bottom:27px}
+ .app .iqHome .iqRowHead{margin-bottom:10px}
+ .app .iqHome .iqRowHead h2{font-size:18px}
+ .app .iqHome .iqGrid{gap:8px;overflow-x:auto;padding-bottom:10px}
+ .app .iqHome .iqCard{flex:0 0 clamp(116px,34vw,150px);border-radius:4px}
+ .app .iqHome .iqPoster{border-radius:4px}
+ .app .iqHome .iqCard>b{font-size:10px;margin:7px 2px 3px}
+ .app .iqHome .iqCard>small{font-size:8px;margin:0 2px 4px}
+ .app .iqHome .iqPlay{opacity:1;width:27px;height:27px;right:6px;bottom:6px}
+ .app .iqHome .iqPlay svg{width:12px;height:12px}
+ .app .iqHome .iqSearchResults{padding:12px 0}
+ .app .searchDock{top:60px;width:calc(100% - 18px)}
+ .app .telegram{left:9px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:calc(100vw - 78px)}
+ .app .aiDock{right:10px}
+ .app .masenetLiquidDock{bottom:calc(8px + env(safe-area-inset-bottom));}
+ .app .siteLegalFooter{padding-bottom:calc(92px + env(safe-area-inset-bottom))!important}
+ .app .detail{padding:14px 10px 88px}
+ .app .detailHero{border-radius:7px}
+ .app .detailHero .eyebrow{font-size:8px}
+ .app .detailHero h1{font-size:clamp(24px,7vw,36px)}
+}
+@media(max-width:380px){
+ .app .iqHome .iqHero{min-height:500px}
+ .app .iqHome .iqHeroCopy{padding-top:140px}
+ .app .iqHome .iqCard{flex-basis:clamp(108px,35vw,128px)}
+ .app .iqHome .iqQuickCategories button{grid-template-columns:28px 1fr;column-gap:7px}
+ .app .iqHome .iqQuickCategories button>span{width:27px;height:27px}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .iqHome .iqCard,.app .iqHome .iqPoster .posterImage,.app .iqHome .iqHeroActions button{transition:none!important;animation:none!important}
+}
