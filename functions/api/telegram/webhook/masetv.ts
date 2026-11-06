@@ -23,7 +23,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const cb = update.callback_query;
     const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
     const actorId = String(cb.from?.id || "");
-    const match = String(cb.data || "").match(/^(ytapprove|ytreject):(\\d+)$/);
+    const match = String(cb.data || "").match(/^(ytapprove|ytreject):(\d+)$/);
     const api = (method: string, payload: Record<string, unknown>) => fetch(
       "https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method,
       { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload) }
