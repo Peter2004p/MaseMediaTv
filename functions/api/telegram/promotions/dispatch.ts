@@ -12,9 +12,9 @@ type PromoTitle = { name: string; kind: string; year: number | null; description
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 
 async function generateCaption(env: Env, title: string, description: string, kind: string, year: string) {
-  const fallback = `🎬 Now showing on MaseNet: ${title}${year ? ` (${year})` : ""}\n\n${description.slice(0, 430)}\n\nReady for your next drama/movie? Open MaseNet and start watching!\nhttps://masetv-cloudflare-migration.pages.dev`;
+  const fallback = `🎬 Now showing on MaseNet: ${title}${year ? ` (${year})` : ""}\n\n${description.slice(0, 430)}\n\nTap the button below to open MaseNet and start watching.`;
   if (!env.GEMINI_API_KEY) return fallback;
-  const prompt = `Write a persuasive but truthful Telegram promo caption for this MaseNet ${kind}. Title: ${title}. Year: ${year || "not listed"}. Official synopsis: ${description || "No synopsis provided."}. Use only facts in the synopsis; do not invent actors, awards, episode counts, availability, or plot details. Make it engaging, concise, and inviting. Include the exact title, a short hook, and a clear invitation to watch on MaseNet. Return plain text only, max 650 characters. Do not include markdown or HTML.`;
+  const prompt = `Write a persuasive but truthful Telegram promo caption for this MaseNet ${kind}. Title: ${title}. Year: ${year || "not listed"}. Official synopsis: ${description || "No synopsis provided."}. Use only facts in the synopsis; do not invent actors, awards, episode counts, availability, or plot details. Make it engaging, concise, and inviting. Include the exact title, a short hook, and a clear invitation to tap the Telegram Mini App button below. Do not include any website address, URL, domain, or link. Return plain text only, max 650 characters. Do not include markdown or HTML.`;
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 220 } })
@@ -23,7 +23,7 @@ async function generateCaption(env: Env, title: string, description: string, kin
   const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const text = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\n").trim();
   if (!text) throw new Error("Gemini returned an empty promo caption.");
-  return text.slice(0, 700);
+  return text.replace(/https?:\/\/[^\s<>]+/gi, "").replace(/\b[a-z0-9.-]+\.(?:pages\.dev|floot\.app)\b[^\s<>]*/gi, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, 700);
 }
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
@@ -67,12 +67,10 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     caption = await generateCaption(env, selected.name, description, kind, year);
   } catch (error) {
     console.error("Gemini promotional caption failed:", error instanceof Error ? error.message : String(error));
-    caption = `🎬 Discover ${selected.name}${year ? ` (${year})` : ""} on MaseNet!\n\n${description.slice(0, 430)}\n\nOpen MaseNet to explore and watch:\nhttps://masetv-cloudflare-migration.pages.dev`;
+    caption = `🎬 Discover ${selected.name}${year ? ` (${year})` : ""} on MaseNet!\n\n${description.slice(0, 430)}\n\nTap the button below to explore and watch on MaseNet.`;
   }
 
-  const miniApp = String(env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
-  const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: miniApp.startsWith("https://") ? miniApp : "https://masetv-cloudflare-migration.pages.dev" }]] };
-  const targets = new Set<string>();
+  const miniAppLaunchUrl = "https://t.me/MaseTv_Bot?startapp=home";\n  // Telegram Mini App deep link works in channel notifications too; never expose the Pages origin.\n  const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: miniAppLaunchUrl }]] };\n  const targets = new Set<string>();
   targets.add("@MaseMediaTv");
   const subs = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND chat_type='private'").all<{ chat_id: string }>();
   for (const row of subs.results || []) if (row.chat_id) targets.add(String(row.chat_id));
