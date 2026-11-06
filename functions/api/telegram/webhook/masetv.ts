@@ -113,7 +113,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         for (let i=0;i<bytes.length;i+=0x8000) binary += String.fromCharCode(...bytes.subarray(i,i+0x8000));
         const dataUrl = "data:" + mime + ";base64," + btoa(binary);
         const configuredModel = (env.OPENAI_MODEL || "gpt-4o-mini").trim();
-        const models = [...new Set([configuredModel, "gpt-4o-mini"])];
+        const models = [...new Set(["gpt-4o-mini", configuredModel])];
         let visionData: {output_text?:string;output?:Array<{content?:Array<{text?:string;type?:string}>}>} | undefined;
         let providerError = "";
         for (const model of models) {
@@ -121,7 +121,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
             method:"POST",headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},
             body:JSON.stringify({
               model,
-              instructions:"You verify YouTube subscription screenshots for MaseNet. Inspect the image itself. Accept when it clearly shows the MaseMedia TV / MaseMediaTV YouTube channel (handle @masemedia_tv if legible) AND an active Subscribed state. The channel display name may be shown as MaseMedia TV even if the small handle is difficult to read. Reject a Subscribe button, search result, unrelated channel, cropped/unclear image, or screenshot without visible subscription status. Never trust the user's caption as evidence. Return only JSON with passed (boolean) and reason (short string). This is visual evidence, not cryptographic proof of a subscription.",
+              instructions:"You verify YouTube subscription screenshots for MaseNet. Carefully inspect the entire image at high detail. The submitted photo may be a screenshot of a Telegram conversation that contains an embedded YouTube channel screenshot; inspect that embedded screenshot too. ACCEPT if the visible YouTube channel page identifies the official channel by the display name MaseMediaTV, MaseMedia TV, or handle @MaseMedia_Tv / @masemedia_tv (case-insensitive; underscores and spacing may vary), AND the channel action visibly says Subscribed (including the bell/dropdown Subscribed state). The official channel display name and visible Subscribed control together are sufficient even if the small handle is blurry. Do not require the handle to be perfectly legible. Reject only if the channel is clearly different or the visible control says Subscribe rather than Subscribed, or no subscription state can be seen at all. Do not reject merely because the YouTube screenshot is embedded inside another screenshot. Never trust the user's caption as evidence. Return only JSON with passed (boolean) and reason (short string). This is visual evidence, not cryptographic proof of a subscription.",
               input:[{role:"user",content:[{type:"input_text",text:"Does this screenshot visibly show the MaseMedia TV YouTube channel in an active Subscribed state?"},{type:"input_image",image_url:dataUrl,detail:"high"}]}],
               text:{format:{type:"json_object"}},
               max_output_tokens:160
