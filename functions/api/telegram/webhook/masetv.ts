@@ -17,36 +17,41 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     channel_post?: { chat?: { id?: number | string; type?: string }; text?: string };
     callback_query?: { id: string; data?: string; from?: { id?: number | string }; message?: { chat?: { id?: number | string }; message_id?: number } };
   };
-  // Admin-only manual review fallback for screenshots the vision provider cannot confidently verify.
+  // Admin-only manual review fallback. Acknowledge the button immediately so Telegram
+  // stops showing the spinner even if the D1 write or notification later fails.
   if (update.callback_query) {
     const cb = update.callback_query;
     const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
     const actorId = String(cb.from?.id || "");
-    const match = String(cb.data || "").match(/^(ytapprove|ytreject):(\d+)$/);
+    const match = String(cb.data || "").match(/^(ytapprove|ytreject):(\\d+)$/);
+    const api = (method: string, payload: Record<string, unknown>) => fetch(
+      "https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method,
+      { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload) }
+    );
     if (!adminId || actorId !== adminId || !match) {
-      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/answerCallbackQuery", {
-        method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({callback_query_id:cb.id,text:"Not authorized.",show_alert:true})
-      });
-      return json({ok:true});
+      await api("answerCallbackQuery",{callback_query_id:cb.id,text:"Approval not authorized. Check the configured admin Telegram ID.",show_alert:true}).catch(()=>undefined);
+      console.error("MaseNet approval callback rejected:",JSON.stringify({adminConfigured:!!adminId,actorMatches:!!adminId&&actorId===adminId,hasData:!!cb.data}));
+      return json({ok:true,adminDecision:"unauthorized"});
     }
     const targetId = match[2];
     const approve = match[1] === "ytapprove";
-    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
-    if (approve) {
-      await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=1,updated_at=datetime('now')").bind(targetId).run();
-    } else {
-      await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,0,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=0,updated_at=datetime('now')").bind(targetId).run();
+    await api("answerCallbackQuery",{callback_query_id:cb.id,text:approve?"Approval received.":"Rejection received."}).catch(error=>console.error("MaseNet callback acknowledgement failed:",String(error)));
+    try {
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
+      await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=excluded.youtube_ok,updated_at=datetime('now')").bind(targetId,approve?1:0).run();
+      const notice = await api("sendMessage",{chat_id:targetId,text:approve?"✅ Your YouTube subscription screenshot was approved by the MaseNet admin. Send /verify to complete your Telegram membership checks.":"❌ The MaseNet admin could not approve this screenshot. Please submit a clearer screenshot."});
+      if (!notice.ok) console.error("MaseNet decision notification failed:",await notice.text());
+      if (cb.message?.chat?.id && cb.message.message_id) {
+        const edit = await api("editMessageReplyMarkup",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,reply_markup:{inline_keyboard:[]}});
+        if (!edit.ok) console.error("MaseNet approval buttons could not be cleared:",await edit.text());
+      }
+      console.log("MaseNet YouTube admin decision saved:",JSON.stringify({targetId,decision:approve?"approved":"rejected"}));
+      return json({ok:true,adminDecision:approve?"approved":"rejected"});
+    } catch(error) {
+      console.error("MaseNet admin approval callback failed:",error instanceof Error?error.stack||error.message:String(error));
+      await api("sendMessage",{chat_id:actorId,text:"⚠️ I received your approval button press, but could not save the decision. Please try again or contact support."}).catch(()=>undefined);
+      return json({ok:true,adminDecision:"save_failed"});
     }
-    await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/answerCallbackQuery", {
-      method:"POST",headers:{"content-type":"application/json"},
-      body:JSON.stringify({callback_query_id:cb.id,text:approve?"YouTube screenshot approved.":"Screenshot rejected."})
-    });
-    await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
-      method:"POST",headers:{"content-type":"application/json"},
-      body:JSON.stringify({chat_id:targetId,text:approve?"✅ Your YouTube subscription screenshot was approved by the MaseNet admin. Send /verify to complete your Telegram membership checks.":"❌ The MaseNet admin could not approve this screenshot. Please submit a clearer screenshot."})
-    });
-    return json({ok:true,adminDecision:approve?"approved":"rejected"});
   }
   // Never let the user-facing AI process channel broadcasts or post replies into channels.
   // Channel updates are acknowledged and ignored; private bot conversations remain supported.
