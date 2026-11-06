@@ -3612,3 +3612,56 @@ button, a { touch-action: manipulation; }
  .app .episodeManageInfo{min-width:calc(100% - 58px)}
  .app .episodeManageActions{width:100%;justify-content:flex-end}
 }
+
+/* MaseNet performance refinement — keeps the iQIYI visual language while reducing work on mobile GPUs. */
+html.masenet-low-performance .nav,
+html.masenet-low-performance .searchDock,
+html.masenet-low-performance .side,
+html.masenet-low-performance .telegram,
+html.masenet-low-performance .aiDock {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.masenet-low-performance .nav,
+html.masenet-low-performance .searchDock,
+html.masenet-low-performance .side,
+html.masenet-low-performance .telegram {
+  background-color: #101514;
+}
+html.masenet-low-performance .iqHome .iqHero,
+html.masenet-low-performance .iqHome .iqPoster,
+html.masenet-low-performance .welcomeProVisual {
+  box-shadow: none;
+}
+html.masenet-low-performance .iqHome .iqCard:hover .iqPoster,
+html.masenet-low-performance .welcomeProFeatures article:hover {
+  transform: none;
+}
+.iqHome .iqRow {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 390px;
+}
+.iqHome .iqCard {
+  min-width: 0;
+  contain: layout style;
+}
+.iqHome .iqPoster img,
+.posterImage {
+  display: block;
+  backface-visibility: hidden;
+}
+@media (hover: none), (pointer: coarse) {
+  .iqHome .iqCard:hover .iqPoster { transform: none; }
+  .welcomeProFeatures article:hover { transform: none; }
+}
+@media (max-width: 680px) {
+  .app .nav,
+  .app .telegram,
+  .app .aiDock { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .iqHome .iqRow { contain-intrinsic-size: auto 330px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iqHome .iqCard,
+  .iqHome .iqPoster,
+  .welcomeProFeatures article { transition: none !important; }
+}
