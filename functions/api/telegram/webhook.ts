@@ -40,7 +40,7 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
   const terms = query.split(/\s+/).filter((word) => word.length > 1 && !stopWords.has(word));
   try {
     const rows = await env.DB.prepare(
-      "SELECT id,name,kind,year,metadata_json FROM titles ORDER BY created_at DESC LIMIT 600"
+      "SELECT id,name,kind,year,metadata_json FROM titles ORDER BY created_at DESC"
     ).all<{id:string;name:string;kind:string;year:number|null;metadata_json:string}>();
     const ranked = (rows.results || []).map((row) => {
       const name = String(row.name || "");
