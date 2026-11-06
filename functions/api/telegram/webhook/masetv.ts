@@ -142,7 +142,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         }
         if (!visionData) throw new Error(providerError || "No vision model could review the screenshot.");
         const raw = visionData.output_text || (visionData.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==="output_text"||typeof x.text==="string").map(x=>x.text||"").join("\n");
-        const parsed = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
+        const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
         if (parsed.passed !== true) {
           await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"❌ Your screenshot did not clearly confirm an active subscription to the MaseMedia TV YouTube channel. "+String(parsed.reason||"Please open the channel page so its name and Subscribed button are both visible, then send a fresh screenshot with caption: YouTube.")})});
           return json({ok:true,verified:false,platform:"youtube"});
