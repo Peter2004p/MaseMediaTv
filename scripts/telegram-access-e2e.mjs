@@ -78,7 +78,7 @@ if (process.env.OPENAI_API_KEY) {
     headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" },
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-      instructions: "You verify YouTube subscription screenshots. Pass only if this image clearly shows the exact channel @masemedia_tv and an active Subscribed state. Reject unclear, cropped, unrelated, or unsubscribed screenshots. Return only JSON {\\"passed\\":true|false,\\"reason\\":\\"brief reason\\"}. This is visual evidence, not cryptographic proof.",
+      instructions: "You verify YouTube subscription screenshots. Pass only if this image clearly shows the exact channel @masemedia_tv and an active Subscribed state. Reject unclear, cropped, unrelated, or unsubscribed screenshots. Return a JSON object with boolean key passed and short string key reason, with no markdown. This is visual evidence, not cryptographic proof.",
       input: [{ role: "user", content: [
         { type: "input_text", text: "Does this screenshot clearly show @masemedia_tv as Subscribed?" },
         { type: "input_image", image_url: dataUrl }
