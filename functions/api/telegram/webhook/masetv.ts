@@ -115,12 +115,15 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
   const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim();
   const verificationKeyboard = (youtubeOk: boolean, membership: {masemedia:boolean;moondramac:boolean}) => {
-    const rows: Array<Array<Record<string, unknown>>> = [
-      [{text:"1️⃣ Subscribe to our YouTube channel",url:"https://youtube.com/@masemedia_tv"}],
-      [{text:"2️⃣ Join our main Telegram channel",url:"https://t.me/MaseMediaTv"}],
-      [{text:"3️⃣ Join our second Telegram channel",url:"https://t.me/MoonDramaC"}]
-    ];
-    if (youtubeOk && membership.masemedia && membership.moondramac && miniAppUrl.startsWith("https://")) rows.push([{text:"🎬 Open MaseNet",web_app:{url:miniAppUrl}}]);
+    const rows: Array<Array<Record<string, unknown>>> = [];
+    // Show only the checks this Telegram account has not already completed.
+    // Both the bot and Mini App read/write this same D1 record.
+    if (!youtubeOk) rows.push([{text:"1️⃣ Subscribe to our YouTube channel",url:"https://youtube.com/@masemedia_tv"}]);
+    if (!membership.masemedia) rows.push([{text:"2️⃣ Join our main Telegram channel",url:"https://t.me/MaseMediaTv"}]);
+    if (!membership.moondramac) rows.push([{text:"3️⃣ Join our second Telegram channel",url:"https://t.me/MoonDramaC"}]);
+    if (youtubeOk && membership.masemedia && membership.moondramac && miniAppUrl.startsWith("https://")) {
+      rows.push([{text:"🎬 Open MaseNet",web_app:{url:miniAppUrl}}]);
+    }
     return {inline_keyboard:rows};
   };
   const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
@@ -177,7 +180,9 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const allVerified = youtubeOk && membership.masemedia && membership.moondramac;
     const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({
       chat_id:chatId,
-      text:"🎬 Welcome to MaseNet!\\n\\nComplete these three steps to unlock the bot and Mini App:\\n\\n1️⃣ Subscribe to our YouTube channel. If not yet verified, send a screenshot with caption: YouTube.\\n2️⃣ Join our main Telegram channel.\\n3️⃣ Join our second Telegram channel.\\n\\nYouTube: "+(youtubeOk?"✅ Verified":"❌ Not verified")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n"+(allVerified?"🎉 All checks passed. Open MaseNet below.":"🔒 MaseNet stays locked until all three checks are complete. After joining both channels, send /verify."),
+      text:allVerified
+        ? "🎬 Welcome back to MaseNet!\\n\\n✅ YouTube subscription verified\\n✅ MaseMediaTv joined\\n✅ MoonDramaC joined\\n\\n🎉 Your access is already verified. Open MaseNet below — you do not need to verify again."
+        : "🎬 Welcome to MaseNet!\\n\\nComplete only the remaining checks to unlock the bot and Mini App:\\n\\n"+(!youtubeOk?"1️⃣ Subscribe to our YouTube channel, then send a screenshot with caption: YouTube.\\n":"")+( !membership.masemedia?"2️⃣ Join our main Telegram channel.\\n":"")+( !membership.moondramac?"3️⃣ Join our second Telegram channel.\\n":"")+"\\nYouTube: "+(youtubeOk?"✅ Verified":"❌ Not verified")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n🔒 Complete the remaining checks, then send /verify.",
       reply_markup:verificationKeyboard(youtubeOk,membership)
     })});
     return sent.ok ? json({ok:true,verificationRequired:!allVerified,membership,youtubeVerified:youtubeOk}) : json({ok:false,error:"Telegram could not deliver the verification instructions."},502);
