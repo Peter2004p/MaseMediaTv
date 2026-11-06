@@ -114,6 +114,15 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
   const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim();
+  const verificationKeyboard = (youtubeOk: boolean, membership: {masemedia:boolean;moondramac:boolean}) => {
+    const rows: Array<Array<Record<string, unknown>>> = [
+      [{text:"1️⃣ Subscribe to our YouTube channel",url:"https://youtube.com/@masemedia_tv"}],
+      [{text:"2️⃣ Join our main Telegram channel",url:"https://t.me/MaseMediaTv"}],
+      [{text:"3️⃣ Join our second Telegram channel",url:"https://t.me/MoonDramaC"}]
+    ];
+    if (youtubeOk && membership.masemedia && membership.moondramac && miniAppUrl.startsWith("https://")) rows.push([{text:"🎬 Open MaseNet",web_app:{url:miniAppUrl}}]);
+    return {inline_keyboard:rows};
+  };
   const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
   const chatType = String(msg?.chat?.type || "private");
   const ensureSubscribers = async () => env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
@@ -163,12 +172,15 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     }
     await ensureAccessTable();
     const membership = await checkTelegramMembership();
+    const existing = await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number}>();
+    const youtubeOk = !!existing?.youtube_ok;
+    const allVerified = youtubeOk && membership.masemedia && membership.moondramac;
     const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({
       chat_id:chatId,
-      text:"🎬 Welcome to MaseNet!\n\nTo unlock the bot and Telegram AI:\n\n1️⃣ Subscribe to our YouTube channel: https://youtube.com/@masemedia_tv\n2️⃣ Join our main Telegram channel: https://t.me/MaseMediaTv\n3️⃣ Join our second Telegram channel: https://t.me/MoonDramaC\n\n✅ I automatically check both Telegram memberships. You only need to submit ONE YouTube screenshot showing the channel is Subscribed. Send it as a photo with the exact caption: YouTube.\n\nTelegram checks now: "+(membership.masemedia?"✅":"❌")+" MaseMediaTv · "+(membership.moondramac?"✅":"❌")+" MoonDramaC\n\nIf you have just joined, send /verify. Access unlocks after the YouTube screenshot is accepted and both Telegram memberships are confirmed.",
-      ...(replyMarkup ? {reply_markup:replyMarkup} : {})
+      text:"🎬 Welcome to MaseNet!\\n\\nComplete these three steps to unlock the bot and Mini App:\\n\\n1️⃣ Subscribe to our YouTube channel. If not yet verified, send a screenshot with caption: YouTube.\\n2️⃣ Join our main Telegram channel.\\n3️⃣ Join our second Telegram channel.\\n\\nYouTube: "+(youtubeOk?"✅ Verified":"❌ Not verified")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n"+(allVerified?"🎉 All checks passed. Open MaseNet below.":"🔒 MaseNet stays locked until all three checks are complete. After joining both channels, send /verify."),
+      reply_markup:verificationKeyboard(youtubeOk,membership)
     })});
-    return sent.ok ? json({ok:true,verificationRequired:true,membership}) : json({ok:false,error:"Telegram could not deliver the verification instructions."},502);
+    return sent.ok ? json({ok:true,verificationRequired:!allVerified,membership,youtubeVerified:youtubeOk}) : json({ok:false,error:"Telegram could not deliver the verification instructions."},502);
   }
   // YouTube subscription is confirmed from a submitted screenshot by vision AI.
   // Telegram channel membership is checked directly with getChatMember on each private update.
@@ -321,7 +333,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
           !membership.masemedia ? "• Join https://t.me/MaseMediaTv" : "",
           !membership.moondramac ? "• Join https://t.me/MoonDramaC" : ""
         ].filter(Boolean).join("\n");
-        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🔒 MaseNet bot and Telegram AI are still locked. Complete these checks:\n"+missing+"\n\nAfter joining the Telegram channels, send /verify. Membership is checked automatically."})});
+        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🔒 MaseNet is locked. Complete the checks below:\\n"+missing+"\\n\\nAfter joining both Telegram channels, send /verify. Your verification is shared with the Mini App.",reply_markup:verificationKeyboard(!!(await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number}>())?.youtube_ok,membership)}))});
       } else {
         await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"YouTube screenshot accepted. Telegram membership status: "+(membership.masemedia?"✅":"❌")+" MaseMediaTv · "+(membership.moondramac?"✅":"❌")+" MoonDramaC"+((membership.masemedia&&membership.moondramac)?"\n\n🎉 All checks passed! Your MaseNet bot and Telegram AI are now unlocked.":"\n\nJoin any missing channel, then send /verify.")})});
       }
