@@ -97,7 +97,13 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return json({ text: "MaseNet, MaseTv, and MaseMediaTv are names for the same MaseMedia TV platform. Here are our official social links:\\n\\n• YouTube: https://youtube.com/@masemedia_tv\\n• Facebook: https://www.facebook.com/share/1A5pSvKte9/\\n• TikTok: https://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E\\n• Telegram Channel 1: https://t.me/MaseMediaTv\\n• Telegram Channel 2: https://t.me/MoonDramaC\\n• Telegram Bot: https://t.me/MaseTv_Bot" });
   }
 
-  if (!imageInputs.length && /\b(?:find|search for|look for|show me|do you have|is there|are there|recommend|suggest)\b|\bwhat (?:movies|dramas|titles|episodes) (?:are )?(?:in|available)\b/i.test(message)) {
+  const normalizedQuery = q.normalize("NFKC").replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const directTitleMatch = normalizedQuery.length >= 3 && titles.some((title) => {
+    const normalizedName = title.name.toLowerCase().normalize("NFKC").replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    return normalizedName === normalizedQuery || normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName);
+  });
+  const catalogueSearchIntent = /\b(?:find|search for|look for|show me|do you have|is there|are there|recommend|suggest)\b|\bwhat (?:movies|dramas|titles|episodes) (?:are )?(?:in|available)\b/i.test(message) || directTitleMatch;
+  if (!imageInputs.length && catalogueSearchIntent) {
     const stopWords = new Set(["the","and","for","with","from","that","this","what","where","when","how","can","you","me","please","show","find","search","look","looking","available","library","movie","movies","drama","dramas","episode","episodes","season","recommend","recommendation","watch","want","need","is","are","in","on","of","to","a","an"]);
     const words = q.split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 1 && !stopWords.has(w));
     const ranked = titles.map(t => {
