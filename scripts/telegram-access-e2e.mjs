@@ -104,7 +104,6 @@ const photoUpdate = {
     from: { id: Number(userId), is_bot: false, first_name: "MaseNet E2E test" },
     chat: { id: Number(userId), type: "private" },
     date: Math.floor(Date.now() / 1000),
-    caption: "YouTube",
     photo: [{ file_id: screenshotFileId, file_unique_id: "masenet-e2e", width: 1280, height: 720, file_size: bytes.length }]
   }
 };
