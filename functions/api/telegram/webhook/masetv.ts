@@ -21,7 +21,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   // Older webhook registrations may omit callback_query, which makes approval buttons inert.
   if (update.message || update.edited_message) {
     try {
-      const webhookUrl = "https://masetv-cloudflare-migration.pages.dev/api/telegram/webhook/masetv";
+      const webhookUrl = "/api/telegram/webhook/masetv";
       const repair = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/setWebhook", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -38,42 +38,6 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       console.error("MaseNet callback webhook self-repair error:", error instanceof Error ? error.message : String(error));
     }
   }
-  // Admin-only manual review fallback. Acknowledge the button immediately so Telegram
-  // stops showing the spinner even if the D1 write or notification later fails.
-  if (update.callback_query) {
-    const cb = update.callback_query;
-    const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
-    const actorId = String(cb.from?.id || "");
-    const match = String(cb.data || "").match(/^(ytapprove|ytreject):(\d+)$/);
-    const api = (method: string, payload: Record<string, unknown>) => fetch(
-      "https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method,
-      { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload) }
-    );
-    if (!adminId || actorId !== adminId || !match) {
-      await api("answerCallbackQuery",{callback_query_id:cb.id,text:"Approval not authorized. Check the configured admin Telegram ID.",show_alert:true}).catch(()=>undefined);
-      console.error("MaseNet approval callback rejected:",JSON.stringify({adminConfigured:!!adminId,actorMatches:!!adminId&&actorId===adminId,hasData:!!cb.data}));
-      return json({ok:true,adminDecision:"unauthorized"});
-    }
-    const targetId = match[2];
-    const approve = match[1] === "ytapprove";
-    await api("answerCallbackQuery",{callback_query_id:cb.id,text:approve?"Approval received.":"Rejection received."}).catch(error=>console.error("MaseNet callback acknowledgement failed:",String(error)));
-    try {
-      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
-      await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=excluded.youtube_ok,updated_at=datetime('now')").bind(targetId,approve?1:0).run();
-      const notice = await api("sendMessage",{chat_id:targetId,text:approve?"✅ Your YouTube subscription screenshot was approved by the MaseNet admin. Send /verify to complete your Telegram membership checks.":"❌ The MaseNet admin could not approve this screenshot. Please submit a clearer screenshot."});
-      if (!notice.ok) console.error("MaseNet decision notification failed:",await notice.text());
-      if (cb.message?.chat?.id && cb.message.message_id) {
-        const edit = await api("editMessageReplyMarkup",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,reply_markup:{inline_keyboard:[]}});
-        if (!edit.ok) console.error("MaseNet approval buttons could not be cleared:",await edit.text());
-      }
-      console.log("MaseNet YouTube admin decision saved:",JSON.stringify({targetId,decision:approve?"approved":"rejected"}));
-      return json({ok:true,adminDecision:approve?"approved":"rejected"});
-    } catch(error) {
-      console.error("MaseNet admin approval callback failed:",error instanceof Error?error.stack||error.message:String(error));
-      await api("sendMessage",{chat_id:actorId,text:"⚠️ I received your approval button press, but could not save the decision. Please try again or contact support."}).catch(()=>undefined);
-      return json({ok:true,adminDecision:"save_failed"});
-    }
-  }
   // Never let the user-facing AI process channel broadcasts or post replies into channels.
   // Channel updates are acknowledged and ignored; private bot conversations remain supported.
   if (update.channel_post || update.edited_channel_post) return json({ ok: true, ignored: "channel_post" });
@@ -83,47 +47,17 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   const photo = (msg as any)?.photo as Array<{file_id:string;file_size?:number}> | undefined;
   if (!chatId || (!incoming && !photo?.length)) return json({ ok: true });
 
-  const requestAdminScreenshotReview = async (reason: string) => {
-    const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
-    if (!adminId || chatType !== "private" || !photo?.length) {
-      console.error("MaseNet admin review unavailable:", JSON.stringify({adminIdConfigured:!!adminId,chatType,hasPhoto:!!photo?.length}));
-      return false;
-    }
-    const messageId = Number((msg as any)?.message_id || 0);
-    if (messageId) {
-      const forwarded = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/forwardMessage", {
-        method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({chat_id:adminId,from_chat_id:chatId,message_id:messageId})
-      });
-      if (!forwarded.ok) console.error("MaseNet admin screenshot forward failed:", await forwarded.text());
-    }
-    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
-      method:"POST",headers:{"content-type":"application/json"},
-      body:JSON.stringify({
-        chat_id:adminId,
-        text:"🛡️ MaseNet YouTube subscription approval needed.\nUser/chat ID: "+String(chatId)+"\nAutomatic review: "+reason+"\n\nApprove only if the screenshot clearly shows the official MaseMediaTV channel with Subscribed active.",
-        reply_markup:{inline_keyboard:[[
-          {text:"✅ Approve YouTube",callback_data:"ytapprove:"+String(chatId)},
-          {text:"❌ Reject",callback_data:"ytreject:"+String(chatId)}
-        ]]}
-      })
-    });
-    if (!sent.ok) console.error("MaseNet admin review message failed:", sent.status, (await sent.text()).slice(0,700));
-    return sent.ok;
-  };
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
-  const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim();
-  const verificationKeyboard = (youtubeOk: boolean, membership: {masemedia:boolean;moondramac:boolean}) => {
-    const rows: Array<Array<Record<string, unknown>>> = [
-      [{text:"1️⃣ Subscribe to our YouTube channel",url:"https://youtube.com/@masemedia_tv"}],
-      [{text:"2️⃣ Join our main Telegram channel",url:"https://t.me/MaseMediaTv"}],
-      [{text:"3️⃣ Join our second Telegram channel",url:"https://t.me/MoonDramaC"}]
-    ];
-    if (youtubeOk && membership.masemedia && membership.moondramac && miniAppUrl.startsWith("https://")) rows.push([{text:"🎬 Open MaseNet",web_app:{url:miniAppUrl}}]);
-    return {inline_keyboard:rows};
-  };
-  const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
+  // Always create a Telegram Mini App deep link from the bot token's real identity.
+  // Never use the Pages website URL as a user-facing destination.
+  let miniAppLink = "";
+  try {
+    const meResponse = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getMe");
+    const me = await meResponse.json().catch(() => ({})) as {ok?:boolean;result?:{username?:string}};
+    if (meResponse.ok && me.ok && me.result?.username) miniAppLink = "https://t.me/" + me.result.username + "?startapp";
+  } catch (error) { console.error("MaseNet Mini App deep link lookup failed:", error instanceof Error ? error.message : String(error)); }
+  const replyMarkup = miniAppLink ? { inline_keyboard: [[{ text: "🎬 Open MaseNet Mini App", url: miniAppLink }]] } : undefined;
   const chatType = String(msg?.chat?.type || "private");
   const ensureSubscribers = async () => env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
     chat_id TEXT PRIMARY KEY, chat_type TEXT NOT NULL, title TEXT,
@@ -167,192 +101,20 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     try {
       await ensureSubscribers();
       await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET chat_type='private',title=excluded.title,active=1,updated_at=datetime('now')").bind(String(chatId),displayTitle).run();
-    } catch (error) {
-      console.error("MaseNet Telegram private subscription failed:", error instanceof Error ? error.message : String(error));
-    }
-    await ensureAccessTable();
-    const membership = await checkTelegramMembership();
-    const existing = await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number}>();
-    const youtubeOk = !!existing?.youtube_ok;
-    const allVerified = youtubeOk && membership.masemedia && membership.moondramac;
-    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({
-      chat_id:chatId,
-      text:"🎬 Welcome to MaseNet!\\n\\nComplete these three steps to unlock the bot and Mini App:\\n\\n1️⃣ Subscribe to our YouTube channel. If not yet verified, send a screenshot with caption: YouTube.\\n2️⃣ Join our main Telegram channel.\\n3️⃣ Join our second Telegram channel.\\n\\nYouTube: "+(youtubeOk?"✅ Verified":"❌ Not verified")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n"+(allVerified?"🎉 All checks passed. Open MaseNet below.":"🔒 MaseNet stays locked until all three checks are complete. After joining both channels, send /verify."),
-      reply_markup:verificationKeyboard(youtubeOk,membership)
-    })});
-    return sent.ok ? json({ok:true,verificationRequired:!allVerified,membership,youtubeVerified:youtubeOk}) : json({ok:false,error:"Telegram could not deliver the verification instructions."},502);
+    } catch (error) { console.error("MaseNet Telegram private subscription failed:", error instanceof Error ? error.message : String(error)); }
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({chat_id:chatId,text:"🎬 Welcome to MaseNet!\n\nTap below to open the MaseNet Telegram Mini App. No screenshot, AI review, or admin approval is required.",...(replyMarkup?{reply_markup:replyMarkup}:{})})
+    });
+    return sent.ok ? json({ok:true,accessGranted:true}) : json({ok:false,error:"Telegram could not deliver the Mini App button."},502);
   }
-  // YouTube subscription is confirmed from a submitted screenshot by vision AI.
-  // Telegram channel membership is checked directly with getChatMember on each private update.
-  if (chatType === "private") {
-    await ensureAccessTable();
-    if (photo?.length) {
-      if (!/^youtube$/i.test(incoming)) {
-        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"Please send only your YouTube subscription screenshot with the exact caption: YouTube. Telegram channel screenshots are not needed; I check both Telegram memberships automatically."})});
-        return json({ok:true,verificationRequired:true});
-      }
-      // Continue even without OpenAI: Gemini and the admin-review fallback must still run.
-      try {
-        const largest = photo[photo.length-1];
-        const fileInfoResponse = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getFile?file_id=" + encodeURIComponent(largest.file_id));
-        const fileInfo = await fileInfoResponse.json().catch(() => ({})) as {ok?:boolean;description?:string;result?:{file_path?:string}};
-        if (!fileInfoResponse.ok || !fileInfo.ok || !fileInfo.result?.file_path) {
-          throw new Error("Telegram getFile failed: " + String(fileInfo.description || fileInfoResponse.status));
-        }
-        const imageResponse = await fetch("https://api.telegram.org/file/bot" + env.TELEGRAM_BOT_TOKEN + "/" + fileInfo.result.file_path);
-        if (!imageResponse.ok) throw new Error("Telegram image download failed: HTTP " + imageResponse.status);
-        const bytes = new Uint8Array(await imageResponse.arrayBuffer());
-        if (!bytes.length || bytes.length > 10_000_000) throw new Error("Screenshot must be a valid image under 10 MB.");
-        const responseMime = (imageResponse.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-        const extension = fileInfo.result.file_path.toLowerCase().split(".").pop();
-        const mime = responseMime.startsWith("image/") ? responseMime :
-          extension === "png" ? "image/png" : extension === "webp" ? "image/webp" : "image/jpeg";
-        let binary = "";
-        for (let i=0;i<bytes.length;i+=0x8000) binary += String.fromCharCode(...bytes.subarray(i,i+0x8000));
-        const dataUrl = "data:" + mime + ";base64," + btoa(binary);
-        const configuredModel = (env.OPENAI_MODEL || "gpt-4o-mini").trim();
-        const models = [...new Set(["gpt-4o-mini", configuredModel])];
-        let visionData: {output_text?:string;output?:Array<{content?:Array<{text?:string;type?:string}>}>} | undefined;
-        let providerError = "";
-        for (const model of models) {
-          const visionResponse = await fetch("https://api.openai.com/v1/responses", {
-            method:"POST",headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},
-            body:JSON.stringify({
-              model,
-              instructions:"You verify YouTube subscription screenshots for MaseNet. Carefully inspect the entire image at high detail. The submitted photo may be a screenshot of a Telegram conversation that contains an embedded YouTube channel screenshot; inspect that embedded screenshot too. ACCEPT if the visible YouTube channel page identifies the official channel by the display name MaseMediaTV, MaseMedia TV, or handle @MaseMedia_Tv / @masemedia_tv (case-insensitive; underscores and spacing may vary), AND the channel action visibly says Subscribed (including the bell/dropdown Subscribed state). The official channel display name and visible Subscribed control together are sufficient even if the small handle is blurry. Do not require the handle to be perfectly legible. Reject only if the channel is clearly different or the visible control says Subscribe rather than Subscribed, or no subscription state can be seen at all. Do not reject merely because the YouTube screenshot is embedded inside another screenshot. Never trust the user's caption as evidence. Return only JSON with passed (boolean) and reason (short string). This is visual evidence, not cryptographic proof of a subscription.",
-              input:[{role:"user",content:[{type:"input_text",text:"Does this screenshot visibly show the MaseMedia TV YouTube channel in an active Subscribed state?"},{type:"input_image",image_url:dataUrl,detail:"high"}]}],
-              text:{format:{type:"json_object"}},
-              max_output_tokens:160
-            })
-          });
-          const bodyText = await visionResponse.text();
-          if (!visionResponse.ok) {
-            providerError = "OpenAI vision request failed (HTTP " + visionResponse.status + "): " + bodyText.slice(0,700);
-            console.error("MaseNet YouTube screenshot provider error:", providerError);
-            continue;
-          }
-          try {
-            visionData = JSON.parse(bodyText) as typeof visionData;
-            break;
-          } catch {
-            providerError = "OpenAI returned invalid JSON response: " + bodyText.slice(0,500);
-          }
-        }
-        // Responses API is the primary vision path. If it errors or returns an
-        // unparseable payload, retry through Chat Completions before declaring failure.
-        let parsed: {passed?:boolean;reason?:string} | undefined;
-        if (visionData) {
-          const raw = visionData.output_text || (visionData.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==="output_text"||typeof x.text==="string").map(x=>x.text||"").join("\n");
-          const match = raw.match(/\{[\s\S]*\}/)?.[0];
-          if (match) {
-            try { parsed = JSON.parse(match) as {passed?:boolean;reason?:string}; }
-            catch { providerError = "Responses API returned unreadable verification JSON."; }
-          } else {
-            providerError = "Responses API returned no readable verification result.";
-          }
-        }
-        if (!parsed) {
-          const fallback = await fetch("https://api.openai.com/v1/chat/completions", {
-            method:"POST",
-            headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},
-            body:JSON.stringify({
-              model:"gpt-4o-mini",
-              temperature:0,
-              response_format:{type:"json_object"},
-              messages:[
-                {role:"system",content:"You verify a YouTube subscription screenshot for MaseNet. Inspect the full image, including any embedded screenshot. Return JSON only with keys passed (boolean) and reason (string). Accept when the official channel is visibly named MaseMediaTV or MaseMedia TV, or handle @MaseMedia_Tv / @masemedia_tv with case/spacing/underscore variations, AND the action visibly says Subscribed. The visible channel name plus Subscribed control is sufficient if the handle is blurry. Do not require the handle to be perfectly legible. Reject only if the channel is clearly different, the button says Subscribe, or no subscription state is visible."},
-                {role:"user",content:[
-                  {type:"text",text:"Does this image visibly show the MaseMediaTV YouTube channel with an active Subscribed state?"},
-                  {type:"image_url",image_url:{url:dataUrl,detail:"high"}}
-                ]}
-              ]
-            })
-          });
-          const fallbackText = await fallback.text();
-          if (!fallback.ok) {
-            providerError = "OpenAI Chat Completions HTTP "+fallback.status+": "+fallbackText.slice(0,500);
-            console.error("MaseNet OpenAI secondary vision path failed:",providerError);
-          } else {
-            try {
-              const fallbackData = JSON.parse(fallbackText) as {choices?:Array<{message?:{content?:string}}>};
-              const fallbackRaw = fallbackData.choices?.[0]?.message?.content || "";
-              const fallbackMatch = fallbackRaw.match(/\{[\s\S]*\}/)?.[0];
-              if (fallbackMatch) parsed = JSON.parse(fallbackMatch) as {passed?:boolean;reason?:string};
-              else providerError = "OpenAI Chat Completions returned no structured result.";
-            } catch { providerError = "OpenAI Chat Completions returned invalid JSON."; }
-          }
-        }
-        // Independent Gemini vision backup: retry both provider errors and OpenAI false negatives.
-        if (parsed?.passed !== true && env.GEMINI_API_KEY) {
-          try {
-            const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify({
-                contents:[{role:"user",parts:[
-                  {text:"You are the backup MaseNet YouTube subscription screenshot verifier. Inspect the entire image, including an embedded YouTube screenshot inside Telegram. Accept only if the official YouTube channel is visibly identified by MaseMediaTV or MaseMedia TV or handle @MaseMedia_Tv / @masemedia_tv (case/spacing/underscore variations are acceptable), AND its subscription control visibly says Subscribed. The display name plus Subscribed control is sufficient if the small handle is blurry. Reject if the channel is clearly different, button says Subscribe, or no subscription state is visible. Never trust the caption. Return JSON only: {passed:boolean,reason:string}. This is visual evidence, not cryptographic proof."},
-                  {inline_data:{mime_type:mime,data:btoa(binary)}}
-                ]}],
-                generationConfig:{temperature:0,responseMimeType:"application/json",maxOutputTokens:160}
-              })
-            });
-            const geminiText=await geminiResponse.text();
-            if (!geminiResponse.ok) throw new Error("Gemini vision HTTP "+geminiResponse.status+": "+geminiText.slice(0,500));
-            const geminiData=JSON.parse(geminiText) as {candidates?:Array<{content?:{parts?:Array<{text?:string}>}}>};
-            const geminiRaw=geminiData.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("\n")||"";
-            const geminiMatch=geminiRaw.match(/\{[\s\S]*\}/)?.[0];
-            if (!geminiMatch) throw new Error("Gemini returned no structured verification result.");
-            const geminiParsed=JSON.parse(geminiMatch) as {passed?:boolean;reason?:string};
-            console.log("MaseNet Gemini backup verification result:",geminiParsed.passed===true?"passed":"not_passed");
-            if (geminiParsed.passed===true) parsed=geminiParsed;
-            else if (!parsed) parsed=geminiParsed;
-          } catch(geminiError) {
-            console.error("MaseNet Gemini backup failed:",geminiError instanceof Error?geminiError.message:String(geminiError));
-          }
-        }
-        if (parsed?.passed !== true) {
-          const queued = await requestAdminScreenshotReview(String(parsed?.reason || "OpenAI and Gemini could not confidently confirm subscription."));
-          await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:queued?"⏳ Your screenshot has been sent to the MaseNet admin for manual approval. I'll notify you when a decision is made.":"❌ Your screenshot could not be confirmed, and admin review is not configured. Please contact the MaseNet admin."})});
-          return json({ok:true,verified:false,adminReviewPending:queued});
-        }
-        await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=1,updated_at=datetime('now')").bind(String(chatId)).run();
-      } catch(error) {
-        console.error("MaseNet YouTube screenshot verification failed:",error instanceof Error?error.message:String(error));
-        const queued = await requestAdminScreenshotReview(error instanceof Error ? error.message.slice(0,300) : String(error));
-        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:queued?"⏳ Automatic screenshot verification is temporarily unavailable. Your screenshot has been sent to the MaseNet admin for manual approval.":"I couldn't verify that screenshot and admin review is not configured. Please contact the MaseNet admin."})});
-        return json({ok:true,verificationAttempted:true,verified:false,adminReviewPending:queued});
-      }
-    }
-    const membership = await checkTelegramMembership();
-    const access = await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number}>();
-    const youtubeOk = !!access?.youtube_ok;
-    if (!youtubeOk || !membership.masemedia || !membership.moondramac) {
-      if (!photo?.length) {
-        const missing = [
-          !youtubeOk ? "• Submit your YouTube subscription screenshot with caption: YouTube" : "",
-          !membership.masemedia ? "• Join https://t.me/MaseMediaTv" : "",
-          !membership.moondramac ? "• Join https://t.me/MoonDramaC" : ""
-        ].filter(Boolean).join("\n");
-        const currentAccess = await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number}>();
-        const lockedReply = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
-          method:"POST", headers:{"content-type":"application/json"},
-          body:JSON.stringify({
-            chat_id:chatId,
-            text:"🔒 MaseNet is locked. Complete the checks below:\n"+missing+"\n\nAfter joining both Telegram channels, send /verify. Your verification is shared with the Mini App.",
-            reply_markup:verificationKeyboard(!!currentAccess?.youtube_ok,membership)
-          })
-        });
-      } else {
-        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"YouTube screenshot accepted. Telegram membership status: "+(membership.masemedia?"✅":"❌")+" MaseMediaTv · "+(membership.moondramac?"✅":"❌")+" MoonDramaC"+((membership.masemedia&&membership.moondramac)?"\n\n🎉 All checks passed! Your MaseNet bot and Telegram AI are now unlocked.":"\n\nJoin any missing channel, then send /verify.")})});
-      }
-      return json({ok:true,verificationRequired:true,membership,youtubeVerified:youtubeOk});
-    }
-    if (photo?.length || command === "/verify") {
-      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🎉 MaseNet verification complete! Your Telegram bot, movie/drama search and Telegram AI are now unlocked. Send a title to search or ask me anything about MaseNet.",...(replyMarkup?{reply_markup:replyMarkup}:{})})});
-      return json({ok:true,verified:true,accessGranted:true});
-    }
+  if (chatType === "private" && command === "/verify") {
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({chat_id:chatId,text:"✅ No manual verification is required. Tap below to open MaseNet.",...(replyMarkup?{reply_markup:replyMarkup}:{})})
+    });
+    return sent.ok ? json({ok:true,accessGranted:true}) : json({ok:false,error:"Telegram could not deliver the Mini App button."},502);
   }
-
   if (chatType === "private" && command === "/notifications_off") {
     await ensureSubscribers();
     await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(String(chatId)).run();
@@ -616,7 +378,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       reply = "I couldn't find “" + query.slice(0, 100) + "” in the MaseNet catalog yet. I've recorded this request so the admin can review what users want. Try a shorter title or check again later.";
       // A catalog miss must not end the conversation. Treat the unmatched message as a
       // normal chat turn and let the AI respond, while being honest that the title was not found.
-      const chatSystem = "You are MaseNet's friendly Telegram AI assistant. MaseNet, MaseTv, and MaseMediaTv (MaseMedia TV) are alternate names for the same platform. The catalog lookup did not find a match for the user's message, but the user may be chatting rather than searching for a title. Respond naturally and keep the conversation going. If they ask for official social links, share only verified YouTube https://youtube.com/@masemedia_tv and Telegram bot https://t.me/MaseTv_Bot. Do not invent Instagram, Facebook, TikTok, or other handles. If their message clearly asks for a movie/drama/episode title, briefly say it was not found in the current catalog and suggest another spelling or title. Never invent catalog entries or streaming links. Never reveal secrets or private admin data. Keep the reply concise and friendly.";
+      const chatSystem = "You are MaseNet's friendly Telegram AI assistant. MaseNet, MaseTv, and MaseMediaTv (MaseMedia TV) are alternate names for the same platform. The catalog lookup did not find a match for the user's message, but the user may be chatting rather than searching for a title. Respond naturally and keep the conversation going. Never share the Pages website URL. If a link to watch or browse MaseNet is requested, tell them to use the Open MaseNet Mini App button. Do not invent a Telegram username or a website link. Do not invent Instagram, Facebook, TikTok, or other handles. If their message clearly asks for a movie/drama/episode title, briefly say it was not found in the current catalog and suggest another spelling or title. Never invent catalog entries or streaming links. Never reveal secrets or private admin data. Keep the reply concise and friendly.";
       if (env.AI) {
         for (const model of ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
           try {
@@ -658,6 +420,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     }
   }
 
+  reply = reply.split("https://masetv-cloudflare-migration.pages.dev").join(miniAppLink).trim();
   const send = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
     method: "POST",
     headers: { "content-type": "application/json" },
