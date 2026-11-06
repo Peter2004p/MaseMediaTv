@@ -20,7 +20,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const chatId = msg?.chat?.id;
   const incoming = String(msg?.text || (msg as any)?.caption || "").trim();
   const photo = (msg as any)?.photo as Array<{file_id:string;file_size?:number}> | undefined;
-  if (!chatId || !incoming) return json({ ok: true });
+  if (!chatId || (!incoming && !photo?.length)) return json({ ok: true });
 
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
