@@ -32,7 +32,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     }
     const targetId = match[2];
     const approve = match[1] === "ytapprove";
-    await ensureAccessTable();
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
     if (approve) {
       await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=1,updated_at=datetime('now')").bind(targetId).run();
     } else {
