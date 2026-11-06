@@ -74,7 +74,7 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
     return [];
   }
 }
-async function makeAIReply(env: Env, message: string, firstName: string, appUrl: string): Promise<string> {
+async function makeAIReply(env: Env, message: string, firstName: string): Promise<string> {
   if (!env.OPENAI_API_KEY) return "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet Mini App using the button below.";
   let sharedInstructions = "";
   let catalogueContext = "";
@@ -115,10 +115,10 @@ async function makeAIReply(env: Env, message: string, firstName: string, appUrl:
         "Shared administrator AI instructions: " + (sharedInstructions || "(No additional owner instructions have been saved.)"),
         "Current MaseNet catalogue (public title metadata):\n" + (catalogueContext || "(The catalogue could not be loaded.)"),
         "Do not claim to search a live catalogue, see account activity, send alerts, or perform an action unless the information is provided or the action has actually happened.",
-        "Do not invent movie availability, streaming links, episode details, or website capabilities. If uncertain, say so and offer the MaseNet app link.",
+        "Do not invent movie availability, streaming links, episode details, or website capabilities. If uncertain, say so. Never include a website URL or raw app URL in a reply; the Telegram Mini App launch button is attached separately.",
         "Keep replies helpful and concise, ideally under 120 words. Do not mention OpenAI or Cloudflare unless explicitly asked.",
         "Never reveal secrets, API keys, environment variables, or private user information.",
-        "The user's Telegram display name is " + (firstName || "there") + ". MaseNet app: " + appUrl
+        "The user's Telegram display name is " + (firstName || "there") + ". The Mini App launch button is attached separately; do not print any app or website URL."
       ].join("\n"),
       input: message.slice(0, 2000),
       max_output_tokens: 350
@@ -132,7 +132,7 @@ async function makeAIReply(env: Env, message: string, firstName: string, appUrl:
   const data = await response.json() as { output_text?: string; output?: Array<{content?:Array<{type?:string;text?:string}>}> };
   const answer = data.output_text || (data.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\n");
   if (!answer.trim()) throw new Error("AI returned an empty reply");
-  return answer.trim().slice(0, 3500);
+  return answer.trim().replace(/https?:\/\/(?:www\.)?masetv-cloudflare-migration\.pages\.dev[^\s<>]*/gi, "").replace(/https?:\/\/masenet\.floot\.app[^\s<>]*/gi, "").trim().slice(0, 3500);
 }
 function chatTitle(chat: any) { return String(chat?.title || [chat?.first_name, chat?.last_name].filter(Boolean).join(" ") || chat?.username || "Telegram user").slice(0, 160); }
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -191,7 +191,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
           (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
           (item.episodeLabels.length ? "\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "") +
-          "\n  <a href=\"https://t.me/MaseTv_Bot?start=title_" + encodeURIComponent(item.id) + "\">Open in Telegram</a>"
+          ""
         ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles.";
         await sendMessage(env, chatId, resultText, keyboard, "HTML");
         return json({ ok: true, searchMatches: matches.length });
@@ -199,7 +199,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       await sendTyping(env, chatId);
       let answer: string;
       try {
-        answer = await makeAIReply(env, text, String(chat?.first_name || ""), appUrl);
+        answer = await makeAIReply(env, text, String(chat?.first_name || ""));
       } catch {
         answer = "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open the MaseNet Mini App using the button below.";
       }
