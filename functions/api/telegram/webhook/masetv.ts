@@ -113,7 +113,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   };
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
-  const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "").trim();
+  const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
   const verificationKeyboard = (youtubeOk: boolean, membership: {masemedia:boolean;moondramac:boolean}) => {
     const rows: Array<Array<Record<string, unknown>>> = [];
     // Show only the checks this Telegram account has not already completed.
@@ -182,7 +182,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       chat_id:chatId,
       text:allVerified
         ? "🎬 Welcome back to MaseNet!\\n\\n✅ YouTube subscription verified\\n✅ MaseMediaTv joined\\n✅ MoonDramaC joined\\n\\n🎉 Your access is already verified. Open MaseNet below — you do not need to verify again."
-        : "🎬 Welcome to MaseNet!\\n\\nComplete only the remaining checks to unlock the bot and Mini App:\\n\\n"+(!youtubeOk?"1️⃣ Subscribe to our YouTube channel, then send a screenshot with caption: YouTube.\\n":"")+( !membership.masemedia?"2️⃣ Join our main Telegram channel.\\n":"")+( !membership.moondramac?"3️⃣ Join our second Telegram channel.\\n":"")+"\\nYouTube: "+(youtubeOk?"✅ Verified":"❌ Not verified")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n🔒 Complete the remaining checks, then send /verify.",
+        : "🎬 Welcome to MaseNet!\\n\\nComplete only the remaining checks to unlock the bot and Mini App:\\n\\n"+(!youtubeOk?"1️⃣ Subscribe to our YouTube channel, then upload the screenshot directly. No caption or added text is needed.\\n":"")+( !membership.masemedia?"2️⃣ Join our main Telegram channel.\\n":"")+( !membership.moondramac?"3️⃣ Join our second Telegram channel.\\n":"")+"\\nYouTube: "+(youtubeOk?"✅ Verified":"❌ Not verified")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n🔒 Complete the remaining checks, then send /verify.",
       reply_markup:verificationKeyboard(youtubeOk,membership)
     })});
     return sent.ok ? json({ok:true,verificationRequired:!allVerified,membership,youtubeVerified:youtubeOk}) : json({ok:false,error:"Telegram could not deliver the verification instructions."},502);
@@ -192,10 +192,6 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   if (chatType === "private") {
     await ensureAccessTable();
     if (photo?.length) {
-      if (!/^youtube$/i.test(incoming)) {
-        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"Please send only your YouTube subscription screenshot with the exact caption: YouTube. Telegram channel screenshots are not needed; I check both Telegram memberships automatically."})});
-        return json({ok:true,verificationRequired:true});
-      }
       // Continue even without OpenAI: Gemini and the admin-review fallback must still run.
       try {
         const largest = photo[photo.length-1];
@@ -334,7 +330,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     if (!youtubeOk || !membership.masemedia || !membership.moondramac) {
       if (!photo?.length) {
         const missing = [
-          !youtubeOk ? "• Submit your YouTube subscription screenshot with caption: YouTube" : "",
+          !youtubeOk ? "• Upload your YouTube subscription screenshot directly (no caption or added text needed)" : "",
           !membership.masemedia ? "• Join https://t.me/MaseMediaTv" : "",
           !membership.moondramac ? "• Join https://t.me/MoonDramaC" : ""
         ].filter(Boolean).join("\n");
@@ -556,7 +552,13 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         answer = "I can help with MaseNet and finding movies or drama episodes. I’m having trouble generating a full AI response right now, but you can send a title to search or use /search title. For episodes, include the season and episode number.";
       }
     }
-    const finalText = answer.slice(0, 3900);
+    const finalText = answer
+      .replace(/https?:\/\/(?:[a-z0-9-]+\.)*masetv-cloudflare-migration\.pages\.dev[^\s<>]*/gi, "")
+      .replace(/https?:\/\/(?:[a-z0-9-]+\.)*masenet\.floot\.app[^\s<>]*/gi, "")
+      .replace(/https?:\/\/[^\s<>]*pages\.dev[^\s<>]*/gi, "")
+      .replace(/https?:\/\/[^\s<>]*floot\.app[^\s<>]*/gi, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim().slice(0, 3900);
     let delivered = false;
     if (thinkingMessageId) {
       const edited = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageText", {
