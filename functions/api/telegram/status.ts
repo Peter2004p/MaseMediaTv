@@ -46,7 +46,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
     let autoRepairSucceeded = false;
     // Keep the live bot webhook on the stable production hostname and make sure
     // channel posts reach the subscription handler. This runs only for an authenticated admin.
-    if (env.TELEGRAM_WEBHOOK_SECRET && (info.url !== expectedUrl || !(info.allowed_updates || []).includes("channel_post"))) {
+    if (env.TELEGRAM_WEBHOOK_SECRET && (info.url !== expectedUrl || (!(info.allowed_updates || []).includes("channel_post") || !(info.allowed_updates || []).includes("callback_query")))) {
       autoRepairAttempted = true;
       try {
         const repair = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/setWebhook", {
@@ -55,7 +55,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
           body: JSON.stringify({
             url: expectedUrl,
             drop_pending_updates: false,
-            allowed_updates: ["message", "edited_message", "channel_post", "my_chat_member"],
+            allowed_updates: ["message", "edited_message", "channel_post", "my_chat_member", "callback_query"],
             secret_token: env.TELEGRAM_WEBHOOK_SECRET
           })
         });
