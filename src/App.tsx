@@ -255,7 +255,6 @@ export default function App(){
   {(route==='#/home'||(inTelegramMiniApp&&route!=='#/admin'&&route!=='#/admin-statistics'&&!route.startsWith('#/title/')))&&<nav className="masenetLiquidDock" aria-label="Main navigation">
     <button className={route==='#/home'?'active':''} onClick={()=>go('#/home')} aria-label="Home"><img className="dockHomeLogo" src="/masenet-home-mark.svg" alt="" aria-hidden="true"/><span>Home</span></button>
     <button onClick={()=>{go('#/home');window.setTimeout(()=>document.querySelector('.iqCategories button:nth-child(2)')?.click(),80)}} aria-label="Movies"><Film size={19}/><span>Movies</span></button>
-    <button className={route==='#/reels'?'active dockReels':'dockReels'} onClick={()=>go('#/reels')} aria-label="Open Reels"><span className="dockR" aria-hidden="true">R</span><span>Reel</span></button>
     <button className="dockCustomize" onClick={()=>setPanel('customize')} aria-label="Customize appearance"><SlidersHorizontal size={19}/><span>Customize</span></button>
     <button className="dockNotifications" onClick={()=>setPanel('notifications')} aria-label={unreadNotificationCount?(`Notifications, ${unreadNotificationCount} unread`):'Notifications'}><Bell size={19}/><span>Alerts</span>{unreadNotificationCount>0&&<i className="dockNotificationBadge">{unreadNotificationCount>99?'99+':unreadNotificationCount}</i>}</button>
   </nav>}
@@ -553,7 +552,6 @@ function Home(input:{titles:Title[];all:Title[];featured?:Title;heroSettings:Her
     <button className="active" onClick={()=>p.go('#/home')}><House/><span>Home</span></button>
     <button onClick={()=>{setLibraryFilter('movies');document.getElementById('iq-library')?.scrollIntoView({behavior:'smooth'})}}><Film/><span>Movies</span></button>
     <button onClick={()=>{setLibraryFilter('dramas');document.getElementById('iq-library')?.scrollIntoView({behavior:'smooth'})}}><Youtube/><span>Series</span></button>
-    <button onClick={()=>p.go('#/reels')}><span className="primaryDockR">R</span><span>Reel</span></button>
     <button onClick={()=>p.go('#/my-list')}><Download/><span>Downloads</span></button>
     <button onClick={()=>p.go('#/notifications')}><LayoutDashboard/><span>More</span></button>
   </nav>
