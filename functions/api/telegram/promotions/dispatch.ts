@@ -7,7 +7,7 @@ interface Env {
   TELEGRAM_MINI_APP_URL?: string;
 }
 
-type PromoTitle = { name: string; kind: string; year: number | null; metadata_json: string; created_at?: string };
+type PromoTitle = { name: string; kind: string; year: number | null; description: string; poster_url: string; created_at?: string };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 
@@ -38,7 +38,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   )`).run();
 
   const query = await env.DB.prepare(
-    "SELECT name,kind,year,metadata_json,created_at FROM titles ORDER BY created_at DESC LIMIT 60"
+    "SELECT name,kind,year,description,poster_url,created_at FROM titles ORDER BY created_at DESC LIMIT 60"
   ).all<PromoTitle>();
   const titles = query.results || [];
   if (!titles.length) return json({ ok: true, skipped: "catalogue_empty" });
@@ -47,13 +47,11 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const recentlySent = new Set((history.results || []).map(row => row.title_name.toLocaleLowerCase()));
   const selected = titles.find(row => !recentlySent.has(row.name.toLocaleLowerCase())) || titles[0];
 
-  let metadata: Record<string, unknown> = {};
-  try { metadata = JSON.parse(selected.metadata_json || "{}") as Record<string, unknown>; } catch {}
-  const description = String(metadata.description || "").trim();
-  const poster = String(metadata.posterUrl || "").trim();
+  const description = String(selected.description || "").trim();
+  const poster = String(selected.poster_url || "").trim();
   if (!poster.startsWith("https://")) return json({ ok: false, error: "Selected title has no valid HTTPS poster image", title: selected.name }, 422);
   const kind = /movie/i.test(selected.kind) ? "movie" : "drama";
-  const year = String(selected.year || metadata.year || "").trim();
+  const year = String(selected.year || "").trim();
   let caption: string;
   try {
     caption = await generateCaption(env, selected.name, description, kind, year);
@@ -63,16 +61,14 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   const miniApp = String(env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
-  const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", web_app: { url: miniApp.startsWith("https://") ? miniApp : "https://masetv-cloudflare-migration.pages.dev" } }]] };
-  const targets = new Map<string, "channel" | "private">();
-  targets.set("@MaseMediaTv", "channel");
-  const subs = await env.DB.prepare("SELECT chat_id,chat_type FROM telegram_subscribers WHERE active=1").all<{ chat_id: string; chat_type: string }>();
-  for (const row of subs.results || []) {
-    if (row.chat_id) targets.set(String(row.chat_id), row.chat_type === "private" ? "private" : "channel");
-  }
+  const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: miniApp.startsWith("https://") ? miniApp : "https://masetv-cloudflare-migration.pages.dev" }]] };
+  const targets = new Set<string>();
+  targets.add("@MaseMediaTv");
+  const subs = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND chat_type='private'").all<{ chat_id: string }>();
+  for (const row of subs.results || []) if (row.chat_id) targets.add(String(row.chat_id));
 
   const results: Array<{ target: string; ok: boolean; error?: string }> = [];
-  for (const [target] of targets) {
+  for (const target of targets) {
     const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendPhoto", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ chat_id: target, photo: poster, caption: caption.slice(0, 1000), reply_markup: replyMarkup })
