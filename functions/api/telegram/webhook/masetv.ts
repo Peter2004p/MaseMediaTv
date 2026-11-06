@@ -258,7 +258,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
             if (!geminiResponse.ok) throw new Error("Gemini vision HTTP "+geminiResponse.status+": "+geminiText.slice(0,500));
             const geminiData=JSON.parse(geminiText) as {candidates?:Array<{content?:{parts?:Array<{text?:string}>}}>};
             const geminiRaw=geminiData.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("\n")||"";
-            const geminiMatch=geminiRaw.match(/\\{[\\s\\S]*\\}/)?.[0];
+            const geminiMatch=geminiRaw.match(/\{[\s\S]*\}/)?.[0];
             if (!geminiMatch) throw new Error("Gemini returned no structured verification result.");
             const geminiParsed=JSON.parse(geminiMatch) as {passed?:boolean;reason?:string};
             console.log("MaseNet Gemini backup verification result:",geminiParsed.passed===true?"passed":"not_passed");
