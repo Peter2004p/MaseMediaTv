@@ -90,11 +90,27 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   try { const u=new URL(requested); if(!isPublicHttps(u.toString())) return json({error:"Invalid HLS resource URL"},400); }
   catch { return json({error:"Invalid HLS resource URL"},400); }
  }
+ // Signed CDN URLs commonly carry an Expires Unix timestamp. Detect an
+ // expired library URL before proxying it so the player can report the real cause
+ // instead of presenting a generic upstream 502.
+ const expiryCandidates=[upstreamUrl,sourceHint].filter(Boolean);
+ for(const candidate of expiryCandidates) {
+  try {
+   const expiry=Number(new URL(candidate).searchParams.get("Expires"));
+   if(Number.isFinite(expiry) && expiry>0 && Math.floor(Date.now()/1000)>=expiry) {
+    return json({error:"This signed video link has expired. Replace it in Admin Library with a fresh streaming URL."},410);
+   }
+  } catch {}
+ }
  const headers=new Headers();
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
  try { upstream=await fetchPublicHttps(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
- if(!upstream.ok && upstream.status!==206) return json({error:"The video source returned HTTP "+upstream.status},502);
+ if(!upstream.ok && upstream.status!==206) {
+  if(upstream.status===401 || upstream.status===403) return json({error:"The streaming provider rejected this link (HTTP "+upstream.status+"). It may be expired or its signature may no longer be valid. Replace it with a fresh URL from the provider."},upstream.status);
+  if(upstream.status===404 || upstream.status===410) return json({error:"The streaming provider says this video or signed link is no longer available (HTTP "+upstream.status+"). Replace it with a fresh URL."},410);
+  return json({error:"The streaming provider returned HTTP "+upstream.status+". The source may be temporarily unavailable."},upstream.status>=400 && upstream.status<500?upstream.status:502);
+ }
  let contentType=upstream.headers.get("content-type")||"";
  // Keep the container MIME type when an upstream labels ranged MKV responses as
  // generic binary downloads. The proxy URL itself has no .mkv suffix, so the player
