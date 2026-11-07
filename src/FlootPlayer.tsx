@@ -122,7 +122,6 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
           controls
           playsinline
           theme="dark"
-          subtitlepicker
           controlslist="nosubtitledrag"
           subtitlesize="1.15"
           subtitlebg="rgba(0,0,0,.65)"
