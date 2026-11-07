@@ -61,7 +61,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       if (!seen.has(episodeKey)) seen.set(episodeKey, ep);
     }
     current.episodes = [...seen.values()].sort((a,b) => Number(a.season||1)-Number(b.season||1) || Number(a.episode||1)-Number(b.episode||1));
-    for (const field of ["description","posterUrl","posterPath","year"]) if (!current[field] && title[field]) current[field] = title[field];
+    for (const field of ["description","posterUrl","posterPath","trailerUrl","year"]) if (!current[field] && title[field]) current[field] = title[field];
   }
   return json({ titles: [...standaloneMovies, ...grouped.values()] });
 };
