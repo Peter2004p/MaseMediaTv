@@ -3665,3 +3665,48 @@ html.masenet-low-performance .welcomeProFeatures article:hover {
   .iqHome .iqPoster,
   .welcomeProFeatures article { transition: none !important; }
 }
+
+/* MaseMediaTv YouTube channel replacement for Reels */
+.dockYouTube{position:relative!important;color:#f3f4f6!important}
+.dockYouTube.active{color:#fff!important}
+.dockYoutubeMark{width:34px;height:25px;border-radius:8px;background:linear-gradient(145deg,#ff3434,#c90019);display:grid;place-items:center;position:relative;box-shadow:0 4px 13px rgba(255,0,35,.28);overflow:hidden}
+.dockYoutubeMark img{position:absolute;width:17px;height:17px;object-fit:contain;opacity:.23;filter:brightness(0) invert(1)}
+.dockYoutubeMark i{position:relative;z-index:1;color:white;font-style:normal;display:grid;place-items:center}
+.dockYouTube.active .dockYoutubeMark{box-shadow:0 0 0 2px rgba(255,66,77,.25),0 5px 18px rgba(255,0,35,.35)}
+.maseYouTubePage{padding-top:35px}
+.maseYouTubeHero{display:grid;grid-template-columns:180px minmax(0,1fr);gap:28px;align-items:center;padding:28px;border:1px solid rgba(255,255,255,.11);border-radius:26px;background:radial-gradient(circle at 12% 50%,rgba(255,35,55,.19),transparent 34%),linear-gradient(120deg,#17131a,#090b12 72%);box-shadow:0 20px 55px rgba(0,0,0,.24)}
+.maseYouTubeHeroLogo{width:154px;height:154px;border-radius:34px;background:linear-gradient(145deg,#ff3d48,#bd001b);display:grid;place-items:center;position:relative;box-shadow:0 14px 35px rgba(220,0,32,.25)}
+.maseYouTubeHeroLogo>img{width:88px;height:88px;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(0,0,0,.2))}
+.maseYouTubeHeroLogo>span{position:absolute;right:-9px;bottom:-9px;width:49px;height:36px;border-radius:12px;background:#fff;color:#e60023;display:grid;place-items:center;border:3px solid #17131a}
+.maseYouTubeHeroCopy>small,.maseYouTubeFeedHead small{color:#ff6876;font-size:10px;font-weight:900;letter-spacing:.17em}
+.maseYouTubeHeroCopy h1{font-size:clamp(30px,5vw,48px);letter-spacing:-.045em;margin:9px 0}
+.maseYouTubeHeroCopy p,.maseYouTubeFeedHead p{color:#a8aab5;line-height:1.6;margin:0;max-width:650px}
+.maseYouTubeHeroActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:19px}
+.maseYouTubeHeroActions a,.maseYouTubeHeroActions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:11px 15px;text-decoration:none;font-weight:800;font-size:13px}
+.maseYouTubeHeroActions a{background:#f21d36;color:#fff;border:1px solid #ff5366}
+.maseYouTubeHeroActions button{background:rgba(255,255,255,.07);color:#eee;border:1px solid rgba(255,255,255,.14)}
+.maseYouTubeFeedHead{display:flex;justify-content:space-between;align-items:end;gap:15px;margin:34px 2px 18px}
+.maseYouTubeFeedHead h2{font-size:clamp(22px,3vw,30px);margin:7px 0}
+.maseYouTubeFeedHead>span{font-size:11px;color:#9699a5;white-space:nowrap}
+.maseYouTubeGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.maseYouTubeCard{min-width:0;overflow:hidden;border-radius:17px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.045)}
+.maseYouTubeThumb{display:block;width:100%;aspect-ratio:16/9;padding:0;border:0;background:#111;position:relative;overflow:hidden}
+.maseYouTubeThumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .25s}
+.maseYouTubeThumb:hover img{transform:scale(1.035)}
+.maseYouTubeThumb>span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:54px;height:39px;border-radius:12px;background:rgba(235,0,35,.94);color:#fff;display:grid;place-items:center}
+.maseYouTubeEmbed{aspect-ratio:16/9;background:#000}
+.maseYouTubeEmbed iframe{width:100%;height:100%;border:0}
+.maseYouTubeCardCopy{padding:13px;display:grid;gap:9px}
+.maseYouTubeCardCopy>b{font-size:14px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:39px}
+.maseYouTubeCardCopy>small{font-size:11px;color:#999eaa}
+.maseYouTubeCardCopy>a{display:inline-flex;align-items:center;gap:6px;color:#ff6876;text-decoration:none;font-size:12px;font-weight:800}
+.maseYouTubeLoading,.maseYouTubeEmpty{padding:48px 20px;text-align:center;color:#a8aab5;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:rgba(255,255,255,.025)}
+.maseYouTubeEmpty h3{color:#fff;margin:12px 0 6px}
+.maseYouTubeEmpty p{margin:0 0 16px}
+.maseYouTubeEmpty a{color:#ff6876;font-weight:800}
+.maseYouTubeSpinner{display:inline-block;width:17px;height:17px;border:2px solid rgba(255,255,255,.2);border-top-color:#ff4b60;border-radius:50%;vertical-align:middle;margin-right:9px;animation:maseYoutubeSpin .8s linear infinite}
+@keyframes maseYoutubeSpin{to{transform:rotate(360deg)}}
+.maseYouTubeNotice{margin:10px 0 18px;padding:13px 15px;border-radius:12px;background:rgba(255,75,96,.1);border:1px solid rgba(255,75,96,.25);color:#ff9aa5;font-size:13px}
+.maseYouTubeFootnote{margin:18px 2px 0;color:#858b98;font-size:11px;line-height:1.5}
+@media(max-width:760px){.maseYouTubePage{padding:22px 13px 110px}.maseYouTubeHero{grid-template-columns:1fr;gap:18px;padding:20px;border-radius:21px}.maseYouTubeHeroLogo{width:100px;height:100px;border-radius:24px}.maseYouTubeHeroLogo>img{width:60px;height:60px}.maseYouTubeHeroLogo>span{width:40px;height:30px}.maseYouTubeGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.maseYouTubeCard{border-radius:13px}.maseYouTubeCardCopy{padding:10px}.maseYouTubeCardCopy>b{font-size:12px;min-height:34px}.maseYouTubeFeedHead{align-items:start;flex-direction:column;gap:5px;margin-top:27px}}
+@media(max-width:390px){.maseYouTubeGrid{grid-template-columns:1fr}.maseYouTubeHeroActions a,.maseYouTubeHeroActions button{flex:1}}
