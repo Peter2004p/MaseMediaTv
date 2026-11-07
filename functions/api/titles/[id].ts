@@ -47,26 +47,47 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
     const base = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(id).first<{id:string;name:string;kind:string}>();
     if (!base) return json({ error: "Series record not found." }, 404);
     const candidates = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(base.kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
-    const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
     const episodeId = url.searchParams.get("episodeId") || "";
-    for (const row of candidates.results || []) {
-      if (norm(row.name) !== norm(base.name)) continue;
+    let targetSeason = 1;
+    let targetEpisode = 0;
+    let targetFound = false;
+    const matchingRows = (candidates.results || []).filter(row => norm(row.name) === norm(base.name));
+    // Resolve the selected episode by its stable ID before changing any records.
+    for (const row of matchingRows) {
       let metadata: Record<string, unknown> = {};
       try { metadata = JSON.parse(row.metadata_json) as Record<string, unknown>; } catch {}
       const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Record<string, unknown>[] : [];
-      const index = episodes.findIndex((ep, i) => String(ep.id || row.id + "-episode-" + (i + 1)) === episodeId);
-      if (index < 0) continue;
-      const removed = episodes[index];
-      const remaining = episodes.filter((_, i) => i !== index);
+      const selected = episodes.find((ep, i) => String(ep.id || row.id + "-episode-" + (i + 1)) === episodeId);
+      if (!selected) continue;
+      targetSeason = Number(selected.season) || 1;
+      targetEpisode = Number(selected.episode) || 1;
+      targetFound = true;
+      break;
+    }
+    if (!targetFound) return json({ error: "Episode not found. Refresh the library and try again." }, 404);
+    let removedCount = 0;
+    const statements = [];
+    for (const row of matchingRows) {
+      let metadata: Record<string, unknown> = {};
+      try { metadata = JSON.parse(row.metadata_json) as Record<string, unknown>; } catch {}
+      const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Record<string, unknown>[] : [];
+      const remaining = episodes.filter(ep => {
+        const sameEpisode = (Number(ep.season) || 1) === targetSeason && (Number(ep.episode) || 1) === targetEpisode;
+        if (sameEpisode) removedCount++;
+        return !sameEpisode;
+      });
+      if (remaining.length === episodes.length) continue;
       if (remaining.length) {
         metadata.episodes = remaining;
-        await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(metadata), row.id).run();
+        statements.push(env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(metadata), row.id));
       } else {
-        await env.DB.prepare("DELETE FROM titles WHERE id=?").bind(row.id).run();
+        statements.push(env.DB.prepare("DELETE FROM titles WHERE id=?").bind(row.id));
       }
-      return json({ ok: true, deletedEpisode: removed, remainingEpisodes: remaining.length });
     }
-    return json({ error: "Episode not found. Refresh the library and try again." }, 404);
+    if (!removedCount) return json({ error: "Episode not found. Refresh the library and try again." }, 404);
+    if (statements.length) await env.DB.batch(statements);
+    return json({ ok: true, deletedSeason: targetSeason, deletedEpisode: targetEpisode, deletedEntries: removedCount });
   }
   const requestedName = url.searchParams.get("name") || "";
   const requestedType = new URL(request.url).searchParams.get("type") || "";
