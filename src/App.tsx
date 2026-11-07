@@ -518,7 +518,7 @@ function YouTubeChannelPage({go}:{go:(route:string)=>void}){
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
  const [activeIndex,setActiveIndex]=useState(0);
- const [muted,setMuted]=useState(true);
+ const [muted,setMuted]=useState(false);
  const refresh=async()=>{
   try{
    const response=await fetch('/api/youtube-feed',{headers:{Accept:'application/json'},cache:'no-store'});
@@ -549,7 +549,7 @@ function YouTubeChannelPage({go}:{go:(route:string)=>void}){
  const onFeedScroll=(event:{currentTarget:HTMLDivElement})=>{
   const el=event.currentTarget;
   const next=Math.max(0,Math.min(videos.length-1,Math.round(el.scrollTop/Math.max(1,el.clientHeight))));
-  if(next!==activeIndex){setActiveIndex(next);setMuted(true);}
+  if(next!==activeIndex){setActiveIndex(next);setMuted(false);}
  };
  return <main className="maseShortsPage">
   <header className="maseShortsTop">
@@ -566,7 +566,7 @@ function YouTubeChannelPage({go}:{go:(route:string)=>void}){
     <div className="maseShortTopShade"/>
     <div className="maseShortMeta"><div className="maseShortChannel"><img src="/masemediatv-logo.svg" alt=""/><b>@MaseMediaTv</b><span>·</span><small>{video.published?new Date(video.published).toLocaleDateString():'Latest upload'}</small></div><h2>{video.title}</h2><p>More dramas, movie moments and updates from MaseMediaTv.</p></div>
     <div className="maseShortActions">
-     <button type="button" onClick={()=>setMuted(!muted)} aria-label={muted?'Turn sound on':'Mute video'}><span>{muted?'🔇':'🔊'}</span><small>{muted?'Sound off':'Sound on'}</small></button>
+     <span className="maseShortSoundOn" aria-label="Sound enabled">🔊<small>Sound on</small></span>
      <a href={video.url} target="_blank" rel="noopener noreferrer" aria-label="Open this video on YouTube"><Youtube size={25} fill="currentColor"/><small>YouTube</small></a>
      <button type="button" onClick={()=>{if(navigator.share)void navigator.share({title:video.title,url:video.url}).catch(()=>{});else window.open(video.url,'_blank','noopener,noreferrer')}} aria-label="Share video"><Share2 size={24}/><small>Share</small></button>
     </div>
