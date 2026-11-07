@@ -293,7 +293,7 @@ export default function App(){
   <header className="nav glass maseReferenceHeader"><button className="brand" onClick={()=>go('#/home')} aria-label="MaseMediaTv home"><img className="brandLogo" src="/masemediatv-logo.svg" alt="MaseMediaTv" /><strong className="brandName">MaseMediaTv</strong></button>{searchOpen?<div className="maseHeaderSearch"><Search size={18}/><input value={query} onFocus={()=>setSearchOpen(true)} onChange={e=>{setQuery(e.target.value);setSearchOpen(true)}} placeholder="Search movies, dramas, series..." aria-label="Search movies, dramas and series"/>{query&&<button onClick={()=>setQuery('')} aria-label="Clear search"><X size={14}/></button>}<button onClick={()=>setSearchOpen(false)} aria-label="Collapse search"><X size={14}/></button></div>:<button className="icon maseSearchToggle" onClick={()=>setSearchOpen(true)} aria-label="Open search" title="Search"><Search size={19}/></button>}<div className="navActions"><button className="icon maseProfileButton" aria-label={viewer?'Open profile':'Sign in with Google'} onClick={()=>setPanel('profile')}><UserRound size={20}/></button>{canAdmin&&<button className="icon" onClick={()=>go('#/admin')} aria-label="Admin dashboard"><ShieldCheck size={17}/></button>}</div></header>{route==='#/home'&&<button className="homeFloat" onClick={()=>go('#/home')} aria-label="MaseNet home"><img src="/masemediatv-logo.svg" alt="MaseNet" /></button>}
   {searchOpen&&<div className={`searchDock glass${isScrolled?' searchDockFloating':''}`}>{query.trim()&&<div className="searchDockResults" role="region" aria-label="Search results"><div className="searchDockResultsHead">{filtered.length} {filtered.length===1?'title':'titles'} found · Select a title to watch</div>{filtered.length?filtered.slice(0,8).map(t=><button className="searchDockResult" key={t.id} onClick={()=>{go('#/title/'+encodeURIComponent(t.id));setSearchOpen(false)}}><span className="searchDockPoster"><Poster title={t} small /></span><span className="searchDockResultCopy"><b>{t.name}</b><small>{t.type} · {t.year||'Year unavailable'} · {t.quality||'HD'}{t.episodes.length?` · ${t.episodes.length} ${t.episodes.length===1?'episode':'episodes'}`:''}</small></span><Play size={16}/></button>):<div className="searchDockNoResults">No matching movie or drama title found. Try the full title or a shorter spelling.</div>}</div>}</div>}
   <main key={route} className="ios27PageTransition">{content}</main>
-  {(route==='#/home'||(inTelegramMiniApp&&route!=='#/admin'&&route!=='#/admin-statistics'&&!route.startsWith('#/title/')))&&<nav className="masenetLiquidDock" aria-label="Main navigation">
+  {(route==='#/home'||(inTelegramMiniApp&&route!=='#/youtube'&&route!=='#/admin'&&route!=='#/admin-statistics'&&!route.startsWith('#/title/')))&&<nav className="masenetLiquidDock" aria-label="Main navigation">
     <button className={route==='#/home'?'active':''} onClick={()=>go('#/home')} aria-label="Home"><img className="dockHomeLogo" src="/masenet-home-mark.svg" alt="" aria-hidden="true"/><span>Home</span></button>
     <button onClick={()=>{go('#/home');window.setTimeout(()=>document.querySelector('.iqCategories button:nth-child(2)')?.click(),80)}} aria-label="Movies"><Film size={19}/><span>Movies</span></button>
     <button className={route==='#/youtube'?'active dockYouTube':'dockYouTube'} onClick={()=>go('#/youtube')} aria-label="Open MaseMediaTv YouTube channel"><span className="dockYoutubeMark" aria-hidden="true"><img src="/masemediatv-logo.svg" alt=""/><i><Play size={11} fill="currentColor"/></i></span><span>YouTube</span></button>
@@ -517,44 +517,63 @@ function YouTubeChannelPage({go}:{go:(route:string)=>void}){
  const [channelTitle,setChannelTitle]=useState('MaseMediaTv');
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
- const [lastUpdated,setLastUpdated]=useState('');
- const [activeVideo,setActiveVideo]=useState<string|null>(null);
+ const [activeIndex,setActiveIndex]=useState(0);
+ const [muted,setMuted]=useState(true);
+ const refresh=async()=>{
+  try{
+   const response=await fetch('/api/youtube-feed',{headers:{Accept:'application/json'},cache:'no-store'});
+   const data=await response.json();
+   if(!response.ok)throw new Error(data?.error||'The YouTube channel feed is temporarily unavailable.');
+   setVideos(Array.isArray(data.videos)?data.videos:[]);
+   setChannelTitle(typeof data.channelTitle==='string'&&data.channelTitle?data.channelTitle:'MaseMediaTv');
+   setError('');
+  }catch(e){setError(e instanceof Error?e.message:'Could not load YouTube uploads.');}
+  finally{setLoading(false);}
+ };
  useEffect(()=>{
   let alive=true;
-  const refresh=async()=>{
-   try{
-    const response=await fetch('/api/youtube-feed',{headers:{Accept:'application/json'},cache:'no-store'});
-    const data=await response.json();
-    if(!response.ok)throw new Error(data?.error||'The YouTube channel feed is temporarily unavailable.');
-    if(!alive)return;
-    setVideos(Array.isArray(data.videos)?data.videos:[]);
-    setChannelTitle(typeof data.channelTitle==='string'&&data.channelTitle?data.channelTitle:'MaseMediaTv');
-    setLastUpdated(new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
-    setError('');
-   }catch(e){if(alive)setError(e instanceof Error?e.message:'Could not load YouTube uploads.');}
-   finally{if(alive)setLoading(false);}
-  };
-  void refresh();
-  const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void refresh()},5*60*1000);
-  const onVisible=()=>{if(document.visibilityState==='visible')void refresh()};
-  document.addEventListener('visibilitychange',onVisible);
-  return()=>{alive=false;window.clearInterval(timer);document.removeEventListener('visibilitychange',onVisible)};
+  const load=async()=>{try{
+   const response=await fetch('/api/youtube-feed',{headers:{Accept:'application/json'},cache:'no-store'});
+   const data=await response.json();
+   if(!response.ok)throw new Error(data?.error||'The YouTube channel feed is temporarily unavailable.');
+   if(!alive)return;
+   setVideos(Array.isArray(data.videos)?data.videos:[]);
+   setChannelTitle(typeof data.channelTitle==='string'&&data.channelTitle?data.channelTitle:'MaseMediaTv');
+   setError('');
+  }catch(e){if(alive)setError(e instanceof Error?e.message:'Could not load YouTube uploads.');}
+  finally{if(alive)setLoading(false);}};
+  void load();
+  const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void load()},5*60*1000);
+  return()=>{alive=false;window.clearInterval(timer)};
  },[]);
- return <main className="page maseYouTubePage">
-  <section className="maseYouTubeHero">
-   <div className="maseYouTubeHeroLogo"><img src="/masemediatv-logo.svg" alt="MaseMediaTv logo"/><span><Youtube size={25} fill="currentColor"/></span></div>
-   <div className="maseYouTubeHeroCopy"><small>OFFICIAL YOUTUBE CHANNEL</small><h1>{channelTitle}</h1><p>Movies, dramas, updates and short videos from MaseMediaTv — together in one place.</p><div className="maseYouTubeHeroActions"><a href="https://www.youtube.com/channel/UCT8yUxTnY1d-arihLSCJfEA" target="_blank" rel="noopener noreferrer"><Youtube size={17} fill="currentColor"/> Subscribe on YouTube</a><button type="button" onClick={()=>{setLoading(true);setError('');fetch('/api/youtube-feed',{cache:'no-store'}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d?.error||'Refresh failed');setVideos(d.videos||[]);setChannelTitle(d.channelTitle||'MaseMediaTv');setLastUpdated(new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}))}).catch(e=>setError(e.message||'Refresh failed')).finally(()=>setLoading(false))}}><RefreshCw size={15}/> Refresh</button></div></div>
-  </section>
-  <div className="maseYouTubeFeedHead"><div><small>FROM OUR CHANNEL</small><h2>Latest videos & Shorts</h2><p>New public uploads appear here automatically when YouTube updates its channel feed.</p></div>{lastUpdated&&<span>Updated {lastUpdated}</span>}</div>
-  {error&&<div className="maseYouTubeNotice" role="status">{error}</div>}
-  {loading?<div className="maseYouTubeLoading"><span className="maseYouTubeSpinner"/>Loading MaseMediaTv uploads…</div>:videos.length?<div className="maseYouTubeGrid">{videos.map(video=><article className="maseYouTubeCard" key={video.id}>
-   <button className="maseYouTubeThumb" type="button" onClick={()=>setActiveVideo(activeVideo===video.id?null:video.id)} aria-label={'Play '+video.title}>
-    <img src={video.thumbnail} alt="" loading="lazy"/><span><Play size={23} fill="currentColor"/></span>
-   </button>
-   {activeVideo===video.id?<div className="maseYouTubeEmbed"><iframe src={'https://www.youtube-nocookie.com/embed/'+encodeURIComponent(video.id)+'?autoplay=1&rel=0'} title={video.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="lazy"/></div>:null}
-   <div className="maseYouTubeCardCopy"><b>{video.title}</b><small>{video.published?new Date(video.published).toLocaleDateString(): 'Latest upload'}</small><a href={video.url} target="_blank" rel="noopener noreferrer">Watch on YouTube <ExternalLink size={13}/></a></div>
-  </article>)}</div>:<div className="maseYouTubeEmpty"><Youtube size={34}/><h3>No uploads found yet</h3><p>When public videos or Shorts are available in the channel feed, they will show here.</p><a href="https://www.youtube.com/channel/UCT8yUxTnY1d-arihLSCJfEA" target="_blank" rel="noopener noreferrer">Open our YouTube channel</a></div>}
-  <p className="maseYouTubeFootnote">Showing the latest public channel uploads. YouTube may take several minutes to publish a new upload to its feed.</p>
+ const onFeedScroll=(event:React.UIEvent<HTMLDivElement>)=>{
+  const el=event.currentTarget;
+  const next=Math.max(0,Math.min(videos.length-1,Math.round(el.scrollTop/Math.max(1,el.clientHeight))));
+  if(next!==activeIndex){setActiveIndex(next);setMuted(true);}
+ };
+ return <main className="maseShortsPage">
+  <header className="maseShortsTop">
+   <button type="button" className="maseShortsBrand" onClick={()=>go('#/home')} aria-label="Back to MaseNet home"><img src="/masemediatv-logo.svg" alt=""/><span>MaseMediaTv</span></button>
+   <span className="maseShortsTopLabel">SHORTS & VIDEOS</span>
+   <a href="https://www.youtube.com/channel/UCT8yUxTnY1d-arihLSCJfEA" target="_blank" rel="noopener noreferrer" aria-label="Subscribe to MaseMediaTv on YouTube"><Youtube size={22} fill="currentColor"/></a>
+  </header>
+  {error&&<div className="maseShortsError" role="status">{error}<button onClick={()=>{setLoading(true);void refresh()}}>Retry</button></div>}
+  {loading?<div className="maseShortsLoading"><span className="maseYouTubeSpinner"/>Loading videos…</div>:videos.length?<div className="maseShortsFeed" onScroll={onFeedScroll} aria-label="Scroll through MaseMediaTv videos">
+   {videos.map((video,index)=><section className="maseShortItem" key={video.id}>
+    <div className="maseShortPlayer">
+     {index===activeIndex?<iframe src={'https://www.youtube-nocookie.com/embed/'+encodeURIComponent(video.id)+'?autoplay=1&mute='+(muted?'1':'0')+'&playsinline=1&rel=0&modestbranding=1'} title={video.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="eager"/>:<img src={video.thumbnail} alt="" loading="lazy"/>}
+    </div>
+    <div className="maseShortTopShade"/>
+    <div className="maseShortMeta"><div className="maseShortChannel"><img src="/masemediatv-logo.svg" alt=""/><b>@MaseMediaTv</b><span>·</span><small>{video.published?new Date(video.published).toLocaleDateString():'Latest upload'}</small></div><h2>{video.title}</h2><p>More dramas, movie moments and updates from MaseMediaTv.</p></div>
+    <div className="maseShortActions">
+     <button type="button" onClick={()=>setMuted(!muted)} aria-label={muted?'Turn sound on':'Mute video'}><span>{muted?'🔇':'🔊'}</span><small>{muted?'Sound off':'Sound on'}</small></button>
+     <a href={video.url} target="_blank" rel="noopener noreferrer" aria-label="Open this video on YouTube"><Youtube size={25} fill="currentColor"/><small>YouTube</small></a>
+     <button type="button" onClick={()=>{if(navigator.share)void navigator.share({title:video.title,url:video.url}).catch(()=>{});else window.open(video.url,'_blank','noopener,noreferrer')}} aria-label="Share video"><Share2 size={24}/><small>Share</small></button>
+    </div>
+    <span className="maseShortCounter">{index+1} / {videos.length}</span>
+   </section>)}
+  </div>:<div className="maseShortsEmpty"><Youtube size={36}/><h2>No videos available</h2><p>Public uploads from the MaseMediaTv channel will appear here automatically.</p><a href="https://www.youtube.com/channel/UCT8yUxTnY1d-arihLSCJfEA" target="_blank" rel="noopener noreferrer">Visit YouTube channel</a></div>}
+  <button className="maseShortsRefresh" type="button" onClick={()=>{setLoading(true);void refresh()}} aria-label="Refresh videos"><RefreshCw size={17}/></button>
  </main>;
 }
 
