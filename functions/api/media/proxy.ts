@@ -42,14 +42,17 @@ function resolveHlsResource(raw:string, base:string):string {
  }
  return resolved.toString();
 }
-function proxyHlsResource(raw:string, base:string, origin:string, episodeId:string):string {
+function proxyHlsResource(raw:string, base:string, origin:string, episodeId:string, sourceHint:string):string {
  const value=raw.trim();
  if(!/^https?:\/\//i.test(value) && !value.startsWith("/") && !value.startsWith("./") && !value.startsWith("../") && !value.startsWith("?") && !value.startsWith("#")) {
   try { const parsed=new URL(value); if(parsed.protocol!=="https:" && parsed.protocol!=="http:") return value; } catch {}
  }
  const absolute=resolveHlsResource(value,base);
  if(new URL(absolute).protocol!=="https:") return value;
- return origin+"/api/media/proxy?episodeId="+encodeURIComponent(episodeId)+"&resource="+encodeURIComponent(absolute);
+ // Every nested HLS request must carry the original library source as a lookup hint.
+ // Legacy episodes can have synthesized IDs that are not persisted in D1; without this
+ // hint, the playlist loads but its child segments are rejected as "Episode not found".
+ return origin+"/api/media/proxy?episodeId="+encodeURIComponent(episodeId)+"&source="+encodeURIComponent(sourceHint)+"&resource="+encodeURIComponent(absolute);
 }
 export const onRequestGet = async ({ request, env }: { request:Request; env:Env }) => {
  const reqUrl=new URL(request.url), episodeId=reqUrl.searchParams.get("episodeId")||"", requested=reqUrl.searchParams.get("resource");
@@ -126,10 +129,10 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    if(!trimmed) return line;
    if(trimmed.startsWith("#")) {
     return line.replace(/URI=(["'])(.*?)\1/g,(_m,quote:string,uri:string)=>{
-     return "URI="+quote+proxyHlsResource(uri,playlistBase,reqUrl.origin,episodeId)+quote;
+     return "URI="+quote+proxyHlsResource(uri,playlistBase,reqUrl.origin,episodeId,sourceHint)+quote;
     });
    }
-   try { return proxyHlsResource(trimmed,playlistBase,reqUrl.origin,episodeId); } catch { return line; }
+   try { return proxyHlsResource(trimmed,playlistBase,reqUrl.origin,episodeId,sourceHint); } catch { return line; }
   }).join("\n");
   return new Response(rewritten,{status:200,headers:{"content-type":"application/vnd.apple.mpegurl","cache-control":"no-store","access-control-allow-origin":"*","x-content-type-options":"nosniff"}});
  }
