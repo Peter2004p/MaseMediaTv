@@ -30,6 +30,27 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers):Promise<Resp
  }
  throw new Error("Too many redirects");
 }
+// Resolve HLS child resources against the final playlist URL. Some CDNs sign
+// the playlist URL and expect the same authentication query parameters on relative
+// segment, variant, subtitle, and key URLs. Preserve child-specific parameters and
+// inherit only missing parameters when the child stays on the same HTTPS host.
+function resolveHlsResource(raw:string, base:string):string {
+ const resolved=new URL(raw.trim(),base);
+ const parent=new URL(base);
+ if(resolved.protocol==="https:" && parent.protocol==="https:" && resolved.hostname===parent.hostname) {
+  parent.searchParams.forEach((value,key)=>{ if(!resolved.searchParams.has(key)) resolved.searchParams.append(key,value); });
+ }
+ return resolved.toString();
+}
+function proxyHlsResource(raw:string, base:string, origin:string, episodeId:string):string {
+ const value=raw.trim();
+ if(!/^https?:\/\//i.test(value) && !value.startsWith("/") && !value.startsWith("./") && !value.startsWith("../") && !value.startsWith("?") && !value.startsWith("#")) {
+  try { const parsed=new URL(value); if(parsed.protocol!=="https:" && parsed.protocol!=="http:") return value; } catch {}
+ }
+ const absolute=resolveHlsResource(value,base);
+ if(new URL(absolute).protocol!=="https:") return value;
+ return origin+"/api/media/proxy?episodeId="+encodeURIComponent(episodeId)+"&resource="+encodeURIComponent(absolute);
+}
 export const onRequestGet = async ({ request, env }: { request:Request; env:Env }) => {
  const reqUrl=new URL(request.url), episodeId=reqUrl.searchParams.get("episodeId")||"", requested=reqUrl.searchParams.get("resource");
  if(!episodeId || episodeId.length>200) return json({error:"Missing episodeId"},400);
@@ -102,13 +123,13 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   const body=await upstream.text();
   const rewritten=body.split(/\r?\n/).map(line=>{
    const trimmed=line.trim();
-   if(!trimmed || trimmed.startsWith("#")) {
-    return trimmed.replace(/URI="([^"]+)"/g,(_m,uri:string)=>{
-     const absolute=new URL(uri,playlistBase).toString();
-     return 'URI="'+new URL("/api/media/proxy",reqUrl.origin).toString()+'?episodeId='+encodeURIComponent(episodeId)+'&resource='+encodeURIComponent(absolute)+'"';
+   if(!trimmed) return line;
+   if(trimmed.startsWith("#")) {
+    return line.replace(/URI=(["'])(.*?)\1/g,(_m,quote:string,uri:string)=>{
+     return "URI="+quote+proxyHlsResource(uri,playlistBase,reqUrl.origin,episodeId)+quote;
     });
    }
-   try { const absolute=new URL(trimmed,playlistBase).toString(); return new URL("/api/media/proxy",reqUrl.origin).toString()+"?episodeId="+encodeURIComponent(episodeId)+"&resource="+encodeURIComponent(absolute); } catch { return trimmed; }
+   try { return proxyHlsResource(trimmed,playlistBase,reqUrl.origin,episodeId); } catch { return line; }
   }).join("\n");
   return new Response(rewritten,{status:200,headers:{"content-type":"application/vnd.apple.mpegurl","cache-control":"no-store","access-control-allow-origin":"*","x-content-type-options":"nosniff"}});
  }
