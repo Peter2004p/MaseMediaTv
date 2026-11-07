@@ -14,22 +14,58 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
     const base = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(id).first<{id:string;name:string;kind:string}>();
     if (!base) return json({ error: "Series record not found." }, 404);
     const candidates = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(base.kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
-    const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
     const episodeId = String(body.episodeId || "");
-    const replacement = body.episode && typeof body.episode === "object" ? body.episode as Record<string, unknown> : null;
-    for (const row of candidates.results || []) {
-      if (norm(row.name) !== norm(base.name)) continue;
+    const edited = body.episode && typeof body.episode === "object" ? body.episode as Record<string, unknown> : null;
+    if (!episodeId || !edited) return json({ error: "An episode selection and updated episode are required." }, 400);
+    const matchingRows = (candidates.results || []).filter(row => norm(row.name) === norm(base.name));
+    let targetSeason = 1;
+    let targetEpisode = 1;
+    let targetRowId = "";
+    for (const row of matchingRows) {
       let metadata: Record<string, unknown> = {};
       try { metadata = JSON.parse(row.metadata_json) as Record<string, unknown>; } catch {}
       const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Record<string, unknown>[] : [];
-      const index = episodes.findIndex((ep, i) => String(ep.id || row.id + "-episode-" + (i + 1)) === episodeId);
-      if (index < 0 || !replacement) continue;
-      episodes[index] = { ...episodes[index], ...replacement, id: String(episodes[index].id || episodeId) };
-      metadata.episodes = episodes;
-      await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(metadata), row.id).run();
-      return json({ ok: true, episode: episodes[index] });
+      const selected = episodes.find((ep, i) => String(ep.id || row.id + "-episode-" + (i + 1)) === episodeId);
+      if (!selected) continue;
+      targetSeason = Number(selected.season) || 1;
+      targetEpisode = Number(selected.episode) || 1;
+      targetRowId = row.id;
+      break;
     }
-    return json({ error: "Episode not found. Refresh the library and try again." }, 404);
+    if (!targetRowId) return json({ error: "Episode not found. Refresh the library and try again." }, 404);
+    const statements = [];
+    let savedEpisode: Record<string, unknown> | null = null;
+    for (const row of matchingRows) {
+      let metadata: Record<string, unknown> = {};
+      try { metadata = JSON.parse(row.metadata_json) as Record<string, unknown>; } catch {}
+      const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Record<string, unknown>[] : [];
+      let changed = false;
+      const nextEpisodes: Record<string, unknown>[] = [];
+      for (const ep of episodes) {
+        const sameEpisode = (Number(ep.season) || 1) === targetSeason && (Number(ep.episode) || 1) === targetEpisode;
+        const isSelected = String(ep.id || "") === episodeId;
+        if (isSelected && row.id === targetRowId) {
+          savedEpisode = { ...ep, ...edited, id: String(ep.id || episodeId) };
+          nextEpisodes.push(savedEpisode);
+          changed = true;
+        } else if (sameEpisode) {
+          changed = true;
+        } else {
+          nextEpisodes.push(ep);
+        }
+      }
+      if (!changed) continue;
+      if (nextEpisodes.length) {
+        metadata.episodes = nextEpisodes;
+        statements.push(env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(metadata), row.id));
+      } else {
+        statements.push(env.DB.prepare("DELETE FROM titles WHERE id=?").bind(row.id));
+      }
+    }
+    if (!savedEpisode) return json({ error: "Episode could not be updated. Refresh the library and try again." }, 409);
+    if (statements.length) await env.DB.batch(statements);
+    return json({ ok: true, episode: savedEpisode });
   }
   if (typeof body.name !== "string" || !body.name.trim()) return json({ error: "A title name is required." }, 400);
   const title: Record<string, unknown> = { ...body, id };
