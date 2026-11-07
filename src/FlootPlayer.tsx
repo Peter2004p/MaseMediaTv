@@ -26,6 +26,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
   const [error, setError] = useState(''); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
   const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
+  const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
@@ -70,7 +71,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
-    setError(''); setHlsSubtitleTracks([]); setNativeSubtitleTracks([]); setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = false; hlsProbeRef.current = false;
+    setError(''); setHlsSubtitleTracks([]); setNativeSubtitleTracks([]); hlsAutoSubtitleRef.current = false; setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = false; hlsProbeRef.current = false;
     hlsRef.current?.destroy(); hlsRef.current = null;
     if (!src || embed) return;
     if (isHlsSource && Hls.isSupported()) {
@@ -79,6 +80,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
       // Hls.js also gives us consistent playlist/segment loading through our proxy.
       const hls = new Hls({
         enableWorker: true,
+        subtitleDisplay: true,
         backBufferLength: 30,
         manifestLoadingTimeOut: 20000,
         levelLoadingTimeOut: 20000,
@@ -90,11 +92,25 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
       hlsRef.current = hls;
       hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => { setError(''); setBuffering(false); });
-      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => {
-        setHlsSubtitleTracks(hls.subtitleTracks.map(t => ({name:t.name,lang:t.lang})));
-        if (hls.subtitleTracks.length && subtitle.startsWith('hls-')) hls.subtitleTrack = Number(subtitle.slice(4));
-      });
+      const syncHlsSubtitles = () => {
+        const available = hls.subtitleTracks.map(t => ({name:t.name,lang:t.lang}));
+        setHlsSubtitleTracks(available);
+        // HLS.js discovers subtitle renditions after parsing the master/media playlist.
+        // Turn on the first supplied subtitle by default; users can still switch tracks
+        // or turn subtitles off from MaseNet's subtitle menu.
+        if (available.length && !hlsAutoSubtitleRef.current) {
+          hlsAutoSubtitleRef.current = true;
+          hls.subtitleDisplay = true;
+          hls.subtitleTrack = 0;
+          setSubtitle('hls-0');
+          setSubtitleNotice(available[0].name || available[0].lang || 'Subtitles enabled');
+        } else if (available.length && subtitle.startsWith('hls-')) {
+          hls.subtitleDisplay = true;
+          hls.subtitleTrack = Number(subtitle.slice(4));
+        }
+      };
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { setError(''); setBuffering(false); syncHlsSubtitles(); });
+      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, syncHlsSubtitles);
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal) return;
         setBuffering(false);
@@ -191,7 +207,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
       <input className="fspSeek" aria-label="Seek video" type="range" min={0} max={duration || 0} step="0.1" value={Math.min(time, duration || 0)} onChange={e => { const n = Number(e.target.value); if (videoRef.current) videoRef.current.currentTime = n; setTime(n); }} />
       <div className="fspRow fspOptions">
         {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
-        <div className="fspSubtitleControl"><button type="button" className="fspSubtitleButton" aria-expanded={subtitleMenuOpen} onClick={() => { setSubtitleMenuOpen(v => !v); setSubtitleNotice(''); }}>▤ Subtitles{subtitle !== 'off' ? ' · On' : ''}</button>{subtitleMenuOpen && <div className="fspSubtitleMenu"><strong>Subtitle track</strong><button type="button" className={subtitle==='off'?'selected':''} onClick={() => { setSubtitle('off'); const v=videoRef.current; if(v)Array.from(v.textTracks).forEach(t=>t.mode='disabled'); if(hlsRef.current&&isHlsSource)hlsRef.current.subtitleTrack=-1; setSubtitleNotice('Subtitles turned off.'); }}>Off</button>{tracks.map((t,i)=><button type="button" className={subtitle==='ext-'+i?'selected':''} key={(t.url||t.path||'')+i} onClick={()=>{const value='ext-'+i;setSubtitle(value);const v=videoRef.current;if(v)Array.from(v.textTracks).forEach((track,j)=>track.mode=j===i?'showing':'disabled');setSubtitleNotice(t.label||t.lang||'Subtitle enabled');}}>{t.label||t.lang||'Subtitle '+(i+1)}</button>)}{(isHlsSource?hlsSubtitleTracks:[]).map((t,i)=><button type="button" className={subtitle==='hls-'+i?'selected':''} key={'hls-'+i} onClick={()=>{const value='hls-'+i;setSubtitle(value);if(hlsRef.current)hlsRef.current.subtitleTrack=i;setSubtitleNotice(t.name||t.lang||'HLS subtitle enabled');}}>{t.name||t.lang||'HLS subtitle '+(i+1)}</button>)}{nativeSubtitleTracks.filter(t=>!tracks.some(ext=>(ext.label||ext.lang||'Subtitle track')===t.label)).map((t,i)=><button type="button" className={subtitle==='native-'+i?'selected':''} key={'native-'+i} onClick={()=>{const value='native-'+i;setSubtitle(value);const v=videoRef.current;if(v)Array.from(v.textTracks).forEach(track=>track.mode=(track.label||track.language||'Subtitle track')===t.label?'showing':'disabled');setSubtitleNotice(t.label);}}>{t.label}</button>)}{tracks.length===0&&nativeSubtitleTracks.filter(t=>!tracks.some(ext=>(ext.label||ext.lang||'Subtitle track')===t.label)).length===0&&(!isHlsSource||hlsSubtitleTracks.length===0)&&<p>No browser-readable subtitle track was detected. Embedded MKV subtitles and SRT/ASS files are not directly supported by all browsers. Add a WebVTT (.vtt) subtitle URL or use an HLS stream with subtitle tracks. VLC-only embedded tracks must be extracted or converted first.</p>}{subtitleNotice&&<small>{subtitleNotice}</small>}</div>}</div>
+        <div className="fspSubtitleControl"><button type="button" className="fspSubtitleButton" aria-expanded={subtitleMenuOpen} onClick={() => { setSubtitleMenuOpen(v => !v); setSubtitleNotice(''); }}>▤ Subtitles{subtitle !== 'off' ? ' · On' : ''}</button>{subtitleMenuOpen && <div className="fspSubtitleMenu"><strong>Subtitle track</strong><button type="button" className={subtitle==='off'?'selected':''} onClick={() => { setSubtitle('off'); const v=videoRef.current; if(v)Array.from(v.textTracks).forEach(t=>t.mode='disabled'); if(hlsRef.current&&isHlsSource){hlsRef.current.subtitleDisplay=false;hlsRef.current.subtitleTrack=-1;} setSubtitleNotice('Subtitles turned off.'); }}>Off</button>{tracks.map((t,i)=><button type="button" className={subtitle==='ext-'+i?'selected':''} key={(t.url||t.path||'')+i} onClick={()=>{const value='ext-'+i;setSubtitle(value);const v=videoRef.current;if(v)Array.from(v.textTracks).forEach((track,j)=>track.mode=j===i?'showing':'disabled');setSubtitleNotice(t.label||t.lang||'Subtitle enabled');}}>{t.label||t.lang||'Subtitle '+(i+1)}</button>)}{(isHlsSource?hlsSubtitleTracks:[]).map((t,i)=><button type="button" className={subtitle==='hls-'+i?'selected':''} key={'hls-'+i} onClick={()=>{const value='hls-'+i;setSubtitle(value);if(hlsRef.current){hlsRef.current.subtitleDisplay=true;hlsRef.current.subtitleTrack=i;}setSubtitleNotice(t.name||t.lang||'HLS subtitle enabled');}}>{t.name||t.lang||'HLS subtitle '+(i+1)}</button>)}{nativeSubtitleTracks.filter(t=>!tracks.some(ext=>(ext.label||ext.lang||'Subtitle track')===t.label)).map((t,i)=><button type="button" className={subtitle==='native-'+i?'selected':''} key={'native-'+i} onClick={()=>{const value='native-'+i;setSubtitle(value);const v=videoRef.current;if(v)Array.from(v.textTracks).forEach(track=>track.mode=(track.label||track.language||'Subtitle track')===t.label?'showing':'disabled');setSubtitleNotice(t.label);}}>{t.label}</button>)}{tracks.length===0&&nativeSubtitleTracks.filter(t=>!tracks.some(ext=>(ext.label||ext.lang||'Subtitle track')===t.label)).length===0&&(!isHlsSource||hlsSubtitleTracks.length===0)&&<p>No browser-readable subtitle track was detected. Embedded MKV subtitles and SRT/ASS files are not directly supported by all browsers. Add a WebVTT (.vtt) subtitle URL or use an HLS stream with subtitle tracks. VLC-only embedded tracks must be extracted or converted first.</p>}{subtitleNotice&&<small>{subtitleNotice}</small>}</div>}</div>
         <label>Speed <select value={speed} onChange={e => { const n = Number(e.target.value); setSpeed(n); if (videoRef.current) videoRef.current.playbackRate = n; }}><option value={0.5}>0.5×</option><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option><option value={1.5}>1.5×</option><option value={2}>2×</option></select></label>
         <label>Volume <input type="range" min={0} max={1} step={0.05} value={volume} onChange={e => setVolume(Number(e.target.value))}/></label>
       </div>
