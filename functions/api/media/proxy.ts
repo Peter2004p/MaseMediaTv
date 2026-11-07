@@ -56,18 +56,19 @@ function proxyHlsResource(raw:string, base:string, origin:string, episodeId:stri
 }
 export const onRequestGet = async ({ request, env }: { request:Request; env:Env }) => {
  const reqUrl=new URL(request.url), episodeId=reqUrl.searchParams.get("episodeId")||"", requested=reqUrl.searchParams.get("resource");
- if(!episodeId || episodeId.length>200) return json({error:"Missing episodeId"},400);
+ if(episodeId.length>200) return json({error:"Invalid episodeId"},400);
+ const sourceHint=reqUrl.searchParams.get("source")||"";
+ if(!episodeId && !sourceHint) return json({error:"Missing episodeId and source lookup hint"},400);
  const rows=await env.DB.prepare("SELECT metadata_json FROM titles").all<{metadata_json:string}>();
  let episode:EpisodeLike|null=null;
- const sourceHint=reqUrl.searchParams.get("source")||"";
  for(const row of rows.results||[]) {
   try {
    const title=JSON.parse(row.metadata_json);
    const episodes=Array.isArray(title.episodes)?title.episodes as EpisodeLike[]:[];
-   // Public titles may synthesize IDs for legacy/grouped uploads. If the ID misses,
-   // resolve only against an exact source URL already recorded in the library.
-   const found=episodes.find((e:EpisodeLike)=>String(e.id)===episodeId);
-   const bySource=!found && sourceHint
+   // Some legacy public episodes have no stable ID. Resolve them only by an exact
+   // stream URL already stored in the library; never accept an arbitrary source URL.
+   const found=episodeId ? episodes.find((e:EpisodeLike)=>String(e.id)===episodeId) : undefined;
+   const bySource=sourceHint
     ? episodes.find((e:EpisodeLike)=>[e.streamUrl,...(e.qualities||[]).map(q=>q.streamUrl)].some((url)=>typeof url==="string" && url===sourceHint))
     : undefined;
    if(found||bySource){episode=found||bySource||null;break;}
