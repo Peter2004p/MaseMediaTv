@@ -464,7 +464,7 @@ function Home(input:{titles:Title[];all:Title[];featured?:Title;heroSettings:Her
     <button className="active" onClick={()=>p.go('#/home')}><House/><span>Home</span></button>
     <button onClick={()=>{setLibraryFilter('movies');document.getElementById('iq-library')?.scrollIntoView({behavior:'smooth'})}}><Film/><span>Movies</span></button>
     <button onClick={()=>{setLibraryFilter('dramas');document.getElementById('iq-library')?.scrollIntoView({behavior:'smooth'})}}><Youtube/><span>Series</span></button>
-    <button onClick={()=>p.go('#/reels')}><span className="primaryDockR">R</span><span>Reel</span></button>
+    <button onClick={()=>p.go('#/youtube')}><Youtube/><span>YouTube</span></button>
     <button onClick={()=>p.go('#/my-list')}><Download/><span>Downloads</span></button>
     <button onClick={()=>p.go('#/notifications')}><LayoutDashboard/><span>More</span></button>
   </nav>
