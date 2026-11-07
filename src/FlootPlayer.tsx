@@ -73,12 +73,46 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
     setError(''); setHlsSubtitleTracks([]); setNativeSubtitleTracks([]); setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = false; hlsProbeRef.current = false;
     hlsRef.current?.destroy(); hlsRef.current = null;
     if (!src || embed) return;
-    if (isHlsSource && !video.canPlayType('application/vnd.apple.mpegurl')) {
-      if (!Hls.isSupported()) { setError('This browser cannot play HLS streams. Try another quality or a direct MP4 URL.'); return; }
-      const hls = new Hls({ enableWorker: true, backBufferLength: 30 }); hlsRef.current = hls;
-      hls.loadSource(src); hls.attachMedia(video);
-      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => { setHlsSubtitleTracks(hls.subtitleTracks.map(t => ({name:t.name,lang:t.lang}))); if (hls.subtitleTracks.length && subtitle.startsWith('hls-')) hls.subtitleTrack = Number(subtitle.slice(4)); });
-      hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { setBuffering(false); setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Stream network error. The source may be offline or blocking playback. Tap Retry to reconnect.' : 'This browser cannot decode this stream. Try another quality or a browser-compatible MP4/HLS source.'); hls.destroy(); hlsRef.current = null; } });
+    if (isHlsSource && Hls.isSupported()) {
+      // Prefer Hls.js on Android/Chrome and Telegram WebViews. canPlayType() can
+      // return a misleading value on mobile even when native HLS playback fails.
+      // Hls.js also gives us consistent playlist/segment loading through our proxy.
+      const hls = new Hls({
+        enableWorker: true,
+        backBufferLength: 30,
+        manifestLoadingTimeOut: 20000,
+        levelLoadingTimeOut: 20000,
+        fragLoadingTimeOut: 30000,
+        manifestLoadingMaxRetry: 2,
+        levelLoadingMaxRetry: 3,
+        fragLoadingMaxRetry: 3
+      });
+      hlsRef.current = hls;
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { setError(''); setBuffering(false); });
+      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => {
+        setHlsSubtitleTracks(hls.subtitleTracks.map(t => ({name:t.name,lang:t.lang})));
+        if (hls.subtitleTracks.length && subtitle.startsWith('hls-')) hls.subtitleTrack = Number(subtitle.slice(4));
+      });
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (!data.fatal) return;
+        setBuffering(false);
+        const status = data.response?.code ? ' (HTTP ' + data.response.code + ')' : '';
+        const detail = data.details ? ' [' + data.details + ']' : '';
+        setError(data.type === Hls.ErrorTypes.NETWORK_ERROR
+          ? 'HLS network error' + status + detail + '. The playlist or a video segment could not be loaded. Check whether the signed link is still valid, then retry.'
+          : 'HLS playback or decoding error' + status + detail + '. The stream may use an unsupported codec or malformed playlist.');
+        hls.destroy();
+        if (hlsRef.current === hls) hlsRef.current = null;
+      });
+    } else if (isHlsSource && video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS is the fallback for Safari/iOS when MediaSource/Hls.js is unavailable.
+      video.src = src;
+      video.load();
+    } else if (isHlsSource) {
+      setError('This browser does not support HLS playback. Try a browser-compatible MP4 source.');
+      return;
     } else { video.src = src; video.load(); }
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [src, rawSrc, embed, isHlsSource, isMkvSource, telegramWebView, selected?.mimeType, episode.mimeType, retry]);
