@@ -42,9 +42,10 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
       const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Record<string, unknown>[] : [];
       let changed = false;
       const nextEpisodes: Record<string, unknown>[] = [];
-      for (const ep of episodes) {
+      for (let episodeIndex = 0; episodeIndex < episodes.length; episodeIndex++) {
+        const ep = episodes[episodeIndex];
         const sameEpisode = (Number(ep.season) || 1) === targetSeason && (Number(ep.episode) || 1) === targetEpisode;
-        const isSelected = String(ep.id || "") === episodeId;
+        const isSelected = String(ep.id || row.id + "-episode-" + (episodeIndex + 1)) === episodeId;
         if (isSelected && row.id === targetRowId) {
           savedEpisode = { ...ep, ...edited, id: String(ep.id || episodeId) };
           nextEpisodes.push(savedEpisode);
