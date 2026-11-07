@@ -52,12 +52,15 @@ function proxyHlsResource(raw:string, base:string, origin:string, episodeId:stri
  // Every nested HLS request must carry the original library source as a lookup hint.
  // Legacy episodes can have synthesized IDs that are not persisted in D1; without this
  // hint, the playlist loads but its child segments are rejected as "Episode not found".
- return origin+"/api/media/proxy?episodeId="+encodeURIComponent(episodeId)+"&source="+encodeURIComponent(sourceHint)+"&resource="+encodeURIComponent(absolute);
+ const nestedEpisodeId=episodeId.length<=200?episodeId:"";
+ return origin+"/api/media/proxy?episodeId="+encodeURIComponent(nestedEpisodeId)+"&source="+encodeURIComponent(sourceHint)+"&resource="+encodeURIComponent(absolute);
 }
 export const onRequestGet = async ({ request, env }: { request:Request; env:Env }) => {
  const reqUrl=new URL(request.url), episodeId=reqUrl.searchParams.get("episodeId")||"", requested=reqUrl.searchParams.get("resource");
- if(episodeId.length>200) return json({error:"Invalid episodeId"},400);
  const sourceHint=reqUrl.searchParams.get("source")||"";
+ // Legacy upload IDs can embed the complete signed stream URL and exceed 200 chars.
+ // When that happens, resolve the episode using the exact stored source URL instead.
+ if(episodeId.length>200 && !sourceHint) return json({error:"Invalid episodeId and missing source lookup hint"},400);
  if(!episodeId && !sourceHint) return json({error:"Missing episodeId and source lookup hint"},400);
  const rows=await env.DB.prepare("SELECT metadata_json FROM titles").all<{metadata_json:string}>();
  let episode:EpisodeLike|null=null;
@@ -67,7 +70,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    const episodes=Array.isArray(title.episodes)?title.episodes as EpisodeLike[]:[];
    // Some legacy public episodes have no stable ID. Resolve them only by an exact
    // stream URL already stored in the library; never accept an arbitrary source URL.
-   const found=episodeId ? episodes.find((e:EpisodeLike)=>String(e.id)===episodeId) : undefined;
+   const found=episodeId && episodeId.length<=200 ? episodes.find((e:EpisodeLike)=>String(e.id)===episodeId) : undefined;
    const bySource=sourceHint
     ? episodes.find((e:EpisodeLike)=>[e.streamUrl,...(e.qualities||[]).map(q=>q.streamUrl)].some((url)=>typeof url==="string" && url===sourceHint))
     : undefined;
