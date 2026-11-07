@@ -3777,3 +3777,34 @@ html.masenet-low-performance .welcomeProFeatures article:hover {
 
 .maseShortSoundOn{width:48px;min-height:48px;padding:0;border-radius:16px;background:rgba(0,0,0,.3);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-shadow:0 2px 6px #000;font-size:21px}
 .maseShortSoundOn small{font-size:9px;font-weight:750}
+
+
+/* MaseNet discovery and Admin Library usability pass */
+.libraryKindFilters{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:10px 0 14px}
+.libraryKindFilters button{min-height:36px;padding:7px 12px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(255,255,255,.045);color:#cbd3df;font-size:12px;font-weight:750;white-space:nowrap}
+.libraryKindFilters button.active{background:linear-gradient(135deg,#fff0ce,#e2b76c);border-color:transparent;color:#17130d}
+.libraryKindFilters button:focus-visible{outline:2px solid #b8e5ff;outline-offset:3px}
+.episodePickerTools{flex-wrap:wrap;align-items:center}
+.episodeSearchBox{min-width:min(100%,280px);flex:1}
+.libraryTitleRow{gap:14px}
+.libraryTitleInfo{min-width:0;flex:1}
+.libraryTitleInfo b{overflow-wrap:anywhere}
+.libraryManageButton{flex:0 0 auto;white-space:nowrap}
+.iqHome .iqPrimaryDock button{min-width:0}
+.iqHome .iqPrimaryDock button:focus-visible{outline:2px solid #b8e5ff;outline-offset:3px}
+.iqHome .iqCategories button{touch-action:pan-x}
+.iqHome .iqGrid{content-visibility:auto;contain-intrinsic-size:1px 620px}
+@media(max-width:560px){
+ .libraryTitleRow{display:grid;grid-template-columns:54px minmax(0,1fr);align-items:center;gap:9px;padding:10px}
+ .libraryTitleRow>.smallPoster{width:54px;height:78px}
+ .libraryTitleInfo{grid-column:2;grid-row:1}
+ .libraryManageButton{grid-column:1/-1;width:100%;min-height:42px}
+ .libraryKindFilters{width:100%;order:3}
+ .libraryKindFilters button{flex:1 1 auto}
+ .episodePickerTools{gap:8px}
+ .iqHome .iqPrimaryDock{gap:2px}
+ .iqHome .iqPrimaryDock button{padding-inline:5px;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .libraryKindFilters button,.iqHome .iqPrimaryDock button{transition:none!important;scroll-behavior:auto!important}
+}
