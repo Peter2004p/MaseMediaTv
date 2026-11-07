@@ -546,7 +546,7 @@ function YouTubeChannelPage({go}:{go:(route:string)=>void}){
   const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void load()},5*60*1000);
   return()=>{alive=false;window.clearInterval(timer)};
  },[]);
- const onFeedScroll=(event:React.UIEvent<HTMLDivElement>)=>{
+ const onFeedScroll=(event:{currentTarget:HTMLDivElement})=>{
   const el=event.currentTarget;
   const next=Math.max(0,Math.min(videos.length-1,Math.round(el.scrollTop/Math.max(1,el.clientHeight))));
   if(next!==activeIndex){setActiveIndex(next);setMuted(true);}
