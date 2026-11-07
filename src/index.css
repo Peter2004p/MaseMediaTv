@@ -3749,3 +3749,28 @@ html.masenet-low-performance .welcomeProFeatures article:hover {
 .maseShortsError button{margin-left:10px;border:0;background:none;color:#fff;font-weight:800}
 @media(min-width:760px){.maseShortsPage{background:#08090c}.maseShortsFeed{max-width:480px;left:50%;right:auto;transform:translateX(-50%);border-left:1px solid rgba(255,255,255,.08);border-right:1px solid rgba(255,255,255,.08)}.maseShortsTop{padding:0 max(18px,calc((100vw - 480px)/2));background:linear-gradient(180deg,#08090c,rgba(8,9,12,.25))}.maseShortsTopLabel{position:absolute;left:50%;transform:translateX(-50%)}}
 @media(max-width:420px){.maseShortMeta{left:13px;right:70px}.maseShortMeta h2{font-size:15px}.maseShortActions{right:8px;gap:17px}}
+
+
+/* Shorts full-viewport correction: escape the page-transition containing block */
+.app:has(.maseShortsPage)>.ios27PageTransition,
+.app:has(.maseShortsPage) .ios27PageTransition{
+ position:static!important;transform:none!important;animation:none!important;filter:none!important;will-change:auto!important;contain:none!important;overflow:visible!important;
+}
+.app:has(.maseShortsPage) .maseReferenceHeader,
+.app:has(.maseShortsPage) .searchDock,
+.app:has(.maseShortsPage) .masenetLiquidDock,
+.app:has(.maseShortsPage) .telegram,
+.app:has(.maseShortsPage) .aiDock,
+.app:has(.maseShortsPage) .homeFloat,
+.app:has(.maseShortsPage) .siteLegalFooter{display:none!important}
+.app:has(.maseShortsPage){padding:0!important;min-height:0!important;overflow:hidden!important}
+.maseShortsPage{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100vh!important;min-height:100dvh!important;z-index:9999!important;overflow:hidden!important;background:#000!important}
+.maseShortsFeed{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;overflow-y:auto!important;overscroll-behavior-y:contain;touch-action:pan-y;scroll-snap-type:y mandatory}
+.maseShortItem{width:100%!important;height:100vh!important;height:100dvh!important;min-height:100vh!important;min-height:100dvh!important;flex:none!important}
+.maseShortPlayer{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;overflow:hidden!important}
+.maseShortPlayer iframe{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;min-height:100%!important;max-height:none!important;aspect-ratio:auto!important;border:0!important}
+.maseShortPlayer>img{position:absolute;inset:0;width:100%!important;height:100%!important;object-fit:contain!important}
+.maseShortsTop{padding-top:env(safe-area-inset-top,0px);height:calc(58px + env(safe-area-inset-top,0px))}
+.maseShortMeta{bottom:max(30px,env(safe-area-inset-bottom,0px))}
+.maseShortActions{bottom:max(44px,calc(env(safe-area-inset-bottom,0px) + 18px))}
+@media(min-width:760px){.maseShortsFeed{height:100%!important}.maseShortItem{height:100vh!important;height:100dvh!important}}
