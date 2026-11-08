@@ -3811,3 +3811,41 @@ html.masenet-low-performance .welcomeProFeatures article:hover {
 
 /* MaseNet Smart Assistance */
 .smartAssistNav{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 11px;border:1px solid rgba(210,173,96,.24);border-radius:999px;background:rgba(210,173,96,.07);color:#b9b2a4;font-size:11px;font-weight:750;white-space:nowrap}.smartAssistNav.isOn{border-color:rgba(210,173,96,.5);background:linear-gradient(135deg,rgba(210,173,96,.18),rgba(255,255,255,.035));color:#f0d69c}.smartAssistNav i{width:6px;height:6px;border-radius:50%;background:#777}.smartAssistNav.isOn i{background:#55dfa0;box-shadow:0 0 9px #55dfa088}.smartAssistPanel{padding-top:18px}.smartAssistHero{display:flex;gap:14px;align-items:center;padding:17px;border:1px solid rgba(210,173,96,.2);border-radius:18px;background:radial-gradient(circle at 0 0,rgba(210,173,96,.13),transparent 65%),rgba(255,255,255,.025)}.smartAssistOrb{width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:16px;color:#f0d69c;background:linear-gradient(145deg,rgba(210,173,96,.24),rgba(255,255,255,.06));border:1px solid rgba(210,173,96,.28)}.smartAssistHero small,.smartAssistQuick>label{font-size:9px;letter-spacing:.15em;font-weight:850;color:#c6a96b}.smartAssistHero h3{margin:5px 0;font:500 23px Georgia,serif;color:#f7f1e6}.smartAssistHero p{margin:0;color:#96938c;font-size:12px;line-height:1.55}.smartAssistStatus{display:flex;align-items:center;gap:10px;padding:14px 2px;border-bottom:1px solid rgba(255,255,255,.08)}.smartAssistStatus>span:nth-child(2){display:grid;gap:3px;flex:1}.smartAssistStatus b{font-size:12px;color:#eee}.smartAssistStatus small{font-size:10px;color:#888}.smartAssistStatusDot{width:8px;height:8px;border-radius:50%;background:#777}.smartAssistStatusDot.active{background:#55dfa0;box-shadow:0 0 10px #55dfa088}.smartAssistFeatures{display:grid;gap:8px;margin:14px 0}.smartAssistFeatures article{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid rgba(255,255,255,.075);border-radius:13px;background:rgba(255,255,255,.025)}.smartAssistFeatures article>span{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:11px;background:rgba(210,173,96,.1);color:#d2ad60}.smartAssistFeatures article div{display:grid;gap:3px;flex:1}.smartAssistFeatures article b{font-size:11px;color:#eee}.smartAssistFeatures article small{font-size:10px;line-height:1.45;color:#888}.smartAssistFeatures article em{font-style:normal;font-size:8px;letter-spacing:.1em;color:#c2a66d}.smartAssistQuick{display:grid;gap:7px;margin-top:18px}.smartAssistQuick>label{margin:0 0 3px}.smartAssistQuick>button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.035);color:#ddd;text-align:left}.smartAssistQuick>button:hover{border-color:rgba(210,173,96,.35);background:rgba(210,173,96,.07)}.smartAssistQuick>button span{display:flex;align-items:center;gap:10px}.smartAssistQuick>button span svg{color:#d2ad60}.smartAssistQuick>button b{font-size:11px;font-weight:650}.smartAssistStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}.smartAssistStats span{display:grid;gap:4px;padding:10px;border-radius:12px;background:rgba(255,255,255,.035);text-align:center}.smartAssistStats b{font:500 19px Georgia,serif;color:#f0d69c}.smartAssistStats small{font-size:9px;color:#888}.smartAssistFootnote{margin:14px 2px 0!important;font-size:10px!important;line-height:1.55;color:#777!important}@media(max-width:560px){.smartAssistNav{padding:0 8px;gap:5px;font-size:10px}.smartAssistNav span{display:none}.smartAssistNav svg{width:17px;height:17px}.smartAssistPanel{padding-top:12px}.smartAssistHero{padding:13px}.smartAssistHero h3{font-size:21px}}
+
+
+/* Smart Assist must remain clearly labelled on narrow mobile screens. */
+@media(max-width:560px){
+  .app header.nav.maseReferenceHeader .smartAssistNav{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    flex:0 0 auto!important;
+    min-width:94px!important;
+    width:auto!important;
+    height:29px!important;
+    min-height:29px!important;
+    padding:0 8px!important;
+    gap:5px!important;
+    font-size:10px!important;
+    line-height:1!important;
+    overflow:visible!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+  .app header.nav.maseReferenceHeader .smartAssistNav span{
+    display:inline!important;
+    visibility:visible!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
+  }
+  .app header.nav.maseReferenceHeader .smartAssistNav i{
+    display:block!important;
+    flex:0 0 6px!important;
+  }
+  .app header.nav.maseReferenceHeader .navActions{
+    display:flex!important;
+    flex:0 0 auto!important;
+    align-items:center!important;
+    overflow:visible!important;
+  }
+}
