@@ -6,11 +6,12 @@ const normalizeKind = (value: unknown) => {
 };
 export const onRequestPut: PagesFunction<Env> = async ({ request, env, params }) => {
   const gate = await requireAdmin(request, env); if (gate.response) return gate.response;
-  const id = String(params.id || "");
-  const old = await env.DB.prepare("SELECT id FROM titles WHERE id=?").bind(id).first();
-  if (!old) return json({ error: "Title not found." }, 404);
+  const requestedId = String(params.id || "");
   const body = await request.json() as Record<string, unknown>;
+  const old = await env.DB.prepare("SELECT id FROM titles WHERE id=?").bind(requestedId).first<{id:string}>();
   if (body.action === "updateEpisode") {
+    if (!old) return json({ error: "Series record not found. Refresh the library and try again." }, 404);
+    const id = old.id;
     const base = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(id).first<{id:string;name:string;kind:string}>();
     if (!base) return json({ error: "Series record not found." }, 404);
     const candidates = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(base.kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
@@ -69,11 +70,22 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
     return json({ ok: true, episode: savedEpisode });
   }
   if (typeof body.name !== "string" || !body.name.trim()) return json({ error: "A title name is required." }, 400);
-  const title: Record<string, unknown> = { ...body, id };
-  const kind = normalizeKind(title.type);
+  const kind = normalizeKind(body.type);
+  // The Library can retain a stale card ID after records have been consolidated.
+  // Resolve a missing ID by exact normalized title + type, but never guess when
+  // more than one movie record has the same visible title.
+  let targetId = old?.id || "";
+  if (!targetId) {
+    const rows = await env.DB.prepare("SELECT id,name FROM titles WHERE kind=?").bind(kind).all<{id:string;name:string}>();
+    const matches = (rows.results || []).filter(row => normalizeName(row.name) === normalizeName(body.name));
+    if (matches.length === 1) targetId = matches[0].id;
+    else if (matches.length > 1) return json({ error: "More than one matching title exists. Refresh the Admin Library and select the exact record." }, 409);
+  }
+  if (!targetId) return json({ error: "Title not found. Refresh the Admin Library and reopen this movie." }, 404);
+  const title: Record<string, unknown> = { ...body, id: targetId };
   title.type = kind === "drama" ? "Drama" : "Movie";
   await env.DB.prepare("UPDATE titles SET name=?,kind=?,metadata_json=?,updated_at=datetime('now') WHERE id=?")
-    .bind(title.name, kind, JSON.stringify(title), id).run();
+    .bind(title.name, kind, JSON.stringify(title), targetId).run();
   return json({ title });
 };
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
