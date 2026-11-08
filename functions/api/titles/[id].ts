@@ -10,10 +10,18 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
   const body = await request.json() as Record<string, unknown>;
   const old = await env.DB.prepare("SELECT id FROM titles WHERE id=?").bind(requestedId).first<{id:string}>();
   if (body.action === "updateEpisode") {
-    if (!old) return json({ error: "Series record not found. Refresh the library and try again." }, 404);
-    const id = old.id;
-    const base = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(id).first<{id:string;name:string;kind:string}>();
-    if (!base) return json({ error: "Series record not found." }, 404);
+    let base = old
+      ? await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(old.id).first<{id:string;name:string;kind:string}>()
+      : null;
+    if (!base && typeof body.name === "string" && body.name.trim()) {
+      const kind = normalizeKind(body.type);
+      const rows = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE kind=?").bind(kind).all<{id:string;name:string;kind:string}>();
+      const matches = (rows.results || []).filter(row => normalizeName(row.name) === normalizeName(body.name));
+      if (matches.length === 1) base = matches[0];
+      else if (matches.length > 1) return json({ error: "More than one matching series exists. Refresh the Library and reopen the movie." }, 409);
+    }
+    if (!base) return json({ error: "Movie or series record not found. Refresh the Admin Library and reopen it." }, 404);
+    const id = base.id;
     const candidates = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(base.kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
     const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
     const episodeId = String(body.episodeId || "");
@@ -93,8 +101,17 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
   const id = String(params.id || "");
   const url = new URL(request.url);
   if (url.searchParams.get("action") === "deleteEpisode") {
-    const base = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(id).first<{id:string;name:string;kind:string}>();
-    if (!base) return json({ error: "Series record not found." }, 404);
+    let base = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(id).first<{id:string;name:string;kind:string}>();
+    const requestedName = url.searchParams.get("name") || "";
+    const requestedType = url.searchParams.get("type") || "";
+    if (!base && requestedName.trim()) {
+      const kind = normalizeKind(requestedType);
+      const rows = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE kind=?").bind(kind).all<{id:string;name:string;kind:string}>();
+      const matches = (rows.results || []).filter(row => normalizeName(row.name) === normalizeName(requestedName));
+      if (matches.length === 1) base = matches[0];
+      else if (matches.length > 1) return json({ error: "More than one matching series exists. Refresh the Library and reopen the movie." }, 409);
+    }
+    if (!base) return json({ error: "Movie or series record not found. Refresh the Admin Library and reopen it." }, 404);
     const candidates = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(base.kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
     const norm = (v: unknown) => String(v || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
     const episodeId = url.searchParams.get("episodeId") || "";
