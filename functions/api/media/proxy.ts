@@ -103,6 +103,11 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   } catch {}
  }
  const headers=new Headers();
+ // Send ordinary browser media headers and identify MaseNet honestly; do not spoof the provider origin.
+ headers.set("accept","*/*");
+ headers.set("user-agent","Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
+ headers.set("origin",reqUrl.origin);
+ headers.set("referer",reqUrl.origin+"/");
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
  try { upstream=await fetchPublicHttps(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
