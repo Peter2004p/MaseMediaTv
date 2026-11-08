@@ -50,9 +50,9 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
           savedEpisode = { ...ep, ...edited, id: String(ep.id || episodeId) };
           nextEpisodes.push(savedEpisode);
           changed = true;
-        } else if (sameEpisode) {
-          changed = true;
         } else {
+          // Editing one quality must not remove the other quality variants
+          // for the same season/episode stored in sibling records.
           nextEpisodes.push(ep);
         }
       }
