@@ -3849,3 +3849,81 @@ html.masenet-low-performance .welcomeProFeatures article:hover {
     overflow:visible!important;
   }
 }
+
+
+/* Mobile header repair: keep both Smart Assist and Profile visible. */
+@media(max-width:680px){
+  .app header.nav.maseReferenceHeader{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 34px auto!important;
+    align-items:center!important;
+    gap:6px!important;
+    overflow:visible!important;
+  }
+  .app header.nav.maseReferenceHeader .brand{
+    min-width:0!important;
+    width:auto!important;
+    max-width:none!important;
+    overflow:hidden!important;
+  }
+  .app header.nav.maseReferenceHeader .brandName{
+    display:block!important;
+    max-width:90px!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+  .app header.nav.maseReferenceHeader .maseSearchToggle{
+    display:inline-flex!important;
+    width:34px!important;
+    min-width:34px!important;
+    height:34px!important;
+    justify-content:center!important;
+  }
+  .app header.nav.maseReferenceHeader .navActions{
+    display:flex!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    flex:0 0 auto!important;
+    justify-content:flex-end!important;
+    align-items:center!important;
+    gap:5px!important;
+    overflow:visible!important;
+  }
+  .app header.nav.maseReferenceHeader .navActions .smartAssistNav{
+    display:inline-flex!important;
+    width:auto!important;
+    min-width:78px!important;
+    height:32px!important;
+    min-height:32px!important;
+    flex:0 0 auto!important;
+    padding:0 7px!important;
+    gap:4px!important;
+    font-size:9px!important;
+  }
+  .app header.nav.maseReferenceHeader .navActions .smartAssistNav span{
+    display:inline!important;
+    font-size:9px!important;
+  }
+  .app header.nav.maseReferenceHeader .navActions .maseProfileButton{
+    display:grid!important;
+    place-items:center!important;
+    position:static!important;
+    visibility:visible!important;
+    opacity:1!important;
+    width:34px!important;
+    min-width:34px!important;
+    height:34px!important;
+    flex:0 0 34px!important;
+    padding:0!important;
+  }
+  .app header.nav.maseReferenceHeader .navActions>button:not(.smartAssistNav):not(.maseProfileButton){
+    display:none!important;
+  }
+}
+@media(max-width:370px){
+  .app header.nav.maseReferenceHeader .brandName{max-width:64px!important;font-size:10px!important}
+  .app header.nav.maseReferenceHeader .navActions .smartAssistNav{min-width:72px!important;padding-inline:5px!important}
+  .app header.nav.maseReferenceHeader .navActions .maseProfileButton{width:32px!important;min-width:32px!important;height:32px!important;flex-basis:32px!important}
+}
