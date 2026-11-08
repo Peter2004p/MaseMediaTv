@@ -10,12 +10,29 @@ const tag = (xml: string, name: string) => {
 };
 export const onRequestGet: PagesFunction = async () => {
  try {
-  const upstream = await fetch("https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID, {
-   headers: { "Accept": "application/atom+xml, application/xml, text/xml", "User-Agent": "MaseMediaTv/1.0" },
-   cf: { cacheTtl: 300, cacheEverything: true }
-  });
-  if (!upstream.ok) throw new Error("YouTube feed returned HTTP " + upstream.status);
-  const xml = await upstream.text();
+  // YouTube's channel RSS endpoint can intermittently return 404 at the edge.
+  // The channel's uploads playlist is the same public feed with UC -> UU.
+  // Try both endpoints before returning an error to the app.
+  const uploadsPlaylistId = "UU" + CHANNEL_ID.slice(2);
+  const feedUrls = [
+   "https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID,
+   "https://www.youtube.com/feeds/videos.xml?playlist_id=" + uploadsPlaylistId
+  ];
+  let xml = "";
+  let lastStatus = 0;
+  for (const feedUrl of feedUrls) {
+   try {
+    const upstream = await fetch(feedUrl, {
+     headers: { "Accept": "application/atom+xml, application/xml, text/xml", "User-Agent": "Mozilla/5.0 (compatible; MaseMediaTv/1.0; +https://masetv-cloudflare-migration.pages.dev)" },
+     cf: { cacheTtl: 120, cacheEverything: true }
+    });
+    if (!upstream.ok) { lastStatus = upstream.status; continue; }
+    const candidate = await upstream.text();
+    if (candidate.includes("<feed") && candidate.includes("<entry")) { xml = candidate; break; }
+    lastStatus = 502;
+   } catch { lastStatus = 502; }
+  }
+  if (!xml) throw new Error("YouTube channel and uploads feeds are unavailable (last HTTP " + (lastStatus || "network error") + ").");
   const entries = xml.match(/<entry(?:\s[^>]*)?>[\s\S]*?<\/entry>/gi) || [];
   const videos = entries.map((entry) => {
    const id = tag(entry, "videoId") || (entry.match(/<id>yt:video:([^<]+)<\/id>/i)?.[1] || "");
