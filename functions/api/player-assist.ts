@@ -51,20 +51,22 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: "You are a careful video playback support assistant. Never invent diagnostics or claim to control the player." }] },
+        systemInstruction: { parts: [{ text: "You are a careful video playback support assistant. Never invent diagnostics or claim to control the player." }] },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.25, maxOutputTokens: 500 }
       })
     });
     const data = await response.json().catch(() => ({})) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-      error?: { message?: string };
+      error?: { message?: string; status?: string };
     };
     if (!response.ok) {
       console.error("Gemini Player API error", response.status, data.error?.message || "No provider message");
       if (response.status === 429) return json({ error: "Gemini is busy right now. Please wait a moment and try again." }, 429);
-      if (response.status === 401 || response.status === 403) return json({ error: "Gemini rejected the API key. Check the GEMINI_API_KEY secret in Cloudflare." }, 502);
-      return json({ error: "Gemini could not analyse this player request. Please try again shortly." }, 502);
+      if (response.status === 401 || response.status === 403 || /api.?key|permission denied/i.test(data.error?.message || "")) return json({ error: "Gemini rejected the API key or its permissions. Check the GEMINI_API_KEY secret in Cloudflare." }, 502);
+      if (response.status === 404) return json({ error: "The configured Gemini model was not found. Check GEMINI_MODEL or remove it to use the default model." }, 502);
+      if (response.status === 400) return json({ error: "Gemini rejected the request format. The player assistant request has been corrected; please retry after deployment." }, 502);
+      return json({ error: "Gemini request failed (" + response.status + "). " + (data.error?.message || "Please try again shortly.").slice(0, 220) }, 502);
     }
     const text = (data.candidates || []).flatMap(candidate => candidate.content?.parts || []).map(part => part.text || "").join("\n").trim();
     if (!text) return json({ error: "Gemini returned an empty diagnosis. Please try again." }, 502);
