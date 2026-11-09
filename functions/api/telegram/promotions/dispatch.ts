@@ -71,9 +71,13 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   const miniAppLaunchUrl = "https://t.me/MaseTv_Bot?startapp=home";
-  // Telegram Mini App deep link works in channel notifications too; never expose the Pages origin.\n  const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: miniAppLaunchUrl }]] };\n  const targets = new Set<string>();
-  targets.add("@MaseMediaTv");
-  const subs = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND chat_type='private'").all<{ chat_id: string }>();
+  // Telegram Mini App deep link works in channel notifications too; never expose the Pages origin.
+  const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: miniAppLaunchUrl }]] };
+
+  // Ensure subscriber storage exists even if the cron runs before the webhook.
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_subscribers (chat_id TEXT PRIMARY KEY, chat_type TEXT NOT NULL, title TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT ('now'), updated_at TEXT NOT NULL DEFAULT ('now'))").run();
+  const targets = new Set<string>(["@MaseMediaTv"]);
+  const subs = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND (chat_type='private' OR chat_type='channel' OR chat_type='supergroup')").all<{ chat_id: string }>();
   for (const row of subs.results || []) if (row.chat_id) targets.add(String(row.chat_id));
 
   const results: Array<{ target: string; ok: boolean; error?: string }> = [];
