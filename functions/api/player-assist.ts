@@ -45,17 +45,36 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     "Player diagnostics (JSON): " + JSON.stringify(diagnostics),
     "User question: " + question
   ].join("\n\n");
-  const configuredModel = String(env.GEMINI_MODEL || "").trim().replace(/^models\//, "");
-  // Prefer the current stable Flash model. If a stale/unsupported model is configured,
-  // automatically fall back rather than leaving the player assistant unusable.
-  const models = [...new Set([configuredModel, "gemini-3.8-flash", "gemini-3.5-flash-lite"].filter(Boolean))];
   try {
+    // Discover models actually exposed to this API key instead of guessing a model ID.
+    const headers = { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY };
+    const listResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models", { headers });
+    const listed = await listResponse.json().catch(() => ({})) as {
+      models?: Array<{ name?: string; supportedGenerationMethods?: string[] }>;
+      error?: { message?: string };
+    };
+    if (!listResponse.ok) {
+      console.error("Gemini model discovery failed", listResponse.status, listed.error?.message || "");
+      if (listResponse.status === 401 || listResponse.status === 403) return json({ error: "Gemini rejected the API key or it lacks Gemini Developer API access. Check the Cloudflare GEMINI_API_KEY secret." , apiVersion: "player-assist-v3" }, 502);
+      if (listResponse.status === 429) return json({ error: "Gemini is busy right now. Please wait a moment and try again.", apiVersion: "player-assist-v3" }, 429);
+      return json({ error: "MaseNet could not list the Gemini models available to this API key (" + listResponse.status + "). " + (listed.error?.message || "").slice(0, 180), apiVersion: "player-assist-v3" }, 502);
+    }
+    const supported = (listed.models || [])
+      .filter(m => m.name && (m.supportedGenerationMethods || []).includes("generateContent"))
+      .map(m => m.name!.replace(/^models\//, ""));
+    const preferred = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash"];
+    const configured = String(env.GEMINI_MODEL || "").trim().replace(/^models\//, "");
+    const models = [...new Set([configured, ...preferred, ...supported].filter(name => name && supported.includes(name)))];
+    if (!models.length) {
+      console.error("Gemini key exposes no generateContent models", supported);
+      return json({ error: "This Gemini API key has no models available for text generation. Check the key's project and Gemini API access.", apiVersion: "player-assist-v3" }, 502);
+    }
     let lastStatus = 0;
     let lastMessage = "";
     for (const model of models) {
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+        headers,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: "You are a careful video playback support assistant. Never invent diagnostics or claim to control the player." }] },
           contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -67,26 +86,23 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         error?: { message?: string; status?: string };
       };
       if (response.status === 404) {
-        lastStatus = 404;
-        lastMessage = data.error?.message || "Model not found";
-        console.warn("Gemini model unavailable; trying fallback", model);
+        lastStatus = 404; lastMessage = data.error?.message || "Model not found";
         continue;
       }
       if (!response.ok) {
         console.error("Gemini Player API error", response.status, data.error?.message || "No provider message");
-        if (response.status === 429) return json({ error: "Gemini is busy right now. Please wait a moment and try again." }, 429);
-        if (response.status === 401 || response.status === 403 || /api.?key|permission denied/i.test(data.error?.message || "")) return json({ error: "Gemini rejected the API key or its permissions. Check the GEMINI_API_KEY secret in Cloudflare." }, 502);
-        if (response.status === 400) return json({ error: "Gemini rejected the request format. " + (data.error?.message || "").slice(0, 180) }, 502);
-        return json({ error: "Gemini request failed (" + response.status + "). " + (data.error?.message || "Please try again shortly.").slice(0, 220) }, 502);
+        if (response.status === 429) return json({ error: "Gemini is busy right now. Please wait a moment and try again.", apiVersion: "player-assist-v3" }, 429);
+        if (response.status === 401 || response.status === 403 || /api.?key|permission denied/i.test(data.error?.message || "")) return json({ error: "Gemini rejected the API key or its permissions. Check the GEMINI_API_KEY secret in Cloudflare.", apiVersion: "player-assist-v3" }, 502);
+        return json({ error: "Gemini request failed (" + response.status + "). " + (data.error?.message || "Please try again shortly.").slice(0, 220), apiVersion: "player-assist-v3" }, 502);
       }
       const answer = (data.candidates || []).flatMap(candidate => candidate.content?.parts || []).map(part => part.text || "").join("\n").trim();
-      if (!answer) return json({ error: "Gemini returned an empty diagnosis. Please try again." }, 502);
-      return json({ text: answer.slice(0, 4000), model });
+      if (!answer) return json({ error: "Gemini returned an empty diagnosis. Please try again.", apiVersion: "player-assist-v3" }, 502);
+      return json({ text: answer.slice(0, 4000), model, apiVersion: "player-assist-v3" });
     }
-    console.error("No available Gemini model", lastStatus, lastMessage);
-    return json({ error: "None of the available Gemini models could be reached with this API key. Check that the key has Gemini Developer API access." }, 502);
+    console.error("All listed Gemini models rejected generation", lastStatus, lastMessage, models);
+    return json({ error: "Gemini listed models for this key, but none accepted text generation. Check the Gemini API project restrictions.", apiVersion: "player-assist-v3" }, 502);
   } catch (error) {
     console.error("Gemini Player request failed", error instanceof Error ? error.message : "unknown error");
-    return json({ error: "Could not reach Gemini. Check the connection and try again." }, 502);
+    return json({ error: "Could not reach Gemini. Check the connection and try again.", apiVersion: "player-assist-v3" }, 502);
   }
 };
