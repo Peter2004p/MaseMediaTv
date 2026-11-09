@@ -40,7 +40,7 @@ function GeminiPlayerAssistant({ context }: { context:GeminiPlayerContext }) {
     finally{setBusy(false);}
   };
   useEffect(()=>{
-    if(!context.error)return;
+    if(!context.error){lastAutoDiagnosis.current='';return;}
     const signature=context.sourceType+'|'+context.error;
     if(lastAutoDiagnosis.current===signature)return;
     lastAutoDiagnosis.current=signature;
