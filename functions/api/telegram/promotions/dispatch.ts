@@ -56,7 +56,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     };
   }).filter(item => item.poster.startsWith("https://") && item.description.length > 0);
   if (!candidates.length) return json({ ok: false, skipped: "no_titles_with_poster_and_description" }, 422);
-  const selectedItem = candidates.find(item => !recentlySent.has(item.row.name.toLocaleLowerCase())) || candidates[0];
+  const selectedItem = candidates.find(item => !recentlySent.has(item.row.name.toLocaleLowerCase()));
+  if (!selectedItem) return json({ ok: true, skipped: "all_titles_promoted_within_7_days" });
   const selected = selectedItem.row;
   const description = selectedItem.description;
   const poster = selectedItem.poster;
