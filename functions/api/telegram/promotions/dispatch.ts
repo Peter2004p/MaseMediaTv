@@ -75,22 +75,29 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: miniAppLaunchUrl }]] };
 
   // Ensure subscriber storage exists even if the cron runs before the webhook.
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_subscribers (chat_id TEXT PRIMARY KEY, chat_type TEXT NOT NULL, title TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT ('now'), updated_at TEXT NOT NULL DEFAULT ('now'))").run();
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_subscribers (chat_id TEXT PRIMARY KEY, chat_type TEXT NOT NULL, title TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
   const targets = new Set<string>(["@MaseMediaTv"]);
   const subs = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND (chat_type='private' OR chat_type='channel' OR chat_type='supergroup')").all<{ chat_id: string }>();
   for (const row of subs.results || []) if (row.chat_id) targets.add(String(row.chat_id));
 
   const results: Array<{ target: string; ok: boolean; error?: string }> = [];
   for (const target of targets) {
-    const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendPhoto", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ chat_id: target, photo: poster, caption: caption.slice(0, 1000), reply_markup: replyMarkup })
-    });
-    if (response.ok) results.push({ target, ok: true });
-    else {
-      const errorText = await response.text();
+    try {
+      const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendPhoto", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: target, photo: poster, caption: caption.slice(0, 1000), reply_markup: replyMarkup })
+      });
+      const telegramResult = await response.json().catch(() => null) as { ok?: boolean; description?: string } | null;
+      if (response.ok && telegramResult?.ok === true) results.push({ target, ok: true });
+      else {
+        const errorText = String(telegramResult?.description || ("Telegram HTTP " + response.status));
+        results.push({ target, ok: false, error: errorText.slice(0, 220) });
+        console.error("MaseNet promo delivery failed:", target, response.status, errorText.slice(0, 300));
+      }
+    } catch (error) {
+      const errorText = error instanceof Error ? error.message : String(error);
       results.push({ target, ok: false, error: errorText.slice(0, 220) });
-      console.error("MaseNet promo delivery failed:", target, response.status, errorText.slice(0, 300));
+      console.error("MaseNet promo network failure:", target, errorText.slice(0, 300));
     }
   }
 
