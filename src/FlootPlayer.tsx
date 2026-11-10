@@ -23,7 +23,7 @@ const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value /
 export default function FlootPlayer({ episode, onProgress, autoPlay = false, muted = false, reelMode = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null); const mkvPlayerRef = useRef<any>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
-  const [error, setError] = useState(''); const [smartAssistStatus, setSmartAssistStatus] = useState<'monitoring'|'assisting'|'recovered'|'unavailable'>('monitoring'); const smartAssistStatusRef = useRef<'monitoring'|'assisting'|'recovered'|'unavailable'>('monitoring'); const setAssistStatus = (status: 'monitoring'|'assisting'|'recovered'|'unavailable') => { smartAssistStatusRef.current = status; setSmartAssistStatus(status); }; const hlsRecoveryAttemptsRef = useRef({ network: 0, media: 0 }); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
+  const [error, setError] = useState(''); const hlsRecoveryAttemptsRef = useRef({ network: 0, media: 0 }); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
   const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
   const hlsAutoSubtitleRef = useRef(false);
@@ -71,8 +71,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
-    let smartAssistWatchdog: ReturnType<typeof setInterval> | undefined;
-    setError(''); setAssistStatus('monitoring'); hlsRecoveryAttemptsRef.current = { network: 0, media: 0 }; setHlsSubtitleTracks([]); setNativeSubtitleTracks([]); hlsAutoSubtitleRef.current = false; setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = false; hlsProbeRef.current = false;
+    setError(''); hlsRecoveryAttemptsRef.current = { network: 0, media: 0 }; setHlsSubtitleTracks([]); setNativeSubtitleTracks([]); hlsAutoSubtitleRef.current = false; setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = false; hlsProbeRef.current = false;
     hlsRef.current?.destroy(); hlsRef.current = null;
     if (!src || embed) return;
     if (isHlsSource && Hls.isSupported()) {
@@ -93,39 +92,6 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
       hlsRef.current = hls;
       hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
       hls.attachMedia(video);
-      // Detect stalls that do not raise a fatal HLS.js error (common with signed
-      // playlists and mobile WebViews), then attempt bounded automatic recovery.
-      let lastProgressAt = Date.now();
-      let lastObservedTime = video.currentTime;
-      smartAssistWatchdog = setInterval(() => {
-        if (video.paused || video.seeking) {
-          lastProgressAt = Date.now();
-          lastObservedTime = video.currentTime;
-          return;
-        }
-        if (video.currentTime > lastObservedTime + 0.1) {
-          lastObservedTime = video.currentTime;
-          lastProgressAt = Date.now();
-          if (smartAssistStatusRef.current === 'recovered') setAssistStatus('monitoring');
-          return;
-        }
-        if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA || Date.now() - lastProgressAt < 8000) return;
-        lastProgressAt = Date.now();
-        setAssistStatus('assisting');
-        const attempts = hlsRecoveryAttemptsRef.current;
-        if (attempts.network < 2) {
-          attempts.network += 1;
-          setError('Smart Assist detected a playback stall and is reconnecting (' + attempts.network + '/2)…');
-          hls.startLoad();
-        } else if (attempts.media < 1) {
-          attempts.media += 1;
-          setError('Smart Assist detected a playback stall and is recovering the video decoder…');
-          hls.recoverMediaError();
-        } else {
-          setAssistStatus('unavailable');
-          setError('Smart Assist tried automatic recovery, but this stream is still stalled. The source may be offline, expired, or unsupported. Tap Retry or try another source.');
-        }
-      }, 4000);
       const syncHlsSubtitles = () => {
         const available = hls.subtitleTracks.map(t => ({name:t.name,lang:t.lang}));
         setHlsSubtitleTracks(available);
@@ -147,11 +113,11 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
       hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, syncHlsSubtitles);
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal) return;
-        setAssistStatus('assisting');
+        
         const attempts = hlsRecoveryAttemptsRef.current;
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR && attempts.network < 2) {
           attempts.network += 1;
-          setError('Smart Assist is reconnecting to the stream (' + attempts.network + '/2)…');
+          setError('Reconnecting to the stream (' + attempts.network + '/2)…');
           hls.startLoad();
           return;
         }
@@ -170,13 +136,13 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
         hls.destroy();
         if (hlsRef.current === hls) hlsRef.current = null;
         if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          setError('Smart Assist is switching to the browser’s native HLS player…');
+          setError('Switching to the browser’s native HLS player…');
           setAssistStatus('assisting');
           video.src = src;
           video.load();
           return;
         }
-        setAssistStatus('unavailable');
+        
       });
     } else if (isHlsSource && video.canPlayType('application/vnd.apple.mpegurl')) {
       // Native HLS is the fallback for Safari/iOS when MediaSource/Hls.js is unavailable.
@@ -186,15 +152,15 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
       setError('This browser does not support HLS playback. Try a browser-compatible MP4 source.');
       return;
     } else { video.src = src; video.load(); }
-    return () => { if (smartAssistWatchdog) clearInterval(smartAssistWatchdog); hlsRef.current?.destroy(); hlsRef.current = null; };
+    return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [src, rawSrc, embed, isHlsSource, isMkvSource, telegramWebView, selected?.mimeType, episode.mimeType, retry]);
 
   useEffect(() => {
     const v = videoRef.current; if (!v) return;
     const metadata = () => { const d = Number.isFinite(v.duration) ? v.duration : 0; setDuration(d); setNativeSubtitleTracks(Array.from(v.textTracks).map(t=>({label:t.label||t.language||'Subtitle track',lang:t.language||''}))); if (!reelMode && d > 30) { try { const saved = Number(localStorage.getItem('masenet-resume-' + episode.id)); if (Number.isFinite(saved) && saved > 10 && saved < d - 30) { v.currentTime = saved; lastSavedTimeRef.current = Math.floor(saved / 10); } } catch { /* Resume storage may be unavailable. */ } } }; const tracksChanged = () => setNativeSubtitleTracks(Array.from(v.textTracks).map(t=>({label:t.label||t.language||'Subtitle track',lang:t.language||''})));
     const tick = () => { setTime(v.currentTime || 0); if (v.duration > 0 && Number.isFinite(v.duration)) onProgress?.(Math.round(v.currentTime / v.duration * 100)); if (!reelMode && v.currentTime > 0) { const bucket = Math.floor(v.currentTime / 10); if (bucket !== lastSavedTimeRef.current) { lastSavedTimeRef.current = bucket; try { localStorage.setItem('masenet-resume-' + episode.id, String(Math.floor(v.currentTime))); } catch { /* Resume storage may be unavailable. */ } } } }; const ended = () => { if (!reelMode) { try { localStorage.removeItem('masenet-resume-' + episode.id); } catch { /* Storage may be unavailable. */ } } };
-    const play = () => { setPlaying(true); setBuffering(false); setError(''); setAssistStatus('monitoring'); }; const pause = () => setPlaying(false);
-    const wait = () => { setBuffering(true); if (isHlsSource) setAssistStatus('assisting'); }; const ready = () => { setBuffering(false); setError(''); if (smartAssistStatusRef.current === 'assisting') setAssistStatus('recovered'); };
+    const play = () => { setPlaying(true); setBuffering(false); setError('');  }; const pause = () => setPlaying(false);
+    const wait = () => { setBuffering(true);  }; const ready = () => { setBuffering(false); setError('');  };
     const fail = () => { setBuffering(false); if (!v.error) return; if ([2, 3, 4].includes(v.error.code) && !isHlsSource && !proxiedFallbackRef.current && rawSrc && /^https:\/\//i.test(rawSrc)) { proxiedFallbackRef.current = true; setError('Trying the stream through MaseNet’s secure video proxy…'); v.src = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc); v.load(); return; } if (v.error.code === 4 && proxiedFallbackRef.current && !hlsProbeRef.current && Hls.isSupported()) { hlsProbeRef.current = true; setError('Checking whether this endpoint is an HLS stream…'); const hls = new Hls({ enableWorker: true, backBufferLength: 30 }); hlsRef.current?.destroy(); hlsRef.current = hls; hls.loadSource('/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc)); hls.attachMedia(v); hls.on(Hls.Events.MANIFEST_PARSED, () => { setError(''); setBuffering(false); }); hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { hls.destroy(); if (hlsRef.current === hls) hlsRef.current = null; setBuffering(false); setError('This source is not a browser-playable MP4 or HLS stream. If it is MKV or VLC-only, it must be converted to MP4/HLS before MaseNet can play it.'); } }); return; } setError((({2:'Network error loading this video. The source may be offline, expired, or blocking playback.',3:'This browser cannot decode this video or audio codec. The source may use a VLC-supported codec that browsers do not support.',4:'The browser rejected this stream format. MaseNet checked the direct URL and secure proxy, and is checking for an HLS playlist. If it is an MKV/VLC-only source, it needs browser-compatible MP4/HLS conversion.'} as Record<number,string>)[v.error.code] || 'Video playback failed. Check the source URL or retry.')); };
     v.addEventListener('loadedmetadata', metadata); v.addEventListener('ended', ended); v.textTracks.addEventListener('addtrack', tracksChanged); v.textTracks.addEventListener('change', tracksChanged); v.addEventListener('timeupdate', tick); v.addEventListener('play', play); v.addEventListener('pause', pause); v.addEventListener('waiting', wait); v.addEventListener('canplay', ready); v.addEventListener('error', fail);
     return () => { v.removeEventListener('loadedmetadata', metadata); v.removeEventListener('ended', ended); v.textTracks.removeEventListener('addtrack', tracksChanged); v.textTracks.removeEventListener('change', tracksChanged); v.removeEventListener('timeupdate', tick); v.removeEventListener('play', play); v.removeEventListener('pause', pause); v.removeEventListener('waiting', wait); v.removeEventListener('canplay', ready); v.removeEventListener('error', fail); };
@@ -262,7 +228,6 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
       <div className="fspRow"><button onClick={playPause} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Ⅱ' : '▶'}</button><button onClick={() => seek(-10)} aria-label="Back 10 seconds">↶ 10s</button><button onClick={() => seek(10)} aria-label="Forward 10 seconds">10s ↷</button><span className="fspTime">{timeLabel(time)} / {timeLabel(duration)}</span><button onClick={pictureInPicture} aria-label="Picture in Picture" title="Picture in Picture">▣</button><button onClick={fullscreen} aria-label="Fullscreen">⛶</button></div>
       <input className="fspSeek" aria-label="Seek video" type="range" min={0} max={duration || 0} step="0.1" value={Math.min(time, duration || 0)} onChange={e => { const n = Number(e.target.value); if (videoRef.current) videoRef.current.currentTime = n; setTime(n); }} />
       <div className="fspRow fspOptions">
-        <span className="fspSmartAssist" role="status" aria-live="polite"><span className={'fspSmartDot ' + smartAssistStatus}></span>Smart Assist · Auto{smartAssistStatus === 'assisting' ? ' · Fixing' : smartAssistStatus === 'recovered' ? ' · Recovered' : smartAssistStatus === 'unavailable' ? ' · Limited' : ''}</span>
         {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
         <div className="fspSubtitleControl"><button type="button" className="fspSubtitleButton" aria-expanded={subtitleMenuOpen} onClick={() => { setSubtitleMenuOpen(v => !v); setSubtitleNotice(''); }}>▤ Subtitles{subtitle !== 'off' ? ' · On' : ''}</button>{subtitleMenuOpen && <div className="fspSubtitleMenu"><strong>Subtitle track</strong><button type="button" className={subtitle==='off'?'selected':''} onClick={() => { setSubtitle('off'); const v=videoRef.current; if(v)Array.from(v.textTracks).forEach(t=>t.mode='disabled'); if(hlsRef.current&&isHlsSource){hlsRef.current.subtitleDisplay=false;hlsRef.current.subtitleTrack=-1;} setSubtitleNotice('Subtitles turned off.'); }}>Off</button>{tracks.map((t,i)=><button type="button" className={subtitle==='ext-'+i?'selected':''} key={(t.url||t.path||'')+i} onClick={()=>{const value='ext-'+i;setSubtitle(value);const v=videoRef.current;if(v)Array.from(v.textTracks).forEach((track,j)=>track.mode=j===i?'showing':'disabled');setSubtitleNotice(t.label||t.lang||'Subtitle enabled');}}>{t.label||t.lang||'Subtitle '+(i+1)}</button>)}{(isHlsSource?hlsSubtitleTracks:[]).map((t,i)=><button type="button" className={subtitle==='hls-'+i?'selected':''} key={'hls-'+i} onClick={()=>{const value='hls-'+i;setSubtitle(value);if(hlsRef.current){hlsRef.current.subtitleDisplay=true;hlsRef.current.subtitleTrack=i;}setSubtitleNotice(t.name||t.lang||'HLS subtitle enabled');}}>{t.name||t.lang||'HLS subtitle '+(i+1)}</button>)}{nativeSubtitleTracks.filter(t=>!tracks.some(ext=>(ext.label||ext.lang||'Subtitle track')===t.label)).map((t,i)=><button type="button" className={subtitle==='native-'+i?'selected':''} key={'native-'+i} onClick={()=>{const value='native-'+i;setSubtitle(value);const v=videoRef.current;if(v)Array.from(v.textTracks).forEach(track=>track.mode=(track.label||track.language||'Subtitle track')===t.label?'showing':'disabled');setSubtitleNotice(t.label);}}>{t.label}</button>)}{tracks.length===0&&nativeSubtitleTracks.filter(t=>!tracks.some(ext=>(ext.label||ext.lang||'Subtitle track')===t.label)).length===0&&(!isHlsSource||hlsSubtitleTracks.length===0)&&<p>No browser-readable subtitle track was detected. Embedded MKV subtitles and SRT/ASS files are not directly supported by all browsers. Add a WebVTT (.vtt) subtitle URL or use an HLS stream with subtitle tracks. VLC-only embedded tracks must be extracted or converted first.</p>}{subtitleNotice&&<small>{subtitleNotice}</small>}</div>}</div>
         <label>Speed <select value={speed} onChange={e => { const n = Number(e.target.value); setSpeed(n); if (videoRef.current) videoRef.current.playbackRate = n; }}><option value={0.5}>0.5×</option><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option><option value={1.5}>1.5×</option><option value={2}>2×</option></select></label>
