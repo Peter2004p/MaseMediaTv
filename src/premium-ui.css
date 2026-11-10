@@ -268,3 +268,109 @@
   width:100%;
   min-width:0;
 }
+
+
+/* MaseNet Assistant — iOS-inspired glass conversation surface */
+.app .backdrop.aiBackdrop{
+  align-items:stretch!important;
+  justify-content:flex-end!important;
+  padding:0!important;
+  background:rgba(2,5,12,.62)!important;
+  backdrop-filter:blur(14px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(14px) saturate(135%)!important;
+}
+.app .backdrop.aiBackdrop>.aiSide{
+  display:flex!important;
+  flex-direction:column!important;
+  width:min(560px,100vw)!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+  min-height:0!important;
+  margin:0!important;
+  overflow:hidden!important;
+  border:1px solid rgba(220,230,255,.19)!important;
+  border-right:0!important;
+  border-radius:34px 0 0 34px!important;
+  background:linear-gradient(155deg,rgba(27,35,53,.97),rgba(8,13,23,.985) 58%,rgba(11,16,28,.99))!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.18),-18px 0 70px rgba(0,0,0,.42)!important;
+  backdrop-filter:blur(34px) saturate(185%)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(185%)!important;
+}
+.app .aiSide>.sideHead{display:none!important}
+.app .aiSide>.aiPanel{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+.app .aiSide .ai{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+.app .aiSide .aiHeader{
+  flex:0 0 auto!important;
+  min-height:76px!important;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px!important;
+  border-bottom:1px solid rgba(225,235,255,.12)!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.018))!important;
+  backdrop-filter:blur(26px) saturate(180%)!important;
+  -webkit-backdrop-filter:blur(26px) saturate(180%)!important;
+}
+.app .aiSide .aiAvatar{width:43px!important;height:43px!important;border-radius:16px!important;border:1px solid rgba(220,232,255,.26)!important;background:linear-gradient(145deg,rgba(255,255,255,.22),rgba(135,160,220,.09))!important;box-shadow:inset 0 1px rgba(255,255,255,.22)!important}
+.app .aiSide .aiHeaderIdentity b{font-size:15px!important;letter-spacing:-.025em!important}
+.app .aiSide .aiHeaderIdentity small{font-size:11px!important}
+.app .aiSide .aiMessages{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  padding:18px 15px 20px!important;
+  scroll-padding-bottom:24px!important;
+}
+.app .aiSide .aiWelcome{max-width:290px!important;margin:24px auto!important;padding:20px!important;border:1px solid rgba(220,230,255,.14)!important;border-radius:25px!important;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025))!important;font-size:13px!important;line-height:1.65!important}
+.app .aiSide .aiBubble{max-width:88%!important;padding:12px 15px!important;margin:7px 0!important;border:1px solid rgba(225,235,255,.12)!important;border-radius:21px 21px 21px 7px!important;background:rgba(255,255,255,.075)!important;color:#f4f6fc!important;font-size:14px!important;line-height:1.58!important;overflow-wrap:anywhere!important;box-shadow:inset 0 1px rgba(255,255,255,.055)!important}
+.app .aiSide .aiBubble.user{margin-left:auto!important;border-color:rgba(166,190,255,.24)!important;border-radius:21px 21px 7px 21px!important;background:linear-gradient(135deg,rgba(113,143,226,.34),rgba(113,110,200,.25))!important}
+.app .aiSide .aiQuickStart{margin:16px 0!important;padding:17px!important;border:1px solid rgba(215,228,255,.14)!important;border-radius:25px!important;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025))!important}
+.app .aiSide .aiQuickStart h3{font-size:19px!important;letter-spacing:-.035em!important}
+.app .aiSide .aiQuickPrompts{gap:8px!important}
+.app .aiSide .aiQuickPrompts button{min-height:46px!important;border:1px solid rgba(220,230,255,.13)!important;border-radius:16px!important;background:rgba(255,255,255,.055)!important;font-size:12px!important}
+.app .aiSide .aiComposer{
+  flex:0 0 auto!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin:0 12px!important;
+  padding:9px!important;
+  border:1px solid rgba(220,232,255,.2)!important;
+  border-radius:26px!important;
+  background:rgba(230,237,255,.095)!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.13)!important;
+  backdrop-filter:blur(24px) saturate(170%)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(170%)!important;
+}
+.app .aiSide .aiComposer input:not([type=file]){min-width:0!important;min-height:42px!important;border:0!important;outline:0!important;background:transparent!important;color:#f7f8fc!important;font-size:14px!important}
+.app .aiSide .aiComposer input::placeholder{color:rgba(230,236,250,.58)!important}
+.app .aiSide .aiComposer button,.app .aiSide .aiComposer .aiAttach{width:40px!important;height:40px!important;flex:0 0 40px!important;border-radius:15px!important}
+.app .aiSide .aiHint{flex:0 0 auto!important;padding:9px 18px calc(12px + env(safe-area-inset-bottom,0px))!important;text-align:center!important;color:rgba(222,231,249,.58)!important;font-size:10px!important;line-height:1.4!important}
+.app .aiSide .aiStyleMenu{z-index:8!important;border:1px solid rgba(225,235,255,.2)!important;border-radius:24px!important;background:rgba(17,24,39,.97)!important;box-shadow:0 18px 55px rgba(0,0,0,.42)!important;backdrop-filter:blur(28px)!important;-webkit-backdrop-filter:blur(28px)!important}
+.app .aiSide .aiFullCustomize>button{min-height:42px!important;border-radius:14px!important}
+.app .aiSide .aiFullCustomize>button.chosen{border-color:rgba(190,210,255,.45)!important;background:rgba(155,180,255,.16)!important}
+.app .assistantSettings{gap:13px!important;padding:18px!important}
+.app .assistantStudioHero{display:flex;align-items:center;gap:12px;padding:17px;border:1px solid rgba(220,230,255,.15);border-radius:22px;background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.025))}
+.app .assistantStudioHero>div{display:grid;gap:4px}
+.app .assistantStudioHero b{font-size:15px;letter-spacing:-.02em}
+.app .assistantStudioHero small{font-size:11px;color:var(--muted,#aab5c8);line-height:1.45}
+.app .assistantStudioIcon{width:42px;height:42px;display:grid;place-items:center;border-radius:15px;background:rgba(180,200,255,.13);color:#d9e3ff}
+.app .assistantSettings>label{margin:5px 0 0!important;font-size:11px!important;font-weight:750!important;letter-spacing:.06em!important;text-transform:uppercase!important;color:var(--muted,#aab5c8)!important}
+.app .assistantThemeGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+.app .assistantThemeGrid button{min-height:48px!important;border-radius:16px!important;border:1px solid rgba(220,230,255,.14)!important;background:rgba(255,255,255,.045)!important;font-size:11px!important}
+.app .assistantThemeGrid button.chosen{border-color:rgba(185,205,255,.55)!important;background:rgba(150,180,255,.15)!important;color:#fff!important}
+.app .assistantStudioActions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:9px!important;margin-top:12px!important}
+.app .assistantStudioActions button{min-height:46px!important;border-radius:16px!important;font-size:12px!important}
+@media(max-width:700px){
+ .app .backdrop.aiBackdrop{padding:0!important}
+ .app .backdrop.aiBackdrop>.aiSide{
+   position:fixed!important;inset:5px!important;right:5px!important;bottom:5px!important;
+   width:auto!important;max-width:none!important;height:auto!important;max-height:none!important;min-height:0!important;
+   border:1px solid rgba(225,235,255,.22)!important;border-radius:32px!important;
+   box-shadow:inset 0 1px rgba(255,255,255,.2),0 18px 65px rgba(0,0,0,.5)!important;
+ }
+ .app .aiSide .aiHeader{min-height:70px!important;padding-top:calc(10px + env(safe-area-inset-top,0px))!important}
+ .app .aiSide .aiMessages{padding:14px 12px 16px!important}
+ .app .aiSide .aiBubble{max-width:91%!important;font-size:13.5px!important}
+ .app .aiSide .aiComposer{margin:0 9px!important}
+ .app .aiSide .aiHint{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))!important}
+}
+@media(prefers-reduced-motion:reduce){.app .aiSide *{animation:none!important;transition:none!important}}
