@@ -3961,3 +3961,7 @@ html.masenet-low-performance .welcomeProFeatures article:hover {
 .app .iqKicker,.app .eyebrow,.app .rowHead small,.app .playerTop small{color:var(--accent)!important}
 .app .poster{border-color:var(--border)}
 @media(prefers-color-scheme:light){.app.theme-light,.app.theme-snow{color-scheme:light}}
+
+/* Keep the primary navigation reachable; search must never be hidden by scroll state. */
+.app.nav-auto-hidden .maseReferenceHeader{transform:translateY(0)!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+.app .maseReferenceHeader .maseSearchToggle{position:relative!important;z-index:5!important;display:grid!important;place-items:center!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;cursor:pointer!important}
