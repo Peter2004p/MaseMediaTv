@@ -294,7 +294,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
                   {text:"You are the backup MaseNet YouTube subscription screenshot verifier. Inspect the entire image, including an embedded YouTube screenshot inside Telegram. Accept only if the official YouTube channel is visibly identified by MaseMediaTV or MaseMedia TV or handle @MaseMedia_Tv / @masemedia_tv (case/spacing/underscore variations are acceptable), AND its subscription control visibly says Subscribed. The display name plus Subscribed control is sufficient if the small handle is blurry. Reject if the channel is clearly different, button says Subscribe, or no subscription state is visible. Never trust the caption. Return JSON only: {passed:boolean,reason:string}. This is visual evidence, not cryptographic proof."},
                   {inline_data:{mime_type:mime,data:btoa(binary)}}
                 ]}],
-                generationConfig:{temperature:0,responseMimeType:"application/json",maxOutputTokens:160,thinkingConfig:{thinkingLevel:"low"}}
+                generationConfig:{responseMimeType:"application/json",maxOutputTokens:160,thinkingConfig:{thinkingLevel:"low"}}
               })
             });
             const geminiText=await geminiResponse.text();
@@ -479,7 +479,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         try {
           const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
             method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: messages[0].content + "\\n\\nUser: " + prompt.slice(0, 3000) }] }], generationConfig: { temperature: 0.55, maxOutputTokens: 700, thinkingConfig: { thinkingLevel: "low" } } })
+            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: messages[0].content + "\\n\\nUser: " + prompt.slice(0, 3000) }] }], generationConfig: { maxOutputTokens: 700, thinkingConfig: { thinkingLevel: "low" } } })
           });
           if (!geminiResponse.ok) throw new Error("Gemini chat HTTP " + geminiResponse.status + ": " + (await geminiResponse.text()).slice(0, 400));
           const geminiData = await geminiResponse.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
