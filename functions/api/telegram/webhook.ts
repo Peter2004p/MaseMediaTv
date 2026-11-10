@@ -150,7 +150,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const text = typeof message?.text === "string" ? message.text.trim() : "";
   const title = chatTitle(chat);
   const appUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
-  const keyboard = { inline_keyboard: [[{ text: "Launch MaseNet Mini App", web_app: { url: appUrl } }]] };
+  const keyboard = { keyboard: [[{ text: "🎬 Recommend a movie" }, { text: "📺 Find a drama" }], [{ text: "🔎 Search a title" }, { text: "🛠 Playback help" }], [{ text: "🚀 Open MaseNet", web_app: { url: appUrl } }]], resize_keyboard: true, is_persistent: true, input_field_placeholder: "Ask MaseNet about movies, dramas or playback…" };
 
   if (chatType === "private") {
     const startMatch = text.match(/^\/start(?:@\w+)?(?:\s+([\w-]+))?$/i);
