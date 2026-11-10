@@ -3941,3 +3941,23 @@ html.masenet-low-performance .welcomeProFeatures article:hover {
 .aiDock{touch-action:none!important;user-select:none;-webkit-user-select:none;cursor:grab;}
 .aiDock:active{cursor:grabbing}
 @media(max-width:560px){.smartAssistPosition{padding:11px}.smartAssistPositionGrid{gap:6px}.smartAssistPositionGrid button{min-height:42px;font-size:12px}}
+
+
+/* MaseNet global theme layer: keep every page surface, including the newer iQIYI layout, in sync. */
+.app{background:var(--bg)!important;color:var(--text)!important;min-height:100vh}
+.app .page,.app main,.app .iqHome,.app .detail,.app .adminPage,.app .settings,.app .ai,.app .profile{color:var(--text)}
+.app .nav,.app .side,.app .adminCard,.app .player,.app .searchDock,.app .telegram,.app .masenetLiquidDock,.app .iqCategories,.app .iqHero,.app .iqHeroRail,.app .iqCard,.app .episode,.app .broadcastItem,.app .settings button,.app .formGrid input,.app .formGrid select,.app .formGrid textarea,.app .bulk input,.app .bulk textarea{border-color:var(--border)!important;color:var(--text)}
+.app .nav,.app .side,.app .adminCard,.app .player,.app .searchDock,.app .telegram,.app .masenetLiquidDock,.app .iqCategories,.app .iqHeroRail,.app .settings button,.app .episode,.app .broadcastItem{background:var(--glassStrong)!important}
+.app .iqHero{background:radial-gradient(ellipse at 80% 0%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 42%),linear-gradient(115deg,var(--glassStrong),var(--bg))!important}
+.app .iqHeroShade{background:linear-gradient(90deg,color-mix(in srgb,var(--bg) 96%,transparent),color-mix(in srgb,var(--bg) 65%,transparent) 55%,transparent)!important}
+.app .iqCard{background:transparent!important}.app .iqCard>b,.app .rowHead h2,.app .iqRowHead h2,.app .sideHead h2,.app .adminHead h1,.app .hero h1,.app .detail h1{color:var(--text)!important}
+.app .iqCard>small,.app .hero p,.app .detail p,.app .adminHead p,.app .settings p,.app .muted,.app .rowHead>span{color:var(--muted)!important}
+.app .primary,.app .iqHeroActions .primary,.app .iqCategories button.active,.app .iqCategories button:hover,.app .brandMark,.app .playBig,.app .aiAvatar,.app .aiSend,.app .iqPlay svg{background:var(--accent)!important;border-color:var(--accent)!important;color:var(--accentText)!important}
+.app .secondary,.app .rowMore,.app .nav nav button,.app .icon,.app .telegram a,.app .tabbar button,.app .seasonTabs button{color:var(--muted)!important;border-color:var(--border)!important}
+.app .secondary,.app .rowMore,.app .tabbar button,.app .seasonTabs button,.app .formGrid input,.app .formGrid select,.app .formGrid textarea,.app .bulk input,.app .bulk textarea{background:var(--glass)!important}
+.app .nav nav button:hover,.app .icon:hover,.app .secondary:hover{background:var(--glassStrong)!important;color:var(--text)!important}
+.app .player,.app .vlcPlayer,.app .flootStylePlayer{color:var(--text)}
+.app .playerControls,.app .fspControls{background:linear-gradient(180deg,var(--glassStrong),var(--bg))!important}
+.app .iqKicker,.app .eyebrow,.app .rowHead small,.app .playerTop small{color:var(--accent)!important}
+.app .poster{border-color:var(--border)}
+@media(prefers-color-scheme:light){.app.theme-light,.app.theme-snow{color-scheme:light}}
