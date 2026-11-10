@@ -17,27 +17,9 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     channel_post?: { chat?: { id?: number | string; type?: string }; text?: string };
     callback_query?: { id: string; data?: string; from?: { id?: number | string }; message?: { chat?: { id?: number | string }; message_id?: number } };
   };
-  // Self-heal Telegram update subscriptions whenever a normal message arrives.
-  // Older webhook registrations may omit callback_query, which makes approval buttons inert.
-  if (update.message || update.edited_message) {
-    try {
-      const webhookUrl = "https://masetv-cloudflare-migration.pages.dev/api/telegram/webhook/masetv";
-      const repair = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/setWebhook", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          url: webhookUrl,
-          drop_pending_updates: false,
-          allowed_updates: ["message", "edited_message", "channel_post", "my_chat_member", "callback_query"],
-          secret_token: env.TELEGRAM_WEBHOOK_SECRET
-        })
-      });
-      const result = await repair.json().catch(() => ({})) as { ok?: boolean; description?: string };
-      if (!repair.ok || result.ok !== true) console.error("MaseNet callback webhook self-repair failed:", result.description || repair.status);
-    } catch (error) {
-      console.error("MaseNet callback webhook self-repair error:", error instanceof Error ? error.message : String(error));
-    }
-  }
+  // Webhook registration is an administrative setup operation, not message handling.
+  // Never call setWebhook on every incoming update: that adds an avoidable Telegram
+  // network round-trip before every reply and can make the assistant appear stuck.
   // Admin-only manual review fallback. Acknowledge the button immediately so Telegram
   // stops showing the spinner even if the D1 write or notification later fails.
   if (update.callback_query) {
