@@ -2,7 +2,7 @@ import { currentAdmin, json } from "./auth/_shared";
 
 interface AIResult { response?: unknown; output_text?: unknown; choices?: Array<{ message?: { content?: unknown } }>; }
 interface WorkersAI {
-  run(model: string, input: { messages: Array<{ role: "system" | "user" | "assistant"; content: string }> }): Promise<AIResult | string>;
+  run(model: string, input: { messages: Array<{ role: "system" | "user" | "assistant"; content: string }>; max_tokens?: number; chat_template_kwargs?: { enable_thinking?: boolean } }): Promise<AIResult | string>;
 }
 interface Env { DB: D1Database; AI?: WorkersAI; ADMIN_EMAIL?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; }
 
@@ -199,7 +199,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
     try {
       const result = await env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
-        messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: message }]
+        messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: message }],
+        max_tokens: 700,
+        chat_template_kwargs: { enable_thinking: false }
       });
       const answer = typeof result === "string" ? result : String(result?.response || result?.output_text || result?.choices?.[0]?.message?.content || "");
       if (answer.trim()) return json({ text: answer.trim().slice(0, 5000) });
