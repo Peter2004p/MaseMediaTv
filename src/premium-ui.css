@@ -169,3 +169,83 @@
  .app .adminBadge{align-self:flex-start}
  .app .adminSectionHead{align-items:flex-start;flex-direction:column}
 }
+
+
+/* MaseNet AI workspace refresh — clear hierarchy, mobile-first conversation canvas */
+.aiSide{
+  width:min(520px,calc(100vw - 24px));
+  height:min(820px,calc(100dvh - 28px));
+  max-height:calc(100dvh - 28px);
+  display:flex;flex-direction:column;overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--accent,#d2ad60) 24%,var(--border,rgba(255,255,255,.12)));
+  border-radius:26px;background:var(--panel,rgba(9,13,22,.98));
+}
+.aiSide .aiPanel{display:flex;flex:1;min-height:0;overflow:hidden}
+.aiSide .ai{display:flex;flex:1;min-height:0;flex-direction:column;gap:0;padding:0;overflow:hidden}
+.aiSide .aiHeader{
+  flex:0 0 auto;min-height:76px;padding:13px 16px;gap:12px;
+  background:linear-gradient(110deg,rgba(25,37,54,.98),rgba(12,20,32,.98));
+  border-bottom:1px solid rgba(255,255,255,.09);
+}
+.aiSide .aiAvatar{width:42px;height:42px;flex:0 0 42px;font-size:21px}
+.aiSide .aiHeaderIdentity{flex:1;min-width:0}
+.aiSide .aiHeaderIdentity b{font-size:15px;letter-spacing:-.02em}
+.aiSide .aiHeaderIdentity small{font-size:11px;margin-top:4px}
+.aiSide .aiMessages{
+  flex:1;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;
+  padding:18px 15px 22px;gap:13px;scrollbar-width:thin;
+  background:radial-gradient(ellipse at 12% 0%,rgba(83,133,190,.09),transparent 48%),var(--bg,#080d16);
+}
+.aiSide .aiWelcome{max-width:92%;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:rgba(255,255,255,.045);gap:7px}
+.aiSide .aiWelcome b{font-size:17px}
+.aiSide .aiWelcome span{font-size:13px;line-height:1.6;color:var(--muted,#a8b5c6)}
+.aiSide .aiQuickStart{width:100%;padding:16px;border:1px solid rgba(255,255,255,.09);border-radius:20px;background:linear-gradient(145deg,rgba(30,44,62,.68),rgba(14,22,34,.78));}
+.aiSide .aiQuickStart h3{font-size:17px;letter-spacing:-.025em;margin:9px 0 4px}
+.aiSide .aiQuickStart p{font-size:12px;margin:0 0 12px;color:var(--muted,#a8b5c6)}
+.aiSide .aiQuickPrompts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.aiSide .aiQuickPrompts button{
+  min-width:0;min-height:52px;display:flex;align-items:center;gap:8px;
+  padding:10px;border:1px solid rgba(255,255,255,.09);border-radius:13px;
+  background:rgba(255,255,255,.045);color:var(--text,#f4f6fb);font-size:11px;line-height:1.35;text-align:left;
+}
+.aiSide .aiQuickPrompts button span{flex:0 0 22px;width:22px;height:22px;display:grid;place-items:center;border-radius:7px;background:rgba(210,173,96,.14);color:#e8c47f;font-size:11px}
+.aiSide .aiQuickPrompts button svg{flex:0 0 auto;margin-left:auto;opacity:.55}
+.aiSide .aiBubble{max-width:88%;padding:12px 14px;border-radius:17px;font-size:13px;line-height:1.65;overflow-wrap:anywhere}
+.aiSide .aiBubble.user{margin-left:auto;border-bottom-right-radius:5px;background:linear-gradient(135deg,#d8b56f,#b98d43);color:#17130c}
+.aiSide .aiBubble.assistant{margin-right:auto;border-bottom-left-radius:5px;background:linear-gradient(145deg,#202d40,#172334);color:#f1f5fb;border:1px solid rgba(255,255,255,.075)}
+.aiSide .aiBubble time{display:block;margin-top:7px;font-size:9px;opacity:.55}
+.aiSide .aiSpeak{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 8px;border:1px solid rgba(255,255,255,.12);border-radius:99px;background:rgba(255,255,255,.06);color:inherit;font-size:10px}
+.aiSide .aiTyping{align-self:flex-start;margin:0 15px 12px;padding:12px 15px;border-radius:16px;background:rgba(255,255,255,.07)}
+.aiSide .aiAttachment{flex:0 0 auto;margin:0 12px;padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.06)}
+.aiSide .aiComposer{
+  flex:0 0 auto;display:flex;align-items:center;gap:7px;margin:0;padding:11px 12px;
+  border-top:1px solid rgba(255,255,255,.08);background:rgba(11,17,27,.98);
+}
+.aiSide .aiComposer>input:not([type=file]){
+  flex:1;min-width:0;height:44px;padding:0 13px;border:1px solid rgba(255,255,255,.1);
+  border-radius:15px;background:rgba(255,255,255,.065);color:#f5f7fb;font-size:13px;outline:none;
+}
+.aiSide .aiComposer>input:focus{border-color:color-mix(in srgb,var(--accent,#d2ad60) 70%,white);box-shadow:0 0 0 3px rgba(210,173,96,.12)}
+.aiSide .aiComposer>input::placeholder{color:#8c9aab}
+.aiSide .aiAttach,.aiSide .aiVoice,.aiSide .aiSend{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:14px}
+.aiSide .aiAttach,.aiSide .aiVoice{background:rgba(255,255,255,.07);color:#c4d0df;border:1px solid rgba(255,255,255,.08)}
+.aiSide .aiSend{background:var(--accent,#d2ad60);color:#17130b;border:0}
+.aiSide .aiSend:disabled{opacity:.45}
+.aiSide .aiHint{flex:0 0 auto;padding:0 14px 12px;background:rgba(11,17,27,.98);font-size:10px;line-height:1.45;color:#8795a7}
+.aiSide .aiFullCustomize{position:absolute;z-index:5;top:72px;right:12px;left:12px;max-height:65%;overflow:auto;padding:15px;border:1px solid rgba(255,255,255,.13);border-radius:18px;background:#111b2a;box-shadow:0 12px 36px rgba(0,0,0,.3)}
+.aiSide .aiFullCustomize button{border-radius:11px}
+.aiSide .aiFullCustomize select{width:100%;min-height:42px;padding:9px;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:#172437;color:#f4f6fb}
+.aiSide .assistantSettings{padding:4px 2px 18px}
+.aiSide .assistantStudioActions{display:grid;gap:8px;margin-top:18px}
+.aiSide .assistantStudioActions button{justify-content:center}
+@media(max-width:560px){
+ .aiSide{width:calc(100vw - 12px);height:calc(100dvh - 12px);max-height:calc(100dvh - 12px);margin:6px;border-radius:22px}
+ .aiSide .aiHeader{min-height:68px;padding:10px 12px}
+ .aiSide .aiMessages{padding:14px 11px 18px}
+ .aiSide .aiQuickPrompts{grid-template-columns:1fr 1fr;gap:7px}
+ .aiSide .aiQuickPrompts button{min-height:54px;padding:8px;font-size:10px}
+ .aiSide .aiComposer{padding:9px 8px;gap:6px}
+ .aiSide .aiAttach,.aiSide .aiVoice,.aiSide .aiSend{width:38px;height:40px;flex-basis:38px}
+ .aiSide .aiComposer>input:not([type=file]){height:41px;padding:0 10px;font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){.aiSide *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
