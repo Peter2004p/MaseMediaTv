@@ -367,9 +367,11 @@ function Home(input:{titles:Title[];all:Title[];featured?:Title;heroSettings:Her
  const [requestState,setRequestState]=useState<'idle'|'sending'|'sent'|'error'>('idle');
  const [magicPrompt,setMagicPrompt]=useState('');
  const [followedIds,setFollowedIds]=useState<string[]>(()=>{try{const v=JSON.parse(localStorage.getItem('masenet-followed-series')||'[]');return Array.isArray(v)?v.filter((x):x is string=>typeof x==='string'):[]}catch{return []}});
+ const [followedSyncReady,setFollowedSyncReady]=useState(false);
  const [radarAlerts,setRadarAlerts]=useState<{id:string;name:string;added:number}[]>([]);
  const toggleFollow=(id:string)=>setFollowedIds(current=>current.includes(id)?current.filter(x=>x!==id):[...current,id]);
- useEffect(()=>{try{localStorage.setItem('masenet-followed-series',JSON.stringify(followedIds))}catch{}},[followedIds]);
+ useEffect(()=>{let alive=true;api.get('/api/user-library').then(r=>{if(!alive)return;const remote=r.data?.state?.followed;if(Array.isArray(remote))setFollowedIds(current=>[...new Set([...remote.filter((x:unknown):x is string=>typeof x==='string'),...current])].slice(0,500))}).catch(()=>{}).finally(()=>{if(alive)setFollowedSyncReady(true)});return()=>{alive=false}},[]);
+ useEffect(()=>{try{localStorage.setItem('masenet-followed-series',JSON.stringify(followedIds))}catch{}if(followedSyncReady)api.post('/api/user-library',{followed:followedIds}).catch(()=>{})},[followedIds,followedSyncReady]);
  useEffect(()=>{
   try{
    const raw=localStorage.getItem('masenet-followed-episode-counts');
