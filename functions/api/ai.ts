@@ -152,7 +152,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         method: "POST",
         headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: env.OPENAI_MODEL || "gpt-4o-mini",
+          model: env.OPENAI_MODEL || "gpt-6-luna",
           instructions,
           input: [...history, { role: "user", content: message }],
           max_output_tokens: 700
@@ -198,7 +198,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     ].filter(Boolean).join("\n\n");
 
     try {
-      const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      const result = await env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
         messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: message }]
       });
       const answer = typeof result === "string" ? result : String(result?.response || "");
