@@ -5,6 +5,7 @@ type LibraryPayload = {
   readNotifications?: unknown;
   progress?: unknown;
   completed?: unknown;
+  followed?: unknown;
 };
 type LibraryEnv = Env;
 
@@ -53,7 +54,8 @@ function normalize(body: LibraryPayload) {
     watchlist: cleanStringArray(body.watchlist, 500, 180),
     readNotifications: cleanStringArray(body.readNotifications, 250, 220),
     progress: cleanProgress(body.progress),
-    completed: cleanCompleted(body.completed)
+    completed: cleanCompleted(body.completed),
+    followed: cleanStringArray(body.followed, 500, 180)
   };
 }
 
@@ -81,8 +83,11 @@ export const onRequestPost: PagesFunction<LibraryEnv> = async ({ request, env })
     if (raw.length > 40000) return json({ error: "Library update is too large." }, 413);
     let body: LibraryPayload;
     try { body = JSON.parse(raw) as LibraryPayload; } catch { return json({ error: "Invalid library data." }, 400); }
-    const state = normalize(body);
     await ensureTable(env.DB);
+    const existing = await env.DB.prepare("SELECT payload FROM user_library_state WHERE user_id=?").bind(userId).first<{ payload: string }>();
+    let previous: LibraryPayload = {};
+    if (existing?.payload) { try { previous = JSON.parse(existing.payload) as LibraryPayload; } catch { previous = {}; } }
+    const state = normalize({ ...previous, ...body });
     await env.DB.prepare("INSERT INTO user_library_state(user_id,payload,updated_at) VALUES(?,?,datetime('now')) ON CONFLICT(user_id) DO UPDATE SET payload=excluded.payload,updated_at=datetime('now')")
       .bind(userId, JSON.stringify(state)).run();
     return json({ ok: true, state });
