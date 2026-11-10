@@ -1,0 +1,122 @@
+/* MaseNet premium interface refinement — visual-only, preserving existing routes and controls. */
+:root{
+  --mase-accent:#d8b879;
+  --mase-accent-soft:rgba(216,184,121,.14);
+  --mase-cool:#9fd8ef;
+  --mase-line:rgba(210,225,245,.13);
+  --mase-panel:rgba(15,21,32,.82);
+}
+.app .iqHome{padding-bottom:calc(112px + env(safe-area-inset-bottom));}
+.app .iqHome .iqHero{
+  border-color:rgba(226,237,255,.19);
+  background-color:#0c1421;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 24px 64px rgba(0,0,0,.26);
+}
+.app .iqHome .iqHeroCopy{max-width:720px}
+.app .iqHome .iqHero h1{letter-spacing:-.06em;text-wrap:balance}
+.app .iqHome .iqHeroCopy p{max-width:620px}
+.app .iqHome .iqHeroActions .primary{
+  background:linear-gradient(135deg,#f5dfb6,#d6b274);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.48),0 8px 22px rgba(214,178,116,.16);
+}
+.app .iqHome .iqCategories{
+  border-color:rgba(222,235,255,.16);
+  background:rgba(10,15,24,.88);
+  box-shadow:0 8px 28px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.app .iqHome .iqCategories button.active,
+.app .iqHome .iqCategories button:hover{
+  background:linear-gradient(135deg,#f2dfbd,#c9e7f3);
+  color:#111722;
+}
+.app .iqHome .iqRowHead{margin-bottom:17px}
+.app .iqHome .iqKicker{color:#a9d9ee}
+.app .iqHome .iqRowHead h2{letter-spacing:-.045em}
+.app .iqHome .rowMore{
+  min-height:36px;border-color:rgba(220,233,250,.17);
+  background:rgba(255,255,255,.045);transition:background .18s,border-color .18s;
+}
+.app .iqHome .rowMore:hover{background:rgba(255,255,255,.09);border-color:rgba(220,233,250,.3)}
+.app .iqHome .iqGrid{gap:20px 13px}
+.app .iqHome .iqCard{border-color:transparent;outline:none}
+.app .iqHome .iqCard:focus-visible{outline:2px solid rgba(159,216,239,.9);outline-offset:3px}
+.app .iqHome .iqPoster{
+  border:1px solid rgba(225,235,250,.10);
+  box-shadow:0 7px 20px rgba(0,0,0,.23);
+  background:#111a28;
+}
+.app .iqHome .iqCard>b{font-weight:750;letter-spacing:-.01em}
+.app .iqHome .iqCard>small{color:#9eabc0}
+.app .iqHome .iqCard:hover .iqPoster{border-color:rgba(159,216,239,.38)}
+.app .iqHome .maseBrief{
+  border-color:rgba(159,216,239,.18);
+  background:linear-gradient(120deg,rgba(51,112,145,.16),rgba(255,255,255,.035));
+}
+.app .detail{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+.app .detailHero{
+  border-color:rgba(220,232,250,.16);
+  background:linear-gradient(125deg,#121c2b,#0c111b 58%,#171827);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 48px rgba(0,0,0,.2);
+}
+.app .playerSection{
+  border-color:rgba(220,232,250,.14);
+  background:linear-gradient(145deg,#111a27,#090e17);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 36px rgba(0,0,0,.2);
+}
+.app .seasonTabs button.activeTab{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 5px 14px rgba(210,173,96,.14);
+}
+.app .aiQuickStart{
+  border:1px solid rgba(173,211,239,.18);
+  border-radius:20px;
+  background:linear-gradient(145deg,rgba(30,48,68,.72),rgba(12,18,29,.82));
+  padding:17px;
+}
+.app .aiQuickStart h3{letter-spacing:-.035em}
+.app .aiQuickPrompts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.app .aiQuickPrompts button{
+  min-width:0;min-height:48px;padding:10px 11px;
+  border:1px solid rgba(220,233,250,.13);border-radius:13px;
+  background:rgba(255,255,255,.045);color:#eaf1fa;
+  text-align:left;transition:background .18s,border-color .18s,transform .18s;
+}
+.app .aiQuickPrompts button:hover{
+  background:rgba(159,216,239,.10);border-color:rgba(159,216,239,.32);transform:translateY(-1px);
+}
+.app .aiQuickPrompts button:focus-visible{outline:2px solid var(--mase-cool);outline-offset:2px}
+.app .aiComposer{
+  border-color:rgba(186,216,242,.22);
+  background:rgba(9,15,24,.94);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 24px rgba(0,0,0,.16);
+}
+.app .aiComposer input{min-width:0}
+.app .aiDynamicIsland{
+  position:fixed!important;z-index:1001!important;
+  display:flex!important;align-items:center!important;gap:9px!important;
+  width:min(270px,calc(100vw - 100px))!important;min-height:42px!important;
+  padding:9px 13px!important;border:1px solid rgba(222,238,255,.25)!important;
+  border-radius:16px!important;background:linear-gradient(135deg,rgba(25,38,56,.96),rgba(10,16,27,.96))!important;
+  color:#f3f7fc!important;text-align:left!important;font-size:11px!important;font-weight:700!important;
+  box-shadow:0 12px 32px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.13)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(160%)!important;backdrop-filter:blur(22px) saturate(160%)!important;
+  cursor:pointer!important;animation:maseSuggestionIn .28s cubic-bezier(.2,.8,.2,1) both;
+}
+.app .aiDynamicIsland:before{
+  content:"";width:7px;height:7px;flex:0 0 7px;border-radius:50%;
+  background:#83e4bd;box-shadow:0 0 0 4px rgba(131,228,189,.12);
+}
+.app .aiDynamicIsland:after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;border:1px solid rgba(255,255,255,.035)}
+.app .aiDynamicIsland:hover{border-color:rgba(159,216,239,.48)!important}
+@keyframes maseSuggestionIn{from{opacity:0;transform:translateY(5px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:680px){
+ .app .iqHome .iqGrid{gap:15px 8px}
+ .app .iqHome .iqHero{border-radius:21px}
+ .app .iqHome .iqHeroRail{background:rgba(8,13,22,.82)}
+ .app .aiQuickPrompts{grid-template-columns:1fr}
+ .app .aiQuickPrompts button{min-height:44px}
+ .app .aiDynamicIsland{width:min(245px,calc(100vw - 88px))!important;min-height:40px!important;font-size:10px!important;padding:8px 11px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .aiDynamicIsland{animation:none!important}
+ .app .iqHome .iqCard,.app .iqHome .iqPoster .posterImage,.app .iqHome .rowMore{transition:none!important}
+}
