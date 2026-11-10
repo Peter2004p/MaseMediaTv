@@ -168,7 +168,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           return json({ ok: true, openedTitle: true });
         }
       }
-      await sendMessage(env, chatId, "Welcome to MaseNet 🎬\n\nI can help with movies, dramas, episodes, Reels, and using MaseNet. Chat normally with me, or tap Open MaseNet to browse the Mini App.\n\nCommands: /app, /help, /notifications_on, /notifications_off, /privacy" + alertNote, keyboard);
+      await sendMessage(env, chatId, "Welcome to MaseNet 🎬\n\nI can help you discover movies and dramas, find episodes, troubleshoot subtitles and playback, and understand download options. Choose a suggestion below or just type naturally, then use Open MaseNet to browse the Mini App.\n\nCommands: /app, /help, /notifications_on, /notifications_off, /privacy" + alertNote, keyboard);
     } else if (/^\/notifications_off(?:@\w+)?$/i.test(text)) {
       await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
       await sendMessage(env, chatId, "Movie and episode alerts are now off. Send /notifications_on to turn them back on.");
