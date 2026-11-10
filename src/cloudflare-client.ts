@@ -1,4 +1,4 @@
-/** Cloudflare Pages API adapter starter. Not wired into App.tsx until auth and routes are ported. */
+/** Cookie-backed Cloudflare Pages API and authentication adapter used by the MaseNet application. */
 type ApiResult<T=any> = { data:T };
 async function request<T=any>(method:string,path:string,body?:unknown,params?:Record<string,string>):Promise<ApiResult<T>> {
   const url=new URL(path,window.location.origin);
