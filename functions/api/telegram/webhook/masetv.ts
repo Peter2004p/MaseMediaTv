@@ -211,8 +211,8 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         let binary = "";
         for (let i=0;i<bytes.length;i+=0x8000) binary += String.fromCharCode(...bytes.subarray(i,i+0x8000));
         const dataUrl = "data:" + mime + ";base64," + btoa(binary);
-        const configuredModel = (env.OPENAI_MODEL || "gpt-4o-mini").trim();
-        const models = [...new Set(["gpt-4o-mini", configuredModel])];
+        const configuredModel = (env.OPENAI_MODEL || "gpt-6-luna").trim();
+        const models = [...new Set(["gpt-6-luna", configuredModel])];
         let visionData: {output_text?:string;output?:Array<{content?:Array<{text?:string;type?:string}>}>} | undefined;
         let providerError = "";
         for (const model of models) {
@@ -257,7 +257,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
             method:"POST",
             headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},
             body:JSON.stringify({
-              model:"gpt-4o-mini",
+              model:"gpt-6-luna",
               temperature:0,
               response_format:{type:"json_object"},
               messages:[
@@ -286,7 +286,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         // Independent Gemini vision backup: retry both provider errors and OpenAI false negatives.
         if (parsed?.passed !== true && env.GEMINI_API_KEY) {
           try {
-            const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
+            const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
               method:"POST",
               headers:{"Content-Type":"application/json"},
               body:JSON.stringify({
@@ -477,7 +477,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       // Gemini is the active primary conversational AI; Workers AI remains a resilient fallback.
       if (env.GEMINI_API_KEY) {
         try {
-          const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
+          const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
             method: "POST", headers: { "content-type": "application/json" },
             body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: messages[0].content + "\\n\\nUser: " + prompt.slice(0, 3000) }] }], generationConfig: { temperature: 0.55, maxOutputTokens: 700 } })
           });
@@ -491,7 +491,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         }
       }
       // Retry model errors and handle both common Workers AI response shapes.
-      if (!answer) for (const model of ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
+      if (!answer) for (const model of ["@cf/google/gemma-4-26b-a4b-it", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
         try {
           const result = await env.AI.run(model, { messages, max_tokens: 700 });
           if (result && typeof result === "object") {
@@ -519,7 +519,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
           method: "POST",
           headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: env.OPENAI_MODEL || "gpt-4o-mini",
+            model: env.OPENAI_MODEL || "gpt-6-luna",
             instructions: "You are MaseNet's friendly Telegram assistant (@MaseTv_Bot). MaseNet, MaseTv, and MaseMediaTv are alternate names for the same platform. Respond naturally to greetings and questions. Help with the website, Mini App, movies, dramas, episodes, Reels, subtitles, and playback. Use the supplied MaseNet catalogue context as the source of truth for title and episode availability. For requests about new/latest movies or dramas, list the newest matching catalogue entries; do not treat these requests as a literal title search. Never invent catalogue availability, streaming links, or admin actions. For official social links, share only owner-provided verified links and distinguish channels from the bot. Do not reveal secrets or private information. Do not mention AI providers or hosting unless asked. Keep answers concise and friendly.\n\nCurrent MaseNet catalogue (newest entries first):\n" + catalogueContext + (adminInstructions ? "\n\nAdditional owner guidance: " + adminInstructions : ""),
             input: prompt.slice(0, 3000),
             max_output_tokens: 450
@@ -624,7 +624,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       // normal chat turn and let the AI respond, while being honest that the title was not found.
       const chatSystem = "You are MaseNet's friendly Telegram AI assistant. MaseNet, MaseTv, and MaseMediaTv (MaseMedia TV) are alternate names for the same platform. The catalog lookup did not find a match for the user's message, but the user may be chatting rather than searching for a title. Respond naturally and keep the conversation going. Never include any website URL, Pages URL, raw Mini App URL, or Floot URL in your reply; the Telegram Mini App launch button is attached separately. If they ask for official social links, share only verified YouTube https://youtube.com/@masemedia_tv and Telegram bot https://t.me/MaseTv_Bot. Do not invent Instagram, Facebook, TikTok, or other handles. If their message clearly asks for a movie/drama/episode title, briefly say it was not found in the current catalog and suggest another spelling or title. Never invent catalog entries or streaming links. Never reveal secrets or private admin data. Keep the reply concise and friendly.";
       if (env.AI) {
-        for (const model of ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
+        for (const model of ["@cf/google/gemma-4-26b-a4b-it", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
           try {
             const result = await env.AI.run(model, { messages: [
               { role: "system", content: chatSystem },
@@ -646,7 +646,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
             method: "POST",
             headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: env.OPENAI_MODEL || "gpt-4o-mini",
+              model: env.OPENAI_MODEL || "gpt-6-luna",
               instructions: chatSystem,
               input: query.slice(0, 1000),
               max_output_tokens: 300
