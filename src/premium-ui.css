@@ -408,3 +408,21 @@
  .app .aiSide.ai-size-large .aiMessages{padding:17px 13px 20px!important;}
  .app .aiSide.ai-size-large .aiComposer{margin:0 10px!important;}
 }
+
+/* Make assistant size presets win over the mobile full-screen shell. */
+@media(max-width:700px){
+ .app .backdrop.aiBackdrop>.aiSide.ai-size-compact{
+   inset:auto 12px 12px auto!important;
+   width:min(420px,calc(100vw - 24px))!important;
+   height:min(680px,calc(100dvh - 24px))!important;
+   max-height:calc(100dvh - 24px)!important;
+   border-radius:28px!important;
+ }
+ .app .backdrop.aiBackdrop>.aiSide.ai-size-large{
+   inset:0!important;
+   width:100vw!important;
+   height:100dvh!important;
+   max-height:100dvh!important;
+   border-radius:0!important;
+ }
+}
