@@ -1,38 +1,35 @@
-# MaseTv — Cloudflare migration
+# MaseNet — Cloudflare Pages
 
-This branch is a separate migration workspace. The original AppDeploy source snapshot is preserved under `appdeploy-source/` on the `appdeploy-source-backup` branch and is not modified by this migration.
+MaseNet is deployed from the `cloudflare-migration` branch to the Cloudflare Pages project `masetv-cloudflare-migration`.
 
-## Current stage
-- Source backup is preserved in GitHub.
-- Cloudflare Pages Functions and an initial D1 schema are being prepared here.
-- This branch is intentionally not configured for production deployment yet. Do not connect it to production or change the Telegram webhook until the API adapter, authentication, media storage, admin routes, and end-to-end checks are complete.
+## Platform architecture
 
-## Required migration work
-1. Replace `@appdeploy/client` frontend calls with a Cloudflare-compatible fetch adapter.
-2. Port AppDeploy backend routes to Pages Functions and D1.
-3. Configure secure admin authentication and session cookies.
-4. Configure media storage and preserve player/proxy behavior.
-5. Add secrets through Cloudflare settings (never commit tokens).
-6. Build, test, and verify the Mini App and bot webhook before cutover.
+- **Frontend:** React, TypeScript and Vite.
+- **Hosting:** Cloudflare Pages.
+- **Backend:** Cloudflare Pages Functions.
+- **Database:** Cloudflare D1.
+- **Media assets:** Cloudflare R2 where configured.
+- **AI:** website assistant and Telegram bot integrations using configured AI credentials.
+- **Telegram:** bot webhook and Telegram Mini App authentication.
 
+## Deployment
 
-## Live Telegram access-gate end-to-end test
+- Production site: https://masetv-cloudflare-migration.pages.dev
+- Source branch: `cloudflare-migration`
+- Build command: `npm run build`
+- Output directory: `dist`
 
-Run this only with a **dedicated Telegram test account** that you control. The test submits a signed test update to the deployed webhook and writes the YouTube-verification result for that Telegram user into the production D1 access table. It also sends bot replies to that test account. Do not use a customer account.
+Cloudflare Pages deploys automatically when commits are pushed to the connected branch. A successful build/deployment confirms that the artifact was built and published; it does not by itself prove that every authenticated workflow, media source, Telegram action or device-specific layout works end to end.
 
-Requirements: Node.js 20+ and the following environment variables (never commit them):
+## Quality checks
 
-- `TELEGRAM_BOT_TOKEN`: the production bot token.
-- `TELEGRAM_WEBHOOK_SECRET`: the exact secret configured on the production webhook.
-- `TELEGRAM_TEST_USER_ID`: numeric Telegram user/chat ID of your dedicated private test account.
-- `TELEGRAM_TEST_YOUTUBE_FILE_ID`: a photo `file_id` received by this bot from that test account; the screenshot must visibly show `@masemedia_tv` as Subscribed.
-- Optional `MASETV_BASE_URL`: defaults to `https://masetv-cloudflare-migration.pages.dev`.
-- Optional `OPENAI_API_KEY` and `OPENAI_MODEL`: used for an independent vision preflight; the deployed webhook still uses its own Cloudflare secret binding.
+- `npm run build` — production frontend build.
+- `npm run typecheck:functions` — TypeScript checks for Pages Functions.
+- `npm run test:telegram-e2e` — live Telegram access-gate test. Run only with the dedicated test account and environment variables described in the script.
 
-Run:
+## Safety and operations
 
-```sh
-npm run test:telegram-e2e
-```
-
-The script checks bot identity and webhook configuration, calls Telegram `getChatMember` for `@MaseMediaTv` and `@MoonDramaC`, downloads the supplied screenshot from Telegram and checks it with OpenAI vision, then posts a signed photo update and a signed `/verify` update to the live Pages Function. It fails on any non-member status, screenshot rejection, webhook error, or missing `accessGranted: true` response. This is a live integration test, not a mock; it cannot prove YouTube subscription cryptographically because screenshot review is visual evidence only.
+- Never commit bot tokens, API keys, OAuth secrets or webhook secrets.
+- Do not reset production D1, administrator accounts, sessions or catalogue data during UI work.
+- Do not remove a feature solely because it appears unused. Confirm its route, API dependencies and persisted data before deprecating it.
+- Keep the AppDeploy source backup branch intact; it is a historical reference, not the active deployment target.
