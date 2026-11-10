@@ -103,7 +103,7 @@ async function makeAIReply(env: Env, message: string, firstName: string): Promis
     method: "POST",
     headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
+      model: env.OPENAI_MODEL || "gpt-6-luna",
       instructions: [
         "You are MaseNet's friendly Telegram bot assistant. Your bot handle is @MaseTv_Bot.",
         "MaseNet, MaseTv, and MaseMediaTv (MaseMedia TV) are alternate names for the same platform. Recognize all three names.",
