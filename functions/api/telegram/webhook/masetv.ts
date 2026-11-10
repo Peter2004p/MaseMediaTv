@@ -429,7 +429,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     let answer = "";
     let adminInstructions = "";
     let catalogueContext = "(Load catalogue only when the question needs it.)";
-    const needsCatalogue = /\\b(movie|drama|film|title|episode|season|catalog|catalogue|latest|newest|available|search|find)\\b/i.test(prompt);
+    const needsCatalogue = /\b(movie|drama|film|title|episode|season|catalog|catalogue|latest|newest|available|search|find)\b/i.test(prompt);
     const settingsTask = env.DB.prepare("SELECT value_json FROM site_settings WHERE key='ai_instructions'").first<{ value_json: string }>();
     const catalogueTask = needsCatalogue
       ? env.DB.prepare("SELECT name,kind,year,metadata_json FROM titles ORDER BY created_at DESC LIMIT 25").all<{name:string;kind:string;year:number|null;metadata_json:string}>()
@@ -452,7 +452,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
             }).join(", ");
           } catch {}
           return "- " + row.name + (row.year ? " (" + row.year + ")" : "") + " [" + row.kind + "]" + episodes;
-        }).join("\\n") || "(The MaseNet catalogue is currently empty.)";
+        }).join("\n") || "(The MaseNet catalogue is currently empty.)";
       }
     } catch (error) {
       console.error("MaseNet Telegram AI context lookup failed:", error instanceof Error ? error.message : String(error));
