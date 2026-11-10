@@ -6,6 +6,7 @@ interface Env {
   TELEGRAM_WEBHOOK_SECRET?: string;
   MEDIA_BUCKET?: R2Bucket;
   AI?: unknown;
+  OPENAI_API_KEY?: string;
 }
 
 export const onRequestGet = async ({ env }: { env: Env }) => {
@@ -27,7 +28,7 @@ export const onRequestGet = async ({ env }: { env: Env }) => {
     googleAdminLogin: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
     telegramBot: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_WEBHOOK_SECRET),
     mediaStorage: Boolean(env.MEDIA_BUCKET),
-    aiAssistant: Boolean(env.AI),
+    aiAssistant: Boolean(env.OPENAI_API_KEY || env.AI),
   };
 
   const productionReady = readiness.database
@@ -40,12 +41,12 @@ export const onRequestGet = async ({ env }: { env: Env }) => {
     ok: true,
     app: "MaseNet",
     platform: "Cloudflare Pages Functions",
-    stage: "migration",
+    stage: "deployed",
     productionReady,
     readiness,
     catalogueCount,
     note: productionReady
       ? "Core service bindings are present. Complete admin, upload, Telegram, and playback end-to-end tests before cutover."
-      : "Migration preview only. One or more required services or catalogue data are not ready; the existing production site has not been changed."
+      : "One or more required service bindings or catalogue data are not ready. This endpoint checks runtime bindings only; it does not certify every user workflow."
   }, { headers: { "Cache-Control": "no-store" } });
 };
