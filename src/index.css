@@ -4014,3 +4014,61 @@ html.masenet-low-performance .welcomeProFeatures article:hover {
 .app .searchDockResultCopy b{font-size:12px!important;line-height:1.3!important;white-space:normal!important;overflow-wrap:anywhere!important}
 .app .searchDockResultCopy small{font-size:10px!important;color:var(--muted)!important;line-height:1.35!important}
 .app .searchDockNoResults{padding:16px 8px!important;font-size:12px!important;color:var(--muted)!important}
+
+
+/* iOS 27 Liquid Glass refinement for the existing bottom dock.
+   Deliberately appearance-only: no width, height, padding, gap, radius, position or grid changes. */
+html body #root .app nav.masenetLiquidDock{
+  background:
+    radial-gradient(ellipse at 16% 0%,rgba(255,255,255,.22),transparent 34%),
+    radial-gradient(ellipse at 86% 100%,rgba(103,177,255,.13),transparent 42%),
+    linear-gradient(112deg,rgba(221,235,255,.13),rgba(86,112,157,.16) 38%,rgba(18,25,45,.30) 72%,rgba(180,151,255,.12))!important;
+  border:1px solid rgba(232,243,255,.38)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.42),
+    inset 0 -1px 0 rgba(255,255,255,.10),
+    inset 1px 0 0 rgba(255,255,255,.12),
+    0 12px 34px rgba(0,0,0,.34),
+    0 2px 8px rgba(0,0,0,.18)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(210%) brightness(1.12)!important;
+  backdrop-filter:blur(34px) saturate(210%) brightness(1.12)!important;
+  isolation:isolate!important;
+}
+html body #root .app nav.masenetLiquidDock::before{
+  content:""!important;position:absolute!important;inset:1px!important;
+  border-radius:inherit!important;pointer-events:none!important;z-index:0!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.035) 34%,transparent 68%)!important;
+  opacity:.9!important;
+}
+html body #root .app nav.masenetLiquidDock::after{
+  content:""!important;position:absolute!important;left:8%!important;right:8%!important;top:1px!important;
+  height:1px!important;border-radius:99px!important;pointer-events:none!important;z-index:1!important;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62),transparent)!important;
+}
+html body #root .app nav.masenetLiquidDock>button{
+  z-index:2!important;color:rgba(245,249,255,.92)!important;
+  -webkit-tap-highlight-color:transparent!important;
+  transition:color .22s ease,background-color .22s ease,filter .22s ease!important;
+}
+html body #root .app nav.masenetLiquidDock>button.active:not(.dockReels){
+  background:linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,255,255,.075))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 0 0 1px rgba(255,255,255,.10)!important;
+  color:#fff!important;
+}
+html body #root .app nav.masenetLiquidDock>button:focus-visible{
+  outline:2px solid rgba(194,226,255,.88)!important;outline-offset:2px!important;
+}
+html body #root .app nav.masenetLiquidDock>button:not(.dockReels):active{
+  filter:brightness(1.18)!important;
+}
+html body #root .app nav.masenetLiquidDock>button>svg{
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.22))!important;
+}
+html body #root .app nav.masenetLiquidDock .dockNotificationBadge{
+  border:1px solid rgba(255,255,255,.52)!important;
+  box-shadow:0 2px 9px rgba(255,47,93,.30),inset 0 1px 0 rgba(255,255,255,.35)!important;
+}
+@media(prefers-reduced-motion:no-preference){
+ html body #root .app nav.masenetLiquidDock::after{animation:masenetGlassGleam 8s ease-in-out infinite}
+ @keyframes masenetGlassGleam{0%,100%{opacity:.38}50%{opacity:.9}}
+}
