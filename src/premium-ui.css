@@ -374,3 +374,37 @@
  .app .aiSide .aiHint{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))!important}
 }
 @media(prefers-reduced-motion:reduce){.app .aiSide *{animation:none!important;transition:none!important}}
+
+
+/* Assistant customization controls: give each advertised choice a real visual effect. */
+.app .aiSide.ai-size-compact{width:min(420px,calc(100vw - 24px));height:min(680px,calc(100dvh - 28px));}
+.app .aiSide.ai-size-compact .aiMessages{padding:12px 11px 15px!important;gap:9px!important;}
+.app .aiSide.ai-size-compact .aiBubble{max-width:92%!important;padding:9px 12px!important;font-size:12px!important;line-height:1.48!important;}
+.app .aiSide.ai-size-compact .aiQuickStart{padding:12px!important;margin:9px 0!important;}
+.app .aiSide.ai-size-compact .aiQuickPrompts button{min-height:40px!important;padding:7px!important;font-size:10px!important;}
+.app .aiSide.ai-size-compact .aiComposer{margin:0 8px!important;padding:7px!important;}
+.app .aiSide.ai-size-compact .aiComposer input:not([type=file]){min-height:38px!important;font-size:12px!important;}
+.app .aiSide.ai-size-large{width:min(640px,100vw);height:100dvh;max-height:100dvh;}
+.app .aiSide.ai-size-large .aiMessages{padding:22px 22px 26px!important;gap:16px!important;}
+.app .aiSide.ai-size-large .aiBubble{max-width:84%!important;padding:15px 17px!important;font-size:15px!important;line-height:1.7!important;}
+.app .aiSide.ai-size-large .aiQuickStart{padding:22px!important;}
+.app .aiSide.ai-size-large .aiComposer{margin:0 18px!important;padding:12px!important;}
+.app .aiSide.ai-size-large .aiComposer input:not([type=file]){min-height:48px!important;font-size:15px!important;}
+
+/* Liquid Glass is the default iOS-inspired surface. Gold and Clean Dark are distinct alternatives. */
+.app .aiSide .ai.ai-glass .aiHeader{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.025))!important;}
+.app .aiSide .ai.ai-glass .aiBubble.assistant{background:rgba(225,235,255,.085)!important;border-color:rgba(220,232,255,.16)!important;}
+.app .aiSide .ai.ai-gold .aiHeader{background:linear-gradient(115deg,rgba(87,65,32,.48),rgba(24,24,29,.94))!important;}
+.app .aiSide .ai.ai-gold .aiAvatar{background:linear-gradient(145deg,rgba(224,184,105,.28),rgba(132,94,43,.18))!important;border-color:rgba(224,184,105,.38)!important;}
+.app .aiSide .ai.ai-gold .aiBubble.user{background:linear-gradient(135deg,rgba(224,184,105,.34),rgba(164,119,54,.26))!important;border-color:rgba(224,184,105,.3)!important;}
+.app .aiSide .ai.ai-gold .aiSend{background:linear-gradient(135deg,#e7c47e,#c69b54)!important;color:#21180b!important;}
+.app .aiSide .ai.ai-minimal .aiHeader{background:#101722!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+.app .aiSide .ai.ai-minimal .aiMessages{background:#0b111a!important;}
+.app .aiSide .ai.ai-minimal .aiBubble,.app .aiSide .ai.ai-minimal .aiQuickStart{background:#151e2b!important;border-color:rgba(255,255,255,.09)!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+.app .aiSide .ai.ai-minimal .aiComposer{background:#111a26!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+@media(max-width:700px){
+ .app .aiSide.ai-size-compact .aiMessages{padding:10px 9px 12px!important;}
+ .app .aiSide.ai-size-compact .aiComposer{margin:0 6px!important;}
+ .app .aiSide.ai-size-large .aiMessages{padding:17px 13px 20px!important;}
+ .app .aiSide.ai-size-large .aiComposer{margin:0 10px!important;}
+}
