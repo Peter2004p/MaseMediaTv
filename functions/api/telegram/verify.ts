@@ -169,7 +169,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
           if (ai.ok) {
             const data = await ai.json() as { candidates?: Array<{ content?: { parts?: Array<{text?:string}> } }> };
             const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\\n") || "";
-            const parsed = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
+            const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
             passed = parsed.passed === true;
             reason = String(parsed.reason || reason).slice(0, 300);
           } else {
@@ -200,7 +200,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
           if (ai.ok) {
             const data = await ai.json() as { output_text?:string; output?:Array<{content?:Array<{text?:string}>}> };
             const raw = data.output_text || (data.output || []).flatMap(item => item.content || []).map(item => item.text || "").join("\\n");
-            const parsed = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
+            const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
             passed = parsed.passed === true;
             reason = String(parsed.reason || reason).slice(0, 300);
           } else {
