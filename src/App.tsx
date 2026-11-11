@@ -107,11 +107,9 @@ export default function App(){
    if(!telegramGateFile.type.startsWith('image/')||telegramGateFile.size>10*1024*1024)throw new Error('Choose an image screenshot under 10 MB.');
    const imageDataUrl=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('Could not read screenshot'));reader.readAsDataURL(telegramGateFile)});
    const result=await api.post('/api/telegram/verify',{initData:tg.initData,imageDataUrl});
-   if(!result.data?.verified)throw new Error(result.data?.error||'Screenshot could not be verified.');
-   setTelegramGate(current=>({...current,youtubeVerified:true,membership:result.data.membership||current?.membership||{},error:'YouTube subscription verified. Checking your Telegram channel memberships…'}));
-   const authResult=await api.post('/api/auth/telegram',{initData:tg.initData});
-   if(authResult.data?.user){setViewer({...authResult.data.user,provider:'telegram'});setTelegramGate(null);setTelegramGateFile(null)}
-   else setTelegramGate({youtubeVerified:true,membership:result.data.membership,error:'YouTube verified. Join any missing Telegram channel, then reopen MaseNet.'});
+   if(!result.data?.submitted)throw new Error(result.data?.error||'Screenshot could not be submitted for admin review.');
+   setTelegramGate(current=>({...current,youtubeVerified:false,error:result.data?.message||'Screenshot sent to the MaseNet admin. Access will unlock after approval.'}));
+   setTelegramGateFile(null);
   }catch(e){const err=e as any;const data=err?.response?.data;setTelegramGate(current=>({...current,youtubeVerified:data?.verificationRequired?!!data.youtubeVerified:current?.youtubeVerified,membership:data?.membership||current?.membership,error:data?.error||(e instanceof Error?e.message:'Verification failed. Please try again.')}))}
   finally{setTelegramGateBusy(false)}
  }
@@ -277,7 +275,7 @@ export default function App(){
    <div style={{width:'100%',maxWidth:480,background:'linear-gradient(160deg,#141b29,#090d15)',border:'1px solid rgba(255,255,255,.12)',borderRadius:24,padding:22,boxShadow:'0 24px 80px rgba(0,0,0,.6)'}}>
     <div style={{fontSize:12,letterSpacing:2,color:'#9bb9e8',fontWeight:800}}>MASENET · ACCESS GATE</div>
     <h1 style={{fontSize:26,margin:'12px 0 8px'}}>Complete your verification</h1>
-    <p style={{color:'#b9c3d3',lineHeight:1.5,marginTop:0}}>Complete these three steps to unlock both the MaseNet Telegram bot and Mini App. The bot AI can verify your YouTube screenshot immediately; the same approved status is used here.</p>
+    <p style={{color:'#b9c3d3',lineHeight:1.5,marginTop:0}}>Complete these three steps to unlock both the MaseNet Telegram bot and Mini App. Upload your YouTube screenshot and wait for the MaseNet admin to review and approve it.</p>
     <div style={{display:'grid',gap:10,margin:'18px 0'}}>
      <a href="https://youtube.com/@masemedia_tv" target="_blank" rel="noopener noreferrer" style={{padding:14,borderRadius:14,background:'#222b3a',color:'white',textDecoration:'none',fontWeight:700}}>1️⃣ Subscribe to our YouTube channel {telegramGate.youtubeVerified?'· ✓':''}</a>
      <a href="https://t.me/MaseMediaTv" target="_blank" rel="noopener noreferrer" style={{padding:14,borderRadius:14,background:'#222b3a',color:'white',textDecoration:'none',fontWeight:700}}>2️⃣ Join our main Telegram channel {telegramGate.membership?.masemedia?'· ✓':''}</a>
@@ -286,7 +284,7 @@ export default function App(){
     {!telegramGate.youtubeVerified&&<div style={{display:'grid',gap:10,marginBottom:14}}>
      <label style={{fontWeight:700}}>Upload a screenshot showing “Subscribed” on the official YouTube channel</label>
      <input type="file" accept="image/*" onChange={e=>setTelegramGateFile(e.target.files?.[0]||null)} style={{width:'100%',color:'#dce6f5'}}/>
-     <button type="button" disabled={!telegramGateFile||telegramGateBusy} onClick={()=>void submitTelegramGateScreenshot()} style={{padding:14,borderRadius:14,border:0,background:'#4b8cff',color:'white',fontWeight:800,opacity:(!telegramGateFile||telegramGateBusy)?0.55:1}}>{telegramGateBusy?'Checking screenshot…':'Verify YouTube subscription'}</button>
+     <button type="button" disabled={!telegramGateFile||telegramGateBusy} onClick={()=>void submitTelegramGateScreenshot()} style={{padding:14,borderRadius:14,border:0,background:'#4b8cff',color:'white',fontWeight:800,opacity:(!telegramGateFile||telegramGateBusy)?0.55:1}}>{telegramGateBusy?'Sending to admin…':'Send screenshot for admin approval'}</button>
     </div>}
     <p role="status" style={{color:'#f4c978',fontSize:13,lineHeight:1.45}}>{telegramGate.error||'Subscribe to @masemedia_tv, upload a screenshot visibly showing “Subscribed”, and join both Telegram channels. The bot AI and Mini App share the approved verification.'}</p>
     <button type="button" onClick={async()=>{try{const tg=(window as any).Telegram?.WebApp;const r=await api.post('/api/telegram/access-status',{initData:tg?.initData||''});setTelegramGate(current=>({...current,youtubeVerified:!!r.data?.youtubeVerified,membership:r.data?.membership||{},error:r.data?.accessGranted?'All checks passed. Opening MaseNet…':'Status refreshed. Complete any remaining checks above.'}));if(r.data?.accessGranted){const authResult=await api.post('/api/auth/telegram',{initData:tg.initData});if(authResult.data?.user){setViewer({...authResult.data.user,provider:'telegram'});setTelegramGate(null)}}}catch(e:any){const d=e?.response?.data;setTelegramGate(current=>({...current,error:d?.error||('Refresh failed ('+(e?.response?.status||'network error')+'). Check your connection and try again.')}))}}} style={{width:'100%',padding:13,borderRadius:14,border:0,background:'#27364d',color:'#fff',fontWeight:800,marginBottom:10}}>I've joined — refresh verification</button>
