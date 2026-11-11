@@ -46,8 +46,14 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     await api("answerCallbackQuery",{callback_query_id:cb.id,text:approve?"Approval received.":"Rejection received."}).catch(error=>console.error("MaseNet callback acknowledgement failed:",String(error)));
     try {
       await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_submissions (
+        id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, display_name TEXT NOT NULL,
+        username TEXT, status TEXT NOT NULL DEFAULT 'pending',
+        submitted_at TEXT NOT NULL DEFAULT (datetime('now')), reviewed_at TEXT
+      )`).run();
+      await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now') WHERE chat_id=? AND status='pending'").bind(approve?"approved":"rejected",targetId).run();
       await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=excluded.youtube_ok,updated_at=datetime('now')").bind(targetId,approve?1:0).run();
-      const notice = await api("sendMessage",{chat_id:targetId,text:approve?"✅ Your YouTube subscription screenshot was approved by the MaseNet admin. Send /verify to complete your Telegram membership checks.":"❌ The MaseNet admin could not approve this screenshot. Please submit a clearer screenshot."});
+      const notice = await api("sendMessage",{chat_id:targetId,text:approve?"✅ Your YouTube subscription screenshot was approved by the MaseNet admin. Your YouTube check is now complete. Join both official Telegram channels, then refresh the Mini App or send /verify to unlock access.":"❌ The MaseNet admin could not approve this screenshot. Your access remains locked. Please upload a clearer screenshot showing the official MaseMedia TV channel and the active Subscribed button."});
       if (!notice.ok) console.error("MaseNet decision notification failed:",await notice.text());
       if (cb.message?.chat?.id && cb.message.message_id) {
         const edit = await api("editMessageReplyMarkup",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,reply_markup:{inline_keyboard:[]}});
