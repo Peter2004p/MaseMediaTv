@@ -27,6 +27,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#080b11;border:1px so
 <input id="secret" type="password" autocomplete="off" required placeholder="Paste the existing secret value">
 <button id="run" type="submit">Run safe diagnostic</button>
 </form>
+<button id="test" type="button" disabled>Send one admin-only Telegram test</button>
 <pre id="result" aria-live="polite"></pre>
 <p class="small">The secret is sent only in the authorization header to this MaseNet site. It is not saved in browser storage and is cleared after the request.</p>
 </main>
@@ -35,17 +36,33 @@ const form=document.getElementById('check');
 const input=document.getElementById('secret');
 const button=document.getElementById('run');
 const output=document.getElementById('result');
+const testButton=document.getElementById('test');
+let authenticatedSecret='';
 form.addEventListener('submit',async event=>{
  event.preventDefault();
  const secret=input.value.trim();
  if(!secret)return;
+ authenticatedSecret=secret;
+ testButton.disabled=true;
  button.disabled=true;button.textContent='Checking…';output.style.display='block';output.textContent='Running read-only checks…';
  try{
   const response=await fetch('/api/telegram/promotions/diagnostic',{method:'POST',headers:{'Authorization':'Bearer '+secret,'Content-Type':'application/json'},body:'{}',cache:'no-store'});
   const data=await response.json();
   output.textContent=JSON.stringify({httpStatus:response.status,...data},null,2);
+  testButton.disabled=!(response.ok && data.ok && data.checks && data.checks.adminChatConfigured && data.checks.telegramBotTokenConfigured);
  }catch(error){output.textContent='Request failed: '+(error&&error.message?error.message:'Network error');}
  finally{input.value='';button.disabled=false;button.textContent='Run safe diagnostic';}
+});
+testButton.addEventListener('click',async()=>{
+ if(!authenticatedSecret)return;
+ testButton.disabled=true;testButton.textContent='Sending admin-only test…';
+ output.style.display='block';output.textContent='Sending exactly one test message to the configured admin chat…';
+ try{
+  const response=await fetch('/api/telegram/promotions/test-admin',{method:'POST',headers:{'Authorization':'Bearer '+authenticatedSecret,'Content-Type':'application/json'},body:'{}',cache:'no-store'});
+  const data=await response.json();
+  output.textContent=JSON.stringify({httpStatus:response.status,...data},null,2);
+ }catch(error){output.textContent='Request failed: '+(error&&error.message?error.message:'Network error');}
+ finally{authenticatedSecret='';testButton.disabled=true;testButton.textContent='Send one admin-only Telegram test';}
 });
 </script>
 </body>
