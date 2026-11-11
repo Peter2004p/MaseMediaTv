@@ -81,7 +81,8 @@ async function generateCatalogueCaption(env: Env, title: string, description: st
 
 async function generateNewsCaption(env: Env, item: NewsItem) {
   const summary = item.summary || "The linked report contains the details.";
-  const parsedDate = item.published ? new Date(item.published) : null;\n  const date = parsedDate && Number.isFinite(parsedDate.getTime()) ? parsedDate.toISOString().slice(0, 10) : "";
+  const parsedDate = item.published ? new Date(item.published) : null;
+  const date = parsedDate && Number.isFinite(parsedDate.getTime()) ? parsedDate.toISOString().slice(0, 10) : "";
   const fallback = `📰 Entertainment update\n\n${item.title}\n\n${summary.slice(0, 360)}\n\nThis is a report from an external publisher. Check the source for the full details and confirmation.`;
   if (!env.GEMINI_API_KEY) return fallback;
   const prompt = `Create a concise Telegram entertainment-news update from this source only. Headline: ${item.title}. Publisher snippet: ${summary}. Published: ${date || "date not supplied"}. Attribute claims to the report, do not present unconfirmed release dates or casting as confirmed, do not add facts, and do not claim MaseNet has the title. End by inviting readers to discuss it. Max 600 characters, plain text, no URLs.`;
@@ -118,7 +119,7 @@ ${title} 👀 What do you think? Share your opinion below. #MaseNet #Movies #Dra
     });
     if (!response.ok) return fallback;
     const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    const result = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\\n").trim();
+    const result = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\n").trim();
     return result ? result.slice(0, 3500) : fallback;
   } catch { return fallback; }
 }
