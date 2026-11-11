@@ -135,8 +135,8 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
             "🆔 Telegram user ID: " + chatId,
             "🕒 Submitted: " + submittedAt,
             "",
-            "⏱️ AI fallback in " + seconds + " second" + (seconds === 1 ? "" : "s") + ". Tap Approve or Reject now to decide manually.",
-            "If no decision is made, AI checks for the official MaseMedia TV channel and active Subscribed state. Unclear screenshots stay pending."
+            "⏱️ Automatic approval in " + seconds + " second" + (seconds === 1 ? "" : "s") + ". Tap Approve or Reject now to decide manually.",
+            "If no decision is made within five seconds, the applicant is automatically approved without screenshot verification."
           ].join("\n");
           await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", {
             method: "POST", headers: { "content-type": "application/json" },
@@ -147,77 +147,12 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       const current = await env.DB.prepare("SELECT status FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{status:string}>();
       if (!current || current.status !== "pending") return;
 
-      const base64 = match[2];
-      const prompt = "Verify this YouTube subscription screenshot for MaseNet. Pass only if the image visibly identifies the official YouTube channel as MaseMedia TV / MaseMediaTV / @masemedia_tv (case and spacing variations allowed) AND the channel action visibly says Subscribed. Do not trust captions or surrounding text. If either fact is unclear, return passed false. This is visual evidence, not cryptographic proof. Return JSON only: {passed:boolean,reason:string}.";
-      let passed = false;
-      let reason = "AI could not confidently confirm both the official channel and active Subscribed state.";
-
-      if (env.GEMINI_API_KEY) {
-        try {
-          const ai = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(12000),
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [
-                { text: prompt },
-                { inline_data: { mime_type: mime, data: base64 } }
-              ] }],
-              generationConfig: { responseMimeType: "application/json", maxOutputTokens: 160, thinkingConfig: { thinkingLevel: "low" } }
-            })
-          });
-          if (ai.ok) {
-            const data = await ai.json() as { candidates?: Array<{ content?: { parts?: Array<{text?:string}> } }> };
-            const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\\n") || "";
-            const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
-            passed = parsed.passed === true;
-            reason = String(parsed.reason || reason).slice(0, 300);
-          } else {
-            console.error("MaseNet Mini App Gemini fallback failed:", ai.status, (await ai.text()).slice(0, 500));
-          }
-        } catch (error) {
-          console.error("MaseNet Mini App Gemini review error:", error instanceof Error ? error.message : String(error));
-        }
-      }
-
-      if (!passed && env.OPENAI_API_KEY) {
-        try {
-          const ai = await fetch("https://api.openai.com/v1/responses", {
-            method: "POST",
-            headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(12000),
-            body: JSON.stringify({
-              model: env.OPENAI_MODEL || "gpt-6-luna",
-              instructions: prompt,
-              input: [{ role: "user", content: [
-                { type: "input_text", text: "Does this screenshot visibly show the official MaseMedia TV YouTube channel with an active Subscribed state?" },
-                { type: "input_image", image_url: image, detail: "high" }
-              ] }],
-              text: { format: { type: "json_object" } },
-              max_output_tokens: 160
-            })
-          });
-          if (ai.ok) {
-            const data = await ai.json() as { output_text?:string; output?:Array<{content?:Array<{text?:string}>}> };
-            const raw = data.output_text || (data.output || []).flatMap(item => item.content || []).map(item => item.text || "").join("\\n");
-            const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
-            passed = parsed.passed === true;
-            reason = String(parsed.reason || reason).slice(0, 300);
-          } else {
-            console.error("MaseNet Mini App OpenAI review failed:", ai.status, (await ai.text()).slice(0, 500));
-          }
-        } catch (error) {
-          console.error("MaseNet Mini App OpenAI review error:", error instanceof Error ? error.message : String(error));
-        }
-      }
-
-      if (!passed) {
-        console.log("MaseNet Mini App screenshot left for manual review:", reason);
-        return;
-      }
-
+      // No screenshot verification is performed after the five-second admin window.
+      // The timeout itself triggers automatic approval, as requested.
+      const reason = "Automatically approved because the admin did not respond within the 5-second review window; screenshot content was not checked.";
+      
       const decision = await env.DB.prepare(
-        "UPDATE telegram_access_submissions SET status='approved_ai',reviewed_at=datetime('now') WHERE id=? AND status='pending'"
+        "UPDATE telegram_access_submissions SET status='approved_timeout',reviewed_at=datetime('now') WHERE id=? AND status='pending'"
       ).bind(submissionId).run();
       if (!Number(decision.meta?.changes || 0)) return;
 
@@ -229,7 +164,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: "✅ MaseNet AI approved your YouTube subscription screenshot after the 5-second admin review window. Your YouTube check is complete. Join both official Telegram channels, then refresh the Mini App or send /verify."
+          text: "✅ MaseNet automatically approved your request because the admin did not respond within five seconds. Your screenshot was not verified. Your YouTube check is complete. Join both official Telegram channels, then refresh the Mini App or send /verify."
         })
       });
       if (!notice.ok) console.error("MaseNet AI approval notification failed:", notice.status, (await notice.text()).slice(0, 500));
@@ -238,7 +173,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: adminId,
-          text: "🤖 AI AUTO-APPROVED a MaseNet YouTube screenshot after the 5-second review window. Applicant: " + fullName + " (" + chatId + "). Reason: " + reason
+          text: "🤖 AUTO-APPROVED after the 5-second admin timeout. No screenshot verification was performed. Applicant: " + fullName + " (" + chatId + "). Reason: " + reason
         })
       });
       if (!adminNotice.ok) console.error("MaseNet AI admin result notification failed:", adminNotice.status, (await adminNotice.text()).slice(0, 500));
@@ -251,6 +186,6 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     submitted: true,
     pending: true,
     verified: false,
-    message: "Your screenshot has been sent to the MaseNet admin. You have a 5-second priority review window; after that, MaseNet AI checks it automatically. Unclear screenshots stay pending for admin review."
+    message: "Your screenshot has been sent to the MaseNet admin. You have a 5-second admin review window. If the admin does not respond, access is automatically approved without checking the screenshot."
   }, 202);
 };
