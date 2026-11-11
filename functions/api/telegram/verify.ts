@@ -118,8 +118,8 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
 
 
   // Give the admin a short priority window. If no manual decision is recorded,
-  // run the same visual subscription check asynchronously. A conditional D1
-  // update ensures a manual decision always wins if it arrives first.
+  // automatically approve the pending request. A conditional D1 update
+  // ensures a manual decision always wins if it arrives first.
   waitUntil((async () => {
     try {
       for (let seconds = 5; seconds > 0; seconds--) {
@@ -167,7 +167,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
           text: "✅ MaseNet automatically approved your request because the admin did not respond within five seconds. Your screenshot was not verified. Your YouTube check is complete. Join both official Telegram channels, then refresh the Mini App or send /verify."
         })
       });
-      if (!notice.ok) console.error("MaseNet AI approval notification failed:", notice.status, (await notice.text()).slice(0, 500));
+      if (!notice.ok) console.error("MaseNet timeout approval notification failed:", notice.status, (await notice.text()).slice(0, 500));
 
       const adminNotice = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
         method: "POST", headers: { "content-type": "application/json" },
@@ -178,7 +178,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       });
       if (!adminNotice.ok) console.error("MaseNet AI admin result notification failed:", adminNotice.status, (await adminNotice.text()).slice(0, 500));
     } catch (error) {
-      console.error("MaseNet delayed AI verification failed:", error instanceof Error ? error.stack || error.message : String(error));
+      console.error("MaseNet delayed timeout approval failed:", error instanceof Error ? error.stack || error.message : String(error));
     }
   })());
 
