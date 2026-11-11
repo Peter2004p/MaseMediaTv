@@ -237,6 +237,26 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   const delivered = results.filter(item => item.ok).length;
+  // Report aggregate Telegram failure categories without exposing subscriber chat IDs.
+  const failureReasons = results.filter(item => !item.ok).reduce((counts, item) => {
+    let code = 0;
+    let description = String(item.error || "");
+    try {
+      const parsed = JSON.parse(description) as { error_code?: number; description?: string };
+      code = Number(parsed.error_code || 0);
+      description = String(parsed.description || description);
+    } catch {}
+    const message = description.toLowerCase();
+    const category = /blocked by the user|user is deactivated|chat not found/.test(message)
+      ? "blocked_or_missing_chat"
+      : /not enough rights|not a member|kicked|forbidden/.test(message)
+        ? "bot_permission"
+        : code === 429 || /too many requests/.test(message)
+          ? "rate_limited"
+          : code >= 500 ? "telegram_server_error" : "other";
+    counts[category] = (counts[category] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
   if (delivered > 0 && historyKey) {
     await env.DB.prepare("INSERT INTO telegram_promo_history (title_name,last_sent_at) VALUES (?,datetime('now')) ON CONFLICT(title_name) DO UPDATE SET last_sent_at=datetime('now')").bind(historyKey).run();
   }
@@ -312,7 +332,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   return json({
     ok: delivered > 0, type: contentType, title: selectedName, delivered, socialDraftSent, engagementPollSent,
-    failed: results.length - delivered, targets: targets.size, sentLast24h,
+    failed: results.length - delivered, failureReasons, targets: targets.size, sentLast24h,
     geminiConfigured: !!env.GEMINI_API_KEY,
     newsFeedItems: news.length, catalogueCandidates: catalogue.length,
     results
