@@ -1,6 +1,7 @@
 interface Env {
   DB: D1Database;
   TELEGRAM_BOT_TOKEN?: string;
+  ADMIN_TELEGRAM_CHAT_ID?: string;
   TELEGRAM_PROMO_CRON_SECRET?: string;
   GEMINI_API_KEY?: string;
   TELEGRAM_WEBAPP_URL?: string;
@@ -93,6 +94,33 @@ async function generateNewsCaption(env: Env, item: NewsItem) {
   const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const result = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\n").trim();
   return result ? result.replace(/https?:\/\/[^\s<>]+/gi, "").slice(0, 700) : fallback;
+}
+
+async function generateSocialPack(env: Env, title: string, facts: string, contentType: string, sourceUrl = "") {
+  const fallback = `SOCIAL MEDIA DRAFTS — ${title}
+
+YOUTUBE
+Title: ${title} | MaseNet entertainment update
+Description: ${facts.slice(0, 420)}${sourceUrl ? "\nSource: " + sourceUrl : ""}
+
+FACEBOOK
+${title} — ${facts.slice(0, 320)}${sourceUrl ? "\nRead the report: " + sourceUrl : ""}
+
+TIKTOK
+${title} 👀 What do you think? Share your opinion below. #MaseNet #Movies #Drama #ChineseDrama`;
+  if (!env.GEMINI_API_KEY) return fallback;
+  const prompt = `Prepare a ready-to-edit social media content pack for MaseNet. Content type: ${contentType}. Subject: ${title}. Grounded facts: ${facts}. Source URL: ${sourceUrl || "none"}. Produce exactly three clearly labelled sections: YOUTUBE (search-friendly video title and description), FACEBOOK (engaging post), TIKTOK (short hook, caption and relevant hashtags). Do not invent cast, release dates, availability, plot details or claim external news is confirmed. For external reports, attribute claims to the linked report. Do not imply that MaseNet owns or streams an external title. Plain text, max 1,800 characters.`;
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 650 } }),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) return fallback;
+    const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const result = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\\n").trim();
+    return result ? result.slice(0, 3500) : fallback;
+  } catch { return fallback; }
 }
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
@@ -196,8 +224,41 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   if (delivered > 0 && historyKey) {
     await env.DB.prepare("INSERT INTO telegram_promo_history (title_name,last_sent_at) VALUES (?,datetime('now')) ON CONFLICT(title_name) DO UPDATE SET last_sent_at=datetime('now')").bind(historyKey).run();
   }
+  let socialDraftSent = false;
+  if (delivered > 0 && env.ADMIN_TELEGRAM_CHAT_ID) {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_social_draft_history (
+      content_key TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`).run();
+    const dailyDrafts = await env.DB.prepare("SELECT COUNT(*) AS count FROM telegram_social_draft_history WHERE created_at >= datetime('now','-1 day')").first<{ count: number }>();
+    const draftKey = historyKey + ":" + new Date().toISOString().slice(0, 10);
+    const alreadySent = await env.DB.prepare("SELECT content_key FROM telegram_social_draft_history WHERE content_key=?").bind(draftKey).first<{ content_key: string }>();
+    if (!alreadySent && Number(dailyDrafts?.count || 0) < 3) {
+      const facts = chosenNews
+        ? chosenNews.title + ". " + chosenNews.summary
+        : selectedName + ". " + chosenCatalogue!.description;
+      const sourceUrl = chosenNews?.link || "";
+      const pack = await generateSocialPack(env, selectedName, facts, contentType, sourceUrl);
+      try {
+        const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ chat_id: env.ADMIN_TELEGRAM_CHAT_ID, text: pack.slice(0, 3900), disable_web_page_preview: true }),
+          signal: AbortSignal.timeout(10000)
+        });
+        if (response.ok) {
+          await env.DB.prepare("INSERT OR IGNORE INTO telegram_social_draft_history (content_key,created_at) VALUES (?,datetime('now'))").bind(draftKey).run();
+          socialDraftSent = true;
+        } else {
+          console.error("Admin social draft delivery failed:", response.status, (await response.text()).slice(0, 220));
+        }
+      } catch (error) {
+        console.error("Admin social draft delivery failed:", error instanceof Error ? error.message : String(error));
+      }
+    }
+  }
+
   return json({
-    ok: delivered > 0, type: contentType, title: selectedName, delivered,
+    ok: delivered > 0, type: contentType, title: selectedName, delivered, socialDraftSent,
     failed: results.length - delivered, targets: targets.size, sentLast24h,
     geminiConfigured: !!env.GEMINI_API_KEY,
     newsFeedItems: news.length, catalogueCandidates: catalogue.length,
