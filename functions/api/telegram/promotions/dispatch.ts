@@ -49,7 +49,7 @@ async function fetchEntertainmentNews(): Promise<NewsItem[]> {
   }));
   const items: NewsItem[] = [];
   for (const xml of responses) {
-    const blocks = xml.match(/<item(?:\\s[^>]*)?>[\\s\\S]*?<\/item>/gi) || [];
+    const blocks = xml.match(new RegExp("<item(?:\\\\s[^>]*)?>[\\\\s\\\\S]*?</item>", "gi")) || [];
     for (const block of blocks) {
       const title = tagValue(block, "title");
       const link = tagValue(block, "link");
@@ -81,7 +81,7 @@ async function generateCatalogueCaption(env: Env, title: string, description: st
 
 async function generateNewsCaption(env: Env, item: NewsItem) {
   const summary = item.summary || "The linked report contains the details.";
-  const date = item.published ? new Date(item.published).toISOString().slice(0, 10) : "";
+  const parsedDate = item.published ? new Date(item.published) : null;\n  const date = parsedDate && Number.isFinite(parsedDate.getTime()) ? parsedDate.toISOString().slice(0, 10) : "";
   const fallback = `📰 Entertainment update\n\n${item.title}\n\n${summary.slice(0, 360)}\n\nThis is a report from an external publisher. Check the source for the full details and confirmation.`;
   if (!env.GEMINI_API_KEY) return fallback;
   const prompt = `Create a concise Telegram entertainment-news update from this source only. Headline: ${item.title}. Publisher snippet: ${summary}. Published: ${date || "date not supplied"}. Attribute claims to the report, do not present unconfirmed release dates or casting as confirmed, do not add facts, and do not claim MaseNet has the title. End by inviting readers to discuss it. Max 600 characters, plain text, no URLs.`;
@@ -224,6 +224,43 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   if (delivered > 0 && historyKey) {
     await env.DB.prepare("INSERT INTO telegram_promo_history (title_name,last_sent_at) VALUES (?,datetime('now')) ON CONFLICT(title_name) DO UPDATE SET last_sent_at=datetime('now')").bind(historyKey).run();
   }
+  let engagementPollSent = false;
+  if (delivered > 0) {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_engagement_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+      question TEXT NOT NULL
+    )`).run();
+    const recentPoll = await env.DB.prepare("SELECT id FROM telegram_promo_engagement_history WHERE sent_at >= datetime('now','-12 hours') LIMIT 1").first<{ id: number }>();
+    if (!recentPoll) {
+      const pollTemplates = [
+        { question: "Which drama genre should MaseNet recommend more often?", options: ["Romance ❤️", "Action & thriller 🔥", "Historical & costume 🏯", "Mystery & suspense 🕵️"] },
+        { question: "What matters most when you choose a movie or drama?", options: ["A gripping story 📖", "Strong acting 🎭", "Action & visuals 🎬", "A satisfying ending ✨"] },
+        { question: "What should our next movie spotlight focus on?", options: ["New releases 🆕", "Hidden gems 💎", "Chinese dramas 🇨🇳", "Movies from around the world 🌍"] }
+      ];
+      const pollIndex = Math.floor(Date.now() / (12 * 60 * 60 * 1000)) % pollTemplates.length;
+      const poll = pollTemplates[pollIndex];
+      let pollDelivered = 0;
+      for (const target of targets) {
+        try {
+          const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendPoll", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ chat_id: target, question: poll.question, options: poll.options, is_anonymous: true, allows_multiple_answers: false }),
+            signal: AbortSignal.timeout(10000)
+          });
+          if (response.ok) pollDelivered++;
+          else console.error("Engagement poll delivery failed:", target, response.status, (await response.text()).slice(0, 180));
+        } catch (error) {
+          console.error("Engagement poll delivery failed:", target, error instanceof Error ? error.message : String(error));
+        }
+      }
+      if (pollDelivered > 0) {
+        await env.DB.prepare("INSERT INTO telegram_promo_engagement_history (question,sent_at) VALUES (?,datetime('now'))").bind(poll.question).run();
+        engagementPollSent = true;
+      }
+    }
+  }
+
   let socialDraftSent = false;
   if (delivered > 0 && env.ADMIN_TELEGRAM_CHAT_ID) {
     await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_social_draft_history (
@@ -258,7 +295,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   return json({
-    ok: delivered > 0, type: contentType, title: selectedName, delivered, socialDraftSent,
+    ok: delivered > 0, type: contentType, title: selectedName, delivered, socialDraftSent, engagementPollSent,
     failed: results.length - delivered, targets: targets.size, sentLast24h,
     geminiConfigured: !!env.GEMINI_API_KEY,
     newsFeedItems: news.length, catalogueCandidates: catalogue.length,
