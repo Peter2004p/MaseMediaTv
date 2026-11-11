@@ -91,7 +91,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     "",
     "ADMIN REVIEW WINDOW: 5 seconds. If you do not decide within 5 seconds, the applicant will be automatically approved. No screenshot verification will be performed.",
     "",
-    "Please inspect the screenshot. Approve or reject now to override the AI fallback during the 5-second window."
+    "Approve or reject within five seconds. If you do not respond, the request is automatically approved without screenshot verification."
   ].join("\n"));
   form.append("reply_markup", JSON.stringify({
     inline_keyboard: [[
