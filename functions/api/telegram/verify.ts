@@ -100,6 +100,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     ]]
   }));
 
+  let adminMessageId: number | null = null;
   try {
     const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendPhoto", { method: "POST", body: form });
     const result = await response.json().catch(() => ({})) as { ok?: boolean; description?: string; result?: { message_id?: number } };
@@ -108,6 +109,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       console.error("MaseNet admin screenshot delivery failed:", response.status, result.description || "Unknown Telegram error");
       return json({ error: "Telegram could not deliver your screenshot to the admin. Please try again shortly." }, 502);
     }
+    adminMessageId = Number(result.result?.message_id || 0) || null;
   } catch (error) {
     await env.DB.prepare("UPDATE telegram_access_submissions SET status='delivery_failed' WHERE id=?").bind(submissionId).run().catch(() => undefined);
     console.error("MaseNet admin screenshot delivery error:", error instanceof Error ? error.message : String(error));
