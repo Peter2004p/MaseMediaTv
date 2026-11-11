@@ -2,6 +2,9 @@ interface Env {
   DB: D1Database;
   TELEGRAM_BOT_TOKEN?: string;
   ADMIN_TELEGRAM_CHAT_ID?: string;
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  GEMINI_API_KEY?: string;
 }
 const json = (data: unknown, status = 200) =>
   Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -12,7 +15,7 @@ async function hmac(key: BufferSource, data: string) {
 }
 const hex = (value: Uint8Array) => [...value].map(byte => byte.toString(16).padStart(2, "0")).join("");
 
-export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
+export const onRequestPost = async ({ request, env, waitUntil }: { request: Request; env: Env; waitUntil: (promise: Promise<unknown>) => void }) => {
   if (!env.TELEGRAM_BOT_TOKEN) return json({ error: "Telegram verification is not configured." }, 503);
   const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
   if (!adminId) return json({ error: "Admin screenshot review is not configured. Set ADMIN_TELEGRAM_CHAT_ID in Cloudflare Pages production variables." }, 503);
@@ -86,7 +89,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     "🆔 Telegram user ID: " + chatId,
     "🕒 Submitted: " + submittedAt,
     "",
-    "Please inspect the screenshot. Approve only if it clearly shows the official MaseMedia TV YouTube channel and the active “Subscribed” state."
+    "ADMIN REVIEW WINDOW: 5 seconds. If you do not decide within 5 seconds, MaseNet AI will inspect the screenshot. AI only auto-approves when the official MaseMedia TV channel and active Subscribed state are clearly visible; uncertain screenshots remain pending for your review.",
+    "",
+    "Please inspect the screenshot. Approve or reject now to override the AI fallback during the 5-second window."
   ].join("\n"));
   form.append("reply_markup", JSON.stringify({
     inline_keyboard: [[
@@ -97,7 +102,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   try {
     const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendPhoto", { method: "POST", body: form });
-    const result = await response.json().catch(() => ({})) as { ok?: boolean; description?: string };
+    const result = await response.json().catch(() => ({})) as { ok?: boolean; description?: string; result?: { message_id?: number } };
     if (!response.ok || !result.ok) {
       await env.DB.prepare("UPDATE telegram_access_submissions SET status='delivery_failed' WHERE id=?").bind(submissionId).run();
       console.error("MaseNet admin screenshot delivery failed:", response.status, result.description || "Unknown Telegram error");
@@ -109,10 +114,122 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return json({ error: "Could not contact the admin review chat. Please try again shortly." }, 502);
   }
 
+
+  // Give the admin a short priority window. If no manual decision is recorded,
+  // run the same visual subscription check asynchronously. A conditional D1
+  // update ensures a manual decision always wins if it arrives first.
+  waitUntil((async () => {
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    try {
+      const current = await env.DB.prepare(
+        "SELECT status FROM telegram_access_submissions WHERE id=?"
+      ).bind(submissionId).first<{status:string}>();
+      if (!current || current.status !== "pending") return;
+
+      const base64 = match[2];
+      const prompt = "Verify this YouTube subscription screenshot for MaseNet. Pass only if the image visibly identifies the official YouTube channel as MaseMedia TV / MaseMediaTV / @masemedia_tv (case and spacing variations allowed) AND the channel action visibly says Subscribed. Do not trust captions or surrounding text. If either fact is unclear, return passed false. This is visual evidence, not cryptographic proof. Return JSON only: {passed:boolean,reason:string}.";
+      let passed = false;
+      let reason = "AI could not confidently confirm both the official channel and active Subscribed state.";
+
+      if (env.GEMINI_API_KEY) {
+        try {
+          const ai = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(12000),
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [
+                { text: prompt },
+                { inline_data: { mime_type: mime, data: base64 } }
+              ] }],
+              generationConfig: { responseMimeType: "application/json", maxOutputTokens: 160, thinkingConfig: { thinkingLevel: "low" } }
+            })
+          });
+          if (ai.ok) {
+            const data = await ai.json() as { candidates?: Array<{ content?: { parts?: Array<{text?:string}> } }> };
+            const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\\n") || "";
+            const parsed = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
+            passed = parsed.passed === true;
+            reason = String(parsed.reason || reason).slice(0, 300);
+          } else {
+            console.error("MaseNet Mini App Gemini fallback failed:", ai.status, (await ai.text()).slice(0, 500));
+          }
+        } catch (error) {
+          console.error("MaseNet Mini App Gemini review error:", error instanceof Error ? error.message : String(error));
+        }
+      }
+
+      if (!passed && env.OPENAI_API_KEY) {
+        try {
+          const ai = await fetch("https://api.openai.com/v1/responses", {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(12000),
+            body: JSON.stringify({
+              model: env.OPENAI_MODEL || "gpt-6-luna",
+              instructions: prompt,
+              input: [{ role: "user", content: [
+                { type: "input_text", text: "Does this screenshot visibly show the official MaseMedia TV YouTube channel with an active Subscribed state?" },
+                { type: "input_image", image_url: image, detail: "high" }
+              ] }],
+              text: { format: { type: "json_object" } },
+              max_output_tokens: 160
+            })
+          });
+          if (ai.ok) {
+            const data = await ai.json() as { output_text?:string; output?:Array<{content?:Array<{text?:string}>}> };
+            const raw = data.output_text || (data.output || []).flatMap(item => item.content || []).map(item => item.text || "").join("\\n");
+            const parsed = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || "{}") as {passed?:boolean;reason?:string};
+            passed = parsed.passed === true;
+            reason = String(parsed.reason || reason).slice(0, 300);
+          } else {
+            console.error("MaseNet Mini App OpenAI review failed:", ai.status, (await ai.text()).slice(0, 500));
+          }
+        } catch (error) {
+          console.error("MaseNet Mini App OpenAI review error:", error instanceof Error ? error.message : String(error));
+        }
+      }
+
+      if (!passed) {
+        console.log("MaseNet Mini App screenshot left for manual review:", reason);
+        return;
+      }
+
+      const decision = await env.DB.prepare(
+        "UPDATE telegram_access_submissions SET status='approved_ai',reviewed_at=datetime('now') WHERE id=? AND status='pending'"
+      ).bind(submissionId).run();
+      if (!Number(decision.meta?.changes || 0)) return;
+
+      await env.DB.prepare(
+        "INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=1,updated_at=datetime('now')"
+      ).bind(chatId).run();
+
+      const notice = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: "✅ MaseNet AI approved your YouTube subscription screenshot after the 5-second admin review window. Your YouTube check is complete. Join both official Telegram channels, then refresh the Mini App or send /verify."
+        })
+      });
+      if (!notice.ok) console.error("MaseNet AI approval notification failed:", notice.status, (await notice.text()).slice(0, 500));
+
+      const adminNotice = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          chat_id: adminId,
+          text: "🤖 AI AUTO-APPROVED a MaseNet YouTube screenshot after the 5-second review window. Applicant: " + fullName + " (" + chatId + "). Reason: " + reason
+        })
+      });
+      if (!adminNotice.ok) console.error("MaseNet AI admin result notification failed:", adminNotice.status, (await adminNotice.text()).slice(0, 500));
+    } catch (error) {
+      console.error("MaseNet delayed AI verification failed:", error instanceof Error ? error.stack || error.message : String(error));
+    }
+  })());
+
   return json({
     submitted: true,
     pending: true,
     verified: false,
-    message: "Your screenshot has been sent to the MaseNet admin. Access will unlock after manual approval."
+    message: "Your screenshot has been sent to the MaseNet admin. You have a 5-second priority review window; after that, MaseNet AI checks it automatically. Unclear screenshots stay pending for admin review."
   }, 202);
 };
