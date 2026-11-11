@@ -257,6 +257,29 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     counts[category] = (counts[category] || 0) + 1;
     return counts;
   }, {} as Record<string, number>);
+
+  // Persist aggregate delivery diagnostics so the next cron run can be inspected
+  // without exposing subscriber IDs or manually triggering another broadcast.
+  try {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_delivery_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+      content_type TEXT NOT NULL,
+      delivered INTEGER NOT NULL,
+      failed INTEGER NOT NULL,
+      targets INTEGER NOT NULL,
+      failure_category TEXT NOT NULL,
+      failure_count INTEGER NOT NULL
+    )`).run();
+    const categories = Object.entries(failureReasons);
+    if (!categories.length) categories.push(["none", 0]);
+    await Promise.all(categories.map(([category, count]) =>
+      env.DB.prepare("INSERT INTO telegram_promo_delivery_metrics (content_type,delivered,failed,targets,failure_category,failure_count) VALUES (?,?,?,?,?,?)")
+        .bind(contentType, delivered, results.length - delivered, targets.size, category, count).run()
+    ));
+  } catch (error) {
+    console.error("Promo delivery metrics could not be saved:", error instanceof Error ? error.message : String(error));
+  }
   if (delivered > 0 && historyKey) {
     await env.DB.prepare("INSERT INTO telegram_promo_history (title_name,last_sent_at) VALUES (?,datetime('now')) ON CONFLICT(title_name) DO UPDATE SET last_sent_at=datetime('now')").bind(historyKey).run();
   }
