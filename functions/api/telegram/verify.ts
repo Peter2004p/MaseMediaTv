@@ -121,11 +121,30 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   // run the same visual subscription check asynchronously. A conditional D1
   // update ensures a manual decision always wins if it arrives first.
   waitUntil((async () => {
-    await new Promise(resolve => setTimeout(resolve, 5000));
     try {
-      const current = await env.DB.prepare(
-        "SELECT status FROM telegram_access_submissions WHERE id=?"
-      ).bind(submissionId).first<{status:string}>();
+      for (let seconds = 5; seconds > 0; seconds--) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const current = await env.DB.prepare("SELECT status FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{status:string}>();
+        if (!current || current.status !== "pending") return;
+        if (adminMessageId) {
+          const countdownCaption = [
+            "🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW",
+            "",
+            "👤 Applicant: " + fullName,
+            "🔖 Telegram: " + username,
+            "🆔 Telegram user ID: " + chatId,
+            "🕒 Submitted: " + submittedAt,
+            "",
+            "⏱️ AI fallback in " + seconds + " second" + (seconds === 1 ? "" : "s") + ". Tap Approve or Reject now to decide manually.",
+            "If no decision is made, AI checks for the official MaseMedia TV channel and active Subscribed state. Unclear screenshots stay pending."
+          ].join("\n");
+          await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ chat_id: adminId, message_id: adminMessageId, caption: countdownCaption })
+          }).catch(() => undefined);
+        }
+      }
+      const current = await env.DB.prepare("SELECT status FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{status:string}>();
       if (!current || current.status !== "pending") return;
 
       const base64 = match[2];
