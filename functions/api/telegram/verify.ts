@@ -89,7 +89,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     "🆔 Telegram user ID: " + chatId,
     "🕒 Submitted: " + submittedAt,
     "",
-    "ADMIN REVIEW WINDOW: 5 seconds. If you do not decide within 5 seconds, MaseNet AI will inspect the screenshot. AI only auto-approves when the official MaseMedia TV channel and active Subscribed state are clearly visible; uncertain screenshots remain pending for your review.",
+    "ADMIN REVIEW WINDOW: 5 seconds. If you do not decide within 5 seconds, the applicant will be automatically approved. No screenshot verification will be performed.",
     "",
     "Please inspect the screenshot. Approve or reject now to override the AI fallback during the 5-second window."
   ].join("\n"));
