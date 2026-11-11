@@ -3,6 +3,10 @@ interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   ADMIN_TELEGRAM_CHAT_ID?: string;
   TELEGRAM_PROMO_CRON_SECRET?: string;
+  PROMO_CRON_SECRET?: string;
+  YOUTUBE_CHANNEL_ID?: string;
+  FACEBOOK_PAGE_URL?: string;
+  TIKTOK_PROFILE_URL?: string;
   GEMINI_API_KEY?: string;
   TELEGRAM_WEBAPP_URL?: string;
   TELEGRAM_MINI_APP_URL?: string;
@@ -34,8 +38,13 @@ async function hashKey(value: string) {
 
 async function fetchEntertainmentNews(): Promise<NewsItem[]> {
   const feeds = [
-    "https://news.google.com/rss/search?q=upcoming+Chinese+drama+release+date+2026+OR+2027&hl=en-US&gl=US&ceid=US:en",
+    // Upcoming Chinese dramas and casting/premiere announcements, including titles not in MaseNet.
+    "https://news.google.com/rss/search?q=upcoming+Chinese+drama+2026+OR+2027+release+date&hl=en-US&gl=US&ceid=US:en",
     "https://news.google.com/rss/search?q=Chinese+drama+casting+premiere+release+announcement&hl=en-US&gl=US&ceid=US:en",
+    // Wider Asian and global movie/TV coverage, viral titles and audience recommendations.
+    "https://news.google.com/rss/search?q=trending+viral+movie+drama+series+popular+this+week&hl=en-US&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=best+new+movies+to+watch+streaming+2026&hl=en-US&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=trending+Chinese+drama+popular+most+watched&hl=en-US&gl=US&ceid=US:en",
     "https://news.google.com/rss/search?q=Asian+film+and+television+new+movie+drama+release&hl=en-US&gl=US&ceid=US:en"
   ];
   const responses = await Promise.all(feeds.map(async url => {
@@ -49,7 +58,7 @@ async function fetchEntertainmentNews(): Promise<NewsItem[]> {
   }));
   const items: NewsItem[] = [];
   for (const xml of responses) {
-    const blocks = xml.match(new RegExp("<item(?:\\\\s[^>]*)?>[\\\\s\\\\S]*?</item>", "gi")) || [];
+    const blocks = xml.match(new RegExp("<item(?:\\s[^>]*)?>[\\s\\S]*?</item>", "gi")) || [];
     for (const block of blocks) {
       const title = tagValue(block, "title");
       const link = tagValue(block, "link");
@@ -125,9 +134,14 @@ ${title} 👀 What do you think? Share your opinion below. #MaseNet #Movies #Dra
 }
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
-  const expected = String(env.TELEGRAM_PROMO_CRON_SECRET || "").trim();
+  // Accept either configured name so the scheduled Worker and Pages function
+  // can share the same bearer secret without depending on two differently named bindings.
+  const expectedSecrets = [env.PROMO_CRON_SECRET, env.TELEGRAM_PROMO_CRON_SECRET]
+    .map(value => String(value || "").trim()).filter(Boolean);
   const supplied = String(request.headers.get("authorization") || "").trim();
-  if (!expected || supplied !== "Bearer " + expected) return json({ ok: false, error: "Unauthorized" }, 401);
+  if (!expectedSecrets.length || !expectedSecrets.some(secret => supplied === "Bearer " + secret)) {
+    return json({ ok: false, error: "Unauthorized" }, 401);
+  }
   if (!env.DB || !env.TELEGRAM_BOT_TOKEN) return json({ ok: false, error: "Telegram or D1 binding unavailable" }, 503);
 
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_history (
