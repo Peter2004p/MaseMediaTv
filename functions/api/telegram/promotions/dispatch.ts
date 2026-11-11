@@ -125,8 +125,9 @@ ${title} 👀 What do you think? Share your opinion below. #MaseNet #Movies #Dra
 }
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
-  const expected = String(env.TELEGRAM_PROMO_CRON_SECRET || "");
-  if (!expected || request.headers.get("authorization") !== "Bearer " + expected) return json({ ok: false, error: "Unauthorized" }, 401);
+  const expected = String(env.TELEGRAM_PROMO_CRON_SECRET || "").trim();
+  const supplied = String(request.headers.get("authorization") || "").trim();
+  if (!expected || supplied !== "Bearer " + expected) return json({ ok: false, error: "Unauthorized" }, 401);
   if (!env.DB || !env.TELEGRAM_BOT_TOKEN) return json({ ok: false, error: "Telegram or D1 binding unavailable" }, 503);
 
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_history (
