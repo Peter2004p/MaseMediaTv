@@ -77,7 +77,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
   const form = new FormData();
   form.append("chat_id", adminId);
-  form.append("photo", new Blob([bytes], { type: mime }), "masenet-youtube-subscription." + (mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg"));
+  form.append("photo", new Blob([bytes.buffer as ArrayBuffer], { type: mime }), "masenet-youtube-subscription." + (mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg"));
   form.append("caption", [
     "🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW",
     "",
