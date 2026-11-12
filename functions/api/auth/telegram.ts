@@ -31,6 +31,13 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
   const chatId = String(user.id);
   const savedAccess = await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number}>();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews(chat_id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'clear',reason TEXT NOT NULL DEFAULT '',flagged_at TEXT,deadline_at TEXT,updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
+  let review=await env.DB.prepare("SELECT status,reason,deadline_at FROM telegram_access_reviews WHERE chat_id=?").bind(chatId).first<{status:string;reason:string;deadline_at:string|null}>();
+  if(review?.status==="warning"&&review.deadline_at){
+    await env.DB.prepare("UPDATE telegram_access_reviews SET status='restricted',updated_at=datetime('now') WHERE chat_id=? AND status='warning' AND datetime(deadline_at)<=datetime('now')").bind(chatId).run();
+    review=await env.DB.prepare("SELECT status,reason,deadline_at FROM telegram_access_reviews WHERE chat_id=?").bind(chatId).first<{status:string;reason:string;deadline_at:string|null}>();
+  }
+  if(review&&["warning","restricted","submitted"].includes(review.status))return json({error:review.status==="restricted"?"Your MaseNet account is restricted until the admin manually approves a genuine replacement screenshot.":"A 24-hour YouTube re-verification warning is active. Submit a genuine screenshot and wait for manual approval.",verificationRequired:true,reviewStatus:review.status,deadlineAt:review.deadline_at},403);
   const membership = { masemedia: false, moondramac: false };
   for (const [channel, key] of [["@MaseMediaTv","masemedia"],["@MoonDramaC","moondramac"]] as const) {
     try {

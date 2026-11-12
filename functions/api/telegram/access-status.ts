@@ -24,6 +24,13 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
   membership[key]=!!r.ok&&!!d.ok&&["member","administrator","creator"].includes(String(d.result?.status||""));
  }
  await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,updated_at) VALUES (?,?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,updated_at=datetime('now')").bind(chatId,membership.masemedia?1:0,membership.moondramac?1:0).run();
- const youtubeVerified=!!saved?.youtube_ok;
- return json({ok:true,youtubeVerified,membership,accessGranted:youtubeVerified&&membership.masemedia&&membership.moondramac,missing:[!youtubeVerified?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)});
+ await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews(chat_id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'clear',reason TEXT NOT NULL DEFAULT '',flagged_at TEXT,deadline_at TEXT,updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
+ let review=await env.DB.prepare("SELECT status,reason,deadline_at FROM telegram_access_reviews WHERE chat_id=?").bind(chatId).first<{status:string;reason:string;deadline_at:string|null}>();
+ if(review?.status==="warning"&&review.deadline_at){
+  const due=await env.DB.prepare("SELECT CASE WHEN datetime(?)<=datetime('now') THEN 1 ELSE 0 END AS due").bind(review.deadline_at).first<{due:number}>();
+  if(due?.due){await env.DB.prepare("UPDATE telegram_access_reviews SET status='restricted',updated_at=datetime('now') WHERE chat_id=? AND status='warning' AND datetime(deadline_at)<=datetime('now')").bind(chatId).run();review={...review,status:"restricted"};}
+ }
+ const reviewActive=!!review&&["warning","restricted","submitted"].includes(review.status);
+ const youtubeVerified=!!saved?.youtube_ok&&!reviewActive;
+ return json({ok:true,youtubeVerified,membership,review:reviewActive?{status:review?.status,reason:review?.reason,deadlineAt:review?.deadline_at}:null,accessGranted:youtubeVerified&&membership.masemedia&&membership.moondramac,missing:[!youtubeVerified?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)});
 };
