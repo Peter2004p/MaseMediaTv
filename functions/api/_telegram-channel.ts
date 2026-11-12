@@ -31,11 +31,17 @@ export async function searchIndexedTelegramChannel(db: D1Database, query: string
   const normalized = query.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   if (normalized.length < 2) return [];
   await ensureChannelIndex(db);
-  const terms = normalized.split(/\s+/).filter(term => term.length > 1).slice(0, 8);
+  const stopWords = new Set(["the","and","for","with","from","that","this","what","where","when","how","can","you","me","please","show","find","search","look","looking","available","movie","movies","drama","dramas","episode","episodes","season","recommend","watch","want","need","is","are","in","on","of","to","a","an","do","have"]);
+  const terms = normalized.split(/\\s+/).filter(term => term.length > 1 && !stopWords.has(term)).slice(0, 8);
+  if (!terms.length) return [];
+  const where = terms.map(() => "post_text LIKE ?").join(" OR ");
+  const rows = await db.prepare("SELECT title,post_text,post_date,post_url FROM telegram_channel_posts WHERE " + where + " ORDER BY post_date DESC LIMIT 200")
+    .bind(...terms.map(term => "%" + term.replace(/[%_\\\\]/g, "\\\\  const terms = normalized.split(/\s+/).filter(term => term.length > 1).slice(0, 8);
   const rows = await db.prepare("SELECT title,post_text,post_date,post_url FROM telegram_channel_posts ORDER BY post_date DESC LIMIT 1000")
+    .all<{title:string;post_text:string;post_date:string|null;post_url:string}>();") + "%"))
     .all<{title:string;post_text:string;post_date:string|null;post_url:string}>();
   return (rows.results || []).map(row => {
-    const haystack = row.post_text.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ");
+    const haystack = row.post_text.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ");
     const matched = terms.filter(term => haystack.includes(term)).length;
     const score = haystack.includes(normalized) ? 100 : matched;
     return {title:row.title,text:row.post_text.slice(0,1200),url:row.post_url,...(row.post_date?{date:row.post_date}:{}),score};
