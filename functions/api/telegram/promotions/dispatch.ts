@@ -298,14 +298,19 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       failed INTEGER NOT NULL,
       targets INTEGER NOT NULL,
       failure_category TEXT NOT NULL,
-      failure_count INTEGER NOT NULL
+      failure_count INTEGER NOT NULL,
+      failure_detail TEXT NOT NULL DEFAULT ''
     )`).run();
+    try {
+      await env.DB.prepare("ALTER TABLE telegram_promo_delivery_metrics ADD COLUMN failure_detail TEXT NOT NULL DEFAULT ''").run();
+    } catch { /* Column already exists. */ }
     const categories = Object.entries(failureReasons);
     if (!categories.length) categories.push(["none", 0]);
-    await Promise.all(categories.map(([category, count]) =>
-      env.DB.prepare("INSERT INTO telegram_promo_delivery_metrics (content_type,delivered,failed,targets,failure_category,failure_count) VALUES (?,?,?,?,?,?)")
-        .bind(contentType, delivered, results.length - delivered, targets.size, category, count).run()
-    ));
+    await Promise.all(categories.map(([category, count]) => {
+      const sample = failureItems.find(item => item.category === category);
+      return env.DB.prepare("INSERT INTO telegram_promo_delivery_metrics (content_type,delivered,failed,targets,failure_category,failure_count,failure_detail) VALUES (?,?,?,?,?,?,?)")
+        .bind(contentType, delivered, results.length - delivered, targets.size, category, count, sample?.description || "").run();
+    }));
   } catch (error) {
     console.error("Promo delivery metrics could not be saved:", error instanceof Error ? error.message : String(error));
   }
