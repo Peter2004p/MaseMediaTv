@@ -22,12 +22,19 @@ async function resolveUser(request: Request, env: LibraryEnv): Promise<string | 
   return user?.id || null;
 }
 
-async function ensureTable(db: D1Database) {
+async function ensureTable(db: D1Database, userId: string) {
   await db.prepare(`CREATE TABLE IF NOT EXISTS user_library_state (
     user_id TEXT PRIMARY KEY,
     payload TEXT NOT NULL DEFAULT '{}',
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS user_profiles (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,name TEXT NOT NULL,avatar TEXT NOT NULL DEFAULT '',is_kids INTEGER NOT NULL DEFAULT 0,pin_hash TEXT,created_at TEXT NOT NULL DEFAULT (datetime('now')),updated_at TEXT NOT NULL DEFAULT (datetime('now')),UNIQUE(user_id,name))`).run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS profile_library_state (profile_id TEXT PRIMARY KEY REFERENCES user_profiles(id) ON DELETE CASCADE,payload TEXT NOT NULL DEFAULT '{}',updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
+  const defaultId=(await sha256("masenet-profile-default:"+userId)).slice(0,32);
+  await db.prepare("INSERT OR IGNORE INTO user_profiles(id,user_id,name,avatar,is_kids) VALUES(?,?,'Main profile','',0)").bind(defaultId,userId).run();
+  const legacy=await db.prepare("SELECT payload FROM user_library_state WHERE user_id=?").bind(userId).first<{payload:string}>();
+  if(legacy?.payload) await db.prepare("INSERT OR IGNORE INTO profile_library_state(profile_id,payload) VALUES(?,?)").bind(defaultId,legacy.payload).run();
+  return defaultId;
 }
 
 const cleanStringArray = (value: unknown, maxItems: number, maxLength: number) =>
@@ -83,13 +90,16 @@ export const onRequestGet: PagesFunction<LibraryEnv> = async ({ request, env }) 
   try {
     const userId = await resolveUser(request, env);
     if (!userId) return json({ error: "Sign in to sync your MaseNet library across devices." }, 401);
-    await ensureTable(env.DB);
-    const row = await env.DB.prepare("SELECT payload,updated_at FROM user_library_state WHERE user_id=?").bind(userId).first<{ payload: string; updated_at: string }>();
+    const defaultId = await ensureTable(env.DB,userId);
+    const requested = new URL(request.url).searchParams.get("profileId") || defaultId;
+    const owned = await env.DB.prepare("SELECT id FROM user_profiles WHERE id=? AND user_id=?").bind(requested,userId).first();
+    if(!owned)return json({error:"Selected profile does not belong to this account."},403);
+    const row = await env.DB.prepare("SELECT payload,updated_at FROM profile_library_state WHERE profile_id=?").bind(requested).first<{ payload: string; updated_at: string }>();
     let state = normalize({});
     if (row?.payload) {
       try { state = normalize(JSON.parse(row.payload) as LibraryPayload); } catch { /* ignore invalid legacy data */ }
     }
-    return json({ state, updatedAt: row?.updated_at || null });
+    return json({ state, profileId: requested, updatedAt: row?.updated_at || null });
   } catch {
     return json({ error: "Your library could not be loaded right now." }, 503);
   }
@@ -103,14 +113,17 @@ export const onRequestPost: PagesFunction<LibraryEnv> = async ({ request, env })
     if (raw.length > 40000) return json({ error: "Library update is too large." }, 413);
     let body: LibraryPayload;
     try { body = JSON.parse(raw) as LibraryPayload; } catch { return json({ error: "Invalid library data." }, 400); }
-    await ensureTable(env.DB);
-    const existing = await env.DB.prepare("SELECT payload FROM user_library_state WHERE user_id=?").bind(userId).first<{ payload: string }>();
+    const defaultId = await ensureTable(env.DB,userId);
+    const profileId = String((body as LibraryPayload & {profileId?:string}).profileId || defaultId);
+    const owned = await env.DB.prepare("SELECT id FROM user_profiles WHERE id=? AND user_id=?").bind(profileId,userId).first();
+    if(!owned)return json({error:"Selected profile does not belong to this account."},403);
+    const existing = await env.DB.prepare("SELECT payload FROM profile_library_state WHERE profile_id=?").bind(profileId).first<{ payload: string }>();
     let previous: LibraryPayload = {};
     if (existing?.payload) { try { previous = JSON.parse(existing.payload) as LibraryPayload; } catch { previous = {}; } }
     const state = normalize({ ...previous, ...body });
-    await env.DB.prepare("INSERT INTO user_library_state(user_id,payload,updated_at) VALUES(?,?,datetime('now')) ON CONFLICT(user_id) DO UPDATE SET payload=excluded.payload,updated_at=datetime('now')")
-      .bind(userId, JSON.stringify(state)).run();
-    return json({ ok: true, state });
+    await env.DB.prepare("INSERT INTO profile_library_state(profile_id,payload,updated_at) VALUES(?,?,datetime('now')) ON CONFLICT(profile_id) DO UPDATE SET payload=excluded.payload,updated_at=datetime('now')")
+      .bind(profileId, JSON.stringify(state)).run();
+    return json({ ok: true, state, profileId });
   } catch {
     return json({ error: "Your library could not be saved right now." }, 503);
   }
