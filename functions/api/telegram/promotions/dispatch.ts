@@ -74,7 +74,9 @@ async function fetchEntertainmentNews(): Promise<NewsItem[]> {
 }
 
 async function generateCatalogueCaption(env: Env, title: string, description: string, kind: string, year: string) {
-  const fallback = `🎬 Now showing on MaseNet: ${title}${year ? ` (${year})` : ""}\n\n${description.slice(0, 430)}\n\nTap below to open MaseNet and start watching.`;
+  const fallback = description
+    ? `🎬 Now showing on MaseNet: ${title}${year ? ` (${year})` : ""}\n\n${description.slice(0, 430)}\n\nTap below to open MaseNet and start watching.`
+    : `🎬 MaseNet watch suggestion\n\nSpotlight: ${title}${year ? ` (${year})` : ""}.\n\nOpen MaseNet to explore this title and see its available details.\n\nA fresh pick from the MaseNet catalogue.`;
   if (!env.GEMINI_API_KEY) return fallback;
   const prompt = `Write a truthful, engaging Telegram promotion for this MaseNet ${kind}. Title: ${title}. Year: ${year || "not listed"}. Synopsis: ${description}. Use only supplied facts; invent no actors, awards, episodes or availability. Max 600 characters, plain text, no URLs.`;
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
@@ -149,12 +151,16 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     last_sent_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
 
-  const [catalogueResult, historyResult, recentCountResult] = await Promise.all([
+  const [catalogueResult, historyResult, catalogueCooldownResult, recentCountResult] = await Promise.all([
     env.DB.prepare("SELECT name,kind,year,description,poster_url,metadata_json FROM titles ORDER BY created_at DESC LIMIT 60").all<PromoTitle>(),
     env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-7 days')").all<{ title_name: string }>(),
+    env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-30 minutes')").all<{ title_name: string }>(),
     env.DB.prepare("SELECT COUNT(*) AS count FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-1 day')").first<{ count: number }>()
   ]);
   const recentlySent = new Set((historyResult.results || []).map(row => row.title_name.toLowerCase()));
+  // News links are held back for seven days; catalogue spotlights only need a
+  // 30-minute cooldown so a small catalogue can still supply the half-hour slot.
+  const recentlySpotlighted = new Set((catalogueCooldownResult.results || []).map(row => row.title_name.toLowerCase()));
   const catalogue = (catalogueResult.results || []).map(row => {
     let metadata: Record<string, unknown> = {};
     try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
@@ -164,7 +170,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       poster: String(row.poster_url || metadata.posterUrl || "").trim(),
       year: String(row.year || metadata.year || "").trim()
     };
-  }).filter(item => item.poster.startsWith("https://") && item.description.length > 0);
+  }).filter(item => !!String(item.row.name || "").trim());
   const news = (await fetchEntertainmentNews()).filter(item => !recentlySent.has(item.key.toLowerCase()));
   const sentLast24h = Number(recentCountResult?.count || 0);
 
@@ -172,9 +178,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   // the same story just to fill a slot. Alternate catalogue discovery and external entertainment news.
   const preferNews = sentLast24h % 2 === 1;
   const selectedNews = preferNews ? news[0] : undefined;
-  const selectedCatalogue = preferNews ? undefined : catalogue.find(item => !recentlySent.has(item.row.name.toLowerCase()));
+  const selectedCatalogue = preferNews ? undefined : catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()));
   const chosenNews = selectedNews || news[0];
-  const chosenCatalogue = selectedCatalogue || catalogue.find(item => !recentlySent.has(item.row.name.toLowerCase()));
+  const chosenCatalogue = selectedCatalogue || catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()));
 
   if (!chosenNews && !chosenCatalogue) {
     return json({ ok: true, skipped: "no_fresh_items", sentLast24h, catalogueCandidates: catalogue.length, newsCandidates: news.length });
@@ -225,9 +231,14 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: MINI_APP_URL }]] };
     for (const target of targets) {
       try {
-        const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendPhoto", {
+        const hasPoster = /^https:\/\//i.test(chosenCatalogue.poster);
+        const method = hasPoster ? "sendPhoto" : "sendMessage";
+        const payload = hasPoster
+          ? { chat_id: target, photo: chosenCatalogue.poster, caption: caption.slice(0, 1000), reply_markup: replyMarkup }
+          : { chat_id: target, text: caption.slice(0, 3800), reply_markup: replyMarkup, disable_web_page_preview: true };
+        const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method, {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ chat_id: target, photo: chosenCatalogue.poster, caption: caption.slice(0, 1000), reply_markup: replyMarkup }),
+          body: JSON.stringify(payload),
           signal: AbortSignal.timeout(10000)
         });
         if (response.ok) results.push({ target, ok: true });
