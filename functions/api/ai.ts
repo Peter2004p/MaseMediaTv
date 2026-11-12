@@ -104,7 +104,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return normalizedName === normalizedQuery || normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName);
   });
   const catalogueSearchIntent = /\b(?:find|search for|look for|show me|do you have|is there|are there|recommend|suggest)\b|\bwhat (?:movies|dramas|titles|episodes) (?:are )?(?:in|available)\b/i.test(message) || directTitleMatch;
-  const channelMatches = !imageInputs.length && catalogueSearchIntent ? await searchPublicTelegramChannel(message, 5).catch((error) => { console.error("MaseNet Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; }) : [];
+  const channelMatches = !imageInputs.length && catalogueSearchIntent ? await searchPublicTelegramChannel(message, 5, env.DB).catch((error) => { console.error("MaseNet Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; }) : [];
   if (!imageInputs.length && catalogueSearchIntent) {
     const stopWords = new Set(["the","and","for","with","from","that","this","what","where","when","how","can","you","me","please","show","find","search","look","looking","available","library","movie","movies","drama","dramas","episode","episodes","season","recommend","recommendation","watch","want","need","is","are","in","on","of","to","a","an"]);
     const words = q.split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 1 && !stopWords.has(w));
