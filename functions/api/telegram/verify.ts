@@ -121,14 +121,17 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   }
 
 
-  // Keep the five-second admin priority window, but never convert silence into
-  // approval. A screenshot is not verified until an authorized admin explicitly
-  // approves it. This is especially important during a 24-hour re-verification.
+  // Five-second fallback: grant provisional access if the admin has not acted.
+  // This is an operational timeout approval, NOT proof that the screenshot is genuine.
+  // The admin can later flag an approved_timeout submission and start 24-hour re-verification.
   waitUntil((async () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 5000));
       const current = await env.DB.prepare("SELECT status FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{status:string}>();
       if (!current || current.status !== "pending") return;
+      const changed = await env.DB.prepare("UPDATE telegram_access_submissions SET status='approved_timeout',reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(submissionId).run();
+      if (!Number(changed.meta?.changes || 0)) return;
+      await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=1,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
       if (adminMessageId) {
         await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", {
           method: "POST", headers: { "content-type": "application/json" },
@@ -143,21 +146,22 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
               "🆔 Telegram user ID: " + chatId,
               "🕒 Submitted: " + submittedAt,
               "",
-              "⏳ Five-second priority window ended. This screenshot is STILL UNVERIFIED.",
-              "Please use Approve or Reject to make the manual decision. No response never grants access."
+              "⏱️ FIVE-SECOND TIMEOUT: PROVISIONAL ACCESS GRANTED.",
+              "⚠️ This is NOT genuine screenshot verification. Please inspect this proof.",
+              "Use Flag / 24h restriction if the screenshot is fake or the task was not completed."
             ].join("\n")
           })
-        }).catch(error => console.error("MaseNet review caption update failed:", error instanceof Error ? error.message : String(error)));
+        }).catch(error => console.error("MaseNet provisional approval caption update failed:", error instanceof Error ? error.message : String(error)));
       }
       await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: "⏳ Your screenshot reached the MaseNet admin. The five-second priority window has ended, but your screenshot is still awaiting manual review. It has NOT been approved or verified. You will receive a Telegram message when the admin makes a decision."
+          text: "⏱️ Your 5-second review window has ended. MaseNet has granted provisional access so you can continue. IMPORTANT: this is a temporary timeout approval, not confirmation that your screenshot or subscription is genuine. An admin may review it later. If your proof is fake or the task was not completed, your access may be challenged and you will receive 24 hours to submit genuine proof."
         })
-      }).catch(error => console.error("MaseNet pending-review notice failed:", error instanceof Error ? error.message : String(error)));
+      }).catch(error => console.error("MaseNet provisional approval notice failed:", error instanceof Error ? error.message : String(error)));
     } catch (error) {
-      console.error("MaseNet pending-review timer failed:", error instanceof Error ? error.stack || error.message : String(error));
+      console.error("MaseNet five-second provisional approval failed:", error instanceof Error ? error.stack || error.message : String(error));
     }
   })());
 
@@ -165,6 +169,6 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     submitted: true,
     pending: true,
     verified: false,
-    message: "Your screenshot has been sent to the MaseNet admin. The admin has a 5-second priority window. If there is no response, the screenshot remains unverified and access is not granted."
+    message: "Your screenshot has been sent to the MaseNet admin. If no admin decision is made within five seconds, provisional access is granted automatically. This is not genuine screenshot verification and may be challenged by an admin later."
   }, 202);
 };
