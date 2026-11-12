@@ -183,7 +183,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const chosenCatalogue = selectedCatalogue || catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()));
 
   if (!chosenNews && !chosenCatalogue) {
-    return json({ ok: true, skipped: "no_fresh_items", sentLast24h, catalogueCandidates: catalogue.length, newsCandidates: news.length });
+    return json({ ok: true, skipped: "no_fresh_items", sentLast24h, catalogueCandidates: catalogue.length, catalogueRecentlySpotlighted: recentlySpotlighted.size, newsCandidates: news.length, newsFeedItems: news.length, geminiConfigured: !!env.GEMINI_API_KEY });
   }
 
   const targets = new Set<string>(["@MaseMediaTv"]);
