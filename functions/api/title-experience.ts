@@ -14,6 +14,8 @@ async function ensureTables(db: D1Database) {
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_events_user_time ON title_user_events(user_id,created_at DESC)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS user_notifications(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,title_id TEXT,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',kind TEXT NOT NULL DEFAULT 'episode',target TEXT,created_at TEXT NOT NULL DEFAULT(datetime('now')),read_at TEXT)").run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_user_notifications_user_time ON user_notifications(user_id,created_at DESC)").run();
   await db.prepare(`CREATE TABLE IF NOT EXISTS user_title_preferences (
     user_id TEXT PRIMARY KEY,languages_json TEXT NOT NULL DEFAULT '[]',
     genres_json TEXT NOT NULL DEFAULT '[]',updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -189,6 +191,18 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
         const titleName=await env.DB.prepare("SELECT name FROM titles WHERE id=?").bind(body.titleId).first<{name:string}>();
         await env.DB.prepare("INSERT INTO user_notifications(id,user_id,title_id,title,description,kind,target) VALUES(?,?,?,?,?,'reply',?)")
           .bind("reply:"+id,parentOwner,body.titleId,"New reply to your comment",(titleName?.name||"A title")+": "+comment.slice(0,180),"#/title/"+encodeURIComponent(String(body.titleId))).run();
+        try {
+          const config=env as ExperienceEnv & {TELEGRAM_BOT_TOKEN?:string};
+          const token=config.TELEGRAM_BOT_TOKEN;
+          if(token){
+            const owner=await env.DB.prepare("SELECT email FROM site_users WHERE id=?").bind(parentOwner).first<{email:string}>();
+            const match=owner?.email.match(/^telegram-(\d+)@telegram\.local$/i);
+            if(match){
+              const appLink="https://t.me/MaseTv_Bot?startapp="+encodeURIComponent("title_"+String(body.titleId));
+              await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:match[1],text:"💬 Someone replied to your comment on "+(titleName?.name||"MaseNet")+".\n\n"+comment.slice(0,500)+"\n\nOpen the discussion: "+appLink,disable_web_page_preview:true})});
+            }
+          }
+        } catch(error) { console.error("MaseNet reply Telegram notification failed:",error instanceof Error?error.message:String(error)); }
       }
       return json({ok:true,id,message:parentId?"Your reply has been posted. The original commenter has been notified.":"Your comment has been posted."});
     }
