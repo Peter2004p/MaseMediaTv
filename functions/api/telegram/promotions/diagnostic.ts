@@ -31,8 +31,28 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     const [targets, catalogue, tables] = await Promise.all([
       env.DB.prepare("SELECT chat_type, COUNT(*) AS count FROM telegram_subscribers WHERE active=1 AND chat_type IN ('private','channel','supergroup') GROUP BY chat_type").all<{chat_type:string;count:number}>(),
       env.DB.prepare("SELECT name,description,poster_url,metadata_json FROM titles ORDER BY created_at DESC LIMIT 60").all<{name:string;description:string|null;poster_url:string|null;metadata_json:string|null}>(),
-      env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('telegram_promo_history','telegram_promo_engagement_history','telegram_social_draft_history')").all<{name:string}>()
+      env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('telegram_promo_history','telegram_promo_engagement_history','telegram_social_draft_history','telegram_promo_delivery_metrics')").all<{name:string}>()
     ]);
+    let recentDeliveryRuns: Array<Record<string, unknown>> = [];
+    if ((tables.results || []).some(row => row.name === "telegram_promo_delivery_metrics")) {
+      try {
+        const metrics = await env.DB.prepare(
+          "SELECT sent_at,content_type,delivered,failed,targets,failure_category,failure_count,failure_detail FROM telegram_promo_delivery_metrics ORDER BY sent_at DESC LIMIT 12"
+        ).all<{sent_at:string;content_type:string;delivered:number;failed:number;targets:number;failure_category:string;failure_count:number;failure_detail?:string}>();
+        recentDeliveryRuns = (metrics.results || []).map(row => ({
+          sentAt: row.sent_at,
+          contentType: row.content_type,
+          delivered: Number(row.delivered || 0),
+          failed: Number(row.failed || 0),
+          targets: Number(row.targets || 0),
+          failureCategory: row.failure_category,
+          failureCount: Number(row.failure_count || 0),
+          failureDetail: String(row.failure_detail || "").slice(0, 180)
+        }));
+      } catch (error) {
+        console.error("Telegram promotion delivery metrics could not be read:", error instanceof Error ? error.message : String(error));
+      }
+    }
 
     const counts = { private: 0, channel: 0, supergroup: 0 };
     for (const row of targets.results || []) {
@@ -48,7 +68,10 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
     checks.subscriberCounts = counts;
     checks.totalSubscriberTargets = counts.private + counts.channel + counts.supergroup;
+    checks.fixedChannelTarget = "@MaseMediaTv";
+    checks.totalBroadcastTargets = counts.private + counts.channel + counts.supergroup + 1;
     checks.eligibleCatalogueItems = eligible;
+    checks.recentDeliveryRuns = recentDeliveryRuns;
     checks.promotionHistoryTables = (tables.results || []).map(row => row.name);
     checks.readyForScheduledDispatch = !!env.TELEGRAM_BOT_TOKEN &&
       (counts.private + counts.channel + counts.supergroup > 0) && eligible > 0;
