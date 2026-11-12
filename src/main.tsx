@@ -4,6 +4,7 @@ import App from './App';
 import './index.css';
 import './title-page.css';
 import './premium-ui.css';
+import './ultra-polish.css';
 
 type ErrorBoundaryState = { hasError: boolean; message: string };
 
