@@ -94,7 +94,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     "🆔 Telegram user ID: " + chatId,
     "🕒 Submitted: " + submittedAt,
     "",
-    "REVIEW WINDOW: 5 seconds. If you do not act, provisional access is granted automatically.",
+    "REVIEW WINDOW: 5 seconds. If you do not act, AI visually screens the screenshot. Provisional access is possible only if the required visible details are clear.",
     "",
     "The separate admin action message contains the approval buttons.",
     "✅ Approve = manually confirm this screenshot",
@@ -126,7 +126,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
           "Telegram user ID: " + chatId,
           "Submission ID: " + submissionId,
           "",
-          "Choose an action. If no decision is made within 5 seconds, provisional access is granted automatically."
+          "Choose an action within 5 seconds. After that, AI performs a visual plausibility screen; provisional access is conditional and is never genuine verification."
         ].join("\n"),
         reply_markup: {
           inline_keyboard: [[
@@ -195,6 +195,6 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     submitted: true,
     pending: true,
     verified: false,
-    message: "Your screenshot has been sent to the MaseNet admin. If no admin decision is made within five seconds, provisional access is granted automatically. This is not genuine screenshot verification and may be challenged by an admin later."
+    message: "Your screenshot has been sent to the MaseNet admin. If no admin decision is made within five seconds, AI visually screens the screenshot. Only a likely visual match receives provisional access; AI does not verify a real YouTube subscription, and manual admin approval remains final."
   }, 202);
 };
