@@ -117,79 +117,43 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   }
 
 
-  // Give the admin a short priority window. If no manual decision is recorded,
-  // automatically approve the pending request. A conditional D1 update
-  // ensures a manual decision always wins if it arrives first.
+  // Keep the five-second admin priority window, but never convert silence into
+  // approval. A screenshot is not verified until an authorized admin explicitly
+  // approves it. This is especially important during a 24-hour re-verification.
   waitUntil((async () => {
     try {
-      for (let seconds = 5; seconds > 0; seconds--) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const current = await env.DB.prepare("SELECT status FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{status:string}>();
-        if (!current || current.status !== "pending") return;
-        if (adminMessageId) {
-          const countdownCaption = [
-            "🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW",
-            "",
-            "👤 Applicant: " + fullName,
-            "🔖 Telegram: " + username,
-            "🆔 Telegram user ID: " + chatId,
-            "🕒 Submitted: " + submittedAt,
-            "",
-            "⏱️ Automatic approval in " + seconds + " second" + (seconds === 1 ? "" : "s") + ". Tap Approve or Reject now to decide manually.",
-            "If no decision is made within five seconds, the applicant is automatically approved without screenshot verification."
-          ].join("\n");
-          await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", {
-            method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ chat_id: adminId, message_id: adminMessageId, caption: countdownCaption })
-          }).catch(() => undefined);
-        }
-      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
       const current = await env.DB.prepare("SELECT status FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{status:string}>();
       if (!current || current.status !== "pending") return;
-
-      // No screenshot verification is performed after the five-second admin window.
-      // The timeout itself triggers automatic approval, as requested.
-      const reason = "Automatically approved because the admin did not respond within the 5-second review window; screenshot content was not checked.";
-      
-      const decision = await env.DB.prepare(
-        "UPDATE telegram_access_submissions SET status='approved_timeout',reviewed_at=datetime('now') WHERE id=? AND status='pending'"
-      ).bind(submissionId).run();
-      if (!Number(decision.meta?.changes || 0)) return;
-
-      // Keep a post-timeout admin moderation action available. The timeout is
-      // still an unconditional approval, but the admin may later flag it for
-      // a genuine replacement screenshot and a 24-hour re-verification period.
       if (adminMessageId) {
-        const flagMarkup = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageReplyMarkup", {
-          method:"POST", headers:{"content-type":"application/json"},
-          body:JSON.stringify({chat_id:adminId,message_id:adminMessageId,reply_markup:{inline_keyboard:[[{text:"⚠️ Flag fake / incomplete (24h warning)",callback_data:"ytflag:"+submissionId}]]}})
-        });
-        if (!flagMarkup.ok) console.error("MaseNet timeout review flag button could not be enabled:",flagMarkup.status,(await flagMarkup.text()).slice(0,400));
+        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            chat_id: adminId,
+            message_id: adminMessageId,
+            caption: [
+              "🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW",
+              "",
+              "👤 Applicant: " + fullName,
+              "🔖 Telegram: " + username,
+              "🆔 Telegram user ID: " + chatId,
+              "🕒 Submitted: " + submittedAt,
+              "",
+              "⏳ Five-second priority window ended. This screenshot is STILL UNVERIFIED.",
+              "Please use Approve or Reject to make the manual decision. No response never grants access."
+            ].join("\\n")
+          })
+        }).catch(error => console.error("MaseNet review caption update failed:", error instanceof Error ? error.message : String(error)));
       }
-
-      await env.DB.prepare(
-        "INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=1,updated_at=datetime('now')"
-      ).bind(chatId).run();
-
-      const notice = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: "✅ MaseNet automatically approved your request because the admin did not respond within five seconds. Your screenshot was not verified. Your YouTube check is complete. Join both official Telegram channels, then refresh the Mini App or send /verify."
+          text: "⏳ Your screenshot reached the MaseNet admin. The five-second priority window has ended, but your screenshot is still awaiting manual review. It has NOT been approved or verified. You will receive a Telegram message when the admin makes a decision."
         })
-      });
-      if (!notice.ok) console.error("MaseNet timeout approval notification failed:", notice.status, (await notice.text()).slice(0, 500));
-
-      const adminNotice = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          chat_id: adminId,
-          text: "🤖 AUTO-APPROVED after the 5-second admin timeout. No screenshot verification was performed. Applicant: " + fullName + " (" + chatId + "). Reason: " + reason
-        })
-      });
-      if (!adminNotice.ok) console.error("MaseNet AI admin result notification failed:", adminNotice.status, (await adminNotice.text()).slice(0, 500));
+      }).catch(error => console.error("MaseNet pending-review notice failed:", error instanceof Error ? error.message : String(error)));
     } catch (error) {
-      console.error("MaseNet delayed timeout approval failed:", error instanceof Error ? error.stack || error.message : String(error));
+      console.error("MaseNet pending-review timer failed:", error instanceof Error ? error.stack || error.message : String(error));
     }
   })());
 
