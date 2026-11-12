@@ -65,8 +65,11 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, display_name TEXT NOT NULL,
       username TEXT, status TEXT NOT NULL DEFAULT 'pending',
       submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
-      reviewed_at TEXT
+      reviewed_at TEXT, ai_verdict TEXT, ai_reason TEXT, ai_reviewed_at TEXT
     )`).run();
+    try { await env.DB.prepare("ALTER TABLE telegram_access_submissions ADD COLUMN ai_verdict TEXT").run(); } catch { /* Column already exists. */ }
+    try { await env.DB.prepare("ALTER TABLE telegram_access_submissions ADD COLUMN ai_reason TEXT").run(); } catch { /* Column already exists. */ }
+    try { await env.DB.prepare("ALTER TABLE telegram_access_submissions ADD COLUMN ai_reviewed_at TEXT").run(); } catch { /* Column already exists. */ }
     await env.DB.prepare(
       "INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,0,datetime('now')) ON CONFLICT(chat_id) DO NOTHING"
     ).bind(chatId).run();
