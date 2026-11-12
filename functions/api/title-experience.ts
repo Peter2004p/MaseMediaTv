@@ -34,6 +34,11 @@ async function ensureTables(db: D1Database) {
     UNIQUE(review_id,user_id)
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_review_reports_review_status ON title_review_reports(review_id,status,created_at DESC)").run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS title_review_votes (
+    review_id TEXT NOT NULL,user_id TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY(review_id,user_id)
+  )`).run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_review_votes_review ON title_review_votes(review_id)").run();
 }
 async function userIdFor(request: Request, env: ExperienceEnv): Promise<string | null> {
   const admin = await currentAdmin(request,env);
@@ -74,7 +79,10 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
     if (titleId) {
       if (!validId(titleId)) return json({error:"Invalid title ID."},400);
       const [reviews,summary]=await Promise.all([
-        env.DB.prepare("SELECT id,rating,body,created_at AS createdAt FROM title_reviews WHERE title_id=? AND status='published' ORDER BY created_at DESC LIMIT 50").bind(titleId).all<{id:string;rating:number;body:string;createdAt:string}>(),
+        env.DB.prepare(`SELECT r.id,r.rating,r.body,r.created_at AS createdAt,
+          (SELECT COUNT(*) FROM title_review_votes v WHERE v.review_id=r.id) AS helpfulCount,
+          EXISTS(SELECT 1 FROM title_review_votes v WHERE v.review_id=r.id AND v.user_id=?) AS helpfulByMe
+          FROM title_reviews r WHERE r.title_id=? AND r.status='published' ORDER BY r.created_at DESC LIMIT 50`).bind(userId||"",titleId).all<{id:string;rating:number;body:string;createdAt:string;helpfulCount:number;helpfulByMe:number}>(),
         env.DB.prepare("SELECT COUNT(*) AS count,ROUND(AVG(rating),1) AS average FROM title_reviews WHERE title_id=? AND status='published'").bind(titleId).first<{count:number;average:number|null}>()
       ]);
       return json({reviews:reviews.results||[],reviewCount:Number(summary?.count||0),averageRating:summary?.average||null,preferences:preferences?{languages:JSON.parse(preferences.languages_json||"[]"),genres:JSON.parse(preferences.genres_json||"[]")}:{languages:[],genres:[]}});
@@ -139,6 +147,17 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
       await env.DB.prepare("INSERT INTO title_reviews(id,title_id,user_id,rating,body) VALUES(?,?,?,?,?) ON CONFLICT(title_id,user_id) DO UPDATE SET rating=excluded.rating,body=excluded.body,status='published',updated_at=datetime('now')")
         .bind(crypto.randomUUID(),body.titleId,userId,rating,text).run();
       return json({ok:true});
+    }
+    if(action==="reviewVote"){
+      if(!validId(body.reviewId)) return json({error:"A valid review is required."},400);
+      const review=await env.DB.prepare("SELECT id,user_id FROM title_reviews WHERE id=? AND status='published'").bind(body.reviewId).first<{id:string;user_id:string}>();
+      if(!review) return json({error:"This review is no longer available."},404);
+      if(review.user_id===userId) return json({error:"You cannot vote on your own review."},400);
+      const prior=await env.DB.prepare("SELECT review_id FROM title_review_votes WHERE review_id=? AND user_id=?").bind(body.reviewId,userId).first();
+      if(prior) await env.DB.prepare("DELETE FROM title_review_votes WHERE review_id=? AND user_id=?").bind(body.reviewId,userId).run();
+      else await env.DB.prepare("INSERT OR IGNORE INTO title_review_votes(review_id,user_id) VALUES(?,?)").bind(body.reviewId,userId).run();
+      const count=await env.DB.prepare("SELECT COUNT(*) AS count FROM title_review_votes WHERE review_id=?").bind(body.reviewId).first<{count:number}>();
+      return json({ok:true,helpful:!prior,helpfulCount:Number(count?.count||0)});
     }
     if(action==="reportReview"){
       if(!validId(body.reviewId)) return json({error:"A valid review is required."},400);
