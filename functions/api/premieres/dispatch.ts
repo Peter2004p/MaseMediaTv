@@ -13,7 +13,8 @@ export const onRequestPost:PagesFunction<Env>=async({request,env})=>{
   const channels=await env.DB.prepare("SELECT chat_id,title FROM telegram_subscribers WHERE active=1 AND chat_type IN ('channel','supergroup')").all<{chat_id:string;title:string|null}>();
   let sent=0,failed=0,alreadySent=0,userAlerts=0,userTelegramSent=0,userTelegramFailed=0;
   const appUrl=(env.TELEGRAM_MINI_APP_URL||env.TELEGRAM_WEBAPP_URL||"https://masetv-cloudflare-migration.pages.dev").trim();
-  for(const p of due.results||[])for(const ch of channels.results||[]){
+  for(const p of due.results||[]){
+   for(const ch of channels.results||[]){
    const prior=await env.DB.prepare("SELECT 1 AS sent FROM premiere_delivery_log WHERE premiere_id=? AND chat_id=?").bind(p.id,ch.chat_id).first();
    if(prior){alreadySent++;continue;}
    const text="🎬 MASENET PREMIERE IS NOW LIVE\n\n"+p.title_name+"\n\n"+String(p.description||"").slice(0,650)+"\n\nOpen MaseNet to watch now.";
@@ -25,6 +26,7 @@ export const onRequestPost:PagesFunction<Env>=async({request,env})=>{
     if(!response.ok||!result.ok){failed++;console.error("Premiere announcement failed",p.id,ch.chat_id,response.status,result.description||"Telegram error");continue;}
     await env.DB.prepare("INSERT OR IGNORE INTO premiere_delivery_log(premiere_id,chat_id) VALUES(?,?)").bind(p.id,ch.chat_id).run();sent++;
    }catch(e){failed++;console.error("Premiere announcement exception",p.id,ch.chat_id,e instanceof Error?e.message:String(e));}
+   }
    const reminderUsers=await env.DB.prepare("SELECT r.user_id,u.email,u.name FROM premiere_reminders r JOIN site_users u ON u.id=r.user_id WHERE r.premiere_id=?").bind(p.id).all<{user_id:string;email:string;name:string}>();
    for(const user of reminderUsers.results||[]){
     const notificationId="premiere:"+p.id+":"+user.user_id;
