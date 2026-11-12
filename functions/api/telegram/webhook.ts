@@ -4,6 +4,7 @@ interface Env {
   TELEGRAM_WEBHOOK_SECRET?: string;
   TELEGRAM_WEBAPP_URL?: string;
   TELEGRAM_MINI_APP_URL?: string;
+  ADMIN_TELEGRAM_CHAT_ID?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
 }
@@ -135,11 +136,129 @@ async function makeAIReply(env: Env, message: string, firstName: string): Promis
   return answer.trim().replace(/https?:\/\/(?:www\.)?masetv-cloudflare-migration\.pages\.dev[^\s<>]*/gi, "").replace(/https?:\/\/masenet\.floot\.app[^\s<>]*/gi, "").trim().slice(0, 3500);
 }
 function chatTitle(chat: any) { return String(chat?.title || [chat?.first_name, chat?.last_name].filter(Boolean).join(" ") || chat?.username || "Telegram user").slice(0, 160); }
+
+async function handleVerificationCallback(env: Env, callback: any) {
+  const callbackId = String(callback?.id || "");
+  const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
+  const senderId = String(callback?.from?.id || "");
+  const callbackChatId = String(callback?.message?.chat?.id || "");
+  const answer = async (text: string, alert = true) => {
+    if (!callbackId) return;
+    try { await telegramCall(env, "answerCallbackQuery", { callback_query_id: callbackId, text: text.slice(0, 180), show_alert: alert }); }
+    catch (error) { console.error("MaseNet verification callback acknowledgement failed:", error instanceof Error ? error.message : String(error)); }
+  };
+
+  // Approval buttons are privileged actions: both the Telegram user and the
+  // private destination chat must match the configured admin ID.
+  if (!adminId || senderId !== adminId || callbackChatId !== adminId) {
+    await answer("This review action is not authorised.");
+    return json({ ok: true, ignored: "unauthorised_verification_callback" });
+  }
+
+  const match = String(callback?.data || "").match(/^yt(approve|reject|flag):([0-9a-f-]{36})$/i);
+  if (!match) {
+    await answer("This review button is invalid or expired.");
+    return json({ ok: true, ignored: "invalid_verification_callback" });
+  }
+  if (!env.DB || !env.TELEGRAM_BOT_TOKEN) {
+    await answer("MaseNet review storage or bot is unavailable. Try again.");
+    return json({ ok: false }, 503);
+  }
+
+  const action = match[1].toLowerCase();
+  const submissionId = match[2];
+  const submission = await env.DB.prepare(
+    "SELECT id,chat_id,display_name,status FROM telegram_access_submissions WHERE id=?"
+  ).bind(submissionId).first<{ id: string; chat_id: string; display_name: string; status: string }>();
+  if (!submission) {
+    await answer("This screenshot submission could not be found.");
+    return json({ ok: true, ignored: "submission_not_found" });
+  }
+  if (["approved_manual", "rejected", "flagged"].includes(String(submission.status))) {
+    await answer("This submission has already been reviewed.");
+    return json({ ok: true, ignored: "already_reviewed" });
+  }
+
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (
+    chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0,
+    youtube_provisional INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0,
+    moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  try { await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN youtube_provisional INTEGER NOT NULL DEFAULT 0").run(); } catch { /* Existing column. */ }
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews (
+    chat_id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'clear', reason TEXT NOT NULL DEFAULT '',
+    flagged_at TEXT, deadline_at TEXT, updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+
+  const resultStatus = action === "approve" ? "approved_manual" : action === "reject" ? "rejected" : "flagged";
+  const changed = await env.DB.prepare(
+    "UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now') WHERE id=? AND status NOT IN ('approved_manual','rejected','flagged')"
+  ).bind(resultStatus, submissionId).run();
+  if (!Number(changed.meta?.changes || 0)) {
+    await answer("This submission was already handled by another review action.");
+    return json({ ok: true, ignored: "review_race" });
+  }
+
+  let userText = "";
+  let adminText = "";
+  let replyMarkup: unknown = undefined;
+  if (action === "approve") {
+    await env.DB.prepare(
+      "UPDATE telegram_access_verification SET youtube_ok=1,youtube_provisional=0,updated_at=datetime('now') WHERE chat_id=?"
+    ).bind(submission.chat_id).run();
+    await env.DB.prepare(
+      "INSERT INTO telegram_access_reviews(chat_id,status,reason,flagged_at,deadline_at,updated_at) VALUES(?,'clear','',NULL,NULL,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET status='clear',reason='',flagged_at=NULL,deadline_at=NULL,updated_at=datetime('now')"
+    ).bind(submission.chat_id).run();
+    userText = "✅ Your YouTube subscription screenshot has been manually approved by the MaseNet admin. Reopen or refresh the MaseNet Mini App to continue.";
+    adminText = "✅ MANUALLY APPROVED — " + submission.display_name + " (" + submission.chat_id + "). YouTube verification is now marked as approved.";
+  } else if (action === "reject") {
+    await env.DB.prepare(
+      "UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=0,updated_at=datetime('now') WHERE chat_id=?"
+    ).bind(submission.chat_id).run();
+    await env.DB.prepare(
+      "INSERT INTO telegram_access_reviews(chat_id,status,reason,updated_at) VALUES(?,'clear','Screenshot rejected by admin',datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET status='clear',reason='Screenshot rejected by admin',flagged_at=NULL,deadline_at=NULL,updated_at=datetime('now')"
+    ).bind(submission.chat_id).run();
+    userText = "❌ Your screenshot was rejected by the MaseNet admin. Your YouTube verification is not approved. Complete the real subscription task and submit a clear, current screenshot from the MaseNet Mini App.";
+    adminText = "❌ REJECTED — " + submission.display_name + " (" + submission.chat_id + "). YouTube verification remains unapproved.";
+    replyMarkup = { inline_keyboard: [[{ text: "Submit a genuine screenshot", web_app: { url: (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim() } }]] };
+  } else {
+    const reason = "Admin flagged the screenshot for genuine YouTube subscription re-verification.";
+    await env.DB.prepare(
+      "INSERT INTO telegram_access_reviews(chat_id,status,reason,flagged_at,deadline_at,updated_at) VALUES(?,'warning',?,datetime('now'),datetime('now','+24 hours'),datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET status='warning',reason=excluded.reason,flagged_at=datetime('now'),deadline_at=datetime('now','+24 hours'),updated_at=datetime('now')"
+    ).bind(submission.chat_id, reason).run();
+    userText = "⚠️ MaseNet needs you to re-verify your YouTube subscription. The admin has flagged your screenshot for review. You have 24 hours to complete the real subscription task and submit a genuine, current screenshot. If it is not approved before the deadline, your MaseNet account will be restricted.";
+    adminText = "⚠️ 24-HOUR RE-VERIFICATION WARNING — " + submission.display_name + " (" + submission.chat_id + "). The deadline is now 24 hours from this action. Existing access is not removed before the deadline.";
+    replyMarkup = { inline_keyboard: [[{ text: "Submit genuine screenshot", web_app: { url: (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim() } }]] };
+  }
+
+  try {
+    await telegramCall(env, "sendMessage", { chat_id: submission.chat_id, text: userText, ...(replyMarkup ? { reply_markup: replyMarkup } : {}) });
+  } catch (error) {
+    console.error("MaseNet verification decision user notification failed:", error instanceof Error ? error.message : String(error));
+  }
+  const messageId = Number(callback?.message?.message_id || 0);
+  if (messageId) {
+    try {
+      await telegramCall(env, "editMessageText", {
+        chat_id: adminId,
+        message_id: messageId,
+        text: adminText,
+        disable_web_page_preview: true
+      });
+    } catch (error) {
+      console.error("MaseNet admin review message update failed:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  await answer(action === "approve" ? "Approved manually." : action === "reject" ? "Screenshot rejected." : "24-hour re-verification warning started.", false);
+  return json({ ok: true, verificationAction: action, submissionId });
+}
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET) return json({ error: "Telegram webhook secrets are not configured." }, 503);
   if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TELEGRAM_WEBHOOK_SECRET) return json({ error: "Unauthorized" }, 401);
   let update: any;
   try { update = await request.json(); } catch { return json({ ok: false }, 400); }
+  if (update?.callback_query) return handleVerificationCallback(env, update.callback_query);
   try { await ensureSubscribers(env); } catch { return json({ error: "Telegram subscriber storage is unavailable." }, 503); }
 
   const message = update?.message || update?.channel_post || (update?.my_chat_member?.chat ? update.my_chat_member : null);
