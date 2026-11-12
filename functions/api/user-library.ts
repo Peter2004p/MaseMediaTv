@@ -127,6 +127,12 @@ export const onRequestPost: PagesFunction<LibraryEnv> = async ({ request, env })
     const profileId = String((body as LibraryPayload & {profileId?:string}).profileId || defaultId);
     const owned = await env.DB.prepare("SELECT id FROM user_profiles WHERE id=? AND user_id=?").bind(profileId,userId).first();
     if(!owned)return json({error:"Selected profile does not belong to this account."},403);
+    const protectedProfile=await env.DB.prepare("SELECT pin_hash FROM user_profiles WHERE id=? AND user_id=?").bind(profileId,userId).first<{pin_hash:string|null}>();
+    if(protectedProfile?.pin_hash){
+      const unlock=request.headers.get("X-MaseNet-Profile-Unlock")||"";
+      const valid=unlock?await env.DB.prepare("SELECT 1 AS ok FROM profile_unlocks WHERE profile_id=? AND user_id=? AND token_hash=? AND expires_at>datetime('now')").bind(profileId,userId,await sha256(unlock)).first():null;
+      if(!valid)return json({error:"Unlock this profile with its PIN to change its private library."},423);
+    }
     const existing = await env.DB.prepare("SELECT payload FROM profile_library_state WHERE profile_id=?").bind(profileId).first<{ payload: string }>();
     let previous: LibraryPayload = {};
     if (existing?.payload) { try { previous = JSON.parse(existing.payload) as LibraryPayload; } catch { previous = {}; } }
