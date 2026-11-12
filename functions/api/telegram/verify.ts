@@ -89,21 +89,13 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     "🆔 Telegram user ID: " + chatId,
     "🕒 Submitted: " + submittedAt,
     "",
-    "ADMIN PRIORITY WINDOW: 5 seconds. This is only a priority alert, NOT automatic approval.",
+    "REVIEW WINDOW: 5 seconds. If you do not act, provisional access is granted automatically.",
     "",
-    "Choose one action below:",
+    "The separate admin action message contains the approval buttons.",
     "✅ Approve = manually confirm this screenshot",
     "❌ Reject = decline this screenshot",
     "⚠️ Flag = start a 24-hour re-verification warning."
   ].join("\n"));
-  form.append("reply_markup", JSON.stringify({
-    inline_keyboard: [[
-      { text: "✅ Approve", callback_data: "ytapprove:" + submissionId },
-      { text: "❌ Reject", callback_data: "ytreject:" + submissionId },
-      { text: "⚠️ Flag / 24h restriction", callback_data: "ytflag:" + submissionId }
-    ]]
-  }));
-
   let adminMessageId: number | null = null;
   try {
     const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendPhoto", { method: "POST", body: form });
@@ -114,6 +106,38 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       return json({ error: "Telegram could not deliver your screenshot to the admin. Please try again shortly." }, 502);
     }
     adminMessageId = Number(result.result?.message_id || 0) || null;
+
+    // Send the review controls as a separate plain-text Telegram message.
+    // This avoids Telegram clients silently omitting inline keyboards on photo captions.
+    const controls = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: adminId,
+        text: [
+          "🛡️ MASENET — ADMIN REVIEW ACTIONS",
+          "Applicant: " + fullName,
+          "Telegram: " + username,
+          "Telegram user ID: " + chatId,
+          "Submission ID: " + submissionId,
+          "",
+          "Choose an action. If no decision is made within 5 seconds, provisional access is granted automatically."
+        ].join("\\n"),
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "✅ Approve", callback_data: "ytapprove:" + submissionId },
+            { text: "❌ Reject", callback_data: "ytreject:" + submissionId }
+          ], [
+            { text: "⚠️ Flag / 24h restriction", callback_data: "ytflag:" + submissionId }
+          ]]
+        }
+      })
+    });
+    const controlsResult = await controls.json().catch(() => ({})) as { ok?: boolean; description?: string };
+    if (!controls.ok || !controlsResult.ok) {
+      console.error("MaseNet admin review buttons delivery failed:", controls.status, controlsResult.description || "Unknown Telegram error");
+      return json({ error: "Screenshot reached the admin, but Telegram could not deliver the approval buttons. Please retry the submission." }, 502);
+    }
   } catch (error) {
     await env.DB.prepare("UPDATE telegram_access_submissions SET status='delivery_failed' WHERE id=?").bind(submissionId).run().catch(() => undefined);
     console.error("MaseNet admin screenshot delivery error:", error instanceof Error ? error.message : String(error));
