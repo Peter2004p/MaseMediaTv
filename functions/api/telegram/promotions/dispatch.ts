@@ -151,99 +151,121 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     last_sent_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
 
-  const [catalogueResult, historyResult, catalogueCooldownResult, recentCountResult] = await Promise.all([
-    env.DB.prepare("SELECT name,kind,year,description,poster_url,metadata_json FROM titles ORDER BY created_at DESC LIMIT 60").all<PromoTitle>(),
-    env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-7 days')").all<{ title_name: string }>(),
-    env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-30 minutes')").all<{ title_name: string }>(),
-    env.DB.prepare("SELECT COUNT(*) AS count FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-1 day')").first<{ count: number }>()
-  ]);
-  const recentlySent = new Set((historyResult.results || []).map(row => row.title_name.toLowerCase()));
-  // News links are held back for seven days; catalogue spotlights only need a
-  // 30-minute cooldown so a small catalogue can still supply the half-hour slot.
-  const recentlySpotlighted = new Set((catalogueCooldownResult.results || []).map(row => row.title_name.toLowerCase()));
-  const catalogue = (catalogueResult.results || []).map(row => {
-    let metadata: Record<string, unknown> = {};
-    try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
-    return {
-      row,
-      description: String(row.description || metadata.description || "").trim(),
-      poster: String(row.poster_url || metadata.posterUrl || "").trim(),
-      year: String(row.year || metadata.year || "").trim()
-    };
-  }).filter(item => !!String(item.row.name || "").trim());
-  const news = (await fetchEntertainmentNews()).filter(item => !recentlySent.has(item.key.toLowerCase()));
-  const sentLast24h = Number(recentCountResult?.count || 0);
+  const requestUrl = new URL(request.url);
+  const campaignSlot = (requestUrl.searchParams.get("slot") || String(Math.floor(Date.now() / 1800000))).slice(0, 80);
+  const batchIndex = Math.max(0, Math.min(20, Number.parseInt(requestUrl.searchParams.get("batch") || "0", 10) || 0));
+  const batchSize = Math.max(5, Math.min(20, Number.parseInt(requestUrl.searchParams.get("batchSize") || "15", 10) || 15));
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_campaigns (
+    slot TEXT PRIMARY KEY,
+    payload_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
 
-  // The cron checks every 30 minutes. It only publishes fresh, unposted items; it never repeats
-  // the same story just to fill a slot. Alternate catalogue discovery and external entertainment news.
-  const preferNews = sentLast24h % 2 === 1;
-  const selectedNews = preferNews ? news[0] : undefined;
-  const selectedCatalogue = preferNews ? undefined : catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()));
-  const chosenNews = selectedNews || news[0];
-  const chosenCatalogue = selectedCatalogue || catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()));
+  type Campaign = { contentType: string; selectedName: string; historyKey: string; caption: string; poster: string; sourceUrl: string; facts: string };
+  const savedCampaign = await env.DB.prepare("SELECT payload_json FROM telegram_promo_campaigns WHERE slot=?").bind(campaignSlot).first<{ payload_json: string }>();
+  let campaign: Campaign | null = null;
+  if (savedCampaign?.payload_json) {
+    try { campaign = JSON.parse(savedCampaign.payload_json) as Campaign; } catch { campaign = null; }
+  }
 
-  if (!chosenNews && !chosenCatalogue) {
-    return json({ ok: true, skipped: "no_fresh_items", sentLast24h, catalogueCandidates: catalogue.length, catalogueRecentlySpotlighted: recentlySpotlighted.size, newsCandidates: news.length, newsFeedItems: news.length, geminiConfigured: !!env.GEMINI_API_KEY });
+  let sentLast24h = 0;
+  let catalogueCandidates = 0;
+  let newsCandidates = 0;
+  let catalogueRecentlySpotlighted = 0;
+  if (!campaign) {
+    const [catalogueResult, historyResult, catalogueCooldownResult, recentCountResult] = await Promise.all([
+      env.DB.prepare("SELECT name,kind,year,description,poster_url,metadata_json FROM titles ORDER BY created_at DESC LIMIT 60").all<PromoTitle>(),
+      env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-7 days')").all<{ title_name: string }>(),
+      env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-30 minutes')").all<{ title_name: string }>(),
+      env.DB.prepare("SELECT COUNT(*) AS count FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-1 day')").first<{ count: number }>()
+    ]);
+    const recentlySent = new Set((historyResult.results || []).map(row => row.title_name.toLowerCase()));
+    const recentlySpotlighted = new Set((catalogueCooldownResult.results || []).map(row => row.title_name.toLowerCase()));
+    catalogueRecentlySpotlighted = recentlySpotlighted.size;
+    const catalogue = (catalogueResult.results || []).map(row => {
+      let metadata: Record<string, unknown> = {};
+      try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
+      return {
+        row,
+        description: String(row.description || metadata.description || "").trim(),
+        poster: String(row.poster_url || metadata.posterUrl || "").trim(),
+        year: String(row.year || metadata.year || "").trim()
+      };
+    }).filter(item => !!String(item.row.name || "").trim());
+    const news = (await fetchEntertainmentNews()).filter(item => !recentlySent.has(item.key.toLowerCase()));
+    sentLast24h = Number(recentCountResult?.count || 0);
+    catalogueCandidates = catalogue.length;
+    newsCandidates = news.length;
+    const preferNews = sentLast24h % 2 === 1;
+    const chosenNews = (preferNews ? news[0] : undefined) || news[0];
+    const chosenCatalogue = (preferNews ? undefined : catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()))) || catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()));
+    if (!chosenNews && !chosenCatalogue) {
+      return json({ ok: true, skipped: "no_fresh_items", sentLast24h, catalogueCandidates, catalogueRecentlySpotlighted, newsCandidates, newsFeedItems: news.length, geminiConfigured: !!env.GEMINI_API_KEY });
+    }
+    if (chosenNews) {
+      let caption: string;
+      try { caption = await generateNewsCaption(env, chosenNews); }
+      catch (error) {
+        console.error("Gemini news caption failed:", error instanceof Error ? error.message : String(error));
+        caption = `📰 Entertainment update\\n\\n${chosenNews.title}\\n\\n${chosenNews.summary.slice(0, 360)}\\n\\nThis is an external report. Open the source for full details.`;
+      }
+      campaign = {
+        contentType: "external_news", selectedName: chosenNews.title, historyKey: chosenNews.key,
+        caption, poster: "", sourceUrl: chosenNews.link, facts: chosenNews.title + ". " + chosenNews.summary
+      };
+    } else if (chosenCatalogue) {
+      const selectedName = chosenCatalogue.row.name;
+      const kind = /movie/i.test(chosenCatalogue.row.kind) ? "movie" : "drama";
+      let caption: string;
+      try { caption = await generateCatalogueCaption(env, selectedName, chosenCatalogue.description, kind, chosenCatalogue.year); }
+      catch (error) {
+        console.error("Gemini catalogue caption failed:", error instanceof Error ? error.message : String(error));
+        caption = `🎬 Discover ${selectedName}${chosenCatalogue.year ? ` (${chosenCatalogue.year})` : ""} on MaseNet!\\n\\n${chosenCatalogue.description.slice(0, 430)}\\n\\nTap below to explore and watch.`;
+      }
+      campaign = {
+        contentType: "catalogue", selectedName, historyKey: selectedName,
+        caption, poster: chosenCatalogue.poster, sourceUrl: "",
+        facts: selectedName + ". " + chosenCatalogue.description
+      };
+    }
+    if (!campaign) return json({ ok: false, error: "Could not prepare a promotion campaign" }, 500);
+    await env.DB.prepare("INSERT OR IGNORE INTO telegram_promo_campaigns (slot,payload_json) VALUES (?,?)")
+      .bind(campaignSlot, JSON.stringify(campaign)).run();
   }
 
   const targets = new Set<string>(["@MaseMediaTv"]);
-  const subs = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND chat_type IN ('private','channel','supergroup')").all<{ chat_id: string }>();
-  for (const row of subs.results || []) if (row.chat_id) targets.add(String(row.chat_id));
-  if (!targets.size) return json({ ok: false, skipped: "no_telegram_targets" }, 503);
+  const subs = await env.DB.prepare("SELECT chat_id,chat_type FROM telegram_subscribers WHERE active=1 AND chat_type IN ('private','channel','supergroup')").all<{ chat_id: string; chat_type: string }>();
+  const channelTargets = new Set<string>(["@MaseMediaTv"]);
+  for (const row of subs.results || []) {
+    if (!row.chat_id) continue;
+    targets.add(String(row.chat_id));
+    if (row.chat_type === "channel" || row.chat_type === "supergroup") channelTargets.add(String(row.chat_id));
+  }
+  const targetList = Array.from(targets).sort();
+  if (!targetList.length) return json({ ok: false, skipped: "no_telegram_targets" }, 503);
+  const batchCount = Math.max(1, Math.ceil(targetList.length / batchSize));
+  if (batchIndex >= batchCount) return json({ ok: true, skipped: "batch_complete", campaignSlot, batchIndex, batchCount });
+  const batchTargets = targetList.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
 
   const results: Array<{ target: string; ok: boolean; error?: string }> = [];
-  let historyKey = "";
-  let contentType = "";
-  let selectedName = "";
-  if (chosenNews) {
-    contentType = "external_news";
-    selectedName = chosenNews.title;
-    historyKey = chosenNews.key;
-    let caption: string;
-    try { caption = await generateNewsCaption(env, chosenNews); }
-    catch (error) {
-      console.error("Gemini news caption failed:", error instanceof Error ? error.message : String(error));
-      caption = `📰 Entertainment update\n\n${chosenNews.title}\n\n${chosenNews.summary.slice(0, 360)}\n\nThis is an external report. Open the source for full details.`;
-    }
-    const replyMarkup = { inline_keyboard: [[{ text: "📰 Read source", url: chosenNews.link }], [{ text: "🎬 Explore MaseNet", url: MINI_APP_URL }]] };
-    for (const target of targets) {
-      try {
-        const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ chat_id: target, text: caption.slice(0, 3800), reply_markup: replyMarkup }),
-          signal: AbortSignal.timeout(10000)
-        });
-        if (response.ok) results.push({ target, ok: true });
-        else results.push({ target, ok: false, error: (await response.text()).slice(0, 220) });
-      } catch (error) { results.push({ target, ok: false, error: error instanceof Error ? error.message : String(error) }); }
-    }
-  } else if (chosenCatalogue) {
-    contentType = "catalogue";
-    selectedName = chosenCatalogue.row.name;
-    historyKey = chosenCatalogue.row.name;
-    const kind = /movie/i.test(chosenCatalogue.row.kind) ? "movie" : "drama";
-    let caption: string;
-    try { caption = await generateCatalogueCaption(env, selectedName, chosenCatalogue.description, kind, chosenCatalogue.year); }
-    catch (error) {
-      console.error("Gemini catalogue caption failed:", error instanceof Error ? error.message : String(error));
-      caption = `🎬 Discover ${selectedName}${chosenCatalogue.year ? ` (${chosenCatalogue.year})` : ""} on MaseNet!\n\n${chosenCatalogue.description.slice(0, 430)}\n\nTap below to explore and watch.`;
-    }
-    const replyMarkup = { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: MINI_APP_URL }]] };
-    for (const target of targets) {
-      try {
-        const hasPoster = /^https:\/\//i.test(chosenCatalogue.poster);
-        const method = hasPoster ? "sendPhoto" : "sendMessage";
-        const payload = hasPoster
-          ? { chat_id: target, photo: chosenCatalogue.poster, caption: caption.slice(0, 1000), reply_markup: replyMarkup }
-          : { chat_id: target, text: caption.slice(0, 3800), reply_markup: replyMarkup, disable_web_page_preview: true };
-        const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method, {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(10000)
-        });
-        if (response.ok) results.push({ target, ok: true });
-        else results.push({ target, ok: false, error: (await response.text()).slice(0, 220) });
-      } catch (error) { results.push({ target, ok: false, error: error instanceof Error ? error.message : String(error) }); }
+  const replyMarkup = campaign.contentType === "external_news"
+    ? { inline_keyboard: [[{ text: "📰 Read source", url: campaign.sourceUrl }], [{ text: "🎬 Explore MaseNet", url: MINI_APP_URL }]] }
+    : { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: MINI_APP_URL }]] };
+  for (const target of batchTargets) {
+    try {
+      const hasPoster = campaign.contentType === "catalogue" && /^https:\\/\\//i.test(campaign.poster);
+      const method = hasPoster ? "sendPhoto" : "sendMessage";
+      const payload = hasPoster
+        ? { chat_id: target, photo: campaign.poster, caption: campaign.caption.slice(0, 1000), reply_markup: replyMarkup }
+        : { chat_id: target, text: campaign.caption.slice(0, 3800), reply_markup: replyMarkup, disable_web_page_preview: campaign.contentType === "catalogue" };
+      const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload), signal: AbortSignal.timeout(10000)
+      });
+      if (response.ok) results.push({ target, ok: true });
+      else results.push({ target, ok: false, error: (await response.text()).slice(0, 220) });
+    } catch (error) {
+      results.push({ target, ok: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -329,7 +351,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     await env.DB.prepare("INSERT INTO telegram_promo_history (title_name,last_sent_at) VALUES (?,datetime('now')) ON CONFLICT(title_name) DO UPDATE SET last_sent_at=datetime('now')").bind(historyKey).run();
   }
   let engagementPollSent = false;
-  if (delivered > 0) {
+  if (delivered > 0 && batchIndex === 0) {
     await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_engagement_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sent_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -345,7 +367,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       const pollIndex = Math.floor(Date.now() / (12 * 60 * 60 * 1000)) % pollTemplates.length;
       const poll = pollTemplates[pollIndex];
       let pollDelivered = 0;
-      for (const target of targets) {
+      for (const target of channelTargets) {
         try {
           const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendPoll", {
             method: "POST", headers: { "content-type": "application/json" },
@@ -366,7 +388,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   let socialDraftSent = false;
-  if (delivered > 0 && env.ADMIN_TELEGRAM_CHAT_ID) {
+  if (delivered > 0 && batchIndex === 0 && env.ADMIN_TELEGRAM_CHAT_ID) {
     await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_social_draft_history (
       content_key TEXT PRIMARY KEY,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -375,11 +397,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     const draftKey = historyKey + ":" + new Date().toISOString().slice(0, 10);
     const alreadySent = await env.DB.prepare("SELECT content_key FROM telegram_social_draft_history WHERE content_key=?").bind(draftKey).first<{ content_key: string }>();
     if (!alreadySent && Number(dailyDrafts?.count || 0) < 3) {
-      const facts = chosenNews
-        ? chosenNews.title + ". " + chosenNews.summary
-        : selectedName + ". " + chosenCatalogue!.description;
-      const sourceUrl = chosenNews?.link || "";
-      const pack = await generateSocialPack(env, selectedName, facts, contentType, sourceUrl);
+      const facts = campaign.facts;
+      const sourceUrl = campaign.sourceUrl;
+      const pack = await generateSocialPack(env, campaign.selectedName, facts, campaign.contentType, sourceUrl);
       try {
         const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
           method: "POST", headers: { "content-type": "application/json" },
@@ -399,12 +419,11 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   return json({
-    ok: delivered > 0, type: contentType, title: selectedName, delivered, socialDraftSent, engagementPollSent,
+    ok: true, deliveryOk: delivered > 0, type: campaign.contentType, title: campaign.selectedName, delivered, socialDraftSent, engagementPollSent,
     failed: results.length - delivered, failureReasons, failureSamples,
     disabledPermanentTargets: permanentlyUnavailable.length,
-    targets: targets.size, sentLast24h,
+    targets: batchTargets.length, totalTargets: targetList.length, batchIndex, batchCount, batchSize, campaignSlot, sentLast24h,
     geminiConfigured: !!env.GEMINI_API_KEY,
-    newsFeedItems: news.length, catalogueCandidates: catalogue.length,
     results: results.filter(item => item.ok).map(item => ({ ok: true })).concat(failureItems.map(item => ({ ok: false, category: item.category, reason: item.description })))
   });
 };
