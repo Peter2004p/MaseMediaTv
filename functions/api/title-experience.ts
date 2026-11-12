@@ -199,7 +199,9 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
             const match=owner?.email.match(/^telegram-(\d+)@telegram\.local$/i);
             if(match){
               const appLink="https://t.me/MaseTv_Bot?startapp="+encodeURIComponent("title_"+String(body.titleId));
-              await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:match[1],text:"💬 Someone replied to your comment on "+(titleName?.name||"MaseNet")+".\n\n"+comment.slice(0,500)+"\n\nOpen the discussion: "+appLink,disable_web_page_preview:true})});
+              const telegramResponse=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:match[1],text:"💬 Someone replied to your comment on "+(titleName?.name||"MaseNet")+".\n\n"+comment.slice(0,500)+"\n\nOpen the discussion: "+appLink,disable_web_page_preview:true})});
+            const telegramResult=await telegramResponse.json() as {ok?:boolean;description?:string};
+            if(!telegramResponse.ok||!telegramResult.ok) console.error("MaseNet reply Telegram notification rejected:",telegramResult.description||("HTTP "+telegramResponse.status));
             }
           }
         } catch(error) { console.error("MaseNet reply Telegram notification failed:",error instanceof Error?error.message:String(error)); }
