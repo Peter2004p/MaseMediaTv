@@ -1,4 +1,5 @@
 import { json } from "../../auth/_shared";
+import { indexTelegramChannelPost } from "../../_telegram-channel";
 
 interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; ADMIN_TELEGRAM_CHAT_ID?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; GEMINI_API_KEY?: string; }
 type Episode = { title?: string; season?: number | string; episode?: number | string; name?: string };
@@ -110,9 +111,18 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       return json({ok:true,adminDecision:"save_failed"});
     }
   }
-  // Never let the user-facing AI process channel broadcasts or post replies into channels.
-  // Channel updates are acknowledged and ignored; private bot conversations remain supported.
-  if (update.channel_post || update.edited_channel_post) return json({ ok: true, ignored: "channel_post" });
+  // Index official channel posts without replying to the channel. The bot webhook
+  // is registered to this /masetv route, so this is the live channel-update path.
+  const channelPost = update.channel_post || update.edited_channel_post;
+  if (channelPost) {
+    try {
+      const indexed = await indexTelegramChannelPost(env.DB, channelPost as any);
+      return json({ ok: true, channelPostIndexed: indexed });
+    } catch (error) {
+      console.error("MaseNet Telegram channel indexing failed:", error instanceof Error ? error.message : String(error));
+      return json({ ok: false, channelPostIndexed: false }, 500);
+    }
+  }
   const msg = update.message || update.edited_message;
   const chatId = msg?.chat?.id;
   const incoming = String(msg?.text || (msg as any)?.caption || "").trim();
