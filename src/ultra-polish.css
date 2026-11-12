@@ -198,3 +198,159 @@
 @media(prefers-reduced-motion:reduce){
   .app .iqHome .iqCard,.app .iqHome .iqPoster img,.app .detailHero *,.app .episodes .episode{transition:none!important}
 }
+
+
+/* Full catalogue art direction — intentionally excludes all navigation and player UI. */
+.app .iqHome .maseCinematicHero{
+  min-height:clamp(510px,53vw,660px)!important;
+  grid-template-columns:minmax(0,1fr) 205px!important;
+  align-items:center!important;
+  gap:clamp(22px,4vw,58px)!important;
+  padding:clamp(28px,5vw,68px)!important;
+  border-radius:30px!important;
+  border:1px solid rgba(205,238,220,.17)!important;
+  background:radial-gradient(ellipse at 78% 16%,rgba(0,220,139,.17),transparent 38%),linear-gradient(125deg,#07110c 0%,#101a15 53%,#15241c 100%)!important;
+  box-shadow:0 34px 100px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.12)!important;
+}
+.app .iqHome .maseCinematicHero .iqHeroShade{
+  z-index:-1!important;
+  background:linear-gradient(90deg,rgba(4,10,7,.98) 0%,rgba(4,10,7,.88) 42%,rgba(4,10,7,.48) 75%,rgba(4,10,7,.18) 100%),linear-gradient(0deg,rgba(3,8,5,.92),transparent 70%)!important;
+}
+.app .iqHome .maseCinematicHero .iqHeroPoster{inset:0 0 0 18%!important;opacity:.56!important;filter:saturate(.8) contrast(1.05)!important}
+.app .iqHome .maseCinematicHero .iqHeroPoster .posterImage,
+.app .iqHome .maseCinematicHero .iqHeroPoster .heroCustomImage{
+  width:100%;height:100%;object-fit:cover;
+  mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.42) 25%,#000 72%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.42) 25%,#000 72%);
+}
+.app .iqHome .maseHeroAtmosphere{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at 12% 18%,rgba(0,213,138,.13),transparent 38%),linear-gradient(125deg,transparent 42%,rgba(0,0,0,.13));
+}
+.app .iqHome .maseHeroEditorial{z-index:2;max-width:760px;align-self:center}
+.app .iqHome .maseHeroBrandline{
+  display:flex;align-items:center;gap:9px;margin-bottom:19px;
+  color:#9aead0;font-size:9px;font-weight:900;letter-spacing:.19em;
+}
+.app .iqHome .maseLiveDot{width:7px;height:7px;border-radius:50%;background:#00e69a;box-shadow:0 0 15px rgba(0,230,154,.75)}
+.app .iqHome .maseHeroDivider{height:12px;width:1px;background:rgba(255,255,255,.25)}
+.app .iqHome .maseHeroEditorial .iqTags{gap:8px;margin-bottom:19px}
+.app .iqHome .maseHeroEditorial .iqTags span{
+  padding:7px 11px;border-radius:5px;border-color:rgba(255,255,255,.18);
+  background:rgba(4,12,8,.55);color:#d5e6dc;font-size:9px;letter-spacing:.1em;
+}
+.app .iqHome .maseHeroEditorial .iqTags span:first-child{
+  color:#82f2c0;border-color:rgba(0,213,138,.45);background:rgba(0,111,69,.22);
+}
+.app .iqHome .maseHeroEditorial h1{
+  max-width:12ch;margin:0 0 18px;font-size:clamp(42px,6.5vw,82px);
+  line-height:.94;letter-spacing:-.075em;font-weight:900;
+  text-shadow:0 8px 38px rgba(0,0,0,.45);
+}
+.app .iqHome .maseHeroEditorial>p{
+  max-width:55ch;color:rgba(237,247,240,.79);
+  font-size:clamp(13px,1.3vw,16px);line-height:1.8;
+}
+.app .iqHome .maseHeroFacts{display:flex;flex-wrap:wrap;gap:0;margin-top:20px;color:#b5c9bd}
+.app .iqHome .maseHeroFacts span{
+  padding:0 13px;border-right:1px solid rgba(255,255,255,.2);
+  font-size:9px;font-weight:850;letter-spacing:.1em;
+}
+.app .iqHome .maseHeroFacts span:first-child{padding-left:0;color:#8cebbd}
+.app .iqHome .maseHeroFacts span:last-child{border:0}
+.app .iqHome .maseHeroEditorial .iqHeroActions{margin-top:25px;gap:11px}
+.app .iqHome .maseHeroEditorial .iqHeroActions button{
+  min-height:48px;padding:0 21px;border-radius:8px;font-size:12px;
+}
+.app .iqHome .maseHeroEditorial .iqHeroActions .primary{
+  background:linear-gradient(135deg,#b5f7d7,#00d58a);color:#062014;
+  box-shadow:0 9px 30px rgba(0,213,138,.2);
+}
+.app .iqHome .maseHeroEditorial .iqHeroActions .secondary{
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.2);
+  color:#f2f8f4;backdrop-filter:blur(12px);
+}
+.app .iqHome .maseHeroPosterCard{
+  position:relative;z-index:2;align-self:center;justify-self:end;
+  width:min(100%,205px);padding:9px;border:1px solid rgba(255,255,255,.2);
+  border-radius:13px;background:linear-gradient(145deg,rgba(255,255,255,.17),rgba(255,255,255,.045));
+  box-shadow:0 28px 65px rgba(0,0,0,.5),inset 0 1px rgba(255,255,255,.17);
+  backdrop-filter:blur(16px);transform:rotate(2deg);
+}
+.app .iqHome .maseHeroPosterCard>.poster{
+  width:100%;aspect-ratio:2/2.85;border-radius:8px;overflow:hidden;
+}
+.app .iqHome .maseHeroPosterCard .posterImage{width:100%;height:100%;object-fit:cover}
+.app .iqHome .maseHeroPosterCard>div:last-child{display:grid;gap:5px;padding:11px 4px 5px}
+.app .iqHome .maseHeroPosterCard small{font-size:8px;font-weight:900;letter-spacing:.14em;color:#8cebbd}
+.app .iqHome .maseHeroPosterCard b{font-size:12px;line-height:1.3;color:#f5faf6}
+.app .iqHome .maseHeroPosterCard span{font-size:9px;color:#aebfb4}
+.app .iqHome .maseCatalogueMasthead{
+  display:flex;align-items:end;justify-content:space-between;gap:22px;
+  margin:clamp(28px,4vw,48px) 2px 20px;padding:0 2px;
+}
+.app .iqHome .maseCatalogueEyebrow{
+  color:#65e9ae;font-size:9px;font-weight:900;letter-spacing:.2em;
+}
+.app .iqHome .maseCatalogueMasthead h2{
+  margin:7px 0 6px;color:#f4f8f5;font-size:clamp(25px,3vw,37px);
+  line-height:1.04;font-weight:850;letter-spacing:-.06em;
+}
+.app .iqHome .maseCatalogueMasthead p{margin:0;color:#9eaea4;font-size:12px;line-height:1.6}
+.app .iqHome .maseCatalogueMetrics{display:flex;align-items:center;gap:clamp(12px,2vw,25px);flex:0 0 auto}
+.app .iqHome .maseCatalogueMetrics span{display:grid;gap:4px}
+.app .iqHome .maseCatalogueMetrics b{font-size:21px;line-height:1;color:#f3faf5;font-weight:850;letter-spacing:-.05em}
+.app .iqHome .maseCatalogueMetrics small{font-size:8px;color:#91a69a;font-weight:850;letter-spacing:.12em}
+.app .iqHome .maseCatalogueMetrics i{height:28px;width:1px;background:rgba(255,255,255,.14)}
+.app .iqHome .iqCategories{
+  position:relative!important;top:auto!important;z-index:2!important;
+  border-radius:11px!important;padding:7px!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  background:linear-gradient(110deg,rgba(20,29,23,.98),rgba(11,17,13,.97))!important;
+}
+.app .iqHome .iqCategories button{border-radius:7px!important;padding:10px 15px!important}
+.app .iqHome .iqCategories button.active{
+  color:#04180e!important;background:linear-gradient(135deg,#b4f5d5,#00d58a)!important;
+  box-shadow:0 5px 18px rgba(0,213,138,.19);
+}
+.app .iqHome .iqRowHead h2{font-size:clamp(22px,2.5vw,30px);letter-spacing:-.055em}
+.app .iqHome .iqKicker{color:#66e8ad;letter-spacing:.17em}
+.app .iqHome .iqGrid{gap:20px 14px}
+.app .iqHome .iqCard{padding:5px;border-radius:12px}
+.app .iqHome .iqPoster{border-radius:9px;box-shadow:0 14px 32px rgba(0,0,0,.32)}
+.app .iqHome .iqCard>b{font-size:12px;font-weight:800;letter-spacing:-.02em}
+.app .iqHome .iqCard>small{color:#9eada3}
+.app .iqHome .iqCard:focus-visible,.app .iqHome .iqCategories button:focus-visible{
+  outline:2px solid #5de6a9;outline-offset:3px;
+}
+.app .detail .detailHero{
+  background:radial-gradient(ellipse at 12% 0%,rgba(0,213,138,.1),transparent 45%),linear-gradient(125deg,#121b15,#0b100d)!important;
+}
+@media(max-width:760px){
+ .app .iqHome .maseCinematicHero{
+   min-height:560px!important;display:flex!important;flex-direction:column!important;
+   align-items:stretch!important;justify-content:flex-end!important;gap:14px!important;
+   padding:22px 17px 17px!important;border-radius:19px!important;
+ }
+ .app .iqHome .maseCinematicHero .iqHeroPoster{inset:0!important;opacity:.62!important}
+ .app .iqHome .maseCinematicHero .iqHeroPoster .posterImage,
+ .app .iqHome .maseCinematicHero .iqHeroPoster .heroCustomImage{
+   mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.75) 38%,transparent 88%);
+   -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.75) 38%,transparent 88%);
+   object-position:center 20%;
+ }
+ .app .iqHome .maseHeroEditorial{padding-top:115px}
+ .app .iqHome .maseHeroEditorial h1{font-size:clamp(36px,10vw,54px);max-width:11ch}
+ .app .iqHome .maseHeroPosterCard{display:none}
+ .app .iqHome .maseHeroFacts{margin-top:13px;gap:8px}
+ .app .iqHome .maseHeroFacts span{padding:0 8px;font-size:8px}
+ .app .iqHome .maseHeroEditorial .iqHeroActions{margin-top:18px}
+ .app .iqHome .maseCatalogueMasthead{align-items:flex-start;flex-direction:column;gap:15px;margin-top:28px}
+ .app .iqHome .maseCatalogueMetrics{width:100%;justify-content:space-between}
+ .app .iqHome .maseCatalogueMetrics b{font-size:19px}
+ .app .iqHome .iqGrid{gap:13px 7px}
+ .app .iqHome .iqCard{padding:3px}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .iqHome .maseHeroPosterCard{transform:none}
+}
