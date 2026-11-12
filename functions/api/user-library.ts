@@ -5,6 +5,7 @@ type LibraryPayload = {
   readNotifications?: unknown;
   progress?: unknown;
   positions?: unknown;
+  lastEpisodes?: unknown;
   completed?: unknown;
   followed?: unknown;
 };
@@ -50,6 +51,14 @@ function cleanPositions(value: unknown): Record<string, number> {
   }
   return out;
 }
+function cleanLastEpisodes(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>).slice(0, 500)) {
+    if (/^[A-Za-z0-9_-]{1,180}$/.test(key) && typeof raw === 'string' && /^[A-Za-z0-9_-]{1,180}$/.test(raw)) out[key] = raw;
+  }
+  return out;
+}
 function cleanCompleted(value: unknown): Record<string, boolean> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const out: Record<string, boolean> = {};
@@ -64,6 +73,7 @@ function normalize(body: LibraryPayload) {
     readNotifications: cleanStringArray(body.readNotifications, 250, 220),
     progress: cleanProgress(body.progress),
     positions: cleanPositions(body.positions),
+    lastEpisodes: cleanLastEpisodes(body.lastEpisodes),
     completed: cleanCompleted(body.completed),
     followed: cleanStringArray(body.followed, 500, 180)
   };
