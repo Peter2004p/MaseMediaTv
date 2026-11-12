@@ -3,7 +3,11 @@ type ApiResult<T=any> = { data:T };
 async function request<T=any>(method:string,path:string,body?:unknown,params?:Record<string,string>):Promise<ApiResult<T>> {
   const url=new URL(path,window.location.origin);
   if(params) for(const [k,v] of Object.entries(params)) url.searchParams.set(k,v);
-  const response=await fetch(url.toString(),{method,credentials:"include",headers:body===undefined?{}:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body)});
+  const headers:Record<string,string>={};
+  if(body!==undefined)headers["Content-Type"]="application/json";
+  const profileId=url.searchParams.get("profileId")||(body&&typeof body==="object"&&"profileId" in body?String((body as any).profileId||""):"");
+  if(profileId){try{const unlock=sessionStorage.getItem("masenet-profile-unlock-"+profileId);if(unlock)headers["X-MaseNet-Profile-Unlock"]=unlock}catch{}}
+  const response=await fetch(url.toString(),{method,credentials:"include",headers,body:body===undefined?undefined:JSON.stringify(body)});
   const text=await response.text();
   let data:any={}; try{data=text?JSON.parse(text):{}}catch{data={message:text}}
   if(!response.ok) throw new Error(data?.error||data?.message||`Request failed (${response.status})`);
