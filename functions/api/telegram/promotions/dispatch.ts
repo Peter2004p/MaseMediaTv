@@ -237,26 +237,55 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   const delivered = results.filter(item => item.ok).length;
-  // Report aggregate Telegram failure categories without exposing subscriber chat IDs.
-  const failureReasons = results.filter(item => !item.ok).reduce((counts, item) => {
+  // Classify delivery failures from Telegram's JSON body or transport error.
+  // Permanently unreachable chats are disabled so every scheduled broadcast does not
+  // keep retrying dead private chats or channels.
+  const classifyFailure = (raw: string) => {
     let code = 0;
-    let description = String(item.error || "");
+    let description = String(raw || "Unknown Telegram delivery error").slice(0, 500);
     try {
       const parsed = JSON.parse(description) as { error_code?: number; description?: string };
       code = Number(parsed.error_code || 0);
       description = String(parsed.description || description);
     } catch {}
     const message = description.toLowerCase();
-    const category = /blocked by the user|user is deactivated|chat not found/.test(message)
+    const category = /bot was blocked by the user|blocked by the user|user is deactivated|chat not found|peer_id_invalid/.test(message)
       ? "blocked_or_missing_chat"
-      : /not enough rights|not a member|kicked|forbidden/.test(message)
+      : /not enough rights|not a member|kicked|bot was kicked|forbidden/.test(message)
         ? "bot_permission"
         : code === 429 || /too many requests/.test(message)
           ? "rate_limited"
-          : code >= 500 ? "telegram_server_error" : "other";
-    counts[category] = (counts[category] || 0) + 1;
+          : code >= 500 || /upstream|internal server|temporarily unavailable/.test(message)
+            ? "telegram_server_error"
+            : /abort|timeout|timed out|network|fetch failed|connection/.test(message)
+              ? "network_or_timeout"
+              : "other";
+    return { category, code, description: description.replace(/\b\d{7,15}\b/g, "[chat]").slice(0, 180) };
+  };
+  const failureItems = results.filter(item => !item.ok).map(item => ({ ...item, ...classifyFailure(item.error || "") }));
+  const failureReasons = failureItems.reduce((counts, item) => {
+    counts[item.category] = (counts[item.category] || 0) + 1;
     return counts;
   }, {} as Record<string, number>);
+
+  // Disable only permanent Telegram delivery failures. Transient network, rate-limit,
+  // and server failures remain active and are retried on the next scheduled run.
+  const permanentlyUnavailable = failureItems.filter(item =>
+    item.category === "blocked_or_missing_chat" || item.category === "bot_permission"
+  );
+  if (permanentlyUnavailable.length) {
+    await Promise.all(permanentlyUnavailable.map(item =>
+      env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?")
+        .bind(item.target).run().catch(error => {
+          console.error("Could not deactivate unreachable Telegram subscriber:", error instanceof Error ? error.message : String(error));
+        })
+    ));
+  }
+  const failureSamples = failureItems.slice(0, 8).map(item => ({
+    category: item.category,
+    httpCode: item.code || undefined,
+    reason: item.description
+  }));
 
   // Persist aggregate delivery diagnostics so the next cron run can be inspected
   // without exposing subscriber IDs or manually triggering another broadcast.
@@ -355,9 +384,11 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   return json({
     ok: delivered > 0, type: contentType, title: selectedName, delivered, socialDraftSent, engagementPollSent,
-    failed: results.length - delivered, failureReasons, targets: targets.size, sentLast24h,
+    failed: results.length - delivered, failureReasons, failureSamples,
+    disabledPermanentTargets: permanentlyUnavailable.length,
+    targets: targets.size, sentLast24h,
     geminiConfigured: !!env.GEMINI_API_KEY,
     newsFeedItems: news.length, catalogueCandidates: catalogue.length,
-    results
+    results: results.filter(item => item.ok).map(item => ({ ok: true })).concat(failureItems.map(item => ({ ok: false, category: item.category, reason: item.description })))
   });
 };
