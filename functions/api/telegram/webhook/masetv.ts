@@ -203,7 +203,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: "📸 To submit your YouTube subscription screenshot, open the MaseNet Mini App and use its verification upload. Your screenshot will be sent to the admin with a 5-second review window; if there is no manual decision, the request is automatically approved without screenshot verification."
+          text: "📸 To submit your YouTube subscription screenshot, open the MaseNet Mini App and use its verification upload. Your screenshot will be sent to the admin with a 5-second review window; if there is no manual decision, your screenshot remains pending and is NOT approved."
         })
       });
       return json({ ok: true, verificationUpload: "mini_app" });
