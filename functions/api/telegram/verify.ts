@@ -156,6 +156,17 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       ).bind(submissionId).run();
       if (!Number(decision.meta?.changes || 0)) return;
 
+      // Keep a post-timeout admin moderation action available. The timeout is
+      // still an unconditional approval, but the admin may later flag it for
+      // a genuine replacement screenshot and a 24-hour re-verification period.
+      if (adminMessageId) {
+        const flagMarkup = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageReplyMarkup", {
+          method:"POST", headers:{"content-type":"application/json"},
+          body:JSON.stringify({chat_id:adminId,message_id:adminMessageId,reply_markup:{inline_keyboard:[[{text:"⚠️ Flag fake / incomplete (24h warning)",callback_data:"ytflag:"+submissionId}]]}})
+        });
+        if (!flagMarkup.ok) console.error("MaseNet timeout review flag button could not be enabled:",flagMarkup.status,(await flagMarkup.text()).slice(0,400));
+      }
+
       await env.DB.prepare(
         "INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=1,updated_at=datetime('now')"
       ).bind(chatId).run();
