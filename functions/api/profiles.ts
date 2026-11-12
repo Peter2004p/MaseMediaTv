@@ -38,7 +38,7 @@ export const onRequestGet: PagesFunction<ProfileEnv> = async ({request,env}) => 
   try {
     const userId=await resolveUser(request,env); if(!userId)return json({error:"Sign in to manage profiles."},401);
     await ensure(env.DB,userId);
-    const rows=await env.DB.prepare("SELECT id,name,avatar,is_kids,created_at FROM user_profiles WHERE user_id=? ORDER BY created_at,id").bind(userId).all();
+    const rows=await env.DB.prepare("SELECT id,name,avatar,is_kids,CASE WHEN pin_hash IS NULL THEN 0 ELSE 1 END AS has_pin,created_at FROM user_profiles WHERE user_id=? ORDER BY created_at,id").bind(userId).all();
     return json({profiles:(rows.results||[]).map(profileShape),maxProfiles:6});
   } catch { return json({error:"Profiles could not be loaded."},503); }
 };
@@ -71,7 +71,7 @@ export const onRequestPost: PagesFunction<ProfileEnv> = async ({request,env}) =>
         await env.DB.prepare("UPDATE user_profiles SET name=?,avatar=?,is_kids=?,pin_hash=CASE WHEN ?=1 THEN ? ELSE pin_hash END,updated_at=datetime('now') WHERE id=? AND user_id=?")
           .bind(name,String(body.avatar||"").slice(0,300),body.isKids?1:0,pin?1:0,pinHash,id,userId).run();
       } catch { return json({error:"A profile with that name already exists."},409); }
-      const row=await env.DB.prepare("SELECT id,name,avatar,is_kids FROM user_profiles WHERE id=? AND user_id=?").bind(id,userId).first();
+      const row=await env.DB.prepare("SELECT id,name,avatar,is_kids,CASE WHEN pin_hash IS NULL THEN 0 ELSE 1 END AS has_pin FROM user_profiles WHERE id=? AND user_id=?").bind(id,userId).first();
       if(!row)return json({error:"Profile not found."},404);
       return json({ok:true,profile:profileShape(row)});
     }
