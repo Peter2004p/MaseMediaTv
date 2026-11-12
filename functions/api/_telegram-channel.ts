@@ -1,12 +1,22 @@
 export type TelegramChannelPost = { title: string; text: string; url: string; date?: string; score: number };
 
-type TelegramChannelMessage = { message_id?: number; date?: number; chat?: { username?: string }; text?: string; caption?: string };
+type TelegramChannelMessage = {
+  message_id?: number;
+  date?: number;
+  chat?: { username?: string };
+  text?: string;
+  caption?: string;
+};
 
 async function ensureChannelIndex(db: D1Database) {
-  await db.prepare(`CREATE TABLE IF NOT EXISTS telegram_channel_posts (
-    post_id TEXT PRIMARY KEY, title TEXT NOT NULL, post_text TEXT NOT NULL,
-    post_date TEXT, post_url TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )`).run();
+  await db.prepare(\`CREATE TABLE IF NOT EXISTS telegram_channel_posts (
+    post_id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    post_text TEXT NOT NULL,
+    post_date TEXT,
+    post_url TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )\`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_telegram_channel_posts_date ON telegram_channel_posts(post_date)").run();
 }
 
@@ -19,10 +29,14 @@ export async function indexTelegramChannelPost(db: D1Database, message: Telegram
   const title = postText.split("\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || "MaseMediaTv channel post";
   const date = message.date ? new Date(message.date * 1000).toISOString() : null;
   const url = "https://t.me/MaseMediaTv/" + postId;
-  await db.prepare(`INSERT INTO telegram_channel_posts (post_id,title,post_text,post_date,post_url,updated_at)
-    VALUES (?,?,?,?,?,datetime('now')) ON CONFLICT(post_id) DO UPDATE SET
-    title=excluded.title,post_text=excluded.post_text,post_date=excluded.post_date,
-    post_url=excluded.post_url,updated_at=datetime('now')`)
+  await db.prepare(\`INSERT INTO telegram_channel_posts (post_id,title,post_text,post_date,post_url,updated_at)
+    VALUES (?,?,?,?,?,datetime('now'))
+    ON CONFLICT(post_id) DO UPDATE SET
+      title=excluded.title,
+      post_text=excluded.post_text,
+      post_date=excluded.post_date,
+      post_url=excluded.post_url,
+      updated_at=datetime('now')\`)
     .bind(String(postId), title, postText, date, url).run();
   return true;
 }
@@ -32,22 +46,26 @@ export async function searchIndexedTelegramChannel(db: D1Database, query: string
   if (normalized.length < 2) return [];
   await ensureChannelIndex(db);
   const stopWords = new Set(["the","and","for","with","from","that","this","what","where","when","how","can","you","me","please","show","find","search","look","looking","available","movie","movies","drama","dramas","episode","episodes","season","recommend","watch","want","need","is","are","in","on","of","to","a","an","do","have"]);
-  const terms = normalized.split(/\\s+/).filter(term => term.length > 1 && !stopWords.has(term)).slice(0, 8);
+  const terms = normalized.split(/\s+/).filter(term => term.length > 1 && !stopWords.has(term)).slice(0, 8);
   if (!terms.length) return [];
   const where = terms.map(() => "post_text LIKE ?").join(" OR ");
   const rows = await db.prepare("SELECT title,post_text,post_date,post_url FROM telegram_channel_posts WHERE " + where + " ORDER BY post_date DESC LIMIT 200")
-    .bind(...terms.map(term => "%" + term.replace(/[%_\\\\]/g, "\\\\  const terms = normalized.split(/\s+/).filter(term => term.length > 1).slice(0, 8);
-  const rows = await db.prepare("SELECT title,post_text,post_date,post_url FROM telegram_channel_posts ORDER BY post_date DESC LIMIT 1000")
-    .all<{title:string;post_text:string;post_date:string|null;post_url:string}>();") + "%"))
+    .bind(...terms.map(term => "%" + term.replace(/[%_\\]/g, "\\$&") + "%"))
     .all<{title:string;post_text:string;post_date:string|null;post_url:string}>();
   return (rows.results || []).map(row => {
     const haystack = row.post_text.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ");
     const matched = terms.filter(term => haystack.includes(term)).length;
     const score = haystack.includes(normalized) ? 100 : matched;
-    return {title:row.title,text:row.post_text.slice(0,1200),url:row.post_url,...(row.post_date?{date:row.post_date}:{}),score};
+    return {
+      title: row.title,
+      text: row.post_text.slice(0, 1200),
+      url: row.post_url,
+      ...(row.post_date ? { date: row.post_date } : {}),
+      score
+    };
   }).filter(post => post.score > 0)
-    .sort((a,b)=>b.score-a.score || String(b.date||"").localeCompare(String(a.date||"")))
-    .slice(0,Math.max(1,Math.min(10,limit)));
+    .sort((a, b) => b.score - a.score || String(b.date || "").localeCompare(String(a.date || "")))
+    .slice(0, Math.max(1, Math.min(10, limit)));
 }
 
 const decode = (value: string) => value
