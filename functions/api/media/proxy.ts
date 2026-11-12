@@ -129,7 +129,9 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  // Some streaming providers expose an HLS playlist or MP4 through an extensionless
  // endpoint and label it as application/octet-stream. Peek at a bounded clone of the
  // response so we can identify the container without buffering the actual video.
- if(!detectedPlaylist && !request.headers.has("range") && /^(?:application\/octet-stream|binary\/octet-stream|text\/plain|application\/x-download)(?:\s*;|$)/i.test(contentType) && upstream.body) {
+ const rangeHeader=request.headers.get("range")||"";
+ const canSniffContainer=!rangeHeader||/^bytes=0-(?:\d*)$/i.test(rangeHeader);
+ if(!detectedPlaylist && canSniffContainer && /^(?:application\/octet-stream|binary\/octet-stream|text\/plain|application\/x-download)(?:\s*;|$)/i.test(contentType) && upstream.body) {
   try {
    const reader=upstream.clone().body?.getReader();
    if(reader) {
