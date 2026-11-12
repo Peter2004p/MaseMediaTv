@@ -1,4 +1,4 @@
-import { searchPublicTelegramChannel } from "../_telegram-channel";
+import { indexTelegramChannelPost, searchPublicTelegramChannel } from "../_telegram-channel";
 interface Env {
   DB: D1Database;
   TELEGRAM_BOT_TOKEN?: string;
@@ -77,7 +77,7 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
   }
 }
 async function makeAIReply(env: Env, message: string, firstName: string): Promise<string> {
-  const channelMatches = await searchPublicTelegramChannel(message, 5).catch((error) => { console.error("Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; });
+  const channelMatches = await searchPublicTelegramChannel(message, 5, env.DB).catch((error) => { console.error("Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; });
   if (!env.OPENAI_API_KEY) return channelMatches.length ? "I couldn’t find that in the MaseNet website library, but I found these posts in our official Telegram channel:\n\n" + channelMatches.map(post => "• " + post.title + "\n" + post.text.slice(0,360) + "\n" + post.url).join("\n\n") : "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet Mini App using the button below.";
   let sharedInstructions = "";
   let catalogueContext = "";
@@ -265,6 +265,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   let update: any;
   try { update = await request.json(); } catch { return json({ ok: false }, 400); }
   if (update?.callback_query) return handleVerificationCallback(env, update.callback_query);
+  const channelUpdate = update?.channel_post || update?.edited_channel_post;
+  if (channelUpdate) {
+    try {
+      const indexed = await indexTelegramChannelPost(env.DB, channelUpdate);
+      return json({ ok: true, channelPostIndexed: indexed });
+    } catch (error) {
+      console.error("MaseNet Telegram channel indexing failed", error instanceof Error ? error.message : "unknown error");
+      return json({ ok: false, channelPostIndexed: false }, 500);
+    }
+  }
   try { await ensureSubscribers(env); } catch { return json({ error: "Telegram subscriber storage is unavailable." }, 503); }
 
   const message = update?.message || update?.channel_post || (update?.my_chat_member?.chat ? update.my_chat_member : null);
@@ -312,7 +322,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     } else if (text && !text.startsWith("/")) {
       const matches = await findCatalogMatches(env, text);
       if (matches.length) {
-        const channelMatches = await searchPublicTelegramChannel(text, 5).catch((error) => { console.error("Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; });
+        const channelMatches = await searchPublicTelegramChannel(text, 5, env.DB).catch((error) => { console.error("Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; });
         const resultText = "🎬 <b>Found in the MaseNet library</b>\n\n" + matches.map((item) =>
           "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
           (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
