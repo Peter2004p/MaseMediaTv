@@ -89,14 +89,18 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     "🆔 Telegram user ID: " + chatId,
     "🕒 Submitted: " + submittedAt,
     "",
-    "ADMIN PRIORITY WINDOW: 5 seconds. If you do not decide within five seconds, the screenshot remains pending and access is NOT granted.",
+    "ADMIN PRIORITY WINDOW: 5 seconds. This is only a priority alert, NOT automatic approval.",
     "",
-    "Approve or reject within five seconds. If you do not respond, the request is automatically approved without screenshot verification."
+    "Choose one action below:",
+    "✅ Approve = manually confirm this screenshot",
+    "❌ Reject = decline this screenshot",
+    "⚠️ Flag = start a 24-hour re-verification warning."
   ].join("\n"));
   form.append("reply_markup", JSON.stringify({
     inline_keyboard: [[
       { text: "✅ Approve", callback_data: "ytapprove:" + submissionId },
-      { text: "❌ Reject", callback_data: "ytreject:" + submissionId }
+      { text: "❌ Reject", callback_data: "ytreject:" + submissionId },
+      { text: "⚠️ Flag / 24h restriction", callback_data: "ytflag:" + submissionId }
     ]]
   }));
 
