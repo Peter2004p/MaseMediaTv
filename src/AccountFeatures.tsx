@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {api} from './cloudflare-client';
+import Player from './FlootPlayer';
 import {Users,Plus,Trash2,ShieldCheck,RefreshCw,Copy,Play,Pause,LogOut,Video,Lock} from 'lucide-react';
 
 type Profile={id:string;name:string;avatar:string;isKids:boolean;hasPin?:boolean};
@@ -22,31 +23,31 @@ export function ProfileManager({activeId,onSelect}:{activeId:string;onSelect:(id
 
 type Room={id:string;code:string;titleId:string;episodeId:string;hostUserId:string;currentTime:number;isPlaying:boolean;revision:number};
 export function WatchPartyPage({titles,displayName,go}:{titles:any[];displayName:string;go:(r:string)=>void}){
- const [room,setRoom]=useState<Room|null>(null),[members,setMembers]=useState<any[]>([]),[code,setCode]=useState(''),[titleId,setTitleId]=useState(titles[0]?.id||''),[episodeId,setEpisodeId]=useState(titles[0]?.episodes?.[0]?.id||''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [room,setRoom]=useState<Room|null>(null),[members,setMembers]=useState<any[]>([]),[viewerId,setViewerId]=useState(''),[code,setCode]=useState(''),[titleId,setTitleId]=useState(titles[0]?.id||''),[episodeId,setEpisodeId]=useState(titles[0]?.episodes?.[0]?.id||''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const request=async(body:any)=>{const r=await api.post('/api/watch-party',body);return r.data};
- const refresh=async()=>{try{const r=await api.get('/api/watch-party'+(room?'?room='+encodeURIComponent(room.id):''));if(r.data?.room){setRoom(r.data.room);setMembers(r.data.members||[])}else if(room){setRoom(null);setMembers([])}}catch(e:any){if(e?.response?.status===403){setRoom(null);setMembers([])}}};
+ const refresh=async()=>{try{const r=await api.get('/api/watch-party'+(room?'?room='+encodeURIComponent(room.id):''));if(r.data?.room){setRoom(r.data.room);setMembers(r.data.members||[]);setViewerId(r.data.viewerId||'')}else if(room){setRoom(null);setMembers([])}}catch(e:any){if(e?.response?.status===403){setRoom(null);setMembers([])}}};
  useEffect(()=>{void refresh();const t=window.setInterval(()=>void refresh(),2500);return()=>window.clearInterval(t)},[room?.id]);
- const create=async()=>{setBusy(true);setError('');try{const r=await request({action:'create',titleId,episodeId,displayName});setRoom(r.room);await refresh()}catch(e:any){setError(e?.response?.data?.error||'Could not create room.')}finally{setBusy(false)}};
+ const create=async()=>{setBusy(true);setError('');try{const r=await request({action:'create',titleId,episodeId,displayName});setRoom(r.room);setViewerId(r.viewerId||'');await refresh()}catch(e:any){setError(e?.response?.data?.error||'Could not create room.')}finally{setBusy(false)}};
  const join=async()=>{setBusy(true);setError('');try{const r=await request({action:'join',code,displayName});setRoom(r.room);await refresh()}catch(e:any){setError(e?.response?.data?.error||'Could not join room.')}finally{setBusy(false)}};
  const action=async(action:string,extra:any={})=>{if(!room)return;try{await request({action,roomId:room.id,...extra});if(action==='leave'||action==='end'){setRoom(null);setMembers([])}else await refresh()}catch(e:any){setError(e?.response?.data?.error||'Watch Party update failed.')}}
- const title=titles.find(t=>t.id===room?.titleId),host=!!room&&room.hostUserId===members.find(m=>m.is_host)?.user_id;
+ const title=titles.find(t=>t.id===room?.titleId),episode=title?.episodes?.find((e:any)=>e.id===room?.episodeId),host=!!room&&room.hostUserId===viewerId;
  return <main className="page" style={{maxWidth:760,paddingTop:28}}>
   <button className="back" onClick={()=>go('#/home')}>← Back to MaseNet</button>
   <section style={{borderRadius:26,padding:22,background:'linear-gradient(145deg,#172a40,#121725)',border:'1px solid #ffffff1c',color:'#fff',boxShadow:'0 18px 50px #0005'}}>
    <div style={{display:'flex',alignItems:'center',gap:12}}><span style={{width:48,height:48,borderRadius:16,display:'grid',placeItems:'center',background:'#ffffff16'}}><Users size={23}/></span><div><small style={{letterSpacing:2,color:'#9bc9ff'}}>MASENET SOCIAL</small><h1 style={{margin:'3px 0',fontSize:26}}>Watch Party</h1></div></div>
    {room?<div style={{marginTop:22,display:'grid',gap:14}}>
     <div style={{padding:16,borderRadius:18,background:'#ffffff0c',border:'1px solid #ffffff18'}}><small style={{opacity:.7}}>ROOM CODE</small><div style={{fontSize:32,fontWeight:900,letterSpacing:6,margin:'5px 0'}}>{room.code}</div><button onClick={()=>void navigator.clipboard?.writeText(room.code)}><Copy size={14}/> Copy invite code</button></div>
-    <div><b>{title?.name||'Selected title'}</b><small style={{display:'block',opacity:.7}}>Episode {room.episodeId||'not selected'} · {room.isPlaying?'Host marked as playing':'Paused'}</small></div>
+    <div><b>{title?.name||'Selected title'}</b><small style={{display:'block',opacity:.7}}>{episode?'Season '+episode.season+' · Episode '+episode.episode:'Episode unavailable'} · {room.isPlaying?'Playing':'Paused'}</small></div>{episode&&<div style={{borderRadius:16,overflow:'hidden',background:'#05070c'}}><Player key={episode.id} episode={episode} autoPlay={host?false:room.isPlaying} syncCommand={host?undefined:{revision:room.revision,currentTime:room.currentTime,isPlaying:room.isPlaying}} onPlaybackPosition={seconds=>{if(host)void action('sync',{currentTime:seconds,isPlaying:room.isPlaying,episodeId:room.episodeId})}} onPlaybackStateChange={(playing,seconds)=>{if(host)void action('sync',{currentTime:seconds,isPlaying:playing,episodeId:room.episodeId})}}/></div>}
     <div><b>{members.length} participant{members.length===1?'':'s'}</b>{members.map(m=><div key={m.user_id} style={{padding:'8px 0',borderBottom:'1px solid #ffffff18',display:'flex',justifyContent:'space-between'}}><span>{m.display_name}</span><small>{m.is_host?'HOST':'VIEWER'}</small></div>)}</div>
     {host&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button onClick={()=>void action('sync',{currentTime:room.currentTime,isPlaying:!room.isPlaying,episodeId:room.episodeId})}>{room.isPlaying?<Pause size={15}/>:<Play size={15}/>} {room.isPlaying?'Pause state':'Play state'}</button><button className="secondary" onClick={()=>void action('end')}>End party</button></div>}
-    {!host&&<small style={{opacity:.7}}>The host controls the room. Ask the host to start or pause the shared session.</small>}
+    {!host&&<small style={{opacity:.7}}>The host controls the shared playback state. If autoplay is blocked on your device, tap Play once to join the stream.</small>}
     <button className="secondary" onClick={()=>void action('leave')}><LogOut size={15}/> Leave party</button>
    </div>:<div style={{display:'grid',gap:15,marginTop:22}}>
     <div style={{padding:15,borderRadius:18,background:'#ffffff0c'}}><b>Create a room</b><small style={{display:'block',opacity:.7,margin:'5px 0 12px'}}>Choose a title to watch together.</small><select value={titleId} onChange={e=>{setTitleId(e.target.value);setEpisodeId(titles.find(t=>t.id===e.target.value)?.episodes?.[0]?.id||'')}} style={{width:'100%',padding:12,borderRadius:12,background:'#182638',color:'#fff',marginBottom:9}}>{titles.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select><select value={episodeId} onChange={e=>setEpisodeId(e.target.value)} style={{width:'100%',padding:12,borderRadius:12,background:'#182638',color:'#fff'}}>{(titles.find(t=>t.id===titleId)?.episodes||[]).map((e:any)=><option key={e.id} value={e.id}>S{e.season} · E{e.episode} {e.title}</option>)}</select><button style={{marginTop:12}} disabled={busy||!titleId} onClick={()=>void create()}><Plus size={15}/> Create Watch Party</button></div>
     <div style={{padding:15,borderRadius:18,background:'#ffffff0c'}}><b>Join a room</b><div style={{display:'flex',gap:8,marginTop:10}}><input value={code} onChange={e=>setCode(e.target.value.toUpperCase().slice(0,6))} placeholder="6-character code" maxLength={6} style={{minWidth:0,flex:1,padding:12,borderRadius:12,background:'#ffffff12',color:'#fff',border:'1px solid #ffffff25',letterSpacing:3}}/><button disabled={busy||code.length!==6} onClick={()=>void join()}>Join</button></div></div>
    </div>}
    {error&&<p role="alert" style={{color:'#ffaaa8'}}>{error}</p>}
-   <small style={{display:'block',marginTop:16,opacity:.55,lineHeight:1.5}}>Room presence and host playback state sync through MaseNet. Full synchronized video playback controls are the next integration step; this room screen does not yet control each viewer’s video player.</small>
+   <small style={{display:'block',marginTop:16,opacity:.55,lineHeight:1.5}}>Video position and play/pause state are synchronized through the host. Browser autoplay policies may require each guest to tap Play once.</small>
   </section>
  </main>
 }
