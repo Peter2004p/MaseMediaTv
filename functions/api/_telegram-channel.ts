@@ -32,7 +32,6 @@ export async function searchPublicTelegramChannel(query: string, limit = 5): Pro
     if (!postId) continue;
     const textMatch = block.match(/<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
     const text = textMatch ? cleanHtml(textMatch[1]) : "";
-    const links = [...block.matchAll(/<a[^>]+href="([^"]+)"[^>]*>/gi)].map(m => decode(m[1])).filter(url => /^https?:\/\//i.test(url) && !/t\.me\/MaseMediaTv\//i.test(url));
     const title = text.split("\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || "MaseMediaTv channel post";
     const haystack = normalize(text);
     const matched = terms.filter(term => haystack.includes(term)).length;
