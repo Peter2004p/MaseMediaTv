@@ -122,7 +122,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
           "Submission ID: " + submissionId,
           "",
           "Choose an action. If no decision is made within 5 seconds, provisional access is granted automatically."
-        ].join("\\n"),
+        ].join("\n"),
         reply_markup: {
           inline_keyboard: [[
             { text: "✅ Approve", callback_data: "ytapprove:" + submissionId },
