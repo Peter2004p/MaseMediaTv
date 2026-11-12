@@ -47,7 +47,8 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const flag = match[1] === "ytflag";
     await api("answerCallbackQuery",{callback_query_id:cb.id,text:flag?"24-hour re-verification warning started.":approve?"Approval received.":"Rejection received."}).catch(error=>console.error("MaseNet callback acknowledgement failed:",String(error)));
     try {
-      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, youtube_provisional INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
+      try { await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN youtube_provisional INTEGER NOT NULL DEFAULT 0").run(); } catch { /* Column already exists. */ }
       await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_submissions (
         id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, display_name TEXT NOT NULL,
         username TEXT, status TEXT NOT NULL DEFAULT 'pending',
@@ -68,7 +69,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
           await env.DB.prepare("UPDATE telegram_access_submissions SET status='flagged',reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(submissionId).run();
         }
         await env.DB.prepare("INSERT INTO telegram_access_reviews(chat_id,status,reason,flagged_at,deadline_at,updated_at) VALUES(?,'warning','Admin flagged the earlier YouTube screenshot as fake or subscription not completed.',datetime('now'),datetime('now','+24 hours'),datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET status='warning',reason=excluded.reason,flagged_at=datetime('now'),deadline_at=datetime('now','+24 hours'),updated_at=datetime('now')").bind(targetId).run();
-        await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,updated_at=datetime('now') WHERE chat_id=?").bind(targetId).run();
+        await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=0,updated_at=datetime('now') WHERE chat_id=?").bind(targetId).run();
         const appUrl=(env.TELEGRAM_MINI_APP_URL||env.TELEGRAM_WEBAPP_URL||"https://masetv-cloudflare-migration.pages.dev").trim();
         const notice=await api("sendMessage",{chat_id:targetId,text:"⚠️ MASENET — ACTION REQUIRED\n\nThe admin reviewed your earlier YouTube subscription screenshot and found that the subscription could not be confirmed. Please subscribe to the official MaseMedia TV YouTube channel and submit a genuine, current screenshot immediately.\n\n⏳ You have 24 hours from this warning. If you do not submit a genuine screenshot and receive manual admin approval before the deadline, your MaseNet account will be restricted. The restriction will remain until your new screenshot is manually approved.",reply_markup:appUrl.startsWith("https://")?{inline_keyboard:[[{text:"📸 Submit real screenshot now",web_app:{url:appUrl}}]]}:undefined});
         if(!notice.ok)console.error("MaseNet 24-hour warning delivery failed:",await notice.text());
@@ -93,7 +94,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         }
         return json({ok:true,adminDecision:"already_reviewed"});
       }
-      await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=excluded.youtube_ok,updated_at=datetime('now')").bind(targetId,approve?1:0).run();
+      await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,youtube_provisional,updated_at) VALUES (?,?,0,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=excluded.youtube_ok,youtube_provisional=0,updated_at=datetime('now')").bind(targetId,approve?1:0).run();
       if(approve)await env.DB.prepare("UPDATE telegram_access_reviews SET status='cleared',updated_at=datetime('now') WHERE chat_id=? AND status IN ('warning','restricted','submitted')").bind(targetId).run();
       const notice = await api("sendMessage",{chat_id:targetId,text:approve?"✅ The MaseNet admin has manually confirmed your YouTube screenshot. Any 24-hour re-verification warning/restriction is cleared. Your YouTube check is complete.":"❌ The MaseNet admin rejected your screenshot after review. Your YouTube verification is not accepted. Please contact support or submit genuine proof again."});
       if (!notice.ok) console.error("MaseNet decision notification failed:",await notice.text());
@@ -155,9 +156,11 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   }
   const ensureAccessTable = async () => env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (
     chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0,
+    youtube_provisional INTEGER NOT NULL DEFAULT 0,
     masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
+  try { await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN youtube_provisional INTEGER NOT NULL DEFAULT 0").run(); } catch { /* Column already exists. */ }
   const checkTelegramMembership = async () => {
     const result = { masemedia: false, moondramac: false };
     for (const [channel, key] of [["@MaseMediaTv","masemedia"],["@MoonDramaC","moondramac"]] as const) {
@@ -182,15 +185,17 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     }
     await ensureAccessTable();
     const membership = await checkTelegramMembership();
-    const existing = await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number}>();
+    const existing = await env.DB.prepare("SELECT youtube_ok,youtube_provisional FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number;youtube_provisional:number}>();
     const youtubeOk = !!existing?.youtube_ok;
-    const allVerified = youtubeOk && membership.masemedia && membership.moondramac;
+    const youtubeProvisional = !youtubeOk && !!existing?.youtube_provisional;
+    const youtubeEligible = youtubeOk || youtubeProvisional;
+    const allVerified = youtubeEligible && membership.masemedia && membership.moondramac;
     const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({
       chat_id:chatId,
       text:allVerified
-        ? "🎬 Welcome back to MaseNet!\\n\\n✅ YouTube subscription verified\\n✅ MaseMediaTv joined\\n✅ MoonDramaC joined\\n\\n🎉 Your access is already verified. Open MaseNet below — you do not need to verify again."
-        : "🎬 Welcome to MaseNet!\\n\\nComplete only the remaining checks to unlock the bot and Mini App:\\n\\n"+(!youtubeOk?"1️⃣ Subscribe to our YouTube channel, then upload the screenshot directly. No caption or added text is needed.\\n":"")+( !membership.masemedia?"2️⃣ Join our main Telegram channel.\\n":"")+( !membership.moondramac?"3️⃣ Join our second Telegram channel.\\n":"")+"\\nYouTube: "+(youtubeOk?"✅ Verified":"❌ Not verified")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n🔒 Complete the remaining checks, then send /verify.",
-      reply_markup:verificationKeyboard(youtubeOk,membership)
+        ? "🎬 Welcome back to MaseNet!\\n\\n"+(youtubeOk?"✅ YouTube subscription manually verified":"🟡 YouTube screenshot received — provisional access only; admin review is still required")+"\\n✅ MaseMediaTv joined\\n✅ MoonDramaC joined\\n\\nOpen MaseNet below. You do not need to submit another screenshot while this review is pending."
+        : "🎬 Welcome to MaseNet!\\n\\nComplete only the remaining checks to unlock the bot and Mini App:\\n\\n"+(!youtubeEligible?"1️⃣ Subscribe to our YouTube channel, then upload the screenshot directly. No caption or added text is needed.\\n":"")+( !membership.masemedia?"2️⃣ Join our main Telegram channel.\\n":"")+( !membership.moondramac?"3️⃣ Join our second Telegram channel.\\n":"")+"\\nYouTube: "+(youtubeOk?"✅ Manually verified":youtubeProvisional?"🟡 Provisional — admin review pending":"❌ Not submitted")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n🔒 Complete the remaining checks, then send /verify.",
+      reply_markup:verificationKeyboard(youtubeEligible,membership)
     })});
     return sent.ok ? json({ok:true,verificationRequired:!allVerified,membership,youtubeVerified:youtubeOk}) : json({ok:false,error:"Telegram could not deliver the verification instructions."},502);
   }
@@ -209,12 +214,14 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       return json({ ok: true, verificationUpload: "mini_app" });
     }
     const membership = await checkTelegramMembership();
-    const access = await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number}>();
+    const access = await env.DB.prepare("SELECT youtube_ok,youtube_provisional FROM telegram_access_verification WHERE chat_id=?").bind(String(chatId)).first<{youtube_ok:number;youtube_provisional:number}>();
     const youtubeOk = !!access?.youtube_ok;
-    if (!youtubeOk || !membership.masemedia || !membership.moondramac) {
+    const youtubeProvisional = !youtubeOk && !!access?.youtube_provisional;
+    const youtubeEligible = youtubeOk || youtubeProvisional;
+    if (!youtubeEligible || !membership.masemedia || !membership.moondramac) {
       if (!photo?.length) {
         const missing = [
-          !youtubeOk ? "• Upload your YouTube subscription screenshot directly (no caption or added text needed)" : "",
+          !youtubeEligible ? "• Upload your YouTube subscription screenshot directly (no caption or added text needed)" : "",
           !membership.masemedia ? "• Join https://t.me/MaseMediaTv" : "",
           !membership.moondramac ? "• Join https://t.me/MoonDramaC" : ""
         ].filter(Boolean).join("\n");
@@ -224,7 +231,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
           body:JSON.stringify({
             chat_id:chatId,
             text:"🔒 MaseNet is locked. Complete the checks below:\n"+missing+"\n\nAfter joining both Telegram channels, send /verify. Your verification is shared with the Mini App.",
-            reply_markup:verificationKeyboard(!!currentAccess?.youtube_ok,membership)
+            reply_markup:verificationKeyboard(!!currentAccess?.youtube_ok || !!access?.youtube_provisional,membership)
           })
         });
       } else {
@@ -232,9 +239,9 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       }
       return json({ok:true,verificationRequired:true,membership,youtubeVerified:youtubeOk});
     }
-    if (photo?.length || command === "/verify") {
-      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:"🎉 MaseNet verification complete! Your Telegram bot, movie/drama search and Telegram AI are now unlocked. Send a title to search or ask me anything about MaseNet.",...(replyMarkup?{reply_markup:replyMarkup}:{})})});
-      return json({ok:true,verified:true,accessGranted:true});
+    if (command === "/verify" && youtubeEligible && membership.masemedia && membership.moondramac) {
+      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:youtubeOk?"🎉 MaseNet verification complete! Your YouTube screenshot was manually approved and both Telegram memberships are confirmed.":"🟡 MaseNet provisional access is active. Your screenshot has NOT been genuinely verified; an admin must still review it. Both Telegram memberships are confirmed.",...(replyMarkup?{reply_markup:replyMarkup}:{})})});
+      return json({ok:true,verified:youtubeOk,provisional:youtubeProvisional,accessGranted:true});
     }
   }
 
