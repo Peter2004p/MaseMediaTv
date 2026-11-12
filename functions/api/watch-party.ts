@@ -33,6 +33,9 @@ export const onRequestGet:PagesFunction<WatchEnv>=async({request,env})=>{
   const member=await env.DB.prepare("SELECT 1 AS ok FROM watch_party_members WHERE room_id=? AND user_id=?").bind(room.id,userId).first();
   if(!member)return json({error:"You are not a member of this Watch Party."},403);
   await env.DB.prepare("UPDATE watch_party_members SET last_seen_at=datetime('now') WHERE room_id=? AND user_id=?").bind(room.id,userId).run();
+  await env.DB.prepare("DELETE FROM watch_party_members WHERE room_id=? AND user_id<>? AND last_seen_at<datetime('now','-90 seconds')").bind(room.id,userId).run();
+  const hostPresence=await env.DB.prepare("SELECT last_seen_at FROM watch_party_members WHERE room_id=? AND user_id=?").bind(room.id,room.host_user_id).first<{last_seen_at:string}>();
+  if(!hostPresence||Date.now()-new Date(hostPresence.last_seen_at.replace(" ","T")+"Z").getTime()>90000){await env.DB.prepare("UPDATE watch_party_rooms SET status='ended',updated_at=datetime('now') WHERE id=?").bind(room.id).run();return json({room:null});}
   const members=await env.DB.prepare("SELECT user_id,display_name,is_host,last_seen_at FROM watch_party_members WHERE room_id=? ORDER BY is_host DESC,joined_at").bind(room.id).all();
   return json({room:{id:room.id,code:room.code,titleId:room.title_id,episodeId:room.episode_id,status:room.status,hostUserId:room.host_user_id,currentTime:room.current_time,isPlaying:!!room.is_playing,revision:room.revision,updatedAt:room.updated_at},members:members.results||[],viewerId:userId});
  }catch{return json({error:"Watch Party could not be loaded."},503)}
