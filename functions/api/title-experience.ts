@@ -44,6 +44,20 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
     await ensureTables(env.DB);
     const userId=await userIdFor(request,env);
     const url=new URL(request.url);
+    const moderation=url.searchParams.get("moderation");
+    if (moderation === "1") {
+      const gate=await requireAdmin(request,env);
+      if (gate.response) return gate.response;
+      const status=url.searchParams.get("status") || "all";
+      if (!["all","published","hidden"].includes(status)) return json({error:"Invalid moderation filter."},400);
+      const rows=await env.DB.prepare(`SELECT r.id,r.title_id AS titleId,t.name AS titleName,r.rating,r.body,r.status,r.created_at AS createdAt,r.updated_at AS updatedAt
+        FROM title_reviews r LEFT JOIN titles t ON t.id=r.title_id
+        WHERE (?='all' OR r.status=?)
+        ORDER BY CASE WHEN r.status='published' THEN 0 ELSE 1 END,r.created_at DESC LIMIT 150`)
+        .bind(status,status).all<{id:string;titleId:string;titleName:string|null;rating:number;body:string;status:string;createdAt:string;updatedAt:string}>();
+      const counts=await env.DB.prepare("SELECT COUNT(*) AS total,SUM(CASE WHEN status='published' THEN 1 ELSE 0 END) AS published,SUM(CASE WHEN status='hidden' THEN 1 ELSE 0 END) AS hidden FROM title_reviews").first<{total:number;published:number;hidden:number}>();
+      return json({reviews:rows.results||[],counts:{total:Number(counts?.total||0),published:Number(counts?.published||0),hidden:Number(counts?.hidden||0)}});
+    }
     const titleId=url.searchParams.get("titleId") || "";
     const preferences=userId ? await env.DB.prepare("SELECT languages_json,genres_json FROM user_title_preferences WHERE user_id=?").bind(userId).first<{languages_json:string;genres_json:string}>():null;
     if (titleId) {
