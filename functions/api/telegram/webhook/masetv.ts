@@ -31,7 +31,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const cb = update.callback_query;
     const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
     const actorId = String(cb.from?.id || "");
-    const match = String(cb.data || "").match(/^(ytapprove|ytreject):(\d+)$/);
+    const match = String(cb.data || "").match(/^(ytapprove|ytreject):([0-9a-f-]{36})$/i);
     const api = (method: string, payload: Record<string, unknown>) => fetch(
       "https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method,
       { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload) }
@@ -41,7 +41,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       console.error("MaseNet approval callback rejected:",JSON.stringify({adminConfigured:!!adminId,actorMatches:!!adminId&&actorId===adminId,hasData:!!cb.data}));
       return json({ok:true,adminDecision:"unauthorized"});
     }
-    const targetId = match[2];
+    const submissionId = match[2];
     const approve = match[1] === "ytapprove";
     await api("answerCallbackQuery",{callback_query_id:cb.id,text:approve?"Approval received.":"Rejection received."}).catch(error=>console.error("MaseNet callback acknowledgement failed:",String(error)));
     try {
@@ -51,7 +51,16 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         username TEXT, status TEXT NOT NULL DEFAULT 'pending',
         submitted_at TEXT NOT NULL DEFAULT (datetime('now')), reviewed_at TEXT
       )`).run();
-      const review = await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now') WHERE chat_id=? AND status='pending'").bind(approve?"approved":"rejected",targetId).run();
+      const pending = await env.DB.prepare("SELECT chat_id FROM telegram_access_submissions WHERE id=? AND status='pending'").bind(submissionId).first<{chat_id:string}>();
+      if (!pending?.chat_id) {
+        await api("answerCallbackQuery",{callback_query_id:cb.id,text:"This screenshot has already been reviewed. The saved decision cannot be changed from this button.",show_alert:true}).catch(()=>undefined);
+        if (cb.message?.chat?.id && cb.message.message_id) {
+          await api("editMessageReplyMarkup",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,reply_markup:{inline_keyboard:[]}}).catch(()=>undefined);
+        }
+        return json({ok:true,adminDecision:"already_reviewed"});
+      }
+      const targetId = pending.chat_id;
+      const review = await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(approve?"approved":"rejected",submissionId).run();
       if (!Number(review.meta?.changes || 0)) {
         await api("answerCallbackQuery",{callback_query_id:cb.id,text:"This screenshot has already been reviewed. The saved decision cannot be changed from this button.",show_alert:true}).catch(()=>undefined);
         if (cb.message?.chat?.id && cb.message.message_id) {
