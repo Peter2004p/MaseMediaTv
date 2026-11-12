@@ -32,7 +32,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const cb = update.callback_query;
     const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
     const actorId = String(cb.from?.id || "");
-    const match = String(cb.data || "").match(/^(ytapprove|ytreject):([0-9a-f-]{36})$/i);
+    const match = String(cb.data || "").match(/^(ytapprove|ytreject|ytflag):([0-9a-f-]{36})$/i);
     const api = (method: string, payload: Record<string, unknown>) => fetch(
       "https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method,
       { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload) }
@@ -44,7 +44,8 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     }
     const submissionId = match[2];
     const approve = match[1] === "ytapprove";
-    await api("answerCallbackQuery",{callback_query_id:cb.id,text:approve?"Approval received.":"Rejection received."}).catch(error=>console.error("MaseNet callback acknowledgement failed:",String(error)));
+    const flag = match[1] === "ytflag";
+    await api("answerCallbackQuery",{callback_query_id:cb.id,text:flag?"24-hour re-verification warning started.":approve?"Approval received.":"Rejection received."}).catch(error=>console.error("MaseNet callback acknowledgement failed:",String(error)));
     try {
       await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
       await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_submissions (
@@ -52,6 +53,26 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         username TEXT, status TEXT NOT NULL DEFAULT 'pending',
         submitted_at TEXT NOT NULL DEFAULT (datetime('now')), reviewed_at TEXT
       )`).run();
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews(
+        chat_id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'clear',reason TEXT NOT NULL DEFAULT '',
+        flagged_at TEXT,deadline_at TEXT,updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`).run();
+      if(flag){
+        const prior=await env.DB.prepare("SELECT chat_id,status,display_name FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{chat_id:string;status:string;display_name:string}>();
+        if(!prior||!["approved","approved_timeout"].includes(prior.status)){
+          await api("answerCallbackQuery",{callback_query_id:cb.id,text:"Only an approved submission can be flagged for re-verification.",show_alert:true}).catch(()=>undefined);
+          return json({ok:true,adminDecision:"not_flaggable"});
+        }
+        const targetId=prior.chat_id;
+        await env.DB.prepare("INSERT INTO telegram_access_reviews(chat_id,status,reason,flagged_at,deadline_at,updated_at) VALUES(?,'warning','Admin flagged the earlier YouTube screenshot as fake or subscription not completed.',datetime('now'),datetime('now','+24 hours'),datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET status='warning',reason=excluded.reason,flagged_at=datetime('now'),deadline_at=datetime('now','+24 hours'),updated_at=datetime('now')").bind(targetId).run();
+        await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,updated_at=datetime('now') WHERE chat_id=?").bind(targetId).run();
+        const appUrl=(env.TELEGRAM_MINI_APP_URL||env.TELEGRAM_WEBAPP_URL||"https://masetv-cloudflare-migration.pages.dev").trim();
+        const notice=await api("sendMessage",{chat_id:targetId,text:"⚠️ MASENET — ACTION REQUIRED\n\nThe admin reviewed your earlier YouTube subscription screenshot and found that the subscription could not be confirmed. Please subscribe to the official MaseMedia TV YouTube channel and submit a genuine, current screenshot immediately.\n\n⏳ You have 24 hours from this warning. If you do not submit a genuine screenshot and receive manual admin approval before the deadline, your MaseNet account will be restricted. The restriction will remain until your new screenshot is manually approved.",reply_markup:appUrl.startsWith("https://")?{inline_keyboard:[[{text:"📸 Submit real screenshot now",web_app:{url:appUrl}}]]}:undefined});
+        if(!notice.ok)console.error("MaseNet 24-hour warning delivery failed:",await notice.text());
+        if(cb.message?.chat?.id&&cb.message.message_id)await api("editMessageReplyMarkup",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,reply_markup:{inline_keyboard:[]}}).catch(()=>undefined);
+        await api("sendMessage",{chat_id:adminId,text:"⚠️ 24-hour re-verification started for "+prior.display_name+" (Telegram ID "+targetId+"). MaseNet will show a homepage warning and restrict access at the deadline unless a new screenshot is manually approved."}).catch(()=>undefined);
+        return json({ok:true,adminDecision:"flagged_for_24h"});
+      }
       const pending = await env.DB.prepare("SELECT chat_id FROM telegram_access_submissions WHERE id=? AND status='pending'").bind(submissionId).first<{chat_id:string}>();
       if (!pending?.chat_id) {
         await api("answerCallbackQuery",{callback_query_id:cb.id,text:"This screenshot has already been reviewed. The saved decision cannot be changed from this button.",show_alert:true}).catch(()=>undefined);
@@ -70,11 +91,12 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         return json({ok:true,adminDecision:"already_reviewed"});
       }
       await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=excluded.youtube_ok,updated_at=datetime('now')").bind(targetId,approve?1:0).run();
-      const notice = await api("sendMessage",{chat_id:targetId,text:approve?"✅ Your YouTube subscription screenshot was approved by the MaseNet admin. Your YouTube check is now complete. Join both official Telegram channels, then refresh the Mini App or send /verify to unlock access.":"❌ The MaseNet admin could not approve this screenshot. Your access remains locked. Please upload a clearer screenshot showing the official MaseMedia TV channel and the active Subscribed button."});
+      if(approve)await env.DB.prepare("UPDATE telegram_access_reviews SET status='cleared',updated_at=datetime('now') WHERE chat_id=? AND status IN ('warning','restricted','submitted')").bind(targetId).run();
+      const notice = await api("sendMessage",{chat_id:targetId,text:approve?"✅ Your new YouTube subscription screenshot was manually approved by the MaseNet admin. Your 24-hour warning/restriction is cleared. Your YouTube check is now complete. Join both official Telegram channels, then refresh the Mini App or send /verify to unlock access.":"❌ The MaseNet admin could not approve this screenshot. Your access remains locked. Please upload a genuine, current screenshot showing the official MaseMedia TV channel and the active Subscribed button."});
       if (!notice.ok) console.error("MaseNet decision notification failed:",await notice.text());
       if (cb.message?.chat?.id && cb.message.message_id) {
-        const edit = await api("editMessageReplyMarkup",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,reply_markup:{inline_keyboard:[]}});
-        if (!edit.ok) console.error("MaseNet approval buttons could not be cleared:",await edit.text());
+        const edit = await api("editMessageReplyMarkup",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,reply_markup:approve?{inline_keyboard:[[{text:"⚠️ Flag fake / incomplete (24h warning)",callback_data:"ytflag:"+submissionId}]]}:{inline_keyboard:[]}});
+        if (!edit.ok) console.error("MaseNet approval buttons could not be updated:",await edit.text());
       }
       console.log("MaseNet YouTube admin decision saved:",JSON.stringify({targetId,decision:approve?"approved":"rejected"}));
       return json({ok:true,adminDecision:approve?"approved":"rejected"});
