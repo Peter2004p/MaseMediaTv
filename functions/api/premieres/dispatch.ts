@@ -32,11 +32,11 @@ export const onRequestPost:PagesFunction<Env>=async({request,env})=>{
     const notificationId="premiere:"+p.id+":"+user.user_id;
     await env.DB.prepare("INSERT OR IGNORE INTO user_notifications(id,user_id,title_id,title,description,kind,target) VALUES(?,?,?,?,?,'premiere',?)").bind(notificationId,user.user_id,p.title_id,"Premiere is now live: "+p.title_name,String(p.description||"Your reminder is here — this premiere is now available."),"#/title/"+encodeURIComponent(p.title_id)).run();
     userAlerts++;
-    const telegramId=user.email.match(/^telegram-(\\d+)@telegram\\.local$/i)?.[1];
+    const telegramId=user.email.match(/^telegram-(\d+)@telegram\.local$/i)?.[1];
     if(!telegramId)continue;
     const priorUser=await env.DB.prepare("SELECT 1 AS sent FROM premiere_user_delivery_log WHERE premiere_id=? AND user_id=?").bind(p.id,user.user_id).first();
     if(priorUser)continue;
-    const dm="🎬 YOUR MASE NET PREMIERE REMINDER\\n\\n"+p.title_name+" is now live!\\n\\n"+String(p.description||"").slice(0,500)+"\\n\\nTap below to open the title.";
+    const dm="🎬 YOUR MASE NET PREMIERE REMINDER\n\n"+p.title_name+" is now live!\n\n"+String(p.description||"").slice(0,500)+"\n\nTap below to open the title.";
     try{
      const response=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/sendMessage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:telegramId,text:dm,reply_markup:{inline_keyboard:[[{text:"▶ Watch on MaseNet",url:"https://t.me/MaseTv_Bot?startapp="+encodeURIComponent("title_"+p.title_id)}]]}}),signal:AbortSignal.timeout(12000)});
      const result=await response.json().catch(()=>({})) as {ok?:boolean;description?:string};
