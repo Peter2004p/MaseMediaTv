@@ -32,7 +32,7 @@ export async function searchPublicTelegramChannel(query: string, limit = 5): Pro
       break;
     }
     const html = await response.text();
-    const blocks = html.match(/<div class="tgme_widget_message_wrap[\\s\\S]*?<\\/div>\\s*<\\/div>/gi) || [];
+    const blocks = html.match(/<div class="tgme_widget_message_wrap[\\s\\S]*?(?=<div class="tgme_widget_message_wrap|$)/gi) || [];
     let oldestId = Number.POSITIVE_INFINITY;
     for (const block of blocks) {
       const postId = block.match(/data-post="MaseMediaTv\\/(\\d+)"/i)?.[1];
