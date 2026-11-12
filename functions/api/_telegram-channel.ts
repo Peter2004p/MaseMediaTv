@@ -16,7 +16,7 @@ export async function indexTelegramChannelPost(db: D1Database, message: Telegram
   const postText = String(message.text || message.caption || "").trim().slice(0, 12000);
   if (!postId || !postText) return false;
   await ensureChannelIndex(db);
-  const title = postText.split("\\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || "MaseMediaTv channel post";
+  const title = postText.split("\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || "MaseMediaTv channel post";
   const date = message.date ? new Date(message.date * 1000).toISOString() : null;
   const url = "https://t.me/MaseMediaTv/" + postId;
   await db.prepare(`INSERT INTO telegram_channel_posts (post_id,title,post_text,post_date,post_url,updated_at)
@@ -28,10 +28,10 @@ export async function indexTelegramChannelPost(db: D1Database, message: Telegram
 }
 
 export async function searchIndexedTelegramChannel(db: D1Database, query: string, limit = 5): Promise<TelegramChannelPost[]> {
-  const normalized = query.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+  const normalized = query.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   if (normalized.length < 2) return [];
   await ensureChannelIndex(db);
-  const terms = normalized.split(/\\s+/).filter(term => term.length > 1).slice(0, 8);
+  const terms = normalized.split(/\s+/).filter(term => term.length > 1).slice(0, 8);
   const rows = await db.prepare("SELECT title,post_text,post_date,post_url FROM telegram_channel_posts ORDER BY post_date DESC LIMIT 1000")
     .all<{title:string;post_text:string;post_date:string|null;post_url:string}>();
   return (rows.results || []).map(row => {
