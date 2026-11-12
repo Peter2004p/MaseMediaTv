@@ -2,13 +2,13 @@ import React,{useEffect,useState} from 'react';
 import {api} from './cloudflare-client';
 import {Users,Plus,Trash2,ShieldCheck,RefreshCw,Copy,Play,Pause,LogOut,Video,Lock} from 'lucide-react';
 
-type Profile={id:string;name:string;avatar:string;isKids:boolean};
+type Profile={id:string;name:string;avatar:string;isKids:boolean;hasPin?:boolean};
 export function ProfileManager({activeId,onSelect}:{activeId:string;onSelect:(id:string)=>void}){
  const [profiles,setProfiles]=useState<Profile[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[name,setName]=useState(''),[pin,setPin]=useState(''),[pending,setPending]=useState<Profile|null>(null);
  const load=()=>api.get('/api/profiles').then(r=>setProfiles(Array.isArray(r.data?.profiles)?r.data.profiles:[])).catch(e=>setError(e?.response?.data?.error||'Could not load profiles.'));
  useEffect(()=>{void load()},[]);
  const create=async()=>{setBusy(true);setError('');try{const r=await api.post('/api/profiles',{action:'create',name,pin});const p=r.data.profile;setProfiles(v=>[...v,p]);setName('');setPin('');onSelect(p.id)}catch(e:any){setError(e?.response?.data?.error||'Could not create profile.')}finally{setBusy(false)}};
- const choose=async(p:Profile)=>{if(p.id===activeId)return;if(pending?.id===p.id){setBusy(true);try{await api.post('/api/profiles',{action:'verify-pin',id:p.id,pin});onSelect(p.id);setPending(null);setPin('');setError('')}catch(e:any){setError(e?.response?.data?.error||'Incorrect PIN.')}finally{setBusy(false)}}else{onSelect(p.id)}};
+ const choose=async(p:Profile)=>{if(p.id===activeId)return;if(p.hasPin&&pending?.id!==p.id){setPending(p);setPin('');setError('This profile is PIN protected.');return}if(pending?.id===p.id){setBusy(true);try{await api.post('/api/profiles',{action:'verify-pin',id:p.id,pin});onSelect(p.id);setPending(null);setPin('');setError('')}catch(e:any){setError(e?.response?.data?.error||'Incorrect PIN.')}finally{setBusy(false)}}else{onSelect(p.id)}};
  const remove=async(p:Profile)=>{if(!window.confirm('Delete '+p.name+' and its separate viewing history?'))return;try{await api.post('/api/profiles',{action:'delete',id:p.id});setProfiles(v=>v.filter(x=>x.id!==p.id));if(activeId===p.id){const next=profiles.find(x=>x.id!==p.id);if(next)onSelect(next.id)}}catch(e:any){setError(e?.response?.data?.error||'Could not delete profile.')}};
  return <section style={{padding:'16px 0',display:'grid',gap:14}}>
   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><div><b>Profiles</b><small style={{display:'block',opacity:.65}}>Separate watchlists and viewing progress</small></div><span style={{fontSize:12,opacity:.7}}>{profiles.length}/6</span></div>
