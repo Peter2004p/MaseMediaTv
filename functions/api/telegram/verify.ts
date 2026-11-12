@@ -147,49 +147,45 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   }
 
 
-  // Five-second fallback: grant provisional access if the admin has not acted.
-  // This is an operational timeout approval, NOT proof that the screenshot is genuine.
-  // The admin can later flag an approved_timeout submission and start 24-hour re-verification.
+  // Five-second manual window. If the admin does not act, AI performs a visual plausibility screen.
+  // This is not a check against YouTube's subscriber records or account ownership.
   waitUntil((async () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 5000));
       const current = await env.DB.prepare("SELECT status FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{status:string}>();
       if (!current || current.status !== "pending") return;
-      const changed = await env.DB.prepare("UPDATE telegram_access_submissions SET status='approved_timeout',reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(submissionId).run();
-      if (!Number(changed.meta?.changes || 0)) return;
-      // Timeout grants only temporary access. It must never set the genuine verification flag.
-      await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=1,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
-      if (adminMessageId) {
-        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            chat_id: adminId,
-            message_id: adminMessageId,
-            caption: [
-              "🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW",
-              "",
-              "👤 Applicant: " + fullName,
-              "🔖 Telegram: " + username,
-              "🆔 Telegram user ID: " + chatId,
-              "🕒 Submitted: " + submittedAt,
-              "",
-              "⏱️ FIVE-SECOND TIMEOUT: PROVISIONAL ACCESS GRANTED.",
-              "⚠️ This is NOT genuine screenshot verification. Please inspect this proof.",
-              "Use Flag / 24h restriction if the screenshot is fake or the task was not completed."
-            ].join("\n")
-          })
-        }).catch(error => console.error("MaseNet provisional approval caption update failed:", error instanceof Error ? error.message : String(error)));
+      let verdict = "review_required";
+      let reason = "AI visual screening is unavailable; manual admin review is required.";
+      if (env.GEMINI_API_KEY) {
+        try {
+          const vision = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
+            method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(7500),
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [
+                { text: "Review only the visible pixels. Does this clearly show the exact YouTube handle @masemedia_tv and an active Subscribed state? Return JSON with verdict equal to likely_subscribed, not_subscribed, or unclear, and a short reason. Use likely_subscribed only when both exact handle and active Subscribed state are clearly visible. This is not proof of account ownership or live subscription status." },
+                { inlineData: { mimeType: mime, data: match[2] } }
+              ] }],
+              generationConfig: { temperature: 0, maxOutputTokens: 140, responseMimeType: "application/json" }
+            })
+          });
+          if (!vision.ok) throw new Error("Gemini vision HTTP " + vision.status);
+          const data = await vision.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+          const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim() || "";
+          const result = JSON.parse(raw) as { verdict?: string; reason?: string };
+          if (!["likely_subscribed","not_subscribed","unclear"].includes(String(result.verdict))) throw new Error("Gemini returned an invalid verdict.");
+          verdict = String(result.verdict); reason = String(result.reason || "No visual explanation supplied.").slice(0, 400);
+        } catch (error) { console.error("MaseNet screenshot AI screening failed:", error instanceof Error ? error.message : String(error)); }
       }
-      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: "⏱️ Your 5-second review window has ended. MaseNet has granted provisional access so you can continue. IMPORTANT: this is a temporary timeout approval, not confirmation that your screenshot or subscription is genuine. An admin may review it later. If your proof is fake or the task was not completed, your access may be challenged and you will receive 24 hours to submit genuine proof."
-        })
-      }).catch(error => console.error("MaseNet provisional approval notice failed:", error instanceof Error ? error.message : String(error)));
-    } catch (error) {
-      console.error("MaseNet five-second provisional approval failed:", error instanceof Error ? error.stack || error.message : String(error));
-    }
+      const provisional = verdict === "likely_subscribed";
+      const nextStatus = provisional ? "approved_timeout" : "ai_review_required";
+      const changed = await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now'),ai_verdict=?,ai_reason=?,ai_reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(nextStatus, verdict, reason, submissionId).run();
+      if (!Number(changed.meta?.changes || 0)) return;
+      await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=?,updated_at=datetime('now') WHERE chat_id=?").bind(provisional ? 1 : 0, chatId).run();
+      const label = provisional ? "AI VISUAL SCREEN: LIKELY SUBSCRIBED — PROVISIONAL ACCESS ONLY" : "AI VISUAL SCREEN: " + verdict.toUpperCase() + " — MANUAL REVIEW REQUIRED";
+      if (adminMessageId) await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: adminId, message_id: adminMessageId, caption: ["🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW", "", "Applicant: " + fullName, "Telegram: " + username, "Telegram ID: " + chatId, "Submitted: " + submittedAt, "", label, "AI note: " + reason, "", "AI inspected visible pixels only. It did NOT verify a real YouTube subscription or account ownership. Manual admin approval is final."].join("\n") }) }).catch(error => console.error("MaseNet AI caption update failed:", String(error)));
+      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: adminId, text: "🤖 " + label + "\nApplicant: " + fullName + "\nTelegram ID: " + chatId + "\nReason: " + reason + "\n\nAI is advisory only. Manual admin approval is the only way to mark YouTube genuinely verified." }) }).catch(error => console.error("MaseNet admin AI verdict notice failed:", String(error)));
+      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: provisional ? "🟡 Your screenshot passed MaseNet's AI visual plausibility screen. Provisional access is active. IMPORTANT: AI has not verified a real YouTube subscription. Your screenshot remains subject to manual admin review." : "⚠️ MaseNet's AI could not confidently confirm the required subscription from this screenshot. No provisional YouTube access was granted. Your screenshot remains with the admin for manual review; you may submit a clearer genuine screenshot." }) }).catch(error => console.error("MaseNet AI screening user notice failed:", String(error)));
+    } catch (error) { console.error("MaseNet five-second AI screenshot review failed:", error instanceof Error ? error.stack || error.message : String(error)); }
   })());
 
   return json({
