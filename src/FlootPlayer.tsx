@@ -57,7 +57,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
     if (!isMkvSource) { setMoviReady(false); return; }
     let active = true;
     setMoviReady(false);
-    import('movi-player').then(() => {
+    import('movi-player/element/slim').then(() => {
       if (active) { setMoviReady(true); setError(''); }
     }).catch(() => {
       if (active) setError('The MKV playback module could not load. Check your connection and tap Retry.');
@@ -193,6 +193,7 @@ export default function FlootPlayer({ episode, onProgress, autoPlay = false, mut
           onError={() => { if (!mkvUseDirectSource) setMkvUseDirectSource(true); }}
           controls
           playsinline
+          subtitlepicker
           theme="dark"
           controlslist="nosubtitledrag"
           subtitlesize="1.15"
