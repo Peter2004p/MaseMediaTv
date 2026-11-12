@@ -63,6 +63,9 @@ export const onRequestPost:PagesFunction<WatchEnv>=async({request,env})=>{
    if(!room)return json({error:"That Watch Party code is invalid or expired."},404);
    const current=await env.DB.prepare("SELECT room_id FROM watch_party_members m JOIN watch_party_rooms r ON r.id=m.room_id WHERE m.user_id=? AND r.status='active' AND r.expires_at>datetime('now')").bind(userId).first<{room_id:string}>();
    if(current&&current.room_id!==room.id)return json({error:"Leave your current Watch Party before joining another."},409);
+   const capacity=await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_party_members WHERE room_id=?").bind(room.id).first<{n:number}>();
+   const alreadyMember=await env.DB.prepare("SELECT 1 AS ok FROM watch_party_members WHERE room_id=? AND user_id=?").bind(room.id,userId).first();
+   if((capacity?.n||0)>=8&&!alreadyMember)return json({error:"This Watch Party is full (8 viewers maximum)."},409);
    await env.DB.prepare("INSERT INTO watch_party_members(room_id,user_id,display_name) VALUES(?,?,?) ON CONFLICT(room_id,user_id) DO UPDATE SET last_seen_at=datetime('now')").bind(room.id,userId,String(body.displayName||"Viewer").slice(0,40)).run();
    return json({ok:true,room:{id:room.id,code:room.code,titleId:room.title_id,episodeId:room.episode_id,hostUserId:room.host_user_id,currentTime:room.current_time,isPlaying:!!room.is_playing,revision:room.revision},viewerId:userId});
   }
