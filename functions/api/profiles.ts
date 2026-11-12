@@ -23,6 +23,11 @@ async function ensure(db: D1Database, userId: string) {
     PRIMARY KEY(profile_id,user_id,token_hash)
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_profile_unlocks_expiry ON profile_unlocks(expires_at)").run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS profile_pin_attempts (
+    profile_id TEXT NOT NULL, user_id TEXT NOT NULL, failures INTEGER NOT NULL DEFAULT 0,
+    window_started_at TEXT NOT NULL DEFAULT (datetime('now')), locked_until TEXT,
+    PRIMARY KEY(profile_id,user_id)
+  )`).run();
   await db.prepare(`CREATE TABLE IF NOT EXISTS profile_library_state (
     profile_id TEXT PRIMARY KEY REFERENCES user_profiles(id) ON DELETE CASCADE,
     payload TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -95,8 +100,18 @@ export const onRequestPost: PagesFunction<ProfileEnv> = async ({request,env}) =>
       const row=await env.DB.prepare("SELECT pin_hash FROM user_profiles WHERE id=? AND user_id=?").bind(id,userId).first<{pin_hash:string|null}>();
       if(!row)return json({error:"Profile not found."},404);
       if(!row.pin_hash)return json({ok:true});
+      const attempts=await env.DB.prepare("SELECT failures,window_started_at,locked_until FROM profile_pin_attempts WHERE profile_id=? AND user_id=?").bind(id,userId).first<{failures:number;window_started_at:string;locked_until:string|null}>();
+      if(attempts?.locked_until && new Date(attempts.locked_until.replace(" ","T")+"Z").getTime()>Date.now())return json({error:"Too many incorrect PIN attempts. Try again after 15 minutes."},429);
       const candidate=await sha256("masenet-profile-pin:"+id+":"+pin);
-      if(candidate!==row.pin_hash)return json({error:"That profile PIN is incorrect."},403);
+      if(candidate!==row.pin_hash){
+        const sameWindow=attempts && Date.now()-new Date(attempts.window_started_at.replace(" ","T")+"Z").getTime()<15*60*1000;
+        const failures=sameWindow?(attempts.failures||0)+1:1;
+        const locked=failures>=5;
+        await env.DB.prepare("INSERT INTO profile_pin_attempts(profile_id,user_id,failures,window_started_at,locked_until) VALUES(?,?,?,datetime('now'),CASE WHEN ?=1 THEN datetime('now','+15 minutes') ELSE NULL END) ON CONFLICT(profile_id,user_id) DO UPDATE SET failures=excluded.failures,window_started_at=CASE WHEN ?=1 THEN profile_pin_attempts.window_started_at ELSE datetime('now') END,locked_until=excluded.locked_until")
+          .bind(id,userId,failures,locked?1:0,sameWindow?1:0).run();
+        return json({error:locked?"Too many incorrect PIN attempts. Try again after 15 minutes.":"That profile PIN is incorrect."},locked?429:403);
+      }
+      await env.DB.prepare("DELETE FROM profile_pin_attempts WHERE profile_id=? AND user_id=?").bind(id,userId).run();
       const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);
       const unlockToken=[...bytes].map(v=>v.toString(16).padStart(2,"0")).join("");
       await env.DB.prepare("DELETE FROM profile_unlocks WHERE expires_at<=datetime('now') OR (profile_id=? AND user_id=?)").bind(id,userId).run();
