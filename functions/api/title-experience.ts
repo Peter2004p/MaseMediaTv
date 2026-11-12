@@ -179,12 +179,18 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
       const title=await env.DB.prepare("SELECT id FROM titles WHERE id=?").bind(body.titleId).first<{id:string}>();
       if(!title) return json({error:"That title is no longer in the library."},404);
       const parentId=body.parentId==null||body.parentId===""?null:String(body.parentId);
-      if(parentId){if(!validId(parentId)) return json({error:"Invalid reply target."},400);const parent=await env.DB.prepare("SELECT id FROM title_discussion_comments WHERE id=? AND title_id=? AND status='published' AND parent_id IS NULL").bind(parentId,body.titleId).first<{id:string}>();if(!parent)return json({error:"This comment cannot be replied to."},404);}
+      let parentOwner:string|null=null;
+      if(parentId){if(!validId(parentId)) return json({error:"Invalid reply target."},400);const parent=await env.DB.prepare("SELECT id,user_id FROM title_discussion_comments WHERE id=? AND title_id=? AND status='published' AND parent_id IS NULL").bind(parentId,body.titleId).first<{id:string;user_id:string}>();if(!parent)return json({error:"This comment cannot be replied to."},404);parentOwner=parent.user_id;}
       const recent=await env.DB.prepare("SELECT COUNT(*) AS count FROM title_discussion_comments WHERE user_id=? AND created_at>=datetime('now','-1 minute')").bind(userId).first<{count:number}>();
       if(Number(recent?.count||0)>=5) return json({error:"Please wait a minute before posting another comment."},429);
       const id=crypto.randomUUID();
       await env.DB.prepare("INSERT INTO title_discussion_comments(id,title_id,user_id,body,status,parent_id) VALUES(?,?,?,?,'published',?)").bind(id,body.titleId,userId,comment,parentId).run();
-      return json({ok:true,id,message:"Your comment has been posted."});
+      if(parentId&&parentOwner&&parentOwner!==userId){
+        const titleName=await env.DB.prepare("SELECT name FROM titles WHERE id=?").bind(body.titleId).first<{name:string}>();
+        await env.DB.prepare("INSERT INTO user_notifications(id,user_id,title_id,title,description,kind,target) VALUES(?,?,?,?,?,'reply',?)")
+          .bind("reply:"+id,parentOwner,body.titleId,"New reply to your comment",(titleName?.name||"A title")+": "+comment.slice(0,180),"#/title/"+encodeURIComponent(String(body.titleId))).run();
+      }
+      return json({ok:true,id,message:parentId?"Your reply has been posted. The original commenter has been notified.":"Your comment has been posted."});
     }
     if(action==="commentReaction"){
       if(!validId(body.commentId)) return json({error:"A valid comment is required."},400);
