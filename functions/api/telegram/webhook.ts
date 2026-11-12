@@ -77,8 +77,8 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
   }
 }
 async function makeAIReply(env: Env, message: string, firstName: string): Promise<string> {
-  if (!env.OPENAI_API_KEY) return "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet Mini App using the button below.";
   const channelMatches = await searchPublicTelegramChannel(message, 5).catch((error) => { console.error("Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; });
+  if (!env.OPENAI_API_KEY) return channelMatches.length ? "I couldn’t find that in the MaseNet website library, but I found these posts in our official Telegram channel:\n\n" + channelMatches.map(post => "• " + post.title + "\n" + post.text.slice(0,360) + "\n" + post.url).join("\n\n") : "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet Mini App using the button below.";
   let sharedInstructions = "";
   let catalogueContext = "";
   try {
@@ -311,12 +311,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     } else if (text && !text.startsWith("/")) {
       const matches = await findCatalogMatches(env, text);
       if (matches.length) {
+        const channelMatches = await searchPublicTelegramChannel(text, 5).catch((error) => { console.error("Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; });
         const resultText = "🎬 <b>Found in the MaseNet library</b>\n\n" + matches.map((item) =>
           "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
           (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
           (item.episodeLabels.length ? "\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "") +
           ""
-        ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles.";
+        ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles." + (channelMatches.length ? "\n\n📢 <b>Also found in our Telegram channel:</b>\n" + channelMatches.map(post => "• <a href=\"" + post.url + "\">" + post.title.replace(/[&<>\"]/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;", "\"":"&quot;" }[ch] || ch)) + "</a>").join("\n") : "");
         await sendMessage(env, chatId, resultText, keyboard, "HTML");
         return json({ ok: true, searchMatches: matches.length });
       }
