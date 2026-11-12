@@ -59,11 +59,14 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       )`).run();
       if(flag){
         const prior=await env.DB.prepare("SELECT chat_id,status,display_name FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{chat_id:string;status:string;display_name:string}>();
-        if(!prior||!["approved","approved_timeout"].includes(prior.status)){
-          await api("answerCallbackQuery",{callback_query_id:cb.id,text:"Only an approved submission can be flagged for re-verification.",show_alert:true}).catch(()=>undefined);
+        if(!prior||!["pending","approved","approved_timeout"].includes(prior.status)){
+          await api("answerCallbackQuery",{callback_query_id:cb.id,text:"This submission can no longer be flagged. Submit a new screenshot if needed.",show_alert:true}).catch(()=>undefined);
           return json({ok:true,adminDecision:"not_flaggable"});
         }
         const targetId=prior.chat_id;
+        if(prior.status==="pending"){
+          await env.DB.prepare("UPDATE telegram_access_submissions SET status='flagged',reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(submissionId).run();
+        }
         await env.DB.prepare("INSERT INTO telegram_access_reviews(chat_id,status,reason,flagged_at,deadline_at,updated_at) VALUES(?,'warning','Admin flagged the earlier YouTube screenshot as fake or subscription not completed.',datetime('now'),datetime('now','+24 hours'),datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET status='warning',reason=excluded.reason,flagged_at=datetime('now'),deadline_at=datetime('now','+24 hours'),updated_at=datetime('now')").bind(targetId).run();
         await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,updated_at=datetime('now') WHERE chat_id=?").bind(targetId).run();
         const appUrl=(env.TELEGRAM_MINI_APP_URL||env.TELEGRAM_WEBAPP_URL||"https://masetv-cloudflare-migration.pages.dev").trim();
