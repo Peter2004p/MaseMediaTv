@@ -17,6 +17,12 @@ async function ensure(db: D1Database, userId: string) {
     updated_at TEXT NOT NULL DEFAULT (datetime('now')), UNIQUE(user_id,name)
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_user_profiles_owner ON user_profiles(user_id,created_at)").run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS profile_unlocks (
+    profile_id TEXT NOT NULL, user_id TEXT NOT NULL, token_hash TEXT NOT NULL,
+    expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY(profile_id,user_id,token_hash)
+  )`).run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_profile_unlocks_expiry ON profile_unlocks(expires_at)").run();
   await db.prepare(`CREATE TABLE IF NOT EXISTS profile_library_state (
     profile_id TEXT PRIMARY KEY REFERENCES user_profiles(id) ON DELETE CASCADE,
     payload TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -90,7 +96,12 @@ export const onRequestPost: PagesFunction<ProfileEnv> = async ({request,env}) =>
       if(!row.pin_hash)return json({ok:true});
       const candidate=await sha256("masenet-profile-pin:"+id+":"+pin);
       if(candidate!==row.pin_hash)return json({error:"That profile PIN is incorrect."},403);
-      return json({ok:true});
+      const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);
+      const unlockToken=[...bytes].map(v=>v.toString(16).padStart(2,"0")).join("");
+      await env.DB.prepare("DELETE FROM profile_unlocks WHERE expires_at<=datetime('now') OR (profile_id=? AND user_id=?)").bind(id,userId).run();
+      await env.DB.prepare("INSERT INTO profile_unlocks(profile_id,user_id,token_hash,expires_at) VALUES(?,?,?,datetime('now','+30 minutes'))")
+        .bind(id,userId,await sha256(unlockToken)).run();
+      return json({ok:true,unlockToken,expiresInSeconds:1800});
     }
     return json({error:"Unknown profile action."},400);
   } catch { return json({error:"Profile update failed. Please retry."},503); }
