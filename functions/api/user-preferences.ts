@@ -47,6 +47,12 @@ export const onRequestPost:PagesFunction<Env>=async({request,env})=>{
   const defaultId=await ensure(env.DB,user),profileId=String(body.profileId||defaultId);
   const owned=await env.DB.prepare("SELECT id FROM user_profiles WHERE id=? AND user_id=?").bind(profileId,user).first();
   if(!owned)return json({error:"Selected profile does not belong to this account."},403);
+  const protectedProfile=await env.DB.prepare("SELECT pin_hash FROM user_profiles WHERE id=? AND user_id=?").bind(profileId,user).first<{pin_hash:string|null}>();
+  if(protectedProfile?.pin_hash){
+   const unlock=request.headers.get("X-MaseNet-Profile-Unlock")||"";
+   const valid=unlock?await env.DB.prepare("SELECT 1 AS ok FROM profile_unlocks WHERE profile_id=? AND user_id=? AND token_hash=? AND expires_at>datetime('now')").bind(profileId,user,await sha256(unlock)).first():null;
+   if(!valid)return json({error:"Unlock this profile with its PIN to change its private preferences."},423);
+  }
   await env.DB.prepare("INSERT INTO profile_preferences(profile_id,payload,updated_at) VALUES(?,?,datetime('now')) ON CONFLICT(profile_id) DO UPDATE SET payload=excluded.payload,updated_at=datetime('now')").bind(profileId,JSON.stringify({subtitleLanguage:subtitle,audioLanguage:audio})).run();
   return json({ok:true,profileId,preferences:{subtitleLanguage:subtitle,audioLanguage:audio}});
  }catch{return json({error:"Player preferences could not be saved."},503)}
