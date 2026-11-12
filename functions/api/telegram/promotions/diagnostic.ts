@@ -63,7 +63,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     for (const row of targets.results || []) {
       if (row.chat_type === "private" || row.chat_type === "channel" || row.chat_type === "supergroup") counts[row.chat_type] = Number(row.count || 0);
     }
-    const eligible = (catalogue.results || []).filter(row => {
+    const eligible = (catalogue.results || []).filter(row => !!String(row.name || "").trim()).length;
+    const enriched = (catalogue.results || []).filter(row => {
       let meta: Record<string, unknown> = {};
       try { meta = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
       const poster = String(row.poster_url || meta.posterUrl || "");
@@ -76,6 +77,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     checks.fixedChannelTarget = "@MaseMediaTv";
     checks.totalBroadcastTargets = counts.private + counts.channel + counts.supergroup + 1;
     checks.eligibleCatalogueItems = eligible;
+    checks.catalogueItemsWithPosterAndDescription = enriched;
     checks.recentDeliveryRuns = recentDeliveryRuns;
     checks.promotionHistoryTables = (tables.results || []).map(row => row.name);
     checks.readyForScheduledDispatch = !!env.TELEGRAM_BOT_TOKEN &&
