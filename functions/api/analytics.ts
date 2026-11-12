@@ -19,6 +19,8 @@ async function ensureTable(db: D1Database) {
     last_seen TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_analytics_presence_seen ON analytics_presence(last_seen)").run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS title_user_events (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,title_id TEXT NOT NULL,event_type TEXT NOT NULL CHECK(event_type IN ('view','watch','complete','skip','save')),progress INTEGER NOT NULL DEFAULT 0 CHECK(progress BETWEEN 0 AND 100),created_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_events_analytics ON title_user_events(event_type,created_at DESC)").run();
 }
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: AnalyticsEnv }) => {
@@ -79,16 +81,18 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: An
   if (gate.response) return gate.response;
   try {
     await ensureTable(env.DB);
-    const [totals, daily, popular, searches, feedback, online, recent] = await Promise.all([
+    const [totals, daily, popular, searches, feedback, online, recent, watchMetrics, topWatched] = await Promise.all([
       env.DB.prepare("SELECT COUNT(DISTINCT session_key) AS visitors, SUM(CASE WHEN event_type='page_view' THEN 1 ELSE 0 END) AS page_views, SUM(CASE WHEN event_type='title_view' THEN 1 ELSE 0 END) AS title_views, SUM(CASE WHEN event_type='search' THEN 1 ELSE 0 END) AS searches, SUM(CASE WHEN event_type='feedback' THEN 1 ELSE 0 END) AS feedback FROM analytics_events").first(),
       env.DB.prepare("SELECT date(created_at) AS day, COUNT(*) AS events, COUNT(DISTINCT session_key) AS visitors FROM analytics_events WHERE created_at >= datetime('now','-6 days') GROUP BY date(created_at) ORDER BY day").all(),
       env.DB.prepare("SELECT item_id AS id,item_name AS name,COUNT(*) AS views FROM analytics_events WHERE event_type='title_view' AND item_name IS NOT NULL GROUP BY item_id,item_name ORDER BY views DESC LIMIT 8").all(),
       env.DB.prepare("SELECT item_name AS query,COUNT(*) AS count FROM analytics_events WHERE event_type='search' AND item_name IS NOT NULL GROUP BY item_name ORDER BY count DESC LIMIT 8").all(),
       env.DB.prepare("SELECT item_name AS rating,COUNT(*) AS count FROM analytics_events WHERE event_type='feedback' AND item_name IS NOT NULL GROUP BY item_name ORDER BY count DESC LIMIT 8").all(),
       env.DB.prepare("SELECT COUNT(*) AS count FROM analytics_presence WHERE last_seen >= datetime('now','-2 minutes')").first(),
-      env.DB.prepare("SELECT event_type AS event,item_name AS detail,created_at AS at FROM analytics_events WHERE event_type IN ('page_view','title_view','feedback') ORDER BY id DESC LIMIT 12").all()
+      env.DB.prepare("SELECT event_type AS event,item_name AS detail,created_at AS at FROM analytics_events WHERE event_type IN ('page_view','title_view','feedback') ORDER BY id DESC LIMIT 12").all(),
+      env.DB.prepare("SELECT COUNT(*) AS starts,COUNT(DISTINCT user_id) AS viewers,SUM(CASE WHEN event_type='complete' THEN 1 ELSE 0 END) AS completions FROM title_user_events WHERE event_type IN ('watch','complete')").first(),
+      env.DB.prepare("SELECT e.title_id AS id,t.name AS name,COUNT(*) AS starts,SUM(CASE WHEN e.event_type='complete' THEN 1 ELSE 0 END) AS completions FROM title_user_events e LEFT JOIN titles t ON t.id=e.title_id WHERE e.event_type IN ('watch','complete') GROUP BY e.title_id,t.name ORDER BY starts DESC LIMIT 8").all()
     ]);
-    return json({ totals: totals || {}, onlineNow: Number((online as any)?.count || 0), daily: daily.results || [], popular: popular.results || [], searches: searches.results || [], feedback: feedback.results || [], recent: recent.results || [], generatedAt: new Date().toISOString(), note: "Counts include only events recorded since analytics collection was enabled. Online presence is approximate and expires after two minutes without a heartbeat." });
+    return json({ totals: totals || {}, onlineNow: Number((online as any)?.count || 0), daily: daily.results || [], popular: popular.results || [], searches: searches.results || [], feedback: feedback.results || [], recent: recent.results || [], watchMetrics: watchMetrics || { starts: 0, viewers: 0, completions: 0 }, topWatched: topWatched.results || [], generatedAt: new Date().toISOString(), note: "Counts include only events recorded since analytics collection was enabled. Online presence is approximate and expires after two minutes without a heartbeat." });
   } catch (error) {
     console.error("Analytics summary failed", error instanceof Error ? error.message : "unknown error");
     return json({ error: "Analytics summary unavailable" }, 503);
