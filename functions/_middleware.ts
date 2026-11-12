@@ -58,9 +58,9 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, next }) => {
     if (!review || !["warning", "restricted", "submitted"].includes(review.status)) return next();
 
     let status = review.status;
-    if (status === "warning" && review.deadline_at) {
+    if (["warning", "submitted"].includes(status) && review.deadline_at) {
       await env.DB.prepare(
-        "UPDATE telegram_access_reviews SET status='restricted',updated_at=datetime('now') WHERE chat_id=? AND status='warning' AND datetime(deadline_at)<=datetime('now')"
+        "UPDATE telegram_access_reviews SET status='restricted',updated_at=datetime('now') WHERE chat_id=? AND status IN ('warning','submitted') AND datetime(deadline_at)<=datetime('now')"
       ).bind(chatId).run();
       const latest = await env.DB.prepare(
         "SELECT status FROM telegram_access_reviews WHERE chat_id=?"
@@ -68,7 +68,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, next }) => {
       status = latest?.status || status;
     }
 
-    if (["warning", "restricted", "submitted"].includes(status)) {
+    if (status === "restricted") {
       return json({
         error: status === "restricted"
           ? "This MaseNet account is restricted pending manual approval of a genuine replacement screenshot."
