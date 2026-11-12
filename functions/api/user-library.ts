@@ -34,6 +34,10 @@ async function ensureTable(db: D1Database, userId: string) {
   await db.prepare("INSERT OR IGNORE INTO user_profiles(id,user_id,name,avatar,is_kids) VALUES(?,?,'Main profile','',0)").bind(defaultId,userId).run();
   const legacy=await db.prepare("SELECT payload FROM user_library_state WHERE user_id=?").bind(userId).first<{payload:string}>();
   if(legacy?.payload) await db.prepare("INSERT OR IGNORE INTO profile_library_state(profile_id,payload) VALUES(?,?)").bind(defaultId,legacy.payload).run();
+ await db.prepare(`CREATE TABLE IF NOT EXISTS profile_unlocks (
+  profile_id TEXT NOT NULL,user_id TEXT NOT NULL,token_hash TEXT NOT NULL,expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),PRIMARY KEY(profile_id,user_id,token_hash)
+ )`).run();
   return defaultId;
 }
 
@@ -94,6 +98,12 @@ export const onRequestGet: PagesFunction<LibraryEnv> = async ({ request, env }) 
     const requested = new URL(request.url).searchParams.get("profileId") || defaultId;
     const owned = await env.DB.prepare("SELECT id FROM user_profiles WHERE id=? AND user_id=?").bind(requested,userId).first();
     if(!owned)return json({error:"Selected profile does not belong to this account."},403);
+    const protectedProfile=await env.DB.prepare("SELECT pin_hash FROM user_profiles WHERE id=? AND user_id=?").bind(requested,userId).first<{pin_hash:string|null}>();
+    if(protectedProfile?.pin_hash){
+      const unlock=request.headers.get("X-MaseNet-Profile-Unlock")||"";
+      const valid=unlock?await env.DB.prepare("SELECT 1 AS ok FROM profile_unlocks WHERE profile_id=? AND user_id=? AND token_hash=? AND expires_at>datetime('now')").bind(requested,userId,await sha256(unlock)).first():null;
+      if(!valid)return json({error:"Unlock this profile with its PIN to access its private library."},423);
+    }
     const row = await env.DB.prepare("SELECT payload,updated_at FROM profile_library_state WHERE profile_id=?").bind(requested).first<{ payload: string; updated_at: string }>();
     let state = normalize({});
     if (row?.payload) {
