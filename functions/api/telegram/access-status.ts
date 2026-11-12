@@ -16,7 +16,10 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
  if(!user?.id)return json({error:"Telegram user was not found."},401);
  const chatId=String(user.id);
  await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY,youtube_ok INTEGER NOT NULL DEFAULT 0,masemedia_ok INTEGER NOT NULL DEFAULT 0,moondramac_ok INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
- const saved=await env.DB.prepare("SELECT youtube_ok FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number}>();
+ await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_access_submissions (id TEXT PRIMARY KEY,chat_id TEXT NOT NULL,display_name TEXT NOT NULL,username TEXT,status TEXT NOT NULL DEFAULT 'pending',submitted_at TEXT NOT NULL DEFAULT (datetime('now')),reviewed_at TEXT)").run();
+ await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY,youtube_ok INTEGER NOT NULL DEFAULT 0,youtube_provisional INTEGER NOT NULL DEFAULT 0,masemedia_ok INTEGER NOT NULL DEFAULT 0,moondramac_ok INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
+ try{await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN youtube_provisional INTEGER NOT NULL DEFAULT 0").run()}catch{/* already exists */}
+ const saved=await env.DB.prepare("SELECT youtube_ok,youtube_provisional FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number}>();
  const membership={masemedia:false,moondramac:false};
  for(const [channel,key] of [["@MaseMediaTv","masemedia"],["@MoonDramaC","moondramac"]] as const){
   const r=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/getChatMember?chat_id="+encodeURIComponent(channel)+"&user_id="+encodeURIComponent(chatId));
@@ -33,5 +36,7 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
  const reviewActive=!!review&&["warning","restricted","submitted"].includes(review.status);
  const reviewRestricted=review?.status==="restricted";
  const youtubeVerified=!!saved?.youtube_ok&&!reviewRestricted;
- return json({ok:true,youtubeVerified,membership,review:reviewActive?{status:review?.status,reason:review?.reason,deadlineAt:review?.deadline_at}:null,accessGranted:youtubeVerified&&membership.masemedia&&membership.moondramac,missing:[!youtubeVerified?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)});
+ const provisionalAccess=!youtubeVerified&&!reviewRestricted&&!!saved?.youtube_provisional;
+ const youtubeEligible=youtubeVerified||provisionalAccess;
+ return json({ok:true,youtubeVerified,provisionalAccess,membership,review:reviewActive?{status:review?.status,reason:review?.reason,deadlineAt:review?.deadline_at}:null,accessGranted:youtubeEligible&&membership.masemedia&&membership.moondramac,missing:[!youtubeEligible?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)});
 };
