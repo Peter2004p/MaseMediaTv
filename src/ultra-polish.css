@@ -1,0 +1,48 @@
+/* MaseNet Ultra Professional design system — presentation-only layer.
+   Existing routes, account state, verification logic and API behaviour are intentionally untouched. */
+:root{--mase-radius-sm:12px;--mase-radius-md:18px;--mase-radius-lg:26px;--mase-shadow-soft:0 10px 30px rgba(0,0,0,.18);--mase-shadow-card:0 18px 48px rgba(0,0,0,.22);--mase-focus:rgba(145,211,255,.92)}
+html{scroll-padding-top:88px;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}body{min-width:320px}
+button,input,textarea,select{accent-color:var(--accent,#d8b879)}button{-webkit-tap-highlight-color:transparent}
+:where(button,a,input,textarea,select,[tabindex]):focus-visible{outline:2px solid var(--mase-focus)!important;outline-offset:3px!important}
+::selection{background:rgba(142,205,239,.28);color:inherit}
+.app{isolation:isolate;background:radial-gradient(ellipse at 12% -12%,color-mix(in srgb,var(--accent,#d8b879) 11%,transparent),transparent 42%),radial-gradient(ellipse at 95% 22%,rgba(74,145,190,.07),transparent 36%),var(--bg,#080d16)!important}
+.app .page,.app .detail,.app .adminPage,.app .settings,.app .profile,.app .ai{width:min(100%,1440px);margin-inline:auto}
+.app .page{padding:clamp(24px,4vw,54px) clamp(14px,3vw,34px) calc(126px + env(safe-area-inset-bottom))}
+.app .nav.maseReferenceHeader{border:1px solid color-mix(in srgb,var(--border,rgba(255,255,255,.14)) 88%,white 12%)!important;border-radius:22px!important;box-shadow:0 12px 36px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.09)!important;background:color-mix(in srgb,var(--glassStrong,rgba(13,20,32,.9)) 90%,transparent)!important;-webkit-backdrop-filter:blur(26px) saturate(155%)!important;backdrop-filter:blur(26px) saturate(155%)!important}
+.app .brandLogo,.app .brandMark{filter:drop-shadow(0 3px 8px rgba(0,0,0,.18))}.app .brandName{letter-spacing:-.035em}
+.app .iqHome .iqHero{overflow:hidden;border-radius:30px!important;box-shadow:0 24px 68px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.12)!important}
+.app .iqHome .iqHero h1,.app .detail h1,.app .adminHead h1{text-wrap:balance;letter-spacing:-.055em}
+.app .iqHome .iqCategories{border-radius:18px!important;padding:7px!important;box-shadow:0 10px 28px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.06)!important}
+.app .iqHome .iqCategories button{min-height:38px;border-radius:12px!important;font-weight:700}
+.app .iqHome .iqGrid{align-items:start}.app .iqHome .iqCard{min-width:0;border-radius:17px!important}
+.app .iqHome .iqPoster{overflow:hidden;border-radius:15px!important;box-shadow:0 9px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.08)!important;transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease!important}
+.app .iqHome .iqCard>b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.38}.app .iqHome .iqCard:active .iqPoster{transform:scale(.975)}
+.app .iqHome .iqRowHead{align-items:end;gap:12px}.app .iqHome .iqRowHead h2{font-weight:760;text-wrap:balance}.app .iqHome .rowMore{border-radius:999px!important;padding-inline:14px!important}
+.app .detail{padding:clamp(18px,3vw,38px) clamp(14px,3vw,30px) calc(130px + env(safe-area-inset-bottom))}
+.app .detailHero{overflow:hidden;border-radius:28px!important;padding:clamp(16px,3vw,28px)!important;box-shadow:var(--mase-shadow-card),inset 0 1px 0 rgba(255,255,255,.08)!important}
+.app .detailHero>.poster{border-radius:19px!important;box-shadow:0 20px 46px rgba(0,0,0,.32)}
+.app .playerSection,.app .player,.app .vlcPlayer,.app .flootStylePlayer{overflow:hidden;border-radius:22px!important}.app .playerSection{box-shadow:var(--mase-shadow-card),inset 0 1px 0 rgba(255,255,255,.07)!important}
+.app .seasonTabs{flex-wrap:wrap}.app .seasonTabs button,.app .episode,.app .chips span{border-radius:12px!important}
+.app .primary,.app .secondary,.app .settings button,.app .formGrid button,.app .bulk button{min-height:42px;border-radius:13px!important;font-weight:720;transition:transform .18s ease,filter .18s ease,box-shadow .18s ease,border-color .18s ease!important}
+.app .primary{box-shadow:0 7px 18px color-mix(in srgb,var(--accent,#d8b879) 18%,transparent),inset 0 1px 0 rgba(255,255,255,.25)}
+.app .primary:active,.app .secondary:active,.app .settings button:active{transform:scale(.98)}
+.app .adminPage{padding:clamp(16px,3vw,34px) clamp(12px,2.5vw,28px) calc(130px + env(safe-area-inset-bottom))}.app .adminHead{margin-bottom:22px}.app .adminHead h1{font-size:clamp(30px,5vw,48px)}
+.app .adminCard,.app .adminSection,.app .adminPanel,.app .settings,.app .assistantStudioHero{border:1px solid var(--border,rgba(255,255,255,.12))!important;border-radius:20px!important;background:var(--glassStrong,rgba(17,24,36,.88))!important;box-shadow:0 12px 34px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.045)!important}
+.app .adminCard,.app .adminSection,.app .adminPanel{padding:clamp(13px,2vw,20px)}
+.app .formGrid input,.app .formGrid select,.app .formGrid textarea,.app .bulk input,.app .bulk textarea,.app input:not([type=checkbox]):not([type=radio]):not([type=file]),.app textarea,.app select{min-height:43px;border-radius:12px!important;border:1px solid var(--border,rgba(255,255,255,.15))!important;background:color-mix(in srgb,var(--glass,rgba(255,255,255,.05)) 90%,transparent)!important;color:var(--text,#f5f7fb)!important;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)!important}
+.app textarea{min-height:96px;line-height:1.55}.app input::placeholder,.app textarea::placeholder{color:var(--muted,#8995a7)!important;opacity:.86}.app input[type=file]{max-width:100%;padding:9px!important}
+.app .settings{padding:clamp(14px,2vw,22px)}.app .settings label,.app .settingsHeading{font-weight:800;letter-spacing:.08em}.app .settings button{padding:12px 14px!important}
+.app .profilePro,.app .assistantStudioHero,.app .aiQuickStart{border-radius:22px!important}.app .notificationList,.app .notificationEmpty{border-radius:17px}
+.app .backdrop{background:rgba(2,6,12,.68)!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.app .side,.app .aiSide,.app .heroBroadcastDialog{border:1px solid rgba(220,235,255,.15)!important;border-radius:26px!important;box-shadow:0 28px 90px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.08)!important}
+.app .telegram,.app .homeFloat,.app .aiDock{box-shadow:0 12px 34px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.15)!important}
+.app .siteLegalFooter{opacity:.88}.app .masenetLiquidDock{border-radius:25px!important}
+.app .maseCatalogWarning,[role=alert].maseCatalogWarning{border-radius:16px!important}.app :where(.error,.profileProError,.welcomeError){border-radius:12px}
+.app .emptyState,.app .iqEmptySearch,.app .notificationEmpty{border-radius:22px!important;border:1px dashed var(--border,rgba(255,255,255,.16))!important}
+.app .posterImage{transition:transform .45s cubic-bezier(.2,.7,.2,1)}.app .iqCard:hover .posterImage{transform:scale(1.035)}
+.app .heroBroadcastCompact,.app .broadcastDynamicIsland,.app .homepageBroadcasts{border-radius:18px!important}
+.app :where(.primary,.secondary,.rowMore,.icon,.maseSearchToggle,.maseProfileButton,.masenetLiquidDock button){touch-action:manipulation}.app a{text-underline-offset:3px}
+@media(hover:hover) and (pointer:fine){.app .iqHome .iqCard:hover .iqPoster{transform:translateY(-4px);box-shadow:0 18px 38px rgba(0,0,0,.28)!important}.app .primary:hover,.app .secondary:hover{filter:brightness(1.06)}}
+@media(max-width:700px){.app .iqHome{padding-inline:12px}.app .iqHome .iqGrid{gap:17px 10px}.app .detailHero{grid-template-columns:minmax(92px,30%) minmax(0,1fr)!important;gap:14px!important}.app .detailHero>.poster{width:100%!important;max-width:190px}.app .detailHero h1{font-size:clamp(25px,7vw,38px)!important}.app .adminPage{padding-top:20px}.app .adminCard,.app .adminSection,.app .adminPanel{padding:13px!important}.app .side,.app .aiSide{max-width:calc(100vw - 16px)}}
+@media(max-width:390px){.app .iqHome .iqGrid{gap:14px 8px}.app .iqHome .iqCard>b{font-size:11px}.app .iqHome .iqCard>small{font-size:9px}.app .iqHome .iqRowHead h2{font-size:20px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
