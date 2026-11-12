@@ -44,6 +44,14 @@ async function ensureTables(db: D1Database) {
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_discussion_title ON title_discussion_comments(title_id,created_at DESC)").run();
+  await db.prepare("ALTER TABLE title_discussion_comments ADD COLUMN status TEXT NOT NULL DEFAULT 'published'").run().catch(()=>{});
+  await db.prepare(`CREATE TABLE IF NOT EXISTS title_comment_reports (
+    id TEXT PRIMARY KEY,comment_id TEXT NOT NULL,user_id TEXT NOT NULL,
+    reason TEXT NOT NULL,details TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','dismissed','actioned')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),UNIQUE(comment_id,user_id)
+  )`).run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_comment_reports_status ON title_comment_reports(comment_id,status,created_at DESC)").run();
 }
 async function userIdFor(request: Request, env: ExperienceEnv): Promise<string | null> {
   const admin = await currentAdmin(request,env);
@@ -63,6 +71,18 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
     const userId=await userIdFor(request,env);
     const url=new URL(request.url);
     const moderation=url.searchParams.get("moderation");
+    if (moderation === "comments") {
+      const gate=await requireAdmin(request,env);
+      if (gate.response) return gate.response;
+      const rows=await env.DB.prepare(`SELECT c.id,c.title_id AS titleId,t.name AS titleName,c.user_id AS userId,c.body,c.status,c.created_at AS createdAt,
+        (SELECT COUNT(*) FROM title_comment_reports p WHERE p.comment_id=c.id AND p.status='open') AS reportCount,
+        (SELECT GROUP_CONCAT(DISTINCT p.reason) FROM title_comment_reports p WHERE p.comment_id=c.id AND p.status='open') AS reportReasons
+        FROM title_discussion_comments c LEFT JOIN titles t ON t.id=c.title_id
+        ORDER BY reportCount DESC,c.created_at DESC LIMIT 200`).all();
+      const counts=await env.DB.prepare("SELECT COUNT(*) AS total,SUM(CASE WHEN status='published' THEN 1 ELSE 0 END) AS published,SUM(CASE WHEN status='hidden' THEN 1 ELSE 0 END) AS hidden FROM title_discussion_comments").first<{total:number;published:number;hidden:number}>();
+      const reports=await env.DB.prepare("SELECT COUNT(*) AS open FROM title_comment_reports WHERE status='open'").first<{open:number}>();
+      return json({comments:rows.results||[],counts:{total:Number(counts?.total||0),published:Number(counts?.published||0),hidden:Number(counts?.hidden||0),openReports:Number(reports?.open||0)}});
+    }
     if (moderation === "1") {
       const gate=await requireAdmin(request,env);
       if (gate.response) return gate.response;
@@ -90,7 +110,7 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
           FROM title_reviews r WHERE r.title_id=? AND r.status='published' ORDER BY r.created_at DESC LIMIT 50`).bind(userId||"",titleId).all<{id:string;rating:number;body:string;createdAt:string;helpfulCount:number;helpfulByMe:number}>(),
         env.DB.prepare("SELECT COUNT(*) AS count,ROUND(AVG(rating),1) AS average FROM title_reviews WHERE title_id=? AND status='published'").bind(titleId).first<{count:number;average:number|null}>()
       ]);
-      const comments=await env.DB.prepare("SELECT id,body,created_at AS createdAt FROM title_discussion_comments WHERE title_id=? ORDER BY created_at DESC LIMIT 100").bind(titleId).all<{id:string;body:string;createdAt:string}>();
+      const comments=await env.DB.prepare("SELECT id,body,created_at AS createdAt FROM title_discussion_comments WHERE title_id=? AND status='published' ORDER BY created_at DESC LIMIT 100").bind(titleId).all<{id:string;body:string;createdAt:string}>();
       return json({reviews:reviews.results||[],comments:comments.results||[],reviewCount:Number(summary?.count||0),averageRating:summary?.average||null,preferences:preferences?{languages:JSON.parse(preferences.languages_json||"[]"),genres:JSON.parse(preferences.genres_json||"[]")}:{languages:[],genres:[]}});
     }
     if (!userId) return json({error:"Sign in to get recommendations based on your viewing activity."},401);
@@ -149,9 +169,38 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
       if(!comment||comment.length>500) return json({error:"Write a comment between 1 and 500 characters."},400);
       const title=await env.DB.prepare("SELECT id FROM titles WHERE id=?").bind(body.titleId).first<{id:string}>();
       if(!title) return json({error:"That title is no longer in the library."},404);
+      const recent=await env.DB.prepare("SELECT COUNT(*) AS count FROM title_discussion_comments WHERE user_id=? AND created_at>=datetime('now','-1 minute')").bind(userId).first<{count:number}>();
+      if(Number(recent?.count||0)>=5) return json({error:"Please wait a minute before posting another comment."},429);
       const id=crypto.randomUUID();
-      await env.DB.prepare("INSERT INTO title_discussion_comments(id,title_id,user_id,body) VALUES(?,?,?,?)").bind(id,body.titleId,userId,comment).run();
+      await env.DB.prepare("INSERT INTO title_discussion_comments(id,title_id,user_id,body,status) VALUES(?,?,?,?,'published')").bind(id,body.titleId,userId,comment).run();
       return json({ok:true,id,message:"Your comment has been posted."});
+    }
+    if(action==="reportComment"){
+      if(!validId(body.commentId)) return json({error:"A valid comment is required."},400);
+      const reason=String(body.reason||"").trim();
+      const allowed=["Spam or advertising","Harassment or hate","Spoilers","Abusive or explicit content","Fake or misleading comment","Other"];
+      if(!allowed.includes(reason)) return json({error:"Choose a valid report reason."},400);
+      const details=typeof body.details==="string"?body.details.trim().slice(0,500):"";
+      const comment=await env.DB.prepare("SELECT id,user_id FROM title_discussion_comments WHERE id=? AND status='published'").bind(body.commentId).first<{id:string;user_id:string}>();
+      if(!comment) return json({error:"This comment is no longer available to report."},404);
+      if(comment.user_id===userId) return json({error:"You cannot report your own comment."},400);
+      const prior=await env.DB.prepare("SELECT id FROM title_comment_reports WHERE comment_id=? AND user_id=?").bind(body.commentId,userId).first<{id:string}>();
+      if(prior) return json({ok:true,alreadyReported:true,message:"You have already reported this comment."});
+      await env.DB.prepare("INSERT INTO title_comment_reports(id,comment_id,user_id,reason,details) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),body.commentId,userId,reason,details).run();
+      return json({ok:true,message:"Comment report sent to the MaseNet moderation team."});
+    }
+    if(action==="resolveCommentReports"){
+      const gate=await requireAdmin(request,env); if(gate.response) return gate.response;
+      if(!validId(body.commentId)||!["dismissed","actioned"].includes(String(body.status))) return json({error:"Invalid report resolution request."},400);
+      const result=await env.DB.prepare("UPDATE title_comment_reports SET status=? WHERE comment_id=? AND status='open'").bind(body.status,body.commentId).run();
+      return json({ok:true,updated:Number(result.meta?.changes||0)});
+    }
+    if(action==="moderateComment"){
+      const gate=await requireAdmin(request,env); if(gate.response) return gate.response;
+      if(!validId(body.commentId)||!["published","hidden"].includes(String(body.status))) return json({error:"Invalid comment moderation request."},400);
+      await env.DB.prepare("UPDATE title_discussion_comments SET status=? WHERE id=?").bind(body.status,body.commentId).run();
+      if(body.status==="hidden") await env.DB.prepare("UPDATE title_comment_reports SET status='actioned' WHERE comment_id=? AND status='open'").bind(body.commentId).run();
+      return json({ok:true});
     }
     if(action==="review"){
       if(!validId(body.titleId)) return json({error:"A valid titleId is required."},400);
