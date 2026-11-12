@@ -38,5 +38,6 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
  const youtubeVerified=!!saved?.youtube_ok&&!reviewRestricted;
  const provisionalAccess=!youtubeVerified&&!reviewRestricted&&!!saved?.youtube_provisional;
  const youtubeEligible=youtubeVerified||provisionalAccess;
- return json({ok:true,youtubeVerified,provisionalAccess,membership,review:reviewActive?{status:review?.status,reason:review?.reason,deadlineAt:review?.deadline_at}:null,accessGranted:youtubeEligible&&membership.masemedia&&membership.moondramac,missing:[!youtubeEligible?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)});
+ const latestSubmission=await env.DB.prepare("SELECT status,ai_verdict,ai_reason FROM telegram_access_submissions WHERE chat_id=? ORDER BY submitted_at DESC LIMIT 1").bind(chatId).first<{status:string;ai_verdict:string|null;ai_reason:string|null}>();
+ return json({ok:true,youtubeVerified,provisionalAccess,latestSubmission:latestSubmission||null,membership,review:reviewActive?{status:review?.status,reason:review?.reason,deadlineAt:review?.deadline_at}:null,accessGranted:youtubeEligible&&membership.masemedia&&membership.moondramac,missing:[!youtubeEligible?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)});
 };
