@@ -30,6 +30,10 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
   const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
+  const [mkvSubtitleTracks, setMkvSubtitleTracks] = useState<{id:number;label:string;language?:string;active?:boolean}[]>([]);
+  const [mkvSubtitleMenuOpen, setMkvSubtitleMenuOpen] = useState(false);
+  const [mkvSubtitleReady, setMkvSubtitleReady] = useState(false);
+  const [mkvSubtitleNotice, setMkvSubtitleNotice] = useState("");
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
@@ -67,9 +71,60 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return () => { active = false; };
   }, [isMkvSource, retry]);
 
-  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
+  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
   // interfere with the custom element's own click/touch handling in WebViews.
+
+  useEffect(() => {
+    if (!isMkvSource || !moviReady) { setMkvSubtitleTracks([]); setMkvSubtitleReady(false); return; }
+    const element = mkvPlayerRef.current;
+    if (!element) return;
+    const syncTracks = () => {
+      const player = element.player;
+      const raw = player?.getSubtitleTracks?.() || [];
+      const tracks = raw.map((track:any, index:number) => ({
+        id: Number(track.id),
+        label: String(track.label || track.name || track.language || track.codec || "Subtitle track " + (index + 1)),
+        language: String(track.language || ""),
+        active: Boolean(track.active)
+      })).filter((track:any) => Number.isFinite(track.id));
+      setMkvSubtitleTracks(tracks);
+      const active = tracks.find((track:any) => track.active);
+      if (active) setMkvSubtitleNotice("Active subtitle: " + active.label);
+      setMkvSubtitleReady(true);
+    };
+    element.addEventListener("trackschange", syncTracks);
+    element.addEventListener("loadend", syncTracks);
+    element.addEventListener("subtitletrackchange", syncTracks);
+    syncTracks();
+    const retryTimer = window.setTimeout(syncTracks, 500);
+    return () => {
+      window.clearTimeout(retryTimer);
+      element.removeEventListener("trackschange", syncTracks);
+      element.removeEventListener("loadend", syncTracks);
+      element.removeEventListener("subtitletrackchange", syncTracks);
+    };
+  }, [isMkvSource, moviReady, episode.id, rawSrc, retry]);
+
+  const selectMkvSubtitle = async (trackId:number|null, label = "Subtitles turned off.") => {
+    const player = mkvPlayerRef.current?.player;
+    if (!player?.selectSubtitleTrack) {
+      setMkvSubtitleNotice("The MKV subtitle selector is still loading. Retry after the video opens.");
+      return;
+    }
+    try {
+      const selected = await player.selectSubtitleTrack(trackId);
+      if (selected === false && trackId !== null) {
+        setMkvSubtitleNotice("This subtitle track could not be enabled.");
+        return;
+      }
+      setMkvSubtitleNotice(trackId === null ? label : "Subtitle enabled: " + label);
+      setMkvSubtitleTracks((current) => current.map(track => ({...track,active:track.id===trackId})));
+      setMkvSubtitleMenuOpen(false);
+    } catch {
+      setMkvSubtitleNotice("Could not switch this embedded subtitle track. Try another track.");
+    }
+  };
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
@@ -222,7 +277,15 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       </div>
       <div className="fspControls"><div className="fspRow fspOptions">
         {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
-        <span style={{ color: '#c9ccd5', fontSize: 12 }}>Use the player's own subtitle menu to scroll and choose embedded tracks.</span>
+        <div className="fspSubtitleControl">
+          <button type="button" className="fspSubtitleButton" aria-expanded={mkvSubtitleMenuOpen} onClick={() => setMkvSubtitleMenuOpen(value => !value)}>▤ Embedded subtitles ({mkvSubtitleTracks.length})</button>
+          {mkvSubtitleMenuOpen && <div className="fspSubtitleMenu"><strong>MKV subtitle tracks</strong>
+            <button type="button" onClick={() => void selectMkvSubtitle(null)}>Off</button>
+            {mkvSubtitleTracks.map((track,index)=><button type="button" key={track.id} className={track.active?'selected':''} onClick={()=>void selectMkvSubtitle(track.id,track.label)}>{track.label}{track.language?' · '+track.language:''}</button>)}
+            {!mkvSubtitleTracks.length && <p>{mkvSubtitleReady?'No embedded subtitle tracks were found in this MKV.':'Reading subtitle tracks from the MKV…'}</p>}
+          </div>}
+        </div>
+        <span style={{ color: '#c9ccd5', fontSize: 12 }}>{mkvSubtitleNotice || (mkvSubtitleTracks.length ? 'Choose an embedded track here or in the player menu.' : 'Detecting embedded subtitle tracks…')}</span>
       </div></div>
     </section>;
   }
