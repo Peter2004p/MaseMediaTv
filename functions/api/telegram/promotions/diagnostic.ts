@@ -2,6 +2,7 @@ interface Env {
   DB?: D1Database;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_PROMO_CRON_SECRET?: string;
+  PROMO_CRON_SECRET?: string;
   ADMIN_TELEGRAM_CHAT_ID?: string;
 }
 
@@ -11,15 +12,19 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 });
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
-  const expected = String(env.TELEGRAM_PROMO_CRON_SECRET || "");
-  const supplied = request.headers.get("authorization") || "";
-  if (!expected || supplied !== "Bearer " + expected) {
+  // Match the scheduled dispatcher's shared secret contract. Cloudflare's cron
+  // Worker uses PROMO_CRON_SECRET; TELEGRAM_PROMO_CRON_SECRET remains supported
+  // for existing manual/admin integrations.
+  const expectedSecrets = [env.PROMO_CRON_SECRET, env.TELEGRAM_PROMO_CRON_SECRET]
+    .map(value => String(value || "").trim()).filter(Boolean);
+  const supplied = String(request.headers.get("authorization") || "").trim();
+  if (!expectedSecrets.length || !expectedSecrets.some(secret => supplied === "Bearer " + secret)) {
     return json({ ok: false, error: "Unauthorized" }, 401);
   }
 
   const checks: Record<string, unknown> = {
     authenticated: true,
-    pagesCronSecretConfigured: !!expected,
+    pagesCronSecretConfigured: expectedSecrets.length > 0,
     d1Configured: !!env.DB,
     telegramBotTokenConfigured: !!env.TELEGRAM_BOT_TOKEN,
     adminChatConfigured: !!env.ADMIN_TELEGRAM_CHAT_ID
