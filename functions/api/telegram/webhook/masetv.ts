@@ -1,5 +1,5 @@
 import { json } from "../../auth/_shared";
-import { indexTelegramChannelPost, searchPublicTelegramChannel } from "../../_telegram-channel";
+import { indexTelegramChannelPost, searchPublicTelegramChannel, type TelegramChannelPost } from "../../_telegram-channel";
 
 interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; ADMIN_TELEGRAM_CHAT_ID?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; GEMINI_API_KEY?: string; }
 type Episode = { title?: string; season?: number | string; episode?: number | string; name?: string };
@@ -526,7 +526,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       }
     }
     const combined = [...new Set([...episodeMatches, ...titleMatches])].slice(0, 5);
-    let channelMatches = [];
+    let channelMatches: TelegramChannelPost[] = [];
     try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 4, env.DB), 6500, "Telegram channel search"); }
     catch (error) { console.error("Telegram command channel search failed:", error instanceof Error ? error.message : String(error)); }
     const channelReply = channelMatches.length ? "\n\nOfficial Telegram channel posts:\n" + channelMatches.map(post => "• " + post.title + "\n" + post.text.slice(0, 650) + "\n" + post.url).join("\n\n") : "";
