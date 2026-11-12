@@ -31,6 +31,7 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
   if(due?.due){await env.DB.prepare("UPDATE telegram_access_reviews SET status='restricted',updated_at=datetime('now') WHERE chat_id=? AND status='warning' AND datetime(deadline_at)<=datetime('now')").bind(chatId).run();review={...review,status:"restricted"};}
  }
  const reviewActive=!!review&&["warning","restricted","submitted"].includes(review.status);
- const youtubeVerified=!!saved?.youtube_ok&&!reviewActive;
+ const reviewRestricted=review?.status==="restricted";
+ const youtubeVerified=!!saved?.youtube_ok&&!reviewRestricted;
  return json({ok:true,youtubeVerified,membership,review:reviewActive?{status:review?.status,reason:review?.reason,deadlineAt:review?.deadline_at}:null,accessGranted:youtubeVerified&&membership.masemedia&&membership.moondramac,missing:[!youtubeVerified?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)});
 };
