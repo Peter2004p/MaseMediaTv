@@ -56,9 +56,11 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   try {
     await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (
       chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0,
+      youtube_provisional INTEGER NOT NULL DEFAULT 0,
       masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`).run();
+    try { await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN youtube_provisional INTEGER NOT NULL DEFAULT 0").run(); } catch { /* Column already exists. */ }
     await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_submissions (
       id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, display_name TEXT NOT NULL,
       username TEXT, status TEXT NOT NULL DEFAULT 'pending',
@@ -155,7 +157,8 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       if (!current || current.status !== "pending") return;
       const changed = await env.DB.prepare("UPDATE telegram_access_submissions SET status='approved_timeout',reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(submissionId).run();
       if (!Number(changed.meta?.changes || 0)) return;
-      await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=1,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
+      // Timeout grants only temporary access. It must never set the genuine verification flag.
+      await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=1,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
       if (adminMessageId) {
         await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", {
           method: "POST", headers: { "content-type": "application/json" },
