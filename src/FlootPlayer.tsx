@@ -7,7 +7,7 @@ type Quality = '480p' | '720p' | '1080p';
 type Track = { label?: string; url: string; path?: string; lang?: string; mimeType?: string };
 type Variant = { quality: Quality; streamUrl: string; mimeType?: string; subtitleTracks?: Track[] };
 type Episode = { id: string; title: string; quality: Quality; streamUrl: string; mimeType?: string; subtitleTracks?: Track[]; qualities?: Variant[] };
-type Props = { episode: Episode; onProgress?: (percent: number) => void; onPlaybackPosition?: (seconds: number) => void; onPlaybackStarted?: () => void; onPlaybackEnded?: () => void; resumeAtSeconds?: number; autoPlay?: boolean; muted?: boolean; reelMode?: boolean };
+type Props = { episode: Episode; onProgress?: (percent: number) => void; onPlaybackPosition?: (seconds: number) => void; onPlaybackStarted?: () => void; onPlaybackEnded?: () => void; playRequest?: number; resumeAtSeconds?: number; autoPlay?: boolean; muted?: boolean; reelMode?: boolean };
 
 const embedFor = (raw: string, autoplay = false) => {
   try {
@@ -21,7 +21,7 @@ const embedFor = (raw: string, autoplay = false) => {
 const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value / 60) + ':' + String(Math.floor(value % 60)).padStart(2, '0') : '0:00';
 const languageMatch=(available:string|undefined,preferred:string)=>{const a=String(available||'').toLowerCase().replace('_','-');const p=preferred.toLowerCase().replace('_','-');return !!p&&p!=='off'&&p!=='auto'&&(a===p||a.startsWith(p+'-')||p.startsWith(a+'-'));};
 
-export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, onPlaybackStarted, onPlaybackEnded, resumeAtSeconds = 0, autoPlay = false, muted = false, reelMode = false }: Props) {
+export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, onPlaybackStarted, onPlaybackEnded, playRequest = 0, resumeAtSeconds = 0, autoPlay = false, muted = false, reelMode = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null); const mkvPlayerRef = useRef<any>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const hlsRecoveryAttemptsRef = useRef({ network: 0, media: 0 }); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
@@ -175,6 +175,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   useEffect(() => { const v = videoRef.current; if (v) v.volume = volume; try { localStorage.setItem('masenet-player-volume', String(volume)); } catch { /* Storage may be unavailable in private browsing. */ } }, [volume]);
   useEffect(() => { const v = videoRef.current; if (v) v.playbackRate = speed; try { localStorage.setItem('masenet-player-speed', String(speed)); } catch { /* Storage may be unavailable in private browsing. */ } }, [speed]);
   useEffect(() => { const v = videoRef.current; if (!v) return; v.muted = Boolean(muted); if (!autoPlay) { v.pause(); return; } const attempt = () => { if (autoPlay) void v.play().catch(() => {}); }; if (v.readyState >= 2) attempt(); else v.addEventListener('canplay', attempt, { once: true }); return () => v.removeEventListener('canplay', attempt); }, [autoPlay, muted, src, retry]);
+  useEffect(() => { const v = videoRef.current; if (!v || playRequest <= 0) return; const attempt = () => { void v.play().catch(() => {}); }; if (v.readyState >= 2) attempt(); else v.addEventListener('canplay', attempt, { once: true }); return () => v.removeEventListener('canplay', attempt); }, [playRequest, src, retry]);
   const playPause = async () => { const v = videoRef.current; if (!v) return; setError(''); try { if (v.paused) await v.play(); else v.pause(); } catch { setError('Playback was blocked or the video URL is not playable. Tap Retry or choose another quality.'); } };
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
   const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
