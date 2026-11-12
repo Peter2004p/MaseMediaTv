@@ -14,6 +14,10 @@ async function ensure(db:D1Database,user:string){
  await db.prepare("INSERT OR IGNORE INTO user_profiles(id,user_id,name,avatar,is_kids) VALUES(?,?,'Main profile','',0)").bind(defaultId,user).run();
  const legacy=await db.prepare("SELECT subtitle_language,audio_language FROM user_player_preferences WHERE user_id=?").bind(user).first<{subtitle_language:string;audio_language:string}>();
  if(legacy)await db.prepare("INSERT OR IGNORE INTO profile_preferences(profile_id,payload) VALUES(?,?)").bind(defaultId,JSON.stringify({subtitleLanguage:legacy.subtitle_language,audioLanguage:legacy.audio_language})).run();
+ await db.prepare(`CREATE TABLE IF NOT EXISTS profile_unlocks (
+  profile_id TEXT NOT NULL,user_id TEXT NOT NULL,token_hash TEXT NOT NULL,expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),PRIMARY KEY(profile_id,user_id,token_hash)
+ )`).run();
  return defaultId;
 }
 export const onRequestGet:PagesFunction<Env>=async({request,env})=>{
@@ -22,6 +26,12 @@ export const onRequestGet:PagesFunction<Env>=async({request,env})=>{
   const defaultId=await ensure(env.DB,user),profileId=new URL(request.url).searchParams.get("profileId")||defaultId;
   const owned=await env.DB.prepare("SELECT id FROM user_profiles WHERE id=? AND user_id=?").bind(profileId,user).first();
   if(!owned)return json({error:"Selected profile does not belong to this account."},403);
+  const protectedProfile=await env.DB.prepare("SELECT pin_hash FROM user_profiles WHERE id=? AND user_id=?").bind(profileId,user).first<{pin_hash:string|null}>();
+  if(protectedProfile?.pin_hash){
+   const unlock=request.headers.get("X-MaseNet-Profile-Unlock")||"";
+   const valid=unlock?await env.DB.prepare("SELECT 1 AS ok FROM profile_unlocks WHERE profile_id=? AND user_id=? AND token_hash=? AND expires_at>datetime('now')").bind(profileId,user,await sha256(unlock)).first():null;
+   if(!valid)return json({error:"Unlock this profile with its PIN to access its private preferences."},423);
+  }
   const row=await env.DB.prepare("SELECT payload,updated_at FROM profile_preferences WHERE profile_id=?").bind(profileId).first<{payload:string;updated_at:string}>();
   let prefs:any={};try{prefs=JSON.parse(row?.payload||"{}")}catch{}
   return json({preferences:{subtitleLanguage:allowed.includes(prefs.subtitleLanguage)?prefs.subtitleLanguage:"off",audioLanguage:allowed.includes(prefs.audioLanguage)?prefs.audioLanguage:"auto"},profileId,updatedAt:row?.updated_at||null});
