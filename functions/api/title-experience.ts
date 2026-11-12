@@ -59,11 +59,12 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
       const status=url.searchParams.get("status") || "all";
       if (!["all","published","hidden"].includes(status)) return json({error:"Invalid moderation filter."},400);
       const rows=await env.DB.prepare(`SELECT r.id,r.title_id AS titleId,t.name AS titleName,r.rating,r.body,r.status,r.created_at AS createdAt,r.updated_at AS updatedAt,
-        (SELECT COUNT(*) FROM title_review_reports p WHERE p.review_id=r.id AND p.status='open') AS reportCount
+        (SELECT COUNT(*) FROM title_review_reports p WHERE p.review_id=r.id AND p.status='open') AS reportCount,
+        (SELECT GROUP_CONCAT(DISTINCT p.reason) FROM title_review_reports p WHERE p.review_id=r.id AND p.status='open') AS reportReasons
         FROM title_reviews r LEFT JOIN titles t ON t.id=r.title_id
         WHERE (?='all' OR r.status=?)
         ORDER BY reportCount DESC,r.created_at DESC LIMIT 150`)
-        .bind(status,status).all<{id:string;titleId:string;titleName:string|null;rating:number;body:string;status:string;createdAt:string;updatedAt:string;reportCount:number}>();
+        .bind(status,status).all<{id:string;titleId:string;titleName:string|null;rating:number;body:string;status:string;createdAt:string;updatedAt:string;reportCount:number;reportReasons:string|null}>();
       const counts=await env.DB.prepare("SELECT COUNT(*) AS total,SUM(CASE WHEN status='published' THEN 1 ELSE 0 END) AS published,SUM(CASE WHEN status='hidden' THEN 1 ELSE 0 END) AS hidden FROM title_reviews").first<{total:number;published:number;hidden:number}>();
       const reports=await env.DB.prepare("SELECT COUNT(*) AS open FROM title_review_reports WHERE status='open'").first<{open:number}>();
       return json({reviews:rows.results||[],counts:{total:Number(counts?.total||0),published:Number(counts?.published||0),hidden:Number(counts?.hidden||0),openReports:Number(reports?.open||0)}});
@@ -154,10 +155,17 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
         .bind(crypto.randomUUID(),body.reviewId,userId,reason,details).run();
       return json({ok:true,message:"Report sent to the MaseNet moderation team."});
     }
+    if(action==="resolveReviewReports"){
+      const gate=await requireAdmin(request,env); if(gate.response) return gate.response;
+      if(!validId(body.reviewId)||!["dismissed","actioned"].includes(String(body.status))) return json({error:"Invalid report resolution request."},400);
+      const result=await env.DB.prepare("UPDATE title_review_reports SET status=? WHERE review_id=? AND status='open'").bind(body.status,body.reviewId).run();
+      return json({ok:true,updated:Number(result.meta?.changes||0)});
+    }
     if(action==="moderateReview"){
       const gate=await requireAdmin(request,env); if(gate.response) return gate.response;
       if(!validId(body.reviewId)||!["published","hidden"].includes(String(body.status))) return json({error:"Invalid review moderation request."},400);
       await env.DB.prepare("UPDATE title_reviews SET status=?,updated_at=datetime('now') WHERE id=?").bind(body.status,body.reviewId).run();
+      if(body.status==="hidden") await env.DB.prepare("UPDATE title_review_reports SET status='actioned' WHERE review_id=? AND status='open'").bind(body.reviewId).run();
       return json({ok:true});
     }
     return json({error:"Unsupported action."},400);
