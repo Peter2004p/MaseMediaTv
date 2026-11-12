@@ -76,7 +76,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         await api("sendMessage",{chat_id:adminId,text:"⚠️ 24-hour re-verification started for "+prior.display_name+" (Telegram ID "+targetId+"). MaseNet will show a homepage warning and restrict access at the deadline unless a new screenshot is manually approved."}).catch(()=>undefined);
         return json({ok:true,adminDecision:"flagged_for_24h"});
       }
-      const pending = await env.DB.prepare("SELECT chat_id FROM telegram_access_submissions WHERE id=? AND status='pending'").bind(submissionId).first<{chat_id:string}>();
+      const pending = await env.DB.prepare("SELECT chat_id,status FROM telegram_access_submissions WHERE id=? AND status IN ('pending','approved_timeout')").bind(submissionId).first<{chat_id:string;status:string}>();
       if (!pending?.chat_id) {
         await api("answerCallbackQuery",{callback_query_id:cb.id,text:"This screenshot has already been reviewed. The saved decision cannot be changed from this button.",show_alert:true}).catch(()=>undefined);
         if (cb.message?.chat?.id && cb.message.message_id) {
@@ -85,7 +85,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         return json({ok:true,adminDecision:"already_reviewed"});
       }
       const targetId = pending.chat_id;
-      const review = await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(approve?"approved":"rejected",submissionId).run();
+      const review = await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now') WHERE id=? AND status IN ('pending','approved_timeout')").bind(approve?"approved":"rejected",submissionId).run();
       if (!Number(review.meta?.changes || 0)) {
         await api("answerCallbackQuery",{callback_query_id:cb.id,text:"This screenshot has already been reviewed. The saved decision cannot be changed from this button.",show_alert:true}).catch(()=>undefined);
         if (cb.message?.chat?.id && cb.message.message_id) {
@@ -95,7 +95,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       }
       await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET youtube_ok=excluded.youtube_ok,updated_at=datetime('now')").bind(targetId,approve?1:0).run();
       if(approve)await env.DB.prepare("UPDATE telegram_access_reviews SET status='cleared',updated_at=datetime('now') WHERE chat_id=? AND status IN ('warning','restricted','submitted')").bind(targetId).run();
-      const notice = await api("sendMessage",{chat_id:targetId,text:approve?"✅ Your new YouTube subscription screenshot was manually approved by the MaseNet admin. Your 24-hour warning/restriction is cleared. Your YouTube check is now complete. Join both official Telegram channels, then refresh the Mini App or send /verify to unlock access.":"❌ The MaseNet admin could not approve this screenshot. Your access remains locked. Please upload a genuine, current screenshot showing the official MaseMedia TV channel and the active Subscribed button."});
+      const notice = await api("sendMessage",{chat_id:targetId,text:approve?"✅ The MaseNet admin has manually confirmed your YouTube screenshot. Any 24-hour re-verification warning/restriction is cleared. Your YouTube check is complete.":"❌ The MaseNet admin rejected your screenshot after review. Your YouTube verification is not accepted. Please contact support or submit genuine proof again."});
       if (!notice.ok) console.error("MaseNet decision notification failed:",await notice.text());
       if (cb.message?.chat?.id && cb.message.message_id) {
         const edit = await api("editMessageReplyMarkup",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,reply_markup:approve?{inline_keyboard:[[{text:"⚠️ Flag fake / incomplete (24h warning)",callback_data:"ytflag:"+submissionId}]]}:{inline_keyboard:[]}});
