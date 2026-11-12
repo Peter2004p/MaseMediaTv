@@ -77,6 +77,7 @@ export const onRequestPost: PagesFunction<ProfileEnv> = async ({request,env}) =>
         await env.DB.prepare("UPDATE user_profiles SET name=?,avatar=?,is_kids=?,pin_hash=CASE WHEN ?=1 THEN ? ELSE pin_hash END,updated_at=datetime('now') WHERE id=? AND user_id=?")
           .bind(name,String(body.avatar||"").slice(0,300),body.isKids?1:0,pin?1:0,pinHash,id,userId).run();
       } catch { return json({error:"A profile with that name already exists."},409); }
+      if(pin)await env.DB.prepare("DELETE FROM profile_unlocks WHERE profile_id=? AND user_id=?").bind(id,userId).run();
       const row=await env.DB.prepare("SELECT id,name,avatar,is_kids,CASE WHEN pin_hash IS NULL THEN 0 ELSE 1 END AS has_pin FROM user_profiles WHERE id=? AND user_id=?").bind(id,userId).first();
       if(!row)return json({error:"Profile not found."},404);
       return json({ok:true,profile:profileShape(row)});
