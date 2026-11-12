@@ -233,6 +233,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       .bind(campaignSlot, JSON.stringify(campaign)).run();
   }
 
+  if (!campaign) return json({ ok: false, error: "Promotion campaign is unavailable" }, 500);
+
   const targets = new Set<string>(["@MaseMediaTv"]);
   const subs = await env.DB.prepare("SELECT chat_id,chat_type FROM telegram_subscribers WHERE active=1 AND chat_type IN ('private','channel','supergroup')").all<{ chat_id: string; chat_type: string }>();
   const channelTargets = new Set<string>(["@MaseMediaTv"]);
@@ -253,7 +255,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     : { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: MINI_APP_URL }]] };
   for (const target of batchTargets) {
     try {
-      const hasPoster = campaign.contentType === "catalogue" && /^https:\\/\\//i.test(campaign.poster);
+      const hasPoster = campaign.contentType === "catalogue" && /^https:\/\//i.test(campaign.poster);
       const method = hasPoster ? "sendPhoto" : "sendMessage";
       const payload = hasPoster
         ? { chat_id: target, photo: campaign.poster, caption: campaign.caption.slice(0, 1000), reply_markup: replyMarkup }
@@ -342,13 +344,13 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     await Promise.all(categories.map(([category, count]) => {
       const sample = failureItems.find(item => item.category === category);
       return env.DB.prepare("INSERT INTO telegram_promo_delivery_metrics (content_type,delivered,failed,targets,failure_category,failure_count,failure_detail) VALUES (?,?,?,?,?,?,?)")
-        .bind(contentType, delivered, results.length - delivered, targets.size, category, count, sample?.description || "").run();
+        .bind(campaign.contentType, delivered, results.length - delivered, batchTargets.length, category, count, sample?.description || "").run();
     }));
   } catch (error) {
     console.error("Promo delivery metrics could not be saved:", error instanceof Error ? error.message : String(error));
   }
-  if (delivered > 0 && historyKey) {
-    await env.DB.prepare("INSERT INTO telegram_promo_history (title_name,last_sent_at) VALUES (?,datetime('now')) ON CONFLICT(title_name) DO UPDATE SET last_sent_at=datetime('now')").bind(historyKey).run();
+  if (delivered > 0 && campaign.historyKey) {
+    await env.DB.prepare("INSERT INTO telegram_promo_history (title_name,last_sent_at) VALUES (?,datetime('now')) ON CONFLICT(title_name) DO UPDATE SET last_sent_at=datetime('now')").bind(campaign.historyKey).run();
   }
   let engagementPollSent = false;
   if (delivered > 0 && batchIndex === 0) {
@@ -394,7 +396,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`).run();
     const dailyDrafts = await env.DB.prepare("SELECT COUNT(*) AS count FROM telegram_social_draft_history WHERE created_at >= datetime('now','-1 day')").first<{ count: number }>();
-    const draftKey = historyKey + ":" + new Date().toISOString().slice(0, 10);
+    const draftKey = campaign.historyKey + ":" + new Date().toISOString().slice(0, 10);
     const alreadySent = await env.DB.prepare("SELECT content_key FROM telegram_social_draft_history WHERE content_key=?").bind(draftKey).first<{ content_key: string }>();
     if (!alreadySent && Number(dailyDrafts?.count || 0) < 3) {
       const facts = campaign.facts;
