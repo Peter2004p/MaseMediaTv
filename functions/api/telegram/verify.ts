@@ -141,7 +141,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
               "",
               "⏳ Five-second priority window ended. This screenshot is STILL UNVERIFIED.",
               "Please use Approve or Reject to make the manual decision. No response never grants access."
-            ].join("\\n")
+            ].join("\n")
           })
         }).catch(error => console.error("MaseNet review caption update failed:", error instanceof Error ? error.message : String(error)));
       }
