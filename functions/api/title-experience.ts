@@ -26,6 +26,14 @@ async function ensureTables(db: D1Database) {
     UNIQUE(title_id,user_id)
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_reviews_title_status ON title_reviews(title_id,status,created_at DESC)").run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS title_review_reports (
+    id TEXT PRIMARY KEY,review_id TEXT NOT NULL,user_id TEXT NOT NULL,
+    reason TEXT NOT NULL,details TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','dismissed','actioned')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(review_id,user_id)
+  )`).run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_review_reports_review_status ON title_review_reports(review_id,status,created_at DESC)").run();
 }
 async function userIdFor(request: Request, env: ExperienceEnv): Promise<string | null> {
   const admin = await currentAdmin(request,env);
@@ -50,13 +58,15 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
       if (gate.response) return gate.response;
       const status=url.searchParams.get("status") || "all";
       if (!["all","published","hidden"].includes(status)) return json({error:"Invalid moderation filter."},400);
-      const rows=await env.DB.prepare(`SELECT r.id,r.title_id AS titleId,t.name AS titleName,r.rating,r.body,r.status,r.created_at AS createdAt,r.updated_at AS updatedAt
+      const rows=await env.DB.prepare(`SELECT r.id,r.title_id AS titleId,t.name AS titleName,r.rating,r.body,r.status,r.created_at AS createdAt,r.updated_at AS updatedAt,
+        (SELECT COUNT(*) FROM title_review_reports p WHERE p.review_id=r.id AND p.status='open') AS reportCount
         FROM title_reviews r LEFT JOIN titles t ON t.id=r.title_id
         WHERE (?='all' OR r.status=?)
-        ORDER BY CASE WHEN r.status='published' THEN 0 ELSE 1 END,r.created_at DESC LIMIT 150`)
-        .bind(status,status).all<{id:string;titleId:string;titleName:string|null;rating:number;body:string;status:string;createdAt:string;updatedAt:string}>();
+        ORDER BY reportCount DESC,r.created_at DESC LIMIT 150`)
+        .bind(status,status).all<{id:string;titleId:string;titleName:string|null;rating:number;body:string;status:string;createdAt:string;updatedAt:string;reportCount:number}>();
       const counts=await env.DB.prepare("SELECT COUNT(*) AS total,SUM(CASE WHEN status='published' THEN 1 ELSE 0 END) AS published,SUM(CASE WHEN status='hidden' THEN 1 ELSE 0 END) AS hidden FROM title_reviews").first<{total:number;published:number;hidden:number}>();
-      return json({reviews:rows.results||[],counts:{total:Number(counts?.total||0),published:Number(counts?.published||0),hidden:Number(counts?.hidden||0)}});
+      const reports=await env.DB.prepare("SELECT COUNT(*) AS open FROM title_review_reports WHERE status='open'").first<{open:number}>();
+      return json({reviews:rows.results||[],counts:{total:Number(counts?.total||0),published:Number(counts?.published||0),hidden:Number(counts?.hidden||0),openReports:Number(reports?.open||0)}});
     }
     const titleId=url.searchParams.get("titleId") || "";
     const preferences=userId ? await env.DB.prepare("SELECT languages_json,genres_json FROM user_title_preferences WHERE user_id=?").bind(userId).first<{languages_json:string;genres_json:string}>():null;
@@ -128,6 +138,21 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
       await env.DB.prepare("INSERT INTO title_reviews(id,title_id,user_id,rating,body) VALUES(?,?,?,?,?) ON CONFLICT(title_id,user_id) DO UPDATE SET rating=excluded.rating,body=excluded.body,status='published',updated_at=datetime('now')")
         .bind(crypto.randomUUID(),body.titleId,userId,rating,text).run();
       return json({ok:true});
+    }
+    if(action==="reportReview"){
+      if(!validId(body.reviewId)) return json({error:"A valid review is required."},400);
+      const reason=String(body.reason||"").trim();
+      const allowed=["Spam or advertising","Harassment or hate","Spoilers","Abusive or explicit content","Fake or misleading review","Other"];
+      if(!allowed.includes(reason)) return json({error:"Choose a valid report reason."},400);
+      const details=typeof body.details==="string"?body.details.trim().slice(0,500):"";
+      const review=await env.DB.prepare("SELECT id,user_id FROM title_reviews WHERE id=? AND status='published'").bind(body.reviewId).first<{id:string;user_id:string}>();
+      if(!review) return json({error:"This review is no longer available to report."},404);
+      if(review.user_id===userId) return json({error:"You cannot report your own review."},400);
+      const prior=await env.DB.prepare("SELECT id FROM title_review_reports WHERE review_id=? AND user_id=?").bind(body.reviewId,userId).first<{id:string}>();
+      if(prior) return json({ok:true,alreadyReported:true,message:"You have already reported this review."});
+      await env.DB.prepare("INSERT INTO title_review_reports(id,review_id,user_id,reason,details) VALUES(?,?,?,?,?)")
+        .bind(crypto.randomUUID(),body.reviewId,userId,reason,details).run();
+      return json({ok:true,message:"Report sent to the MaseNet moderation team."});
     }
     if(action==="moderateReview"){
       const gate=await requireAdmin(request,env); if(gate.response) return gate.response;
