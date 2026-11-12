@@ -1,3 +1,4 @@
+import { searchPublicTelegramChannel } from "./_telegram-channel";
 import { currentAdmin, json } from "./auth/_shared";
 
 interface AIResult { response?: unknown; output_text?: unknown; choices?: Array<{ message?: { content?: unknown } }>; }
@@ -103,6 +104,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return normalizedName === normalizedQuery || normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName);
   });
   const catalogueSearchIntent = /\b(?:find|search for|look for|show me|do you have|is there|are there|recommend|suggest)\b|\bwhat (?:movies|dramas|titles|episodes) (?:are )?(?:in|available)\b/i.test(message) || directTitleMatch;
+  const channelMatches = !imageInputs.length && catalogueSearchIntent ? await searchPublicTelegramChannel(message, 5).catch((error) => { console.error("MaseNet Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; }) : [];
   if (!imageInputs.length && catalogueSearchIntent) {
     const stopWords = new Set(["the","and","for","with","from","that","this","what","where","when","how","can","you","me","please","show","find","search","look","looking","available","library","movie","movies","drama","dramas","episode","episodes","season","recommend","recommendation","watch","want","need","is","are","in","on","of","to","a","an"]);
     const words = q.split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 1 && !stopWords.has(w));
@@ -119,6 +121,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     if (ranked.length) {
       return json({ text: "Here are matching titles in the MaseNet library:\n" + ranked.slice(0, 5).map(x => "• " + x.title.name + (x.title.year ? " (" + x.title.year + ")" : "") + " — " + x.title.kind).join("\n") });
     }
+    if (channelMatches.length) return json({ text: "I couldn’t find that in the MaseNet website library, but I found these related posts in our official Telegram channel:\n\n" + channelMatches.slice(0,5).map((post) => "• " + post.title + "\n" + post.text.slice(0,360) + "\n" + post.url).join("\n\n") });
   }
 
   if (env.OPENAI_API_KEY) {
