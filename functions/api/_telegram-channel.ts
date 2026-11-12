@@ -56,7 +56,7 @@ export async function searchPublicTelegramChannel(query: string, limit = 5): Pro
       }
     }
 
-    if (!Number.isFinite(oldestId) || oldestId <= 1 || oldestId >= before) break;
+    if (!Number.isFinite(oldestId) || oldestId <= 1 || (before > 0 && oldestId >= before)) break;
     before = oldestId;
     if (results.some(post => post.score === 100) && page >= 1) break;
   }
