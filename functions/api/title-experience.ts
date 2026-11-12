@@ -39,6 +39,11 @@ async function ensureTables(db: D1Database) {
     PRIMARY KEY(review_id,user_id)
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_review_votes_review ON title_review_votes(review_id)").run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS title_discussion_comments (
+    id TEXT PRIMARY KEY,title_id TEXT NOT NULL,user_id TEXT NOT NULL,body TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_discussion_title ON title_discussion_comments(title_id,created_at DESC)").run();
 }
 async function userIdFor(request: Request, env: ExperienceEnv): Promise<string | null> {
   const admin = await currentAdmin(request,env);
@@ -85,7 +90,8 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
           FROM title_reviews r WHERE r.title_id=? AND r.status='published' ORDER BY r.created_at DESC LIMIT 50`).bind(userId||"",titleId).all<{id:string;rating:number;body:string;createdAt:string;helpfulCount:number;helpfulByMe:number}>(),
         env.DB.prepare("SELECT COUNT(*) AS count,ROUND(AVG(rating),1) AS average FROM title_reviews WHERE title_id=? AND status='published'").bind(titleId).first<{count:number;average:number|null}>()
       ]);
-      return json({reviews:reviews.results||[],reviewCount:Number(summary?.count||0),averageRating:summary?.average||null,preferences:preferences?{languages:JSON.parse(preferences.languages_json||"[]"),genres:JSON.parse(preferences.genres_json||"[]")}:{languages:[],genres:[]}});
+      const comments=await env.DB.prepare("SELECT id,body,created_at AS createdAt FROM title_discussion_comments WHERE title_id=? ORDER BY created_at DESC LIMIT 100").bind(titleId).all<{id:string;body:string;createdAt:string}>();
+      return json({reviews:reviews.results||[],comments:comments.results||[],reviewCount:Number(summary?.count||0),averageRating:summary?.average||null,preferences:preferences?{languages:JSON.parse(preferences.languages_json||"[]"),genres:JSON.parse(preferences.genres_json||"[]")}:{languages:[],genres:[]}});
     }
     if (!userId) return json({error:"Sign in to get recommendations based on your viewing activity."},401);
     const [events,titles]=await Promise.all([
@@ -136,6 +142,16 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
       await env.DB.prepare("INSERT INTO title_user_events(id,user_id,title_id,event_type,progress) VALUES(?,?,?,?,?)")
         .bind(crypto.randomUUID(),userId,body.titleId,eventType,progress).run();
       return json({ok:true});
+    }
+    if(action==="discussionComment"){
+      if(!validId(body.titleId)) return json({error:"A valid title is required."},400);
+      const comment=typeof body.body==="string"?body.body.trim():"";
+      if(!comment||comment.length>500) return json({error:"Write a comment between 1 and 500 characters."},400);
+      const title=await env.DB.prepare("SELECT id FROM titles WHERE id=?").bind(body.titleId).first<{id:string}>();
+      if(!title) return json({error:"That title is no longer in the library."},404);
+      const id=crypto.randomUUID();
+      await env.DB.prepare("INSERT INTO title_discussion_comments(id,title_id,user_id,body) VALUES(?,?,?,?)").bind(id,body.titleId,userId,comment).run();
+      return json({ok:true,id,message:"Your comment has been posted."});
     }
     if(action==="review"){
       if(!validId(body.titleId)) return json({error:"A valid titleId is required."},400);
