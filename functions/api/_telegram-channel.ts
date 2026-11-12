@@ -9,14 +9,14 @@ type TelegramChannelMessage = {
 };
 
 async function ensureChannelIndex(db: D1Database) {
-  await db.prepare(\`CREATE TABLE IF NOT EXISTS telegram_channel_posts (
+  await db.prepare(`CREATE TABLE IF NOT EXISTS telegram_channel_posts (
     post_id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     post_text TEXT NOT NULL,
     post_date TEXT,
     post_url TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )\`).run();
+  )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_telegram_channel_posts_date ON telegram_channel_posts(post_date)").run();
 }
 
@@ -29,14 +29,14 @@ export async function indexTelegramChannelPost(db: D1Database, message: Telegram
   const title = postText.split("\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || "MaseMediaTv channel post";
   const date = message.date ? new Date(message.date * 1000).toISOString() : null;
   const url = "https://t.me/MaseMediaTv/" + postId;
-  await db.prepare(\`INSERT INTO telegram_channel_posts (post_id,title,post_text,post_date,post_url,updated_at)
+  await db.prepare(`INSERT INTO telegram_channel_posts (post_id,title,post_text,post_date,post_url,updated_at)
     VALUES (?,?,?,?,?,datetime('now'))
     ON CONFLICT(post_id) DO UPDATE SET
       title=excluded.title,
       post_text=excluded.post_text,
       post_date=excluded.post_date,
       post_url=excluded.post_url,
-      updated_at=datetime('now')\`)
+      updated_at=datetime('now')`)
     .bind(String(postId), title, postText, date, url).run();
   return true;
 }
