@@ -6,8 +6,8 @@ export const onRequestGet:PagesFunction<Env>=async({request,env})=>{
   if(!token)return json({active:false},200);
   const user=await env.DB.prepare("SELECT u.email FROM site_user_sessions s JOIN site_users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>datetime('now')").bind(await sha256(token)).first<{email:string}>();
   if(!user?.email||!user.email.startsWith("telegram-"))return json({active:false},200);
-  const chatId=user.email.slice("telegram-".length).replace(/@telegram\\.local$/,"");
-  if(!/^\\d+$/.test(chatId))return json({active:false},200);
+  const chatId=user.email.slice("telegram-".length).replace(/@telegram\.local$/,"");
+  if(!/^\d+$/.test(chatId))return json({active:false},200);
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews(
     chat_id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'clear',reason TEXT NOT NULL DEFAULT '',
     flagged_at TEXT,deadline_at TEXT,updated_at TEXT NOT NULL DEFAULT (datetime('now'))
