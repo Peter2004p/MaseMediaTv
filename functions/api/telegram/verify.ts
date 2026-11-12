@@ -183,7 +183,24 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       const nextStatus = provisional ? "approved_timeout" : "ai_review_required";
       const changed = await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now'),ai_verdict=?,ai_reason=?,ai_reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(nextStatus, verdict, reason, submissionId).run();
       if (!Number(changed.meta?.changes || 0)) return;
-      await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=?,updated_at=datetime('now') WHERE chat_id=?").bind(provisional ? 1 : 0, chatId).run();
+      // A 24-hour admin warning is a grace period, not an immediate lockout.
+      // If the user already had access when flagged, an inconclusive AI screen
+      // on their replacement screenshot must not revoke that access early.
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews (
+        chat_id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'clear', reason TEXT NOT NULL DEFAULT '',
+        flagged_at TEXT, deadline_at TEXT, updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`).run();
+      const [previousAccess, activeWarning] = await Promise.all([
+        env.DB.prepare("SELECT youtube_ok,youtube_provisional FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number}>(),
+        env.DB.prepare("SELECT chat_id FROM telegram_access_reviews WHERE chat_id=? AND status='warning' AND deadline_at IS NOT NULL AND datetime(deadline_at)>datetime('now')").bind(chatId).first<{chat_id:string}>()
+      ]);
+      const preserveGraceAccess = !!activeWarning;
+      const nextYoutubeOk = preserveGraceAccess ? Number(previousAccess?.youtube_ok || 0) : 0;
+      const nextYoutubeProvisional = preserveGraceAccess
+        ? Math.max(Number(previousAccess?.youtube_provisional || 0), provisional ? 1 : 0)
+        : provisional ? 1 : 0;
+      await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=?,youtube_provisional=?,updated_at=datetime('now') WHERE chat_id=?")
+        .bind(nextYoutubeOk, nextYoutubeProvisional, chatId).run();
       const label = provisional ? "AI VISUAL SCREEN: LIKELY SUBSCRIBED — PROVISIONAL ACCESS ONLY" : "AI VISUAL SCREEN: " + verdict.toUpperCase() + " — MANUAL REVIEW REQUIRED";
       if (adminMessageId) await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: adminId, message_id: adminMessageId, caption: ["🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW", "", "Applicant: " + fullName, "Telegram: " + username, "Telegram ID: " + chatId, "Submitted: " + submittedAt, "", label, "AI note: " + reason, "", "AI inspected visible pixels only. It did NOT verify a real YouTube subscription or account ownership. Manual admin approval is final."].join("\n") }) }).catch(error => console.error("MaseNet AI caption update failed:", String(error)));
       await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: adminId, text: "🤖 " + label + "\nApplicant: " + fullName + "\nTelegram ID: " + chatId + "\nReason: " + reason + "\n\nAI is advisory only. Manual admin approval is the only way to mark YouTube genuinely verified." }) }).catch(error => console.error("MaseNet admin AI verdict notice failed:", String(error)));
