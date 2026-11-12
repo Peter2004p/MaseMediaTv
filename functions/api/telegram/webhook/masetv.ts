@@ -372,10 +372,10 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       console.error("MaseNet Telegram AI context lookup failed:", error instanceof Error ? error.message : String(error));
     }
     let telegramChannelContext = "";
-    if (/\b(movie|drama|film|title|episode|season|latest|newest|recommend|watch|search|find|channel|posted|post)\b/i.test(prompt)) {
+    if (prompt.trim().length >= 3 && !/^(hi|hello|hey|yo|thanks|thank you|good morning|good afternoon|good evening)$/i.test(prompt.trim())) {
       try {
         const channelHits = await withTimeout(searchPublicTelegramChannel(prompt, 4, env.DB), 6500, "Telegram channel search");
-        if (channelHits.length) telegramChannelContext = "\n\nOfficial MaseMediaTv channel posts (share the original links):\n" + channelHits.map(post => "- " + post.title + ": " + post.text.slice(0, 650) + "\n" + post.url).join("\n");
+        if (channelHits.length) telegramChannelContext = "\n\nVerified source-channel posts (use only these exact original links; do not alter or invent URLs):\n" + channelHits.map(post => "- Source: " + post.channel + "\n- Post: " + post.title + "\n- Text: " + post.text.slice(0, 650) + "\n- Original link: " + post.url).join("\n\n");
       } catch (error) { console.error("Telegram channel search failed:", error instanceof Error ? error.message : String(error)); }
     }
     if (env.AI) {
@@ -529,7 +529,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     let channelMatches: TelegramChannelPost[] = [];
     try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 4, env.DB), 6500, "Telegram channel search"); }
     catch (error) { console.error("Telegram command channel search failed:", error instanceof Error ? error.message : String(error)); }
-    const channelReply = channelMatches.length ? "\n\nOfficial Telegram channel posts:\n" + channelMatches.map(post => "• " + post.title + "\n" + post.text.slice(0, 650) + "\n" + post.url).join("\n\n") : "";
+    const channelReply = channelMatches.length ? "\n\nMatching posts from our official Telegram channels:\n" + channelMatches.map(post => "• " + post.title + "\nSource: " + post.channel + "\n" + post.text.slice(0, 650) + "\nOriginal post: " + post.url).join("\n\n") : "";
     if (combined.length || channelMatches.length) {
       reply = (combined.length ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n") : "Not in the catalogue, but I found these official channel posts:") + channelReply;
     } else {
