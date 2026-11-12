@@ -73,7 +73,7 @@ export async function searchPublicTelegramChannel(query: string, limit = 5, db?:
       cf: { cacheTtl: 60, cacheEverything: true }
     } as RequestInit);
     if (!response.ok) {
-      if (page === 0) throw new Error("Public Telegram channel preview is unavailable");
+      if (page === 0 && results.length === 0) throw new Error("Public Telegram channel preview is unavailable");
       break;
     }
 
