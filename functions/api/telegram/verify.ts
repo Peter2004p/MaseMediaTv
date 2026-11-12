@@ -89,7 +89,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     "🆔 Telegram user ID: " + chatId,
     "🕒 Submitted: " + submittedAt,
     "",
-    "ADMIN REVIEW WINDOW: 5 seconds. If you do not decide within 5 seconds, the applicant will be automatically approved. No screenshot verification will be performed.",
+    "ADMIN PRIORITY WINDOW: 5 seconds. If you do not decide within five seconds, the screenshot remains pending and access is NOT granted.",
     "",
     "Approve or reject within five seconds. If you do not respond, the request is automatically approved without screenshot verification."
   ].join("\n"));
@@ -161,6 +161,6 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     submitted: true,
     pending: true,
     verified: false,
-    message: "Your screenshot has been sent to the MaseNet admin. You have a 5-second admin review window. If the admin does not respond, access is automatically approved without checking the screenshot."
+    message: "Your screenshot has been sent to the MaseNet admin. The admin has a 5-second priority window. If there is no response, the screenshot remains unverified and access is not granted."
   }, 202);
 };
