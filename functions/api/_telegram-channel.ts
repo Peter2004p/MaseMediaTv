@@ -43,8 +43,7 @@ export async function indexTelegramChannelPost(db: D1Database, message: Telegram
       post_date=excluded.post_date,
       post_url=excluded.post_url,
       source_channel=excluded.source_channel,
-      updated_at=datetime('now'))
-    .bind(indexKey, title, postText, date, url, channel.label).run();
+      updated_at=datetime('now')`).bind(indexKey, title, postText, date, url, channel.label).run();
   return true;
 }
 
