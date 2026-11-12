@@ -118,6 +118,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const allEpisodes = (Array.isArray(title.episodes) ? title.episodes : []) as Record<string, unknown>[];
   const newEpisodes = allEpisodes.filter(ep => !previousEpisodeKeys.has(String(ep.season || 1) + "|" + String(ep.episode || 1)));
   const isNewTitle = !existing;
+  const followedTelegramChats:string[]=[];
+  if(existing&&newEpisodes.length){
+    try{
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS user_notifications(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,title_id TEXT,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',kind TEXT NOT NULL DEFAULT 'episode',target TEXT,created_at TEXT NOT NULL DEFAULT(datetime('now')),read_at TEXT)`).run();
+      for(const ep of newEpisodes){
+        const episodeLabel="Season "+String(ep.season||1)+" · Episode "+String(ep.episode||"?")+(ep.title?" — "+String(ep.title).slice(0,100):"");
+        const followers=await env.DB.prepare("SELECT su.id,su.email FROM user_library_state l JOIN site_users su ON su.id=l.user_id WHERE json_valid(l.payload) AND EXISTS (SELECT 1 FROM json_each(l.payload,'$.followed') WHERE value=?)").bind(id).all<{id:string;email:string}>();
+        for(const follower of followers.results||[]){
+          const notificationId=crypto.randomUUID();
+          await env.DB.prepare("INSERT INTO user_notifications(id,user_id,title_id,title,description,kind,target) VALUES(?,?,?,?,?,'episode',?)").bind(notificationId,follower.id,id,"New episode: "+String(title.name).slice(0,170),episodeLabel,"#/title/"+encodeURIComponent(id)).run();
+          const match=follower.email.match(/^telegram-(\d+)@telegram\.local$/i);
+          if(match)followedTelegramChats.push(match[1]);
+        }
+      }
+    }catch(error){console.error("MaseNet followed-episode notification creation failed:",error instanceof Error?error.message:String(error));}
+  }
   if (token && (isNewTitle || newEpisodes.length)) {
     try {
       await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
@@ -125,7 +141,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`).run();
-      const targets = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1").all<{chat_id:string}>();
+      const channelTargets = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND chat_type IN ('channel','supergroup')").all<{chat_id:string}>();
+      const targetIds=[...(channelTargets.results||[]).map(x=>x.chat_id),...(!isNewTitle?followedTelegramChats:[])];
+      const targets={results:[...new Set(targetIds)].map(chat_id=>({chat_id}))};
       // Telegram notifications must open the Mini App, not the public website.
       // startapp is passed through Telegram's configured main Mini App for this bot.
       const botUsername = "MaseTv_Bot";
