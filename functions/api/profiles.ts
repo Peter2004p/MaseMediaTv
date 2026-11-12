@@ -33,7 +33,7 @@ async function ensure(db: D1Database, userId: string) {
     await db.prepare("INSERT OR IGNORE INTO profile_library_state(profile_id,payload) VALUES(?,?)").bind(defaultId,legacy.payload).run();
   }
 }
-const profileShape = (row:any) => ({id:String(row.id),name:String(row.name),avatar:String(row.avatar||""),isKids:!!row.is_kids,createdAt:row.created_at});
+const profileShape = (row:any) => ({id:String(row.id),name:String(row.name),avatar:String(row.avatar||""),isKids:!!row.is_kids,hasPin:!!row.has_pin,createdAt:row.created_at});
 export const onRequestGet: PagesFunction<ProfileEnv> = async ({request,env}) => {
   try {
     const userId=await resolveUser(request,env); if(!userId)return json({error:"Sign in to manage profiles."},401);
