@@ -95,8 +95,8 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   ].join("\n"));
   form.append("reply_markup", JSON.stringify({
     inline_keyboard: [[
-      { text: "✅ Approve", callback_data: "ytapprove:" + chatId },
-      { text: "❌ Reject", callback_data: "ytreject:" + chatId }
+      { text: "✅ Approve", callback_data: "ytapprove:" + submissionId },
+      { text: "❌ Reject", callback_data: "ytreject:" + submissionId }
     ]]
   }));
 
