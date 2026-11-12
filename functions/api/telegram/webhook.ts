@@ -243,7 +243,8 @@ async function handleVerificationCallback(env: Env, callback: any) {
         chat_id: adminId,
         message_id: messageId,
         text: adminText,
-        disable_web_page_preview: true
+        disable_web_page_preview: true,
+        reply_markup: { inline_keyboard: [] }
       });
     } catch (error) {
       console.error("MaseNet admin review message update failed:", error instanceof Error ? error.message : String(error));
