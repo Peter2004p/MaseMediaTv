@@ -115,6 +115,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       const score = exact ? 100 : matched.length;
       return { title:t, score };
     }).filter(x => x.score > 0 && (x.score === 100 || x.score >= Math.max(1, Math.ceil(words.length * 0.6)))).sort((a,b) => b.score-a.score);
+    if (!titles.length && channelMatches.length) return json({ text: "I couldn’t find that in the MaseNet website library, but I found these posts in our official Telegram channel:\n\n" + channelMatches.slice(0,5).map((post) => "• " + post.title + "\n" + post.text.slice(0,360) + "\n" + post.url).join("\n\n") });
     if (!titles.length) {
       return json({ text: "The MaseNet library is currently empty, so I could not find matching titles. Please try again later or contact the site administrator." });
     }
