@@ -50,6 +50,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, next }) => {
 
     if (REVERIFICATION_EXEMPT_PATHS.has(url.pathname)) return next();
 
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_access_reviews (chat_id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'clear',reason TEXT NOT NULL DEFAULT '',flagged_at TEXT,deadline_at TEXT,updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
     const review = await env.DB.prepare(
       "SELECT status,deadline_at FROM telegram_access_reviews WHERE chat_id=?"
     ).bind(chatId).first<{ status: string; deadline_at: string | null }>();
