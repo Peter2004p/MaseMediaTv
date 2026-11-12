@@ -1,3 +1,4 @@
+import { searchPublicTelegramChannel } from "../_telegram-channel";
 interface Env {
   DB: D1Database;
   TELEGRAM_BOT_TOKEN?: string;
@@ -77,6 +78,7 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
 }
 async function makeAIReply(env: Env, message: string, firstName: string): Promise<string> {
   if (!env.OPENAI_API_KEY) return "I’m MaseNet Assistant 🎬 I can help with movies, dramas, episodes, MaseNet features, and playback problems. You can also open the MaseNet Mini App using the button below.";
+  const channelMatches = await searchPublicTelegramChannel(message, 5).catch((error) => { console.error("Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; });
   let sharedInstructions = "";
   let catalogueContext = "";
   try {
@@ -115,6 +117,8 @@ async function makeAIReply(env: Env, message: string, firstName: string): Promis
         "Use the current MaseNet catalogue context below as the source of truth for title and episode availability. If a title is not listed, say that you could not verify it in the current library. Do not invent title matches, episodes, or playback links.",
         "Shared administrator AI instructions: " + (sharedInstructions || "(No additional owner instructions have been saved.)"),
         "Current MaseNet catalogue (public title metadata):\n" + (catalogueContext || "(The catalogue could not be loaded.)"),
+        "Related posts from the official MaseMediaTv Telegram channel (use only when relevant; links point to original channel posts):\n" + (channelMatches.length ? channelMatches.map(post => "- " + post.title + ": " + post.text.slice(0,700) + " | " + post.url).join("\n") : "(No matching public channel posts were found.)"),
+        "If a requested movie or drama is missing from the website catalogue but appears in Telegram channel results, tell the user it is available in the channel and share the exact original post link. Never pretend a channel post is a playable website item. If neither source confirms it, say you could not find it.");
         "Do not claim to search a live catalogue, see account activity, send alerts, or perform an action unless the information is provided or the action has actually happened.",
         "Do not invent movie availability, streaming links, episode details, or website capabilities. If uncertain, say so. Never include a website URL or raw app URL in a reply; the Telegram Mini App launch button is attached separately.",
         "Keep replies helpful and concise, ideally under 120 words. Do not mention OpenAI or Cloudflare unless explicitly asked.",
