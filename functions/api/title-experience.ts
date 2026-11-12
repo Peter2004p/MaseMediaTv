@@ -52,6 +52,11 @@ async function ensureTables(db: D1Database) {
     created_at TEXT NOT NULL DEFAULT (datetime('now')),UNIQUE(comment_id,user_id)
   )`).run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_comment_reports_status ON title_comment_reports(comment_id,status,created_at DESC)").run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS title_comment_reactions (
+    comment_id TEXT NOT NULL,user_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),PRIMARY KEY(comment_id,user_id)
+  )`).run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_comment_reactions_comment ON title_comment_reactions(comment_id)").run();
 }
 async function userIdFor(request: Request, env: ExperienceEnv): Promise<string | null> {
   const admin = await currentAdmin(request,env);
@@ -110,7 +115,10 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
           FROM title_reviews r WHERE r.title_id=? AND r.status='published' ORDER BY r.created_at DESC LIMIT 50`).bind(userId||"",titleId).all<{id:string;rating:number;body:string;createdAt:string;helpfulCount:number;helpfulByMe:number}>(),
         env.DB.prepare("SELECT COUNT(*) AS count,ROUND(AVG(rating),1) AS average FROM title_reviews WHERE title_id=? AND status='published'").bind(titleId).first<{count:number;average:number|null}>()
       ]);
-      const comments=await env.DB.prepare("SELECT id,body,created_at AS createdAt FROM title_discussion_comments WHERE title_id=? AND status='published' ORDER BY created_at DESC LIMIT 100").bind(titleId).all<{id:string;body:string;createdAt:string}>();
+      const comments=await env.DB.prepare(`SELECT c.id,c.body,c.created_at AS createdAt,
+        (SELECT COUNT(*) FROM title_comment_reactions v WHERE v.comment_id=c.id) AS reactionCount,
+        EXISTS(SELECT 1 FROM title_comment_reactions v WHERE v.comment_id=c.id AND v.user_id=?) AS reactedByMe
+        FROM title_discussion_comments c WHERE c.title_id=? AND c.status='published' ORDER BY c.created_at DESC LIMIT 100`).bind(userId||"",titleId).all<{id:string;body:string;createdAt:string;reactionCount:number;reactedByMe:number}>();
       return json({reviews:reviews.results||[],comments:comments.results||[],reviewCount:Number(summary?.count||0),averageRating:summary?.average||null,preferences:preferences?{languages:JSON.parse(preferences.languages_json||"[]"),genres:JSON.parse(preferences.genres_json||"[]")}:{languages:[],genres:[]}});
     }
     if (!userId) return json({error:"Sign in to get recommendations based on your viewing activity."},401);
@@ -174,6 +182,16 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
       const id=crypto.randomUUID();
       await env.DB.prepare("INSERT INTO title_discussion_comments(id,title_id,user_id,body,status) VALUES(?,?,?,?,'published')").bind(id,body.titleId,userId,comment).run();
       return json({ok:true,id,message:"Your comment has been posted."});
+    }
+    if(action==="commentReaction"){
+      if(!validId(body.commentId)) return json({error:"A valid comment is required."},400);
+      const comment=await env.DB.prepare("SELECT id FROM title_discussion_comments WHERE id=? AND status='published'").bind(body.commentId).first<{id:string}>();
+      if(!comment) return json({error:"This comment is no longer available."},404);
+      const existing=await env.DB.prepare("SELECT comment_id FROM title_comment_reactions WHERE comment_id=? AND user_id=?").bind(body.commentId,userId).first<{comment_id:string}>();
+      if(existing) await env.DB.prepare("DELETE FROM title_comment_reactions WHERE comment_id=? AND user_id=?").bind(body.commentId,userId).run();
+      else await env.DB.prepare("INSERT INTO title_comment_reactions(comment_id,user_id) VALUES(?,?)").bind(body.commentId,userId).run();
+      const count=await env.DB.prepare("SELECT COUNT(*) AS count FROM title_comment_reactions WHERE comment_id=?").bind(body.commentId).first<{count:number}>();
+      return json({ok:true,reacted:!existing,reactionCount:Number(count?.count||0)});
     }
     if(action==="reportComment"){
       if(!validId(body.commentId)) return json({error:"A valid comment is required."},400);
