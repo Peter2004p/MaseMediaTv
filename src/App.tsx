@@ -822,8 +822,14 @@ function ReviewModerationPanel(){
  useEffect(()=>{void load('all')},[]);
  const moderate=async(reviewId:string,status:'published'|'hidden')=>{
   if(busyId)return;setBusyId(reviewId);setError('');setNotice('');
-  try{await api.post('/api/title-experience',{action:'moderateReview',reviewId,status});setNotice(status==='hidden'?'Review hidden from viewers.':'Review approved and visible to viewers.');await load(filter);}
+  try{await api.post('/api/title-experience',{action:'moderateReview',reviewId,status});setNotice(status==='hidden'?'Review hidden and its open reports marked actioned.':'Review approved and visible to viewers.');await load(filter);}
   catch(e){const x=e as any;setError(x?.response?.data?.error||'Could not update this review.')}
+  finally{setBusyId('')}
+ };
+ const dismissReports=async(reviewId:string)=>{
+  if(busyId)return;setBusyId(reviewId);setError('');setNotice('');
+  try{const r=await api.post('/api/title-experience',{action:'resolveReviewReports',reviewId,status:'dismissed'});setNotice((r.data?.updated||0)+' report(s) dismissed.');await load(filter);}
+  catch(e){const x=e as any;setError(x?.response?.data?.error||'Could not dismiss reports.')}
   finally{setBusyId('')}
  };
  return <div className="bulk">
@@ -836,6 +842,7 @@ function ReviewModerationPanel(){
   {loading&&!reviews.length?<p className="muted">Loading community reviews…</p>:reviews.length?reviews.map(review=><article key={review.id} className="adminStat" style={{margin:'10px 0',gap:10}}>
    <div style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap',alignItems:'center'}}><div><b>{review.titleName||'Removed library title'}</b><small>{review.rating} / 5 stars · {review.status} · {Number(review.reportCount||0)} reports · {review.createdAt?new Date(String(review.createdAt).replace(' ','T')+'Z').toLocaleString():'Date unavailable'}</small></div><span className="adminBadge">{review.status==='published'?'Visible':'Hidden'}</span></div>
    <p style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',margin:0}}>{review.body||'Star rating only — no written comment.'}</p>
+   {Number(review.reportCount||0)>0&&<div className="adminStat" style={{padding:10}}><b>{review.reportCount} open report(s)</b><p style={{margin:'5px 0 0'}}>Reasons: {review.reportReasons||'Reason unavailable'}</p><button className="secondary" disabled={!!busyId} onClick={()=>void dismissReports(review.id)}>{busyId===review.id?'Saving…':'Dismiss reports'}</button></div>}
    <div className="adminQuickActions">{review.status==='published'?<button className="secondary danger" disabled={!!busyId} onClick={()=>void moderate(review.id,'hidden')}>{busyId===review.id?'Saving…':'Hide review'}</button>:<button className="primary" disabled={!!busyId} onClick={()=>void moderate(review.id,'published')}>{busyId===review.id?'Saving…':'Publish review'}</button>}</div>
   </article>):<p className="muted">{loading?'Loading…':'No reviews match this filter yet.'}</p>}
  </div>;
