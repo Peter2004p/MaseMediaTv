@@ -60,7 +60,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       )`).run();
       if(flag){
         const prior=await env.DB.prepare("SELECT chat_id,status,display_name FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{chat_id:string;status:string;display_name:string}>();
-        if(!prior||!["pending","approved","approved_timeout"].includes(prior.status)){
+        if(!prior||!["pending","approved","approved_timeout","ai_review_required"].includes(prior.status)){
           await api("answerCallbackQuery",{callback_query_id:cb.id,text:"This submission can no longer be flagged. Submit a new screenshot if needed.",show_alert:true}).catch(()=>undefined);
           return json({ok:true,adminDecision:"not_flaggable"});
         }
@@ -77,7 +77,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         await api("sendMessage",{chat_id:adminId,text:"⚠️ 24-hour re-verification started for "+prior.display_name+" (Telegram ID "+targetId+"). MaseNet will show a homepage warning and restrict access at the deadline unless a new screenshot is manually approved."}).catch(()=>undefined);
         return json({ok:true,adminDecision:"flagged_for_24h"});
       }
-      const pending = await env.DB.prepare("SELECT chat_id,status FROM telegram_access_submissions WHERE id=? AND status IN ('pending','approved_timeout')").bind(submissionId).first<{chat_id:string;status:string}>();
+      const pending = await env.DB.prepare("SELECT chat_id,status FROM telegram_access_submissions WHERE id=? AND status IN ('pending','approved_timeout','ai_review_required')").bind(submissionId).first<{chat_id:string;status:string}>();
       if (!pending?.chat_id) {
         await api("answerCallbackQuery",{callback_query_id:cb.id,text:"This screenshot has already been reviewed. The saved decision cannot be changed from this button.",show_alert:true}).catch(()=>undefined);
         if (cb.message?.chat?.id && cb.message.message_id) {
@@ -86,7 +86,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         return json({ok:true,adminDecision:"already_reviewed"});
       }
       const targetId = pending.chat_id;
-      const review = await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now') WHERE id=? AND status IN ('pending','approved_timeout')").bind(approve?"approved":"rejected",submissionId).run();
+      const review = await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now') WHERE id=? AND status IN ('pending','approved_timeout','ai_review_required')").bind(approve?"approved":"rejected",submissionId).run();
       if (!Number(review.meta?.changes || 0)) {
         await api("answerCallbackQuery",{callback_query_id:cb.id,text:"This screenshot has already been reviewed. The saved decision cannot be changed from this button.",show_alert:true}).catch(()=>undefined);
         if (cb.message?.chat?.id && cb.message.message_id) {
