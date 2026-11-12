@@ -15,11 +15,11 @@ const cleanHtml = (value: string) => decode(value
 const normalize = (value: string) => value.normalize("NFKC").toLocaleLowerCase()
   .replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
-export async function searchPublicTelegramChannel(query: string, limit = 5): Promise<TelegramChannelPost[]> {
+export async function searchPublicTelegramChannel(query: string, limit = 5, db?: D1Database): Promise<TelegramChannelPost[]> {
   const q = normalize(query);
   if (q.length < 2) return [];
   const terms = q.split(/\s+/).filter(Boolean);
-  const results: TelegramChannelPost[] = [];
+  const results: TelegramChannelPost[] = db ? await searchIndexedTelegramChannel(db, query, limit).catch(() => []) : [];
   let before = 0;
 
   for (let page = 0; page < 5; page++) {
