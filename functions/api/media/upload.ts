@@ -3,7 +3,6 @@ interface Env { DB: D1Database; ADMIN_EMAIL?: string; MEDIA_BUCKET?: R2Bucket; }
 const safeName = (s:string) => s.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/^-+|-+$/g,"").slice(-120) || "media.bin";
 const jsonImageTypes = ["image/jpeg","image/png","image/webp"];
 const subtitleTypes = ["text/vtt","text/plain","application/x-subrip","application/octet-stream"];
-const videoTypes = ["video/mp4","video/webm","video/quicktime","video/x-matroska","application/octet-stream"];
 const error = (message:string,status:number) => json({error:message},status);
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
@@ -38,15 +37,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
    if(lowerName.endsWith(".vtt")) type = "text/vtt";
    else type = "application/x-subrip";
   } else if(folder === "videos" || folder === "media") {
-   const extensionAllowed = /\.(mp4|m4v|webm|mov|mkv)$/i.test(lowerName);
-   if(!extensionAllowed || !videoTypes.includes(type)) return error("Video files must be MP4, M4V, WebM, MOV, or MKV.",415);
-   maxBytes = 50 * 1024 * 1024;
-   pathPrefix = folder === "videos" ? "videos" : "media";
-   if(type === "application/octet-stream") {
-    type = lowerName.endsWith(".mkv") ? "video/x-matroska" : lowerName.endsWith(".webm") ? "video/webm" : lowerName.endsWith(".mov") ? "video/quicktime" : "video/mp4";
-   }
+   return error("Video-file uploads are disabled. Add movie and drama streams using Bulk URLs or Auto Bulk URLs.",403);
   } else {
-   return error("Unsupported upload folder. Use posters, subtitles, or videos.",400);
+   return error("Unsupported upload folder. Use posters or subtitles. Video-file uploads are disabled; use streaming URLs.",400);
   }
   if(file.size > maxBytes) return error(folder === "subtitles" ? "Subtitle files must be 2MB or smaller." : folder === "posters" ? "Poster images must be compressed below 400KB." : "Video files must be 50MB or smaller here. For larger episodes, paste a direct HTTPS stream URL.",413);
   const path = pathPrefix + "/" + crypto.randomUUID() + "-" + safeName(filename);
