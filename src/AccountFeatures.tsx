@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {api} from './cloudflare-client';
 import Player from './FlootPlayer';
-import {Users,Plus,Trash2,ShieldCheck,RefreshCw,Copy,Play,Pause,LogOut,Video,Lock} from 'lucide-react';
+import {Users,Plus,Trash2,Copy,Play,Pause,LogOut} from 'lucide-react';
 
 type Profile={id:string;name:string;avatar:string;isKids:boolean;hasPin?:boolean};
 export function ProfileManager({activeId,onSelect}:{activeId:string;onSelect:(id:string)=>void}){
