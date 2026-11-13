@@ -93,6 +93,10 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     await env.DB.prepare(
       "INSERT INTO telegram_access_verification (chat_id,youtube_ok,updated_at) VALUES (?,0,datetime('now')) ON CONFLICT(chat_id) DO NOTHING"
     ).bind(chatId).run();
+    const recent = await env.DB.prepare(
+      "SELECT id FROM telegram_access_submissions WHERE chat_id=? AND datetime(submitted_at)>=datetime('now','-60 seconds') AND status IN ('pending','ai_review_required','approved_timeout') ORDER BY submitted_at DESC LIMIT 1"
+    ).bind(chatId).first<{id:string}>();
+    if (recent) return json({ error: "Your recent screenshot is already being processed. Please wait a moment before submitting another." }, 429);
     await env.DB.prepare(
       "INSERT INTO telegram_access_submissions (id,chat_id,display_name,username,status,submitted_at) VALUES (?,?,?,?, 'pending', ?)"
     ).bind(submissionId, chatId, fullName, user.username || null, submittedAt).run();
