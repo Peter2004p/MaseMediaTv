@@ -19,12 +19,14 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const MINI_APP_URL = "https://t.me/MaseTv_Bot?startapp=home";
 
 function decodeXml(value: string) {
-  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+  return value.replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
+    .replace(/&amp;/gi, "&").replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+    .replace(/&nbsp;|&#160;/gi, " ").replace(/&#(\\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(parseInt(n, 16))).trim();
 }
 function cleanText(value: string) {
-  return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
 }
 function tagValue(xml: string, tag: string) {
   const match = xml.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "i"));
@@ -35,33 +37,52 @@ async function hashKey(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest)).slice(0, 12).map(v => v.toString(16).padStart(2, "0")).join("");
 }
+function validImageUrl(raw: string): string {
+  const value = decodeXml(raw).replace(/^["']|["']$/g, "").trim();
+  if (!/^https:\\/\\//i.test(value)) return "";
+  try {
+    const url = new URL(value);
+    if (!/\\.(?:jpe?g|png|webp|gif|avif)$/i.test(url.pathname) && !/(image|img|photo|poster|media)/i.test(url.hostname + url.pathname + url.search)) return "";
+    return url.toString();
+  } catch { return ""; }
+}
 function imageFromFeed(block: string): string {
   const candidates = [
     block.match(/<media:content[^>]*url=["']([^"']+)["']/i)?.[1],
     block.match(/<media:thumbnail[^>]*url=["']([^"']+)["']/i)?.[1],
-    block.match(/<enclosure[^>]*url=["']([^"']+)["']/i)?.[1],
-    block.match(/<img[^>]*src=["']([^"']+)["']/i)?.[1]
+    block.match(/<enclosure[^>]*url=["']([^"']+)["'][^>]*type=["']image\\//i)?.[1],
+    block.match(/<img[^>]*src=["']([^"']+)["']/i)?.[1],
+    block.match(/<img[^>]*srcset=["']([^ "' ,]+)[^"']*["']/i)?.[1]
   ];
   for (const candidate of candidates) {
-    const value = decodeXml(String(candidate || ""));
-    if (/^https:\/\//i.test(value) && /\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(value)) return value;
+    const image = validImageUrl(String(candidate || ""));
+    if (image) return image;
   }
   return "";
 }
 async function fetchArticleImage(articleUrl: string): Promise<string> {
   try {
     const response = await fetch(articleUrl, {
-      headers: { "user-agent": "Mozilla/5.0 (compatible; MaseNetNewsBot/1.0)", accept: "text/html" },
-      redirect: "follow",
-      signal: AbortSignal.timeout(5500)
+      headers: { "user-agent": "Mozilla/5.0 (compatible; MaseNetNewsBot/1.0)", accept: "text/html,application/xhtml+xml" },
+      redirect: "follow", signal: AbortSignal.timeout(9000)
     });
     if (!response.ok) return "";
-    const html = (await response.text()).slice(0, 220000);
-    const meta = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i)
-      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
-    const imageUrl = decodeXml(String(meta?.[1] || ""));
-    return /^https:\/\//i.test(imageUrl) ? imageUrl : "";
-  } catch {
+    const html = (await response.text()).slice(0, 350000);
+    const patterns = [
+      /<meta[^>]+(?:property|name)=["'](?:og:image:secure_url|og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image:secure_url|og:image|twitter:image)["']/i,
+      /<meta[^>]+itemprop=["']image["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+itemprop=["']image["']/i
+    ];
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      const image = validImageUrl(String(match?.[1] || ""));
+      if (image) return image;
+    }
+    const jsonImage = html.match(/["'](?:image|thumbnailUrl)["']\\s*:\\s*["'](https?:\\\\?\\/\\/[^"']+)["']/i)?.[1];
+    return jsonImage ? validImageUrl(jsonImage.replace(/\\\\\\//g, "/")) : "";
+  } catch (error) {
+    console.warn("Publisher image fetch failed:", error instanceof Error ? error.message : String(error));
     return "";
   }
 }
