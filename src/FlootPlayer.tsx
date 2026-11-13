@@ -85,25 +85,25 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       // Its public element contract says to read element.player after loadedmetadata/loadeddata.
       const player = element.player;
       if (!player) { setMkvSubtitleReady(false); return; }
-      const raw = player.getSubtitleTracks?.() || [];
-      setMkvSubtitleTracks((current) => raw.map((track:any, index:number) => {
+      const raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
+      setMkvSubtitleTracks(raw.map((track:any, index:number) => {
         const id = Number(track.id);
-        const previous = current.find(item => item.id === id);
         return {
           id,
-          label: String(track.label || track.language || track.codec || "Subtitle track " + (index + 1)),
+          label: String(track.label || track.title || track.language || track.codec || "Subtitle track " + (index + 1)),
           language: String(track.language || ""),
-          active: id === mkvActiveSubtitleTrackId || Boolean(previous?.active)
+          active: id === mkvActiveSubtitleTrackId || Boolean(track.active || track.isActive)
         };
       }).filter((track:any) => Number.isFinite(track.id)));
       setMkvSubtitleReady(true);
     };
-    // The source can finish loading before React's effect attaches. Sync once now,
-    // then listen for the actual Movi lifecycle and track events (not the unsupported loadend event).
-    const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitletrackchange"];
+    // Some remote MKV files expose their track table only after the WASM demuxer
+    // has fetched several byte ranges. Keep syncing for a short window, not just
+    // the first three seconds, and listen to Movi's documented event spellings.
+    const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
     events.forEach(name => element.addEventListener(name, syncTracks));
     syncTracks();
-    const retryTimers = [500, 1500, 3000].map(delay => window.setTimeout(syncTracks, delay));
+    const retryTimers = [500, 1500, 3000, 6000, 10000, 15000].map(delay => window.setTimeout(syncTracks, delay));
     return () => {
       retryTimers.forEach(timer => window.clearTimeout(timer));
       events.forEach(name => element.removeEventListener(name, syncTracks));
