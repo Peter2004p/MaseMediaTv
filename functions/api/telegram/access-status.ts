@@ -23,14 +23,19 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
  await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_access_submissions (id TEXT PRIMARY KEY,chat_id TEXT NOT NULL,display_name TEXT NOT NULL,username TEXT,status TEXT NOT NULL DEFAULT 'pending',submitted_at TEXT NOT NULL DEFAULT (datetime('now')),reviewed_at TEXT)").run();
  await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY,youtube_ok INTEGER NOT NULL DEFAULT 0,youtube_provisional INTEGER NOT NULL DEFAULT 0,masemedia_ok INTEGER NOT NULL DEFAULT 0,moondramac_ok INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
  try{await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN youtube_provisional INTEGER NOT NULL DEFAULT 0").run()}catch{/* already exists */}
- const saved=await env.DB.prepare("SELECT youtube_ok,youtube_provisional FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number}>();
- const membership={masemedia:false,moondramac:false};
- for(const [channel,key] of [["@MaseMediaTv","masemedia"],["@MoonDramaC","moondramac"]] as const){
-  const r=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/getChatMember?chat_id="+encodeURIComponent(channel)+"&user_id="+encodeURIComponent(chatId));
-  const d=await r.json().catch(()=>({})) as {ok?:boolean;result?:{status?:string};description?:string};
-  membership[key]=!!r.ok&&!!d.ok&&["member","administrator","creator"].includes(String(d.result?.status||""));
+ try{await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN membership_checked_at TEXT").run()}catch{/* already exists */}
+ const saved=await env.DB.prepare("SELECT youtube_ok,youtube_provisional,masemedia_ok,moondramac_ok,membership_checked_at FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number;masemedia_ok:number;moondramac_ok:number;membership_checked_at:string|null}>();
+ const membership={masemedia:!!saved?.masemedia_ok,moondramac:!!saved?.moondramac_ok};
+ const checkedAt=saved?.membership_checked_at?Date.parse(saved.membership_checked_at.replace(" ","T")+"Z"):0;
+ const membershipFresh=Number.isFinite(checkedAt)&&Date.now()-checkedAt<30000;
+ if(!membershipFresh){
+  for(const [channel,key] of [["@MaseMediaTv","masemedia"],["@MoonDramaC","moondramac"]] as const){
+   const r=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/getChatMember?chat_id="+encodeURIComponent(channel)+"&user_id="+encodeURIComponent(chatId));
+   const d=await r.json().catch(()=>({})) as {ok?:boolean;result?:{status?:string};description?:string};
+   membership[key]=!!r.ok&&!!d.ok&&["member","administrator","creator"].includes(String(d.result?.status||""));
+  }
+  await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,membership_checked_at,updated_at) VALUES (?,?,?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,membership_checked_at=excluded.membership_checked_at,updated_at=datetime('now')").bind(chatId,membership.masemedia?1:0,membership.moondramac?1:0,new Date().toISOString()).run();
  }
- await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,updated_at) VALUES (?,?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,updated_at=datetime('now')").bind(chatId,membership.masemedia?1:0,membership.moondramac?1:0).run();
  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews(chat_id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'clear',reason TEXT NOT NULL DEFAULT '',flagged_at TEXT,deadline_at TEXT,updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
  let review=await env.DB.prepare("SELECT status,reason,deadline_at FROM telegram_access_reviews WHERE chat_id=?").bind(chatId).first<{status:string;reason:string;deadline_at:string|null}>();
  if(review?.status==="warning"&&review.deadline_at){
