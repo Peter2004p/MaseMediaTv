@@ -165,6 +165,12 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  }
  const outHeaders=new Headers();
  for(const key of ["content-length","content-range","accept-ranges","last-modified","etag"]) { const value=upstream.headers.get(key); if(value) outHeaders.set(key,value); } outHeaders.set("content-type",contentType || "application/octet-stream");
+ // A download request must remain a streamed response (never buffer the whole movie
+ // in the Worker). Content-Disposition tells Android browsers to save the file.
+ if(reqUrl.searchParams.get("download")==="1" && !detectedPlaylist) {
+  const extension=sourcePath.match(/\.(mkv|mp4|m4v|webm|mov)$/i)?.[1]?.toLowerCase() || "bin";
+  outHeaders.set("content-disposition", 'attachment; filename="MaseNet-video.'+extension+'"');
+ }
  outHeaders.set("cache-control","no-store"); outHeaders.set("access-control-allow-origin","*"); outHeaders.set("access-control-expose-headers","content-length,content-range,accept-ranges,last-modified,etag"); outHeaders.set("accept-ranges",upstream.headers.get("accept-ranges")||"bytes"); outHeaders.set("x-content-type-options","nosniff");
  return new Response(upstream.body,{status:upstream.status,headers:outHeaders});
 };
