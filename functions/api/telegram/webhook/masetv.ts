@@ -572,7 +572,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         urls_json TEXT NOT NULL DEFAULT '[]', source TEXT NOT NULL DEFAULT 'Owner-saved',
         saved_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`).run();
-      const terms = normalize(query).split(/\\s+/).filter(term=>term.length>2).slice(0,6);
+      const terms = normalize(query).split(/\s+/).filter(term=>term.length>2 && !new Set(["the","and","for","with","from","that","this","where","when","what","movie","movies","drama","dramas","episode","episodes","season"]).has(term)).slice(0,6);
       if (terms.length) {
         const clauses = terms.map(()=>"(lower(title) LIKE ? OR lower(content) LIKE ?)").join(" OR ");
         const values = terms.flatMap(term=>["%"+term+"%","%"+term+"%"]);
