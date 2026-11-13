@@ -117,9 +117,25 @@ export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) =>
     const channel = await env.DB.prepare("SELECT channel_id FROM social_connections WHERE provider='youtube'").first<{ channel_id: string }>();
     if (!channel?.channel_id) throw new Error("YouTube channel is not connected.");
     const token = await youtubeToken(env);
-    const list = await fetch("https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&allThreadsRelatedToChannelId=" + encodeURIComponent(channel.channel_id) + "&maxResults=30&order=time&textFormat=plainText", { headers: { Authorization: "Bearer " + token } });
-    const payload = await list.json() as { items?: Array<any>; error?: { message?: string } };
-    if (!list.ok) throw new Error(payload.error?.message || "Could not fetch YouTube comments.");
+    // Scan multiple pages so a busy channel does not hide unprocessed comments behind the newest 30.
+    const payload: { items: Array<any> } = { items: [] };
+    let pageToken = "";
+    for (let page = 0; page < 3; page++) {
+      const params = new URLSearchParams({
+        part: "snippet",
+        allThreadsRelatedToChannelId: channel.channel_id,
+        maxResults: "100",
+        order: "time",
+        textFormat: "plainText"
+      });
+      if (pageToken) params.set("pageToken", pageToken);
+      const list = await fetch("https://www.googleapis.com/youtube/v3/commentThreads?" + params.toString(), { headers: { Authorization: "Bearer " + token } });
+      const pageData = await list.json() as { items?: Array<any>; nextPageToken?: string; error?: { message?: string } };
+      if (!list.ok) throw new Error(pageData.error?.message || "Could not fetch YouTube comments.");
+      payload.items.push(...(pageData.items || []));
+      pageToken = pageData.nextPageToken || "";
+      if (!pageToken) break;
+    }
     let published = 0, skipped = 0, failed = 0;
     const failureDetails: Array<{ commentId: string; stage: string; reason: string }> = [];
     for (const item of payload.items || []) {
@@ -131,9 +147,31 @@ export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) =>
       const text = String(comment.textOriginal || comment.textDisplay || "").trim();
       const author = String(comment.authorDisplayName || "Viewer");
       const authorChannel = String(comment.authorChannelId?.value || "");
-      if (!commentId || !text || text.length < 2 || snippet.totalReplyCount > 0 || authorChannel === channel.channel_id) { skipped++; continue; }
+      if (!commentId || !text || text.length < 2 || authorChannel === channel.channel_id) { skipped++; continue; }
       const existing = await env.DB.prepare("SELECT status FROM social_comment_drafts WHERE comment_id=?").bind(commentId).first<{ status: string }>();
-      if (existing && existing.status !== "failed") { skipped++; continue; }
+      if (existing?.status === "published") { skipped++; continue; }
+      if (Number(snippet.totalReplyCount || 0) > 0) {
+        // Reconcile an interrupted publish before deciding whether this thread should be skipped.
+        if (existing?.status === "publishing") {
+          try {
+            const repliesResponse = await fetch("https://www.googleapis.com/youtube/v3/comments?part=snippet&parentId=" + encodeURIComponent(commentId) + "&maxResults=100", { headers: { Authorization: "Bearer " + token } });
+            const repliesData = await repliesResponse.json() as { items?: Array<{ snippet?: { authorChannelId?: { value?: string } } }> };
+            const ourReplyExists = repliesResponse.ok && (repliesData.items || []).some(reply => reply.snippet?.authorChannelId?.value === channel.channel_id);
+            if (ourReplyExists) {
+              await env.DB.prepare("UPDATE social_comment_drafts SET status='published',published_at=COALESCE(published_at,datetime('now')),last_error=NULL WHERE comment_id=?").bind(commentId).run();
+            } else {
+              await env.DB.prepare("UPDATE social_comment_drafts SET status='skipped',last_error='Thread already has a reply; automatic duplicate posting prevented.' WHERE comment_id=?").bind(commentId).run();
+            }
+          } catch {
+            await env.DB.prepare("UPDATE social_comment_drafts SET status='skipped',last_error='Thread already has a reply; automatic duplicate posting prevented.' WHERE comment_id=?").bind(commentId).run();
+          }
+        } else if (existing?.status === "failed") {
+          await env.DB.prepare("UPDATE social_comment_drafts SET status='skipped',last_error='Thread already has a reply; automatic duplicate posting prevented.' WHERE comment_id=?").bind(commentId).run();
+        }
+        skipped++;
+        continue;
+      }
+      if (existing && existing.status !== "failed" && existing.status !== "publishing") { skipped++; continue; }
       // A failed insert is retried only while YouTube still reports no replies.
       // This avoids posting a duplicate when the previous insert succeeded but its response was lost.
       const videoId = String(snippet.videoId || "");
@@ -149,8 +187,8 @@ export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) =>
         const reply = await makeReply(env, text, author, title);
         if (!reply || /^SKIP$/i.test(reply.trim())) { skipped++; continue; }
         const id = crypto.randomUUID();
-        if (existing?.status === "failed") {
-          await env.DB.prepare("UPDATE social_comment_drafts SET video_id=?,video_title=?,author=?,comment_text=?,draft_text=?,status='publishing',last_error=NULL WHERE comment_id=? AND status='failed'").bind(videoId, title, author, text, reply.slice(0, 1000), commentId).run();
+        if (existing && (existing.status === "failed" || existing.status === "publishing")) {
+          await env.DB.prepare("UPDATE social_comment_drafts SET video_id=?,video_title=?,author=?,comment_text=?,draft_text=?,status='publishing',last_error=NULL WHERE comment_id=? AND status IN ('failed','publishing')").bind(videoId, title, author, text, reply.slice(0, 1000), commentId).run();
         } else {
           await env.DB.prepare("INSERT INTO social_comment_drafts(id,comment_id,video_id,video_title,author,comment_text,draft_text,status) VALUES(?,?,?,?,?,?,?,'publishing')").bind(id, commentId, videoId, title, author, text, reply.slice(0, 1000)).run();
         }
