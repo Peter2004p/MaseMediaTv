@@ -98,41 +98,54 @@ export async function searchPublicTelegramChannel(query: string, limit = 5, db?:
   const terms = q.split(/\s+/).filter(term => term.length > 2 && !stopWords.has(term));
   if (!terms.length) return [];
   const results: TelegramChannelPost[] = db ? await searchIndexedTelegramChannel(db, query, limit * 2).catch(() => []) : [];
-  for (const channel of CHANNELS) {
+  // Crawl up to 12 public-preview pages per channel (about 240 recent posts each).
+  // Telegram Bot API cannot retrieve arbitrary historical channel messages; older posts
+  // must have been indexed when published or imported by an authorized archive process.
+  await Promise.all(CHANNELS.map(async channel => {
     let before = 0;
-    for (let page = 0; page < 4; page++) {
+    for (let page = 0; page < 12; page++) {
       const pageUrl = "https://t.me/s/" + channel.username + (before ? "?before=" + before : "");
-      const response = await fetch(pageUrl, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; MaseNetSearch/1.0)" },
-        cf: { cacheTtl: 60, cacheEverything: true }
-      } as RequestInit);
+      let response: Response;
+      try {
+        response = await fetch(pageUrl, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; MaseNetSearch/1.0)" },
+          cf: { cacheTtl: 45, cacheEverything: true }
+        } as RequestInit);
+      } catch { break; }
       if (!response.ok) break;
       const html = await response.text();
-      const blocks = html.match(/<div class="tgme_widget_message_wrap[\s\S]*?(?=<div class="tgme_widget_message_wrap|$)/gi) || [];
+      const blocks = html.match(/<div class="tgme_widget_message_wrap[\\s\\S]*?(?=<div class="tgme_widget_message_wrap|$)/gi) || [];
       let oldestId = Number.POSITIVE_INFINITY;
       for (const block of blocks) {
-        const postId = block.match(new RegExp('data-post="' + channel.username + '/(\\d+)"', "i"))?.[1];
+        const postId = block.match(new RegExp('data-post="' + channel.username + '/(\\\\d+)"', "i"))?.[1];
         if (!postId) continue;
         oldestId = Math.min(oldestId, Number(postId));
-        const textMatch = block.match(/<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+        const textMatch = block.match(/<div class="tgme_widget_message_text[^"]*"[^>]*>([\\s\\S]*?)<\\/div>/i);
         const postText = textMatch ? cleanHtml(textMatch[1]) : "";
+        if (!postText) continue;
         const haystack = normalize(postText);
         const matched = terms.filter(term => haystack.includes(term)).length;
         const required = terms.length === 1 ? 1 : Math.max(2, Math.ceil(terms.length * 0.6));
         const score = haystack.includes(q) ? 100 : matched >= required ? Math.round((matched / terms.length) * 80) : 0;
-        if (!postText || !score) continue;
         const date = block.match(/<time[^>]+datetime="([^"]+)"/i)?.[1];
         const url = "https://t.me/" + channel.username + "/" + postId;
-        if (!results.some(post => post.url === url)) {
-          const title = postText.split("\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || channel.label + " channel post";
-          results.push({ title, text: postText.slice(0, 1200), url, channel: channel.label, ...(date ? { date } : {}), score });
+        const title = postText.split("\\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || channel.label + " channel post";
+        if (db) {
+          const key = channel.username.toLowerCase() + ":" + postId;
+          await db.prepare(`INSERT INTO telegram_channel_posts (post_id,title,post_text,post_date,post_url,source_channel,updated_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))
+            ON CONFLICT(post_id) DO UPDATE SET title=excluded.title,post_text=excluded.post_text,
+            post_date=excluded.post_date,post_url=excluded.post_url,source_channel=excluded.source_channel,updated_at=datetime('now')`)
+            .bind(key,title,postText.slice(0,12000),date || null,url,channel.label).run().catch(()=>undefined);
+        }
+        if (score && !results.some(post => post.url === url)) {
+          results.push({ title, text: postText.slice(0,1200), url, channel: channel.label, ...(date ? { date } : {}), score });
         }
       }
       if (!Number.isFinite(oldestId) || oldestId <= 1 || (before > 0 && oldestId >= before)) break;
       before = oldestId;
-      if (results.some(post => post.score === 100) && page >= 1) break;
     }
-  }
+  }));
   return results.sort((a, b) => b.score - a.score || String(b.date || "").localeCompare(String(a.date || "")))
     .slice(0, Math.max(1, Math.min(10, limit)));
 }
