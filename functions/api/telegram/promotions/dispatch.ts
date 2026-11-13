@@ -19,12 +19,12 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const MINI_APP_URL = "https://t.me/MaseTv_Bot?startapp=home";
 
 function decodeXml(value: string) {
-  return value.replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
+  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
     .replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
 }
 function cleanText(value: string) {
-  return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
+  return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 function tagValue(xml: string, tag: string) {
   const match = xml.match(new RegExp("<" + tag + "(?:\\\\s[^>]*)?>([\\\\s\\\\S]*?)</" + tag + ">", "i"));
