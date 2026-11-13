@@ -321,13 +321,24 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       const payload = hasPoster
         ? { chat_id: target, photo: posterImage, caption: campaign.caption.slice(0, 1000), reply_markup: replyMarkup }
         : { chat_id: target, text: campaign.caption.slice(0, 3800), reply_markup: replyMarkup, disable_web_page_preview: true };
-      const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method, {
+      let response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method, {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify(payload), signal: AbortSignal.timeout(10000)
       });
+      let usedImageFallback = false;
+      if (!response.ok && hasPoster) {
+        const photoError = (await response.text()).slice(0, 180);
+        console.warn("Telegram rejected promo image; retrying as text", photoError);
+        usedImageFallback = true;
+        response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ chat_id: target, text: campaign.caption.slice(0, 3800), reply_markup: replyMarkup, disable_web_page_preview: true }),
+          signal: AbortSignal.timeout(10000)
+        });
+      }
       if (response.ok) {
         await env.DB.prepare("UPDATE telegram_promo_delivery_log SET status='sent',sent_at=datetime('now') WHERE campaign_slot=? AND chat_id=?").bind(campaignSlot,target).run();
-        results.push({ target, ok: true });
+        results.push({ target, ok: true, imageFallback: usedImageFallback });
       } else {
         const detail=(await response.text()).slice(0,220);
         await env.DB.prepare("DELETE FROM telegram_promo_delivery_log WHERE campaign_slot=? AND chat_id=? AND status='sending'").bind(campaignSlot,target).run();
