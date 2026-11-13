@@ -164,8 +164,9 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     });
     const controlsResult = await controls.json().catch(() => ({})) as { ok?: boolean; description?: string };
     if (!controls.ok || !controlsResult.ok) {
+      await env.DB.prepare("UPDATE telegram_access_submissions SET status='delivery_failed' WHERE id=? AND status='pending'").bind(submissionId).run().catch(() => undefined);
       console.error("MaseNet admin review buttons delivery failed:", controls.status, controlsResult.description || "Unknown Telegram error");
-      return json({ error: "Screenshot reached the admin, but Telegram could not deliver the approval buttons. Please retry the submission." }, 502);
+      return json({ error: "Your screenshot reached the admin, but the review buttons could not be delivered. Reopen MaseNet from Telegram and submit again." }, 502);
     }
   } catch (error) {
     await env.DB.prepare("UPDATE telegram_access_submissions SET status='delivery_failed' WHERE id=?").bind(submissionId).run().catch(() => undefined);
@@ -194,7 +195,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
             method: "POST",
             headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: env.OPENAI_MODEL || "gpt-6-luna",
+              model: env.OPENAI_MODEL || "gpt-6-astra",
               instructions: [
                 "You are a cautious visual screening assistant for a YouTube subscription screenshot. You cannot access YouTube accounts, verify subscriptions on the server, detect every edited image, or prove that the screenshot is genuine.",
                 "Return exactly one JSON object with keys verdict and reason. verdict must be likely_match, mismatch, or unclear.",
