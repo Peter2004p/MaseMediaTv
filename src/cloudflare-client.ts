@@ -10,7 +10,7 @@ async function request<T=any>(method:string,path:string,body?:unknown,params?:Re
   const response=await fetch(url.toString(),{method,credentials:"include",headers,body:body===undefined?undefined:JSON.stringify(body)});
   const text=await response.text();
   let data:any={}; try{data=text?JSON.parse(text):{}}catch{data={message:text}}
-  if(!response.ok) throw new Error(data?.error||data?.message||`Request failed (${response.status})`);
+  if(!response.ok){if(response.status===423&&profileId){try{sessionStorage.removeItem("masenet-profile-unlock-"+profileId)}catch{}}throw new Error(data?.error||data?.message||`Request failed (${response.status})`);}
   return {data};
 }
 export const api={
