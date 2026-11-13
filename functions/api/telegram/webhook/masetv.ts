@@ -133,7 +133,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   const senderId = String((msg as any)?.from?.id || "");
   if (String((msg as any)?.chat?.type || "") === "private" &&
       env.ADMIN_TELEGRAM_CHAT_ID && senderId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim() &&
-      ((msg as any)?.forward_origin || (msg as any)?.forward_from || (msg as any)?.forward_from_chat || incoming)) {
+      ((msg as any)?.forward_origin || (msg as any)?.forward_from || (msg as any)?.forward_from_chat)) {
     const forwarded = msg as any;
     const savedText = String(forwarded.text || forwarded.caption || "").trim().slice(0, 12000);
     const urls = [...savedText.matchAll(/https?:\\/\\/[^\\s<>]+/g)].map((m:any)=>String(m[0]).replace(/[),.]+$/,"")).slice(0,12);
