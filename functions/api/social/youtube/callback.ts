@@ -11,7 +11,15 @@ export const onRequestGet: PagesFunction<SocialEnv> = async ({ request, env }) =
   const cookie = request.headers.get("Cookie") || "";
   const match = cookie.match(/(?:^|;\s*)masenet_youtube_oauth_state=([^;]+)/);
   const cookieState = match ? decodeURIComponent(match[1]) : "";
-  const fail = (reason: string) => Response.redirect(new URL("/#/admin", url.origin), 302);
+  const fail = (reason: string) => {
+    const destination = new URL("/", url.origin);
+    destination.searchParams.set("youtube_oauth_error", reason);
+    destination.hash = "/admin";
+    const headers = new Headers({ Location: destination.toString(), "Cache-Control": "no-store" });
+    headers.append("Set-Cookie", "masenet_youtube_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/social/youtube; Max-Age=0");
+    return new Response(null, { status: 302, headers });
+  };
+  try {
   if (url.searchParams.has("error")) return fail("Google authorization was cancelled or denied.");
   if (!code || !state || !cookieState || state !== cookieState) return fail("The YouTube connection session expired. Start again from MaseNet.");
   const admin = await currentAdmin(request, env);
@@ -53,4 +61,7 @@ export const onRequestGet: PagesFunction<SocialEnv> = async ({ request, env }) =
   const headers = new Headers({ Location: new URL("/#/admin", url.origin).toString(), "Cache-Control":"no-store" });
   headers.append("Set-Cookie","masenet_youtube_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/social/youtube; Max-Age=0");
   return new Response(null,{status:302,headers});
+  } catch {
+    return fail("MaseNet encountered a server error while saving the YouTube connection. Check the Cloudflare Pages function logs.");
+  }
 };
