@@ -27,14 +27,19 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   const hash = params.get("hash") || "";
   params.delete("hash");
   const authDate = Number(params.get("auth_date") || 0);
-  if (!hash || !authDate || Math.abs(Date.now() / 1000 - authDate) > 86400) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (!hash || !Number.isSafeInteger(authDate) || authDate <= 0 || authDate > nowSeconds + 60 || nowSeconds - authDate > 86400) {
     return json({ error: "Open MaseNet again from Telegram and retry." }, 401);
   }
   const entries: Array<[string, string]> = [];
   params.forEach((value, key) => entries.push([key, value]));
   const checkString = entries.sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => key + "=" + value).join("\n");
   const secret = await hmac(new TextEncoder().encode("WebAppData"), env.TELEGRAM_BOT_TOKEN);
-  if (hex(await hmac(secret, checkString)) !== hash) return json({ error: "Telegram session validation failed." }, 401);
+  const expected = hex(await hmac(secret, checkString));
+  if (expected.length !== hash.length) return json({ error: "Telegram session validation failed." }, 401);
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i++) mismatch |= expected.charCodeAt(i) ^ hash.charCodeAt(i);
+  if (mismatch !== 0) return json({ error: "Telegram session validation failed." }, 401);
 
   let user: { id?: number | string; first_name?: string; last_name?: string; username?: string } | null = null;
   try { user = JSON.parse(params.get("user") || "null"); } catch {}
