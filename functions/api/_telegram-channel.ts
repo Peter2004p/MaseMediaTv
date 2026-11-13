@@ -114,13 +114,13 @@ export async function searchPublicTelegramChannel(query: string, limit = 5, db?:
       } catch { break; }
       if (!response.ok) break;
       const html = await response.text();
-      const blocks = html.match(/<div class="tgme_widget_message_wrap[\\s\\S]*?(?=<div class="tgme_widget_message_wrap|$)/gi) || [];
+      const blocks = html.match(/<div class="tgme_widget_message_wrap[\s\S]*?(?=<div class="tgme_widget_message_wrap|$)/gi) || [];
       let oldestId = Number.POSITIVE_INFINITY;
       for (const block of blocks) {
-        const postId = block.match(new RegExp('data-post="' + channel.username + '/(\\\\d+)"', "i"))?.[1];
+        const postId = block.match(new RegExp('data-post="' + channel.username + '/(\\d+)"', "i"))?.[1];
         if (!postId) continue;
         oldestId = Math.min(oldestId, Number(postId));
-        const textMatch = block.match(/<div class="tgme_widget_message_text[^"]*"[^>]*>([\\s\\S]*?)<\\/div>/i);
+        const textMatch = block.match(/<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
         const postText = textMatch ? cleanHtml(textMatch[1]) : "";
         if (!postText) continue;
         const haystack = normalize(postText);
