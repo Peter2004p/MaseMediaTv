@@ -37,27 +37,38 @@ async function youtubeToken(env: AutoEnv): Promise<string> {
 async function makeReply(env: AutoEnv, comment: string, author: string, videoTitle: string): Promise<string> {
   const system = "You are the official MaseMedia TV YouTube community manager. Reply automatically to viewer comments in a friendly, concise, natural, respectful way. Do not invent facts, titles, availability, links, dates, release schedules, support contacts, or promises. Never request personal information or reveal private data. Do not argue, insult, spam, or use excessive emojis. If the comment asks for information you cannot verify, say you will pass the question to the team. If it is abusive, threatening, spam, or contains personal information, return exactly SKIP. Keep replies under 350 characters. Return only the reply or SKIP.";
   const prompt = "Video: " + videoTitle.slice(0, 180) + "\nViewer: " + author.slice(0, 100) + "\nComment: " + comment.slice(0, 2500);
+  const errors: string[] = [];
   if (env.GEMINI_API_KEY) {
-    const model = env.GEMINI_MODEL || "gemini-2.5-flash";
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.35, maxOutputTokens: 180 } })
-    });
-    const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; error?: { message?: string } };
-    if (response.ok) return (data.candidates?.[0]?.content?.parts || []).map(x => x.text || "").join("").trim();
-    if (!env.AI && !env.OPENAI_API_KEY) throw new Error(data.error?.message || "Gemini reply generation failed.");
+    try {
+      const model = env.GEMINI_MODEL || "gemini-2.5-flash";
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.35, maxOutputTokens: 180 } })
+      });
+      const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; error?: { message?: string } };
+      const answer = (data.candidates?.[0]?.content?.parts || []).map(x => x.text || "").join("").trim();
+      if (response.ok && answer) return answer;
+      errors.push(data.error?.message || (response.ok ? "Gemini returned an empty reply." : "Gemini HTTP " + response.status));
+    } catch (error) { errors.push(error instanceof Error ? error.message : "Gemini request failed."); }
   }
   if (env.AI) {
-    const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", { messages: [{ role: "system", content: system }, { role: "user", content: prompt }] });
-    return String(result?.response || result?.result?.response || "").trim();
+    try {
+      const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", { messages: [{ role: "system", content: system }, { role: "user", content: prompt }] });
+      const answer = String(result?.response || result?.result?.response || "").trim();
+      if (answer) return answer;
+      errors.push("Cloudflare Workers AI returned an empty reply.");
+    } catch (error) { errors.push(error instanceof Error ? error.message : "Cloudflare Workers AI failed."); }
   }
   if (env.OPENAI_API_KEY) {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ model: env.OPENAI_MODEL || "gpt-4o-mini", temperature: 0.35, max_tokens: 150, messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }) });
-    const data = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } };
-    if (response.ok) return String(data.choices?.[0]?.message?.content || "").trim();
-    throw new Error(data.error?.message || "OpenAI reply generation failed.");
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ model: env.OPENAI_MODEL || "gpt-4o-mini", temperature: 0.35, max_tokens: 150, messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }) });
+      const data = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } };
+      const answer = String(data.choices?.[0]?.message?.content || "").trim();
+      if (response.ok && answer) return answer;
+      errors.push(data.error?.message || (response.ok ? "OpenAI returned an empty reply." : "OpenAI HTTP " + response.status));
+    } catch (error) { errors.push(error instanceof Error ? error.message : "OpenAI request failed."); }
   }
-  throw new Error("No AI provider configured. Configure Gemini or Cloudflare Workers AI.");
+  throw new Error(errors.join(" | ") || "No AI provider configured. Configure Gemini or Cloudflare Workers AI.");
 }
 
 export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) => {
@@ -136,8 +147,14 @@ export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) =>
         published++;
       } catch (error) {
         const reason = error instanceof Error ? error.message : "Unknown processing error";
-        await env.DB.prepare("UPDATE social_comment_drafts SET status='failed',last_error=? WHERE comment_id=? AND status='publishing'").bind(reason.slice(0, 1000), commentId).run().catch(() => undefined);
-        failureDetails.push({ commentId, stage: "reply_processing", reason: reason.slice(0, 300) });
+        const safeReason = reason.slice(0, 1000);
+        const prior = await env.DB.prepare("SELECT id FROM social_comment_drafts WHERE comment_id=?").bind(commentId).first<{ id: string }>().catch(() => null);
+        if (prior) {
+          await env.DB.prepare("UPDATE social_comment_drafts SET status='failed',last_error=? WHERE comment_id=?").bind(safeReason, commentId).run().catch(() => undefined);
+        } else {
+          await env.DB.prepare("INSERT INTO social_comment_drafts(id,comment_id,video_id,video_title,author,comment_text,draft_text,status,last_error) VALUES(?,?,?,?,?,?,?,'failed',?)").bind(crypto.randomUUID(), commentId, videoId, title, author, text, "[Reply generation failed]", safeReason).run().catch(() => undefined);
+        }
+        failureDetails.push({ commentId, stage: "reply_processing", reason: safeReason.slice(0, 300) });
         failed++;
       }
     }
