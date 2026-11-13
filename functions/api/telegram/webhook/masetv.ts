@@ -136,9 +136,9 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       ((msg as any)?.forward_origin || (msg as any)?.forward_from || (msg as any)?.forward_from_chat)) {
     const forwarded = msg as any;
     const savedText = String(forwarded.text || forwarded.caption || "").trim().slice(0, 12000);
-    const urls = [...savedText.matchAll(/https?:\\/\\/[^\\s<>]+/g)].map((m:any)=>String(m[0]).replace(/[),.]+$/,"")).slice(0,12);
+    const urls = [...savedText.matchAll(/https?:\/\/[^\s<>]+/g)].map((m:any)=>String(m[0]).replace(/[),.]+$/,"")).slice(0,12);
     const source = forwarded.forward_origin?.chat?.username || forwarded.forward_from_chat?.username || forwarded.forward_origin?.sender_user?.username || "Owner-saved";
-    const title = savedText.split("\\n").map((line:string)=>line.trim()).find(Boolean)?.slice(0,180) || (forwarded.video ? "Forwarded video" : forwarded.document ? "Forwarded file" : "Saved Telegram reference");
+    const title = savedText.split("\n").map((line:string)=>line.trim()).find(Boolean)?.slice(0,180) || (forwarded.video ? "Forwarded video" : forwarded.document ? "Forwarded file" : "Saved Telegram reference");
     try {
       await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_owner_library (
         id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL DEFAULT '',
