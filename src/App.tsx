@@ -1021,25 +1021,25 @@ function Admin({isOwner,restricted,titles,onCreate,onUpdate,onDelete,onEpisodeUp
  const uploadFile=async(file:File,folder='media')=>{if(folder==='posters'){const dataUrl=await galleryPosterToDataUrl(file);const base64=dataUrl.split(',')[1]||'';const r=await api.post('/api/media/upload',{filename:file.name.replace(/\\.[^/.]+$/,'')+'.jpg',contentType:'image/jpeg',base64,folder:'posters'});if(!r.data?.url||!r.data?.path)throw new Error(r.data?.error||'Poster upload failed');return {url:String(r.data.url),path:String(r.data.path),contentType:String(r.data.contentType||'image/jpeg')};}const limit=folder==='subtitles'?2*1024*1024:50*1024*1024;if(file.size>limit)throw new Error(folder==='subtitles'?'Subtitle files must be 2MB or smaller.':'Video files must be 50MB or smaller here. For larger episodes, paste a direct HTTPS stream URL.');const formData=new FormData();formData.append('file',file,file.name);formData.append('filename',file.name);formData.append('contentType',file.type||'application/octet-stream');formData.append('folder',folder);const response=await fetch('/api/media/upload',{method:'POST',credentials:'include',body:formData});const data=await response.json().catch(()=>({}));if(!response.ok||!data?.url||!data?.path)throw new Error(data?.error||'Media upload failed');return {url:String(data.url),path:String(data.path),contentType:String(data.contentType||file.type||'application/octet-stream')};};
  const posterUpload=async(file:File|null)=>file?uploadFile(file,'posters'):({url:form.posterUrl.trim(),path:'',contentType:'image/*'});
  const subtitleToVtt=async(file:File)=>{
-  if(/\\.vtt$/i.test(file.name))return file;
-  const source=(await file.text()).replace(/^\\uFEFF/,'');
-  if(/\\.srt$/i.test(file.name)){
-   const vtt='WEBVTT\\n\\n'+source.replace(/\\r?\\n/g,'\\n').replace(/(\\d{2}:\\d{2}:\\d{2}),(\\d{3})/g,'$1.$2');
-   return new File([vtt],file.name.replace(/\\.srt$/i,'.vtt'),{type:'text/vtt'});
+  if(/\.vtt$/i.test(file.name))return file;
+  const source=(await file.text()).replace(/^\uFEFF/,'');
+  if(/\.srt$/i.test(file.name)){
+   const vtt='WEBVTT\n\n'+source.replace(/\r?\n/g,'\n').replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g,'$1.$2');
+   return new File([vtt],file.name.replace(/\.srt$/i,'.vtt'),{type:'text/vtt'});
   }
-  if(/\\.(?:ass|ssa)$/i.test(file.name)){
-   const lines=source.split(/\\r?\\n/);let inEvents=false;
+  if(/\.(?:ass|ssa)$/i.test(file.name)){
+   const lines=source.split(/\r?\n/);let inEvents=false;
    let format=['layer','start','end','style','name','marginl','marginr','marginv','effect','text'];
    const cues:string[]=[];
    const toVttTime=(value:string)=>{
-    const match=value.trim().match(/^(\\d+):(\\d{2}):(\\d{2})[.,](\\d{1,2})$/);
+    const match=value.trim().match(/^(\d+):(\d{2}):(\d{2})[.,](\d{1,2})$/);
     if(!match)return '';
     return match[1].padStart(2,'0')+':'+match[2]+':'+match[3]+'.'+match[4].padEnd(2,'0')+'0';
    };
    for(const line of lines){
     const trimmed=line.trim();
-    if(/^\\[events\\]$/i.test(trimmed)){inEvents=true;continue;}
-    if(/^\\[/i.test(trimmed)){inEvents=false;continue;}
+    if(/^\[events\]$/i.test(trimmed)){inEvents=true;continue;}
+    if(/^\[/i.test(trimmed)){inEvents=false;continue;}
     if(!inEvents)continue;
     if(/^format:/i.test(trimmed)){format=trimmed.slice(trimmed.indexOf(':')+1).split(',').map(v=>v.trim().toLowerCase());continue;}
     if(!/^dialogue:/i.test(trimmed))continue;
@@ -1049,12 +1049,12 @@ function Admin({isOwner,restricted,titles,onCreate,onUpdate,onDelete,onEpisodeUp
     const start=toVttTime(fields[format.indexOf('start')]||'');
     const end=toVttTime(fields[format.indexOf('end')]||'');
     let text=fields[format.indexOf('text')]||'';
-    text=text.replace(/\\{[^}]*\\}/g,'').replace(/\\\\[Nn]/g,'\\n').replace(/\\\\h/g,' ');
+    text=text.replace(/\{[^}]*\}/g,'').replace(/\\[Nn]/g,'\n').replace(/\\h/g,' ');
     text=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').trim();
-    if(start&&end&&text)cues.push(start+' --> '+end+'\\n'+text);
+    if(start&&end&&text)cues.push(start+' --> '+end+'\n'+text);
    }
    if(!cues.length)throw new Error('No readable dialogue cues were found in this ASS/SSA file.');
-   return new File(['WEBVTT\\n\\n'+cues.join('\\n\\n')+'\\n'],file.name.replace(/\\.(?:ass|ssa)$/i,'.vtt'),{type:'text/vtt'});
+   return new File(['WEBVTT\n\n'+cues.join('\n\n')+'\n'],file.name.replace(/\.(?:ass|ssa)$/i,'.vtt'),{type:'text/vtt'});
   }
   throw new Error('Subtitle files must be WebVTT (.vtt), SRT (.srt), ASS (.ass), or SSA (.ssa).');
  };
