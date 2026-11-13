@@ -313,8 +313,11 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
 
   // Treat ordinary greetings and natural-language questions as chat without requiring /ai.
   // Keep likely title/episode searches in the catalog-search flow below.
-  const looksLikeCatalogSearch = /\b(?:episode|ep|season|movie|drama|film|s\d+e\d+)\b/i.test(incoming)
-    || /\b(?:find|search(?:ing)?|look(?:ing)?\s+for|do\s+you\s+have|have\s+you\s+got)\b/i.test(incoming);
+  const explicitTitleSearch = /^(?:(?:hey|please)\\s+)?(?:(?:i(?:'m|\\s+am)|we(?:'re|\\s+are))\\s+)?(?:search(?:ing)?\\s+for|look(?:ing)?\\s+for|find(?:\\s+me)?|do\\s+you\\s+have|have\\s+you\\s+got)\\s+.+$/i.test(incoming.trim())
+    || /^\\/search(?:@\\w+)?\\s+.+$/i.test(incoming.trim());
+  const looksLikeCatalogSearch = explicitTitleSearch
+    || /\\b(?:episode|ep|season|movie|drama|film|s\\d+e\\d+)\\b/i.test(incoming)
+    || /\\b(?:find|search(?:ing)?|look(?:ing)?\\s+for|do\\s+you\\s+have|have\\s+you\\s+got)\\b/i.test(incoming);
   const conversationalMessage = !incoming.startsWith("/") && !looksLikeCatalogSearch && (
     /^(hey|hi|hello|yo|good morning|good afternoon|good evening|how are you|what's up|whats up|thanks|thank you|who are you|what can you do|tell me a joke|let's chat|lets chat)\b/i.test(incoming) ||
     /^(hey|hi|hello)\s+(?:ai|assistant|masenet|bot)\b/i.test(incoming) ||
@@ -492,8 +495,8 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     return json({ ok: true });
   }
 
-  const query = incoming.replace(/^\/start(?:\s+\S+)?/i, "").replace(/^\/search\s*/i, "")
-    .replace(/^(?:hey\s+)?(?:i(?:'m| am)\s+)?(?:search(?:ing)?\s+for|look(?:ing)?\s+for|find\s+me|do\s+you\s+have|have\s+you\s+got)\s+/i, "")
+  const query = incoming.replace(/^\/start(?:\s+\S+)?/i, "").replace(/^\/search(?:@\w+)?\s*/i, "")
+    .replace(/^(?:(?:hey|please)\s+)?(?:(?:i(?:'m|\s+am)|we(?:'re|\s+are))\s+)?(?:search(?:ing)?\s+for|look(?:ing)?\s+for|find(?:\s+me)?|do\s+you\s+have|have\s+you\s+got)\s+/i, "")
     .replace(/^(?:please\s+)?(?:can you\s+)?find\s+/i, "").trim();
   let reply = "Welcome to MaseNet! 🎬\nSend a movie, drama, or episode name to search the library.\nNeed help? Use /help. Ask a question with /ai your question.";
   let searchReplyMarkup: Record<string, unknown> | undefined;
@@ -530,10 +533,12 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     }
     const combined = [...new Set([...episodeMatches, ...titleMatches])].slice(0, 5);
     let channelMatches: TelegramChannelPost[] = [];
-    try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 4, env.DB), 12000, "Telegram channel search"); }
+    try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 5, env.DB), 25000, "Telegram channel search"); }
     catch (error) { console.error("Telegram command channel search failed:", error instanceof Error ? error.message : String(error)); }
-    const channelReply = channelMatches.length ? "\n\nI searched the available indexed and public-preview messages in both official channels. Open the exact matching post using the button(s) below:" + channelMatches.map(post => "\\n• " + post.title + " — " + post.channel).join("") : "";
-    searchReplyMarkup = channelMatches.length ? { inline_keyboard: channelMatches.slice(0,5).map(post => [{ text: "🔗 Open " + post.channel + " post", url: post.url }]) } : undefined;
+    const channelReply = channelMatches.length ? "\n\nI found matching posts in our official Telegram channels. Tap a button below to open the original post:" : "";
+    searchReplyMarkup = channelMatches.length
+      ? { inline_keyboard: channelMatches.slice(0,5).map(post => [{ text: "🔗 Open " + post.channel + " post", url: post.url }]) }
+      : { inline_keyboard: [[{ text: "📢 MaseMediaTv channel", url: "https://t.me/MaseMediaTv" }], [{ text: "📚 Ongoing Drama List", url: "https://t.me/Ongoing_drama_list" }]] };
     if (combined.length || channelMatches.length) {
       reply = (combined.length ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n") : "Not in the catalogue, but I found these official channel posts:") + channelReply;
     } else {
@@ -542,7 +547,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_missing_searches (id INTEGER PRIMARY KEY AUTOINCREMENT, query TEXT NOT NULL, chat_type TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
         await env.DB.prepare("INSERT INTO telegram_missing_searches (query, chat_type) VALUES (?, ?)").bind(query.slice(0, 300), String((msg as { chat?: { type?: string } }).chat?.type || "unknown")).run();
       } catch { /* Search still replies even if logging is unavailable. */ }
-      reply = "I couldn't find “" + query.slice(0, 100) + "” in the MaseNet catalogue or in the channel messages currently indexed and publicly searchable. I have recorded your request for the admin. This does not mean the title is absent from older or pinned channel posts; Telegram's Bot API does not provide full historical channel search. Try another spelling or open the official channels below.";
+      reply = "I couldn't confirm an exact match for “" + query.slice(0, 100) + "” in the catalogue or the channel messages I could access during this search. This is not proof that the drama is absent from our channels—older or pinned posts may not yet be indexed. I have recorded the request for admin review. You can also open either official channel using the buttons below.";
       // Keep title-search results deterministic. Never let a conversational model
       // overwrite a verified search result or a transparent no-match explanation.
     }
