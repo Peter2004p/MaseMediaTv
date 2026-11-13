@@ -61,7 +61,8 @@ export async function searchIndexedTelegramChannel(db: D1Database, query: string
   return (rows.results || []).map(row => {
     const haystack = row.post_text.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ");
     const matched = terms.filter(term => haystack.includes(term)).length;
-    const score = haystack.includes(normalized) ? 100 : matched;
+    const required = terms.length === 1 ? 1 : Math.max(2, Math.ceil(terms.length * 0.6));
+    const score = haystack.includes(normalized) ? 100 : matched >= required ? Math.round((matched / terms.length) * 80) : 0;
     return {
       title: row.title,
       text: row.post_text.slice(0, 1200),
