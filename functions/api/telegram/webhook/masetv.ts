@@ -496,6 +496,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     .replace(/^(?:hey\s+)?(?:i(?:'m| am)\s+)?(?:search(?:ing)?\s+for|look(?:ing)?\s+for|find\s+me|do\s+you\s+have|have\s+you\s+got)\s+/i, "")
     .replace(/^(?:please\s+)?(?:can you\s+)?find\s+/i, "").trim();
   let reply = "Welcome to MaseNet! 🎬\nSend a movie, drama, or episode name to search the library.\nNeed help? Use /help. Ask a question with /ai your question.";
+  let searchReplyMarkup: Record<string, unknown> | undefined;
   if (query) {
     const needle = normalize(query).slice(0, 100);
     const sql = await env.DB.prepare(
@@ -532,7 +533,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 4, env.DB), 6500, "Telegram channel search"); }
     catch (error) { console.error("Telegram command channel search failed:", error instanceof Error ? error.message : String(error)); }
     const channelReply = channelMatches.length ? "\n\nI searched the available indexed and public-preview messages in both official channels. Open the exact matching post using the button(s) below:" + channelMatches.map(post => "\\n• " + post.title + " — " + post.channel).join("") : "";
-    const channelKeyboard = channelMatches.length ? { inline_keyboard: channelMatches.slice(0,5).map(post => [{ text: "🔗 Open " + post.channel + " post", url: post.url }]) } : undefined;
+    searchReplyMarkup = channelMatches.length ? { inline_keyboard: channelMatches.slice(0,5).map(post => [{ text: "🔗 Open " + post.channel + " post", url: post.url }]) } : undefined;
     if (combined.length || channelMatches.length) {
       reply = (combined.length ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n") : "Not in the catalogue, but I found these official channel posts:") + channelReply;
     } else {
@@ -560,7 +561,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         .replace(/\n{3,}/g, "\n\n")
         .trim().slice(0, 3900),
       disable_web_page_preview: true,
-      ...((typeof channelKeyboard !== "undefined" && channelKeyboard) ? { reply_markup: channelKeyboard } : replyMarkup ? { reply_markup: replyMarkup } : {})
+      ...(searchReplyMarkup ? { reply_markup: searchReplyMarkup } : replyMarkup ? { reply_markup: replyMarkup } : {})
     })
   });
   if (!send.ok) return json({ ok: false, error: "Telegram could not deliver the search reply." }, 502);
