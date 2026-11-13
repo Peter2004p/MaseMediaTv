@@ -7,11 +7,15 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
  const body=await request.json().catch(()=>({})) as {initData?:string};
  const params=new URLSearchParams(String(body.initData||""));const hash=params.get("hash")||"";params.delete("hash");
  const authDate=Number(params.get("auth_date")||0);
- if(!hash||!authDate||Math.abs(Date.now()/1000-authDate)>86400)return json({error:"Your Telegram session expired. Close and reopen MaseNet."},401);
+ const nowSeconds=Math.floor(Date.now()/1000);
+ if(!hash||!Number.isSafeInteger(authDate)||authDate<=0||authDate>nowSeconds+60||nowSeconds-authDate>86400)return json({error:"Your Telegram session expired. Close and reopen MaseNet."},401);
  const entries:Array<[string,string]>=[];params.forEach((v,k)=>entries.push([k,v]));
  const check=entries.sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+"="+v).join("\n");
  const secret=await hmac(new TextEncoder().encode("WebAppData"),env.TELEGRAM_BOT_TOKEN);
- if(hex(await hmac(secret,check))!==hash)return json({error:"Telegram session validation failed."},401);
+ const expected=hex(await hmac(secret,check));
+ if(expected.length!==hash.length)return json({error:"Telegram session validation failed."},401);
+ let mismatch=0;for(let i=0;i<expected.length;i++)mismatch|=expected.charCodeAt(i)^hash.charCodeAt(i);
+ if(mismatch!==0)return json({error:"Telegram session validation failed."},401);
  let user:{id?:number|string}|null=null;try{user=JSON.parse(params.get("user")||"null")}catch{}
  if(!user?.id)return json({error:"Telegram user was not found."},401);
  const chatId=String(user.id);
