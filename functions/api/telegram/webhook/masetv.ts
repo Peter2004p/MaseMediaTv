@@ -313,11 +313,11 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
 
   // Treat ordinary greetings and natural-language questions as chat without requiring /ai.
   // Keep likely title/episode searches in the catalog-search flow below.
-  const explicitTitleSearch = /^(?:(?:hey|please)\\s+)?(?:(?:i(?:'m|\\s+am)|we(?:'re|\\s+are))\\s+)?(?:search(?:ing)?\\s+for|look(?:ing)?\\s+for|find(?:\\s+me)?|do\\s+you\\s+have|have\\s+you\\s+got)\\s+.+$/i.test(incoming.trim())
-    || /^\\/search(?:@\\w+)?\\s+.+$/i.test(incoming.trim());
+  const explicitTitleSearch = /^(?:(?:hey|please)\s+)?(?:(?:i(?:'m|\s+am)|we(?:'re|\s+are))\s+)?(?:search(?:ing)?\s+for|look(?:ing)?\s+for|find(?:\s+me)?|do\s+you\s+have|have\s+you\s+got)\s+.+$/i.test(incoming.trim())
+    || /^\/search(?:@\w+)?\s+.+$/i.test(incoming.trim());
   const looksLikeCatalogSearch = explicitTitleSearch
-    || /\\b(?:episode|ep|season|movie|drama|film|s\\d+e\\d+)\\b/i.test(incoming)
-    || /\\b(?:find|search(?:ing)?|look(?:ing)?\\s+for|do\\s+you\\s+have|have\\s+you\\s+got)\\b/i.test(incoming);
+    || /\b(?:episode|ep|season|movie|drama|film|s\d+e\d+)\b/i.test(incoming)
+    || /\b(?:find|search(?:ing)?|look(?:ing)?\s+for|do\s+you\s+have|have\s+you\s+got)\b/i.test(incoming);
   const conversationalMessage = !incoming.startsWith("/") && !looksLikeCatalogSearch && (
     /^(hey|hi|hello|yo|good morning|good afternoon|good evening|how are you|what's up|whats up|thanks|thank you|who are you|what can you do|tell me a joke|let's chat|lets chat)\b/i.test(incoming) ||
     /^(hey|hi|hello)\s+(?:ai|assistant|masenet|bot)\b/i.test(incoming) ||
