@@ -3,6 +3,8 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
  if(!env.MEDIA_BUCKET) return new Response("Media storage is not configured", {status:503});
  const path=new URL(request.url).searchParams.get("path")||"";
  if(!path || path.length>512 || path.startsWith("/") || path.split("/").some(p=>p===".."||p===".")) return new Response("Invalid media path",{status:400});
+ const folder=path.split("/",1)[0];
+ if(!["posters","subtitles","broadcasts"].includes(folder)) return new Response("Movie and drama video-file hosting is disabled. Use an external HTTPS source URL.",{status:403});
  const rangeHeader=request.headers.get("range");
  const ifRange=request.headers.get("if-range");
  const meta=await env.MEDIA_BUCKET.head(path);
