@@ -303,7 +303,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   if (batchIndex >= batchCount) return json({ ok: true, skipped: "batch_complete", campaignSlot, batchIndex, batchCount });
   const batchTargets = targetList.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
 
-  const results: Array<{ target: string; ok: boolean; error?: string }> = [];
+  const results: Array<{ target: string; ok: boolean; error?: string; imageFallback?: boolean }> = [];
   const replyMarkup = campaign.contentType !== "catalogue"
     ? { inline_keyboard: [[{ text: "📰 Read source", url: campaign.sourceUrl }], [{ text: "🎬 Explore MaseNet", url: MINI_APP_URL }]] }
     : { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: MINI_APP_URL }]] };
