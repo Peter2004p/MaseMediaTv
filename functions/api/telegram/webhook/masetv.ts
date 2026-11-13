@@ -7,10 +7,13 @@ type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; y
 
 const normalize = (value: unknown) => String(value ?? "").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
-  Promise.race([
-    promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(label + " timed out after " + ms + "ms")), ms))
-  ]);
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(label + " timed out after " + ms + "ms")), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); }
+    );
+  });
 
 const handleTelegramUpdate = async ({ request, env }: { request: Request; env: Env }) => {
   if (!env.TELEGRAM_BOT_TOKEN) return json({ ok: false, error: "Bot token not configured" }, 503);
@@ -405,9 +408,13 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       console.error("MaseNet Telegram AI context lookup failed:", error instanceof Error ? error.message : String(error));
     }
     let telegramChannelContext = "";
-    if (prompt.trim().length >= 3 && !/^(hi|hello|hey|yo|thanks|thank you|good morning|good afternoon|good evening)$/i.test(prompt.trim())) {
+    // Only search indexed Telegram posts when the message actually asks about catalogue,
+    // releases, news or channel updates. Previously every ordinary question such as
+    // "hey AI, how are you?" waited on this search and could add 12 seconds of avoidable delay.
+    const needsChannelContext = needsCatalogue || /\\b(?:news|updates?|announcements?|posts?|trailers?|release date|premiere)\\b/i.test(prompt);
+    if (needsChannelContext && prompt.trim().length >= 3) {
       try {
-        const channelHits = await withTimeout(searchPublicTelegramChannel(prompt, 4, env.DB), 12000, "Telegram channel search");
+        const channelHits = await withTimeout(searchPublicTelegramChannel(prompt, 4, env.DB), 6000, "Telegram channel search");
         if (channelHits.length) telegramChannelContext = "\n\nVerified source-channel posts (use only these exact original links; do not alter or invent URLs):\n" + channelHits.map(post => "- Source: " + post.channel + "\n- Post: " + post.title + "\n- Text: " + post.text.slice(0, 650) + "\n- Original link: " + post.url).join("\n\n");
       } catch (error) { console.error("Telegram channel search failed:", error instanceof Error ? error.message : String(error)); }
     }
