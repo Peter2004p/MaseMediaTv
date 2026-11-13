@@ -40,16 +40,19 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
   }, [episode]);
   const selected = variants.find(v => v.quality === quality) || variants[0];
-  const rawSrc = selected?.streamUrl || episode.streamUrl || ''; 
+  const rawSrc = selected?.streamUrl || episode.streamUrl || '';
   const embed = embedFor(rawSrc, autoPlay);
-  const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => {
-    const value = String(t.url || t.path || '').trim();
-    // Browser <track> can load same-origin relative WebVTT URLs as well as absolute HTTP(S) URLs.
-    const safeUrl = /^https?:\/\//i.test(value) || (!value.startsWith('//') && !/^[a-z][a-z0-9+.-]*:/i.test(value));
-    return safeUrl && /\.vtt(?:$|[?#])/i.test(value);
-  }).map(t => ({ ...t, url: String(t.url || t.path).trim() }));
   const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');
   const isMkvSource = /\.mkv(?:$|[?#])/i.test(rawSrc) || /matroska|x-matroska/i.test(selected?.mimeType || episode.mimeType || '');
+  const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => {
+    const value = String(t.url || t.path || '').trim();
+    // Native browser tracks require WebVTT. The Matroska player also accepts SRT
+    // tracks through its explicit data-format="srt" track hint below.
+    const safeUrl = /^https?:\/\//i.test(value) || (!value.startsWith('//') && !/^[a-z][a-z0-9+.-]*:/i.test(value));
+    const webVtt = /\.vtt(?:$|[?#])/i.test(value);
+    const srt = /\.srt(?:$|[?#])/i.test(value) || /subrip/i.test(t.mimeType || '');
+    return safeUrl && (webVtt || (isMkvSource && srt));
+  }).map(t => ({ ...t, url: String(t.url || t.path).trim() }));
   const vlcIntent = '';
   const telegramWebView = typeof window !== 'undefined' && (/Telegram/i.test(navigator.userAgent) || Boolean((window as Window & { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp));
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
