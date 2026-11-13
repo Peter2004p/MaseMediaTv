@@ -7,6 +7,8 @@ interface Env {
   YOUTUBE_CHANNEL_ID?: string;
   FACEBOOK_PAGE_URL?: string;
   TIKTOK_PROFILE_URL?: string;
+  INSTAGRAM_PROFILE_URL?: string;
+  YOUTUBE_CHANNEL_URL?: string;
   GEMINI_API_KEY?: string;
   TELEGRAM_WEBAPP_URL?: string;
   TELEGRAM_MINI_APP_URL?: string;
@@ -178,7 +180,13 @@ ${title} — ${facts.slice(0, 320)}${sourceUrl ? "\nRead the report: " + sourceU
 TIKTOK
 ${title} 👀 What do you think? Share your opinion below. #MaseNet #Movies #Drama #ChineseDrama`;
   if (!env.GEMINI_API_KEY) return fallback;
-  const prompt = `Prepare a ready-to-edit social media content pack for MaseNet. Content type: ${contentType}. Subject: ${title}. Grounded facts: ${facts}. Source URL: ${sourceUrl || "none"}. Produce exactly three clearly labelled sections: YOUTUBE (search-friendly video title and description), FACEBOOK (engaging post), TIKTOK (short hook, caption and relevant hashtags). Do not invent cast, release dates, availability, plot details or claim external news is confirmed. For external reports, attribute claims to the linked report. Do not imply that MaseNet owns or streams an external title. Plain text, max 1,800 characters.`;
+  const platformLinks = [
+    env.YOUTUBE_CHANNEL_URL || (env.YOUTUBE_CHANNEL_ID ? (/^https:\/\//i.test(env.YOUTUBE_CHANNEL_ID) ? env.YOUTUBE_CHANNEL_ID : "https://www.youtube.com/channel/" + encodeURIComponent(env.YOUTUBE_CHANNEL_ID)) : ""),
+    env.FACEBOOK_PAGE_URL || "",
+    env.TIKTOK_PROFILE_URL || "",
+    env.INSTAGRAM_PROFILE_URL || ""
+  ].filter(url => /^https:\/\//i.test(url));
+  const prompt = `Prepare a ready-to-edit social media content pack for MaseNet. Content type: ${contentType}. Subject: ${title}. Grounded facts: ${facts}. Source URL: ${sourceUrl || "none"}. Official MaseNet social links: ${platformLinks.join(" | ") || "not configured"}. Produce exactly four clearly labelled sections: YOUTUBE (search-friendly video title and description), FACEBOOK (engaging post), TIKTOK (short hook, caption and relevant hashtags), INSTAGRAM (short Reel/post caption and relevant hashtags). Include relevant official follow links naturally where appropriate. Do not invent cast, release dates, availability, plot details or claim external news is confirmed. For external reports, attribute claims to the linked report. Do not imply that MaseNet owns or streams an external title. Plain text, max 2,200 characters.`;
   try {
     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
       method: "POST", headers: { "content-type": "application/json" },
@@ -520,8 +528,54 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     }
   }
 
+  let socialPlatformPromoSent = false;
+  if (delivered > 0 && batchIndex === 0 && channelTargets.size) {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_social_platform_promo_history (
+      promo_day TEXT PRIMARY KEY,
+      sent_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`).run();
+    const today = new Date().toISOString().slice(0, 10);
+    const sentToday = await env.DB.prepare("SELECT promo_day FROM telegram_social_platform_promo_history WHERE promo_day=?").bind(today).first<{ promo_day: string }>();
+    if (!sentToday) {
+      const socialButtons: Array<Array<{ text: string; url: string }>> = [];
+      const addSocialButton = (label: string, rawUrl: string) => {
+        const url = String(rawUrl || "").trim();
+        if (/^https:\/\//i.test(url)) socialButtons.push([{ text: label, url }]);
+      };
+      addSocialButton("▶ Follow on YouTube", env.YOUTUBE_CHANNEL_URL || (env.YOUTUBE_CHANNEL_ID ? (/^https:\/\//i.test(env.YOUTUBE_CHANNEL_ID) ? env.YOUTUBE_CHANNEL_ID : "https://www.youtube.com/channel/" + encodeURIComponent(env.YOUTUBE_CHANNEL_ID)) : ""));
+      addSocialButton("📘 Follow on Facebook", env.FACEBOOK_PAGE_URL || "");
+      addSocialButton("🎵 Follow on TikTok", env.TIKTOK_PROFILE_URL || "");
+      addSocialButton("📸 Follow on Instagram", env.INSTAGRAM_PROFILE_URL || "");
+      socialButtons.push([{ text: "🎬 Open MaseNet Mini App", url: MINI_APP_URL }]);
+      const socialMessages = [
+        "📣 STAY CONNECTED WITH MASENET\n\nGet more entertainment updates, new video alerts, drama highlights and community moments. Follow our official pages and open the MaseNet Mini App so you never miss an update.",
+        "✨ MORE MASENET, MORE ENTERTAINMENT\n\nJoin us beyond Telegram for fresh clips, video updates and entertainment highlights. Follow our official social pages, then explore movies and dramas in the MaseNet Mini App.",
+        "🍿 YOUR ENTERTAINMENT UPDATE STARTS HERE\n\nFollow MaseNet on our official social platforms for new posts, short clips and updates. Open our Mini App to discover what's available to watch."
+      ];
+      const promoText = socialMessages[Math.floor(Date.now() / 86400000) % socialMessages.length];
+      let successfulTargets = 0;
+      for (const target of channelTargets) {
+        try {
+          const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ chat_id: target, text: promoText, reply_markup: { inline_keyboard: socialButtons }, disable_web_page_preview: true }),
+            signal: AbortSignal.timeout(10000)
+          });
+          if (response.ok) successfulTargets++;
+          else console.error("Social platform promo failed:", response.status, (await response.text()).slice(0, 180));
+        } catch (error) {
+          console.error("Social platform promo failed:", error instanceof Error ? error.message : String(error));
+        }
+      }
+      if (successfulTargets > 0) {
+        await env.DB.prepare("INSERT OR IGNORE INTO telegram_social_platform_promo_history (promo_day,sent_at) VALUES (?,datetime('now'))").bind(today).run();
+        socialPlatformPromoSent = true;
+      }
+    }
+  }
+
   return json({
-    ok: true, deliveryOk: delivered > 0, type: campaign.contentType, title: campaign.selectedName, delivered, socialDraftSent, engagementPollSent,
+    ok: true, deliveryOk: delivered > 0, type: campaign.contentType, title: campaign.selectedName, delivered, socialDraftSent, socialPlatformPromoSent, engagementPollSent,
     failed: results.length - delivered, failureReasons, failureSamples,
     disabledPermanentTargets: permanentlyUnavailable.length,
     targets: batchTargets.length, totalTargets: targetList.length, batchIndex, batchCount, batchSize, campaignSlot, sentLast24h,
