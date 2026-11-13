@@ -1,5 +1,5 @@
 import { json } from "../auth/_shared";
-interface Env { DB: D1Database; }
+interface Env { DB: D1Database; MEDIA_PROXY_ALLOWED_HOSTS?: string; }
 type EpisodeLike = { id?:string; streamUrl?:string; qualities?:{streamUrl?:string}[] };
 const isPublicHttps = (value:string) => {
  try {
@@ -83,12 +83,17 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  if(!isPublicHttps(upstreamUrl)) return json({error:"This video source is not an allowed HTTPS URL"},400);
  if(!requested && !allowed.includes(upstreamUrl)) return json({error:"The requested source does not belong to this episode"},403);
  if(requested) {
-  // HLS playlists commonly load variants, keys, and media segments from separate
-  // CDN hostnames. Permit those playlist-referenced HTTPS resources while still
-  // rejecting credentials, local/private literal addresses, and non-HTTPS URLs.
-  // The episode must exist in D1 before any resource can be proxied.
-  try { const u=new URL(requested); if(!isPublicHttps(u.toString())) return json({error:"Invalid HLS resource URL"},400); }
-  catch { return json({error:"Invalid HLS resource URL"},400); }
+  // HLS child URLs are only proxied when their hostname matches the episode's
+  // stored source host or an operator-configured CDN hostname. This prevents a
+  // valid episode ID being abused as an arbitrary public HTTPS proxy.
+  try {
+   const child=new URL(requested);
+   const sourceHost=new URL(sourceHint || allowed[0] || upstreamUrl).hostname.toLowerCase();
+   const configured=(env.MEDIA_PROXY_ALLOWED_HOSTS||"").split(",").map(host=>host.trim().toLowerCase()).filter(Boolean);
+   const allowedHosts=new Set([sourceHost,...configured]);
+   if(!isPublicHttps(child.toString()) || !allowedHosts.has(child.hostname.toLowerCase()))
+    return json({error:"This HLS resource host is not an approved media CDN. Add its hostname to MEDIA_PROXY_ALLOWED_HOSTS if it is a trusted CDN."},403);
+  } catch { return json({error:"Invalid HLS resource URL"},400); }
  }
  // Signed CDN URLs commonly carry an Expires Unix timestamp. Detect an
  // expired library URL before proxying it so the player can report the real cause
