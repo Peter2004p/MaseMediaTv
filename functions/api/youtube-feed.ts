@@ -73,12 +73,12 @@ export const onRequestGet: PagesFunction = async () => {
   }
 
   if (xml) {
-   const entries = xml.match(/<entry(?:\\s[^>]*)?>[\\s\\S]*?<\\/entry>/gi) || [];
+   const entries = xml.match(/<entry(?:\s[^>]*)?>[\s\S]*?<\/entry>/gi) || [];
    const videos = entries.map((entry) => {
-    const id = tag(entry, "videoId") || (entry.match(/<id>yt:video:([^<]+)<\\/id>/i)?.[1] || "");
+    const id = tag(entry, "videoId") || (entry.match(/<id>yt:video:([^<]+)<\/id>/i)?.[1] || "");
     const title = tag(entry, "title");
     const published = tag(entry, "published");
-    const href = entry.match(/<link\\b[^>]*href=["']([^"']+)["'][^>]*>/i)?.[1] || ("https://www.youtube.com/watch?v=" + id);
+    const href = entry.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*>/i)?.[1] || ("https://www.youtube.com/watch?v=" + id);
     if (!id || !/^[A-Za-z0-9_-]{11}$/.test(id)) return null;
     return { id, title, published, url: href, thumbnail: "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg" };
    }).filter((item): item is NonNullable<typeof item> => !!item);
