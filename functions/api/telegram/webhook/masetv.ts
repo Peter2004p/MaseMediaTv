@@ -374,7 +374,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     let telegramChannelContext = "";
     if (prompt.trim().length >= 3 && !/^(hi|hello|hey|yo|thanks|thank you|good morning|good afternoon|good evening)$/i.test(prompt.trim())) {
       try {
-        const channelHits = await withTimeout(searchPublicTelegramChannel(prompt, 4, env.DB), 6500, "Telegram channel search");
+        const channelHits = await withTimeout(searchPublicTelegramChannel(prompt, 4, env.DB), 12000, "Telegram channel search");
         if (channelHits.length) telegramChannelContext = "\n\nVerified source-channel posts (use only these exact original links; do not alter or invent URLs):\n" + channelHits.map(post => "- Source: " + post.channel + "\n- Post: " + post.title + "\n- Text: " + post.text.slice(0, 650) + "\n- Original link: " + post.url).join("\n\n");
       } catch (error) { console.error("Telegram channel search failed:", error instanceof Error ? error.message : String(error)); }
     }
@@ -530,7 +530,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     }
     const combined = [...new Set([...episodeMatches, ...titleMatches])].slice(0, 5);
     let channelMatches: TelegramChannelPost[] = [];
-    try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 4, env.DB), 6500, "Telegram channel search"); }
+    try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 4, env.DB), 12000, "Telegram channel search"); }
     catch (error) { console.error("Telegram command channel search failed:", error instanceof Error ? error.message : String(error)); }
     const channelReply = channelMatches.length ? "\n\nI searched the available indexed and public-preview messages in both official channels. Open the exact matching post using the button(s) below:" + channelMatches.map(post => "\\n• " + post.title + " — " + post.channel).join("") : "";
     searchReplyMarkup = channelMatches.length ? { inline_keyboard: channelMatches.slice(0,5).map(post => [{ text: "🔗 Open " + post.channel + " post", url: post.url }]) } : undefined;
