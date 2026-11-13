@@ -9,6 +9,23 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
   const requestedId = String(params.id || "");
   const body = await request.json() as Record<string, unknown>;
   const old = await env.DB.prepare("SELECT id FROM titles WHERE id=?").bind(requestedId).first<{id:string}>();
+  if (body.action === "updateStatus") {
+    const status = String(body.status || "").trim().toLowerCase();
+    if (status !== "active" && status !== "ended") return json({ error: "Choose active or ended status." }, 400);
+    const base = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(requestedId).first<{id:string;name:string;kind:string}>();
+    if (!base) return json({ error: "Title not found. Refresh the library and try again." }, 404);
+    const rows = await env.DB.prepare("SELECT id,name,metadata_json FROM titles WHERE kind=?").bind(base.kind).all<{id:string;name:string;metadata_json:string}>();
+    const matching = (rows.results || []).filter(row => normalizeName(row.name) === normalizeName(base.name));
+    if (!matching.length) return json({ error: "Title records could not be found." }, 404);
+    await env.DB.batch(matching.map(row => {
+      let metadata: Record<string, unknown> = {};
+      try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
+      metadata.status = status;
+      metadata.isEnded = status === "ended";
+      return env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(metadata), row.id);
+    }));
+    return json({ ok: true, id: base.id, name: base.name, status, updatedRecords: matching.length });
+  }
   if (body.action === "updateEpisode") {
     let base = old
       ? await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(old.id).first<{id:string;name:string;kind:string}>()
