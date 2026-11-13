@@ -53,6 +53,21 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   if (binary.length > 10 * 1024 * 1024) return json({ error: "The screenshot must be smaller than 10 MB." }, 400);
 
   const chatId = String(user.id);
+
+  // Consume each signed Telegram initData hash once for screenshot submissions.
+  // The unique primary key makes concurrent duplicate requests race-safe in D1.
+  try {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_verification_replays (
+      init_hash TEXT PRIMARY KEY, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`).run();
+    await env.DB.prepare("DELETE FROM telegram_verification_replays WHERE datetime(expires_at) <= datetime('now')").run();
+    const replayExpiry = new Date((authDate + 86400) * 1000).toISOString();
+    await env.DB.prepare("INSERT INTO telegram_verification_replays (init_hash,expires_at) VALUES (?,?)")
+      .bind(hash, replayExpiry).run();
+  } catch (error) {
+    console.error("MaseNet Telegram verification replay rejected:", error instanceof Error ? error.message : String(error));
+    return json({ error: "This Telegram session has already been used for a verification submission. Reopen MaseNet in Telegram and try again." }, 409);
+  }
   const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim() || "Telegram user";
   const username = user.username ? "@" + user.username : "Not provided";
   const submittedAt = new Date().toISOString();
