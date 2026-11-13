@@ -1,6 +1,6 @@
 import { Env, json, currentAdmin } from "../../auth/_shared";
 
-type SocialEnv = Env & { YOUTUBE_CLIENT_ID?:string; YOUTUBE_CLIENT_SECRET?:string; YOUTUBE_TOKEN_ENCRYPTION_KEY?:string; OPENAI_API_KEY?:string; OPENAI_MODEL?:string };
+type SocialEnv = Env & { YOUTUBE_CLIENT_ID?:string; YOUTUBE_CLIENT_SECRET?:string; YOUTUBE_TOKEN_ENCRYPTION_KEY?:string; OPENAI_API_KEY?:string; OPENAI_MODEL?:string; GEMINI_API_KEY?:string; GEMINI_MODEL?:string };
 async function accessToken(env:SocialEnv):Promise<string>{
   const row=await env.DB.prepare("SELECT encrypted_refresh_token FROM social_connections WHERE provider='youtube'").first<{encrypted_refresh_token:string}>();
   if(!row?.encrypted_refresh_token) throw new Error("YouTube channel is not connected.");
@@ -37,7 +37,7 @@ export const onRequestPost:PagesFunction<SocialEnv>=async({request,env})=>{
   const body=await request.json().catch(()=>({})) as {commentId?:string;videoId?:string;videoTitle?:string;author?:string;commentText?:string};
   const commentId=String(body.commentId||"").slice(0,180), commentText=String(body.commentText||"").trim().slice(0,3000);
   if(!commentId||!commentText) return json({error:"A YouTube comment is required."},400);
-  if(!env.OPENAI_API_KEY) return json({error:"OPENAI_API_KEY is not configured for AI reply drafting."},503);
+  if(!env.GEMINI_API_KEY&&!env.OPENAI_API_KEY) return json({error:"No AI provider is configured. Add GEMINI_API_KEY or OPENAI_API_KEY in Cloudflare Pages secrets."},503);
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS social_comment_drafts (id TEXT PRIMARY KEY, comment_id TEXT NOT NULL UNIQUE, video_id TEXT, video_title TEXT, author TEXT, comment_text TEXT, draft_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL DEFAULT (datetime('now')), published_at TEXT)").run();
   const prompt="You write helpful, natural, concise public replies for the official MaseMedia TV YouTube channel. Reply to the viewer's comment in a warm, respectful tone. Do not claim a title is available, promise release dates, ask for personal information, reveal private details, or use spammy promotion. If the viewer reports a problem, acknowledge it and suggest contacting MaseNet support without inventing contact details. Keep the reply under 450 characters. Return only the reply text.";
   const ai=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},body:JSON.stringify({model:env.OPENAI_MODEL||"gpt-4o-mini",temperature:0.5,max_tokens:180,messages:[{role:"system",content:prompt},{role:"user",content:"Video: "+String(body.videoTitle||"").slice(0,200)+"\nViewer: "+String(body.author||"").slice(0,100)+"\nComment: "+commentText}]})});
