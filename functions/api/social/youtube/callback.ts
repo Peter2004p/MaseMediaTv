@@ -37,8 +37,15 @@ export const onRequestGet: PagesFunction<SocialEnv> = async ({ request, env }) =
   const tokens = await tokenResponse.json() as { access_token?:string; refresh_token?:string; expires_in?:number; scope?:string };
   if (!tokens.access_token || !tokens.refresh_token) return fail("Google did not return a refresh token. Remove MaseNet access from your Google account and connect again.");
   const channelResponse = await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true", { headers: { Authorization: "Bearer "+tokens.access_token } });
-  if (!channelResponse.ok) return fail("Google authorized the account, but MaseNet could not read its YouTube channel.");
-  const channelData = await channelResponse.json() as { items?:Array<{id?:string;snippet?:{title?:string;customUrl?:string}} > };
+  const channelData = await channelResponse.json().catch(() => ({})) as {
+    items?:Array<{id?:string;snippet?:{title?:string;customUrl?:string}}>;
+    error?:{message?:string;errors?:Array<{reason?:string;message?:string}>};
+  };
+  if (!channelResponse.ok) {
+    const apiReason = channelData.error?.errors?.[0]?.reason || "unknown";
+    const apiMessage = channelData.error?.errors?.[0]?.message || channelData.error?.message || "No details returned";
+    return fail(`YouTube API error (${channelResponse.status}, ${apiReason}): ${apiMessage.slice(0,220)}. Check that YouTube Data API v3 is enabled in the same Google Cloud project as this OAuth client, and that the selected Google account owns or manages a YouTube channel.`);
+  }
   const channel = channelData.items?.[0];
   if (!channel?.id) return fail("No YouTube channel was found for the selected Google account.");
   // Tokens are never stored in plaintext. Configure a 32-byte base64 AES key as YOUTUBE_TOKEN_ENCRYPTION_KEY.
