@@ -81,7 +81,7 @@ export const onRequestPost: PagesFunction<ProfileEnv> = async ({request,env}) =>
       if(!existingProfile)return json({error:"Profile not found."},404);
       if(pin && existingProfile.pin_hash){
         const currentPin=String(body.currentPin||"").trim();
-        if(!/^\\d{4,6}$/.test(currentPin) || await sha256("masenet-profile-pin:"+id+":"+currentPin)!==existingProfile.pin_hash)
+        if(!/^\d{4,6}$/.test(currentPin) || await sha256("masenet-profile-pin:"+id+":"+currentPin)!==existingProfile.pin_hash)
           return json({error:"Enter the current profile PIN before changing it."},403);
       }
       const pinHash=pin?await sha256("masenet-profile-pin:"+id+":"+pin):null;
