@@ -4074,20 +4074,18 @@ html body #root .app nav.masenetLiquidDock .dockNotificationBadge{
 }
 
 
-/* Global mobile scroll recovery: keep the document vertically scrollable on Android browsers and Telegram WebView. */
-html, body, #root {
-  height: auto !important;
-  min-height: 100% !important;
-  overflow-x: clip !important;
-  overflow-y: auto !important;
-  overscroll-behavior-y: auto;
+
+/* YouTube Shorts page only: keep the feed vertically scrollable on Android and Telegram WebView. */
+.app:has(.maseShortsPage) .maseShortsFeed{
+  overflow-y:scroll!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+  overscroll-behavior-y:contain!important;
+  scroll-snap-type:y mandatory;
 }
-body {
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y pinch-zoom;
+.app:has(.maseShortsPage) .maseShortPlayer iframe{
+  pointer-events:none!important;
 }
-#root, .app {
-  min-height: 100dvh !important;
-  height: auto !important;
-  overflow-y: visible !important;
+.app:has(.maseShortsPage) .maseShortItem{
+  touch-action:pan-y!important;
 }
