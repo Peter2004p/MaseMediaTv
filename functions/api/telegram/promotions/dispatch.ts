@@ -235,13 +235,18 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   if (!campaign) return json({ ok: false, error: "Promotion campaign is unavailable" }, 500);
 
-  const targets = new Set<string>(["@MaseMediaTv"]);
-  const subs = await env.DB.prepare("SELECT chat_id,chat_type FROM telegram_subscribers WHERE active=1 AND chat_type IN ('private','channel','supergroup')").all<{ chat_id: string; chat_type: string }>();
-  const channelTargets = new Set<string>(["@MaseMediaTv"]);
+  const subs = await env.DB.prepare("SELECT chat_id,chat_type,title FROM telegram_subscribers WHERE active=1 AND chat_type IN ('private','channel','supergroup')").all<{ chat_id: string; chat_type: string; title?: string | null }>();
+  // The main channel may be present twice: once as the legacy @username target
+  // and once as its numeric chat ID after /masenet_subscribe. Prefer the numeric
+  // subscriber record so one campaign cannot post twice to the same channel.
+  const hasMainChannelSubscriber = (subs.results || []).some(row =>
+    (row.chat_type === "channel" || row.chat_type === "supergroup") &&
+    /masemediatv/i.test(String(row.title || "").replace(/[^a-z0-9]/gi, ""))
+  );
+  const targets = new Set<string>(hasMainChannelSubscriber ? [] : ["@MaseMediaTv"]);
   for (const row of subs.results || []) {
     if (!row.chat_id) continue;
     targets.add(String(row.chat_id));
-    if (row.chat_type === "channel" || row.chat_type === "supergroup") channelTargets.add(String(row.chat_id));
   }
   const targetList = Array.from(targets).sort();
   if (!targetList.length) return json({ ok: false, skipped: "no_telegram_targets" }, 503);
