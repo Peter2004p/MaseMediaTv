@@ -48,6 +48,24 @@ function imageFromFeed(block: string): string {
   }
   return "";
 }
+async function fetchArticleImage(articleUrl: string): Promise<string> {
+  try {
+    const response = await fetch(articleUrl, {
+      headers: { "user-agent": "Mozilla/5.0 (compatible; MaseNetNewsBot/1.0)", accept: "text/html" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(5500)
+    });
+    if (!response.ok) return "";
+    const html = (await response.text()).slice(0, 220000);
+    const meta = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i)
+      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
+    const imageUrl = decodeXml(String(meta?.[1] || ""));
+    return /^https:\/\//i.test(imageUrl) ? imageUrl : "";
+  } catch {
+    return "";
+  }
+}
+
 async function fetchEntertainmentNews(): Promise<NewsItem[]> {
   // Search recent premiere/release and airing notices, not only broad "popular" stories.
   const feeds = [
