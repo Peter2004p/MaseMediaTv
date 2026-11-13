@@ -150,42 +150,17 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   }
 
 
-  // Five-second manual window. If the admin does not act, AI performs a visual plausibility screen.
-  // This is not a check against YouTube's subscriber records or account ownership.
+  // Five-second manual window. If the admin does not act, grant provisional access
+  // automatically. This never marks the YouTube subscription as genuinely verified.
+  // Manual approve/reject/flag callbacks win because they change status away from pending.
   waitUntil((async () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 5000));
-      const current = await env.DB.prepare("SELECT status FROM telegram_access_submissions WHERE id=?").bind(submissionId).first<{status:string}>();
-      if (!current || current.status !== "pending") return;
-      let verdict = "review_required";
-      let reason = "AI visual screening is unavailable; manual admin review is required.";
-      if (env.GEMINI_API_KEY) {
-        try {
-          const vision = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
-            method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(7500),
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [
-                { text: "Review only the visible pixels. Does this clearly show the exact YouTube handle @masemedia_tv and an active Subscribed state? Return JSON with verdict equal to likely_subscribed, not_subscribed, or unclear, and a short reason. Use likely_subscribed only when both exact handle and active Subscribed state are clearly visible. This is not proof of account ownership or live subscription status." },
-                { inlineData: { mimeType: mime, data: match[2] } }
-              ] }],
-              generationConfig: { temperature: 0, maxOutputTokens: 140, responseMimeType: "application/json" }
-            })
-          });
-          if (!vision.ok) throw new Error("Gemini vision HTTP " + vision.status);
-          const data = await vision.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-          const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim() || "";
-          const result = JSON.parse(raw) as { verdict?: string; reason?: string };
-          if (!["likely_subscribed","not_subscribed","unclear"].includes(String(result.verdict))) throw new Error("Gemini returned an invalid verdict.");
-          verdict = String(result.verdict); reason = String(result.reason || "No visual explanation supplied.").slice(0, 400);
-        } catch (error) { console.error("MaseNet screenshot AI screening failed:", error instanceof Error ? error.message : String(error)); }
-      }
-      const provisional = verdict === "likely_subscribed";
-      const nextStatus = provisional ? "approved_timeout" : "ai_review_required";
-      const changed = await env.DB.prepare("UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now'),ai_verdict=?,ai_reason=?,ai_reviewed_at=datetime('now') WHERE id=? AND status='pending'").bind(nextStatus, verdict, reason, submissionId).run();
+      const changed = await env.DB.prepare(
+        "UPDATE telegram_access_submissions SET status='approved_timeout',reviewed_at=datetime('now'),ai_verdict='timeout_provisional',ai_reason='No manual admin decision within five seconds; provisional access granted automatically.',ai_reviewed_at=datetime('now') WHERE id=? AND status='pending'"
+      ).bind(submissionId).run();
       if (!Number(changed.meta?.changes || 0)) return;
-      // A 24-hour admin warning is a grace period, not an immediate lockout.
-      // If the user already had access when flagged, an inconclusive AI screen
-      // on their replacement screenshot must not revoke that access early.
+
       await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews (
         chat_id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'clear', reason TEXT NOT NULL DEFAULT '',
         flagged_at TEXT, deadline_at TEXT, updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -197,21 +172,53 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       const preserveGraceAccess = !!activeWarning;
       const nextYoutubeOk = preserveGraceAccess ? Number(previousAccess?.youtube_ok || 0) : 0;
       const nextYoutubeProvisional = preserveGraceAccess
-        ? Math.max(Number(previousAccess?.youtube_provisional || 0), provisional ? 1 : 0)
-        : provisional ? 1 : 0;
+        ? Math.max(Number(previousAccess?.youtube_provisional || 0), 1)
+        : 1;
       await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=?,youtube_provisional=?,updated_at=datetime('now') WHERE chat_id=?")
         .bind(nextYoutubeOk, nextYoutubeProvisional, chatId).run();
-      const label = provisional ? "AI VISUAL SCREEN: LIKELY SUBSCRIBED — PROVISIONAL ACCESS ONLY" : "AI VISUAL SCREEN: " + verdict.toUpperCase() + " — MANUAL REVIEW REQUIRED";
-      if (adminMessageId) await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: adminId, message_id: adminMessageId, caption: ["🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW", "", "Applicant: " + fullName, "Telegram: " + username, "Telegram ID: " + chatId, "Submitted: " + submittedAt, "", label, "AI note: " + reason, "", "AI inspected visible pixels only. It did NOT verify a real YouTube subscription or account ownership. Manual admin approval is final."].join("\n") }) }).catch(error => console.error("MaseNet AI caption update failed:", String(error)));
-      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: adminId, text: "🤖 " + label + "\nApplicant: " + fullName + "\nTelegram ID: " + chatId + "\nReason: " + reason + "\n\nAI is advisory only. Manual admin approval is the only way to mark YouTube genuinely verified." }) }).catch(error => console.error("MaseNet admin AI verdict notice failed:", String(error)));
-      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: provisional ? "🟡 Your screenshot passed MaseNet's AI visual plausibility screen. Provisional access is active. IMPORTANT: AI has not verified a real YouTube subscription. Your screenshot remains subject to manual admin review." : "⚠️ MaseNet's AI could not confidently confirm the required subscription from this screenshot. No provisional YouTube access was granted. Your screenshot remains with the admin for manual review; you may submit a clearer genuine screenshot." }) }).catch(error => console.error("MaseNet AI screening user notice failed:", String(error)));
-    } catch (error) { console.error("MaseNet five-second AI screenshot review failed:", error instanceof Error ? error.stack || error.message : String(error)); }
+
+      const label = "5-SECOND TIMEOUT: PROVISIONAL ACCESS GRANTED — NOT GENUINELY VERIFIED";
+      if (adminMessageId) {
+        const caption = [
+          "🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW",
+          "",
+          "Applicant: " + fullName,
+          "Telegram: " + username,
+          "Telegram ID: " + chatId,
+          "Submitted: " + submittedAt,
+          "",
+          label,
+          "No admin action was received within five seconds. This is a provisional timeout decision only; it does NOT prove a genuine YouTube subscription.",
+          "You can still manually approve, reject or flag this submission below."
+        ].join("\n");
+        await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ chat_id: adminId, message_id: adminMessageId, caption })
+        }).catch(error => console.error("MaseNet timeout caption update failed:", String(error)));
+      }
+      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          chat_id: adminId,
+          text: "⏱️ " + label + "\nApplicant: " + fullName + "\nTelegram ID: " + chatId + "\n\nThis is not genuine verification. Your manual Approve, Reject or Flag action can still override the provisional decision."
+        })
+      }).catch(error => console.error("MaseNet admin timeout notice failed:", String(error)));
+      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: "🟡 No admin decision arrived within five seconds, so provisional MaseNet access has been granted automatically. IMPORTANT: this does not mean your YouTube subscription screenshot has been genuinely verified. The admin can still review it and may reject it or require re-verification."
+        })
+      }).catch(error => console.error("MaseNet user timeout notice failed:", String(error)));
+    } catch (error) {
+      console.error("MaseNet five-second provisional access timeout failed:", error instanceof Error ? error.stack || error.message : String(error));
+    }
   })());
 
   return json({
     submitted: true,
     pending: true,
     verified: false,
-    message: "Your screenshot has been sent to the MaseNet admin. If no admin decision is made within five seconds, AI visually screens the screenshot. Only a likely visual match receives provisional access; AI does not verify a real YouTube subscription, and manual admin approval remains final."
+    message: "Your screenshot has been sent to the MaseNet admin. If no admin decision is made within five seconds, provisional access is granted automatically. This does not verify a genuine YouTube subscription; manual admin approval is still required for genuine verification."
   }, 202);
 };
