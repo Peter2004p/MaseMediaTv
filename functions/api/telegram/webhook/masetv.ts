@@ -127,7 +127,37 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   const chatId = msg?.chat?.id;
   const incoming = String(msg?.text || (msg as any)?.caption || "").trim();
   const photo = (msg as any)?.photo as Array<{file_id:string;file_size?:number}> | undefined;
-  if (!chatId || (!incoming && !photo?.length)) return json({ ok: true });
+  if (!chatId || (!incoming && !photo?.length && !(msg as any)?.video && !(msg as any)?.document)) return json({ ok: true });
+  // Messages the owner forwards directly to the bot become a searchable private
+  // reference library. Do not ingest ordinary user forwards or publish them to channels.
+  const senderId = String((msg as any)?.from?.id || "");
+  if (String((msg as any)?.chat?.type || "") === "private" &&
+      env.ADMIN_TELEGRAM_CHAT_ID && senderId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim() &&
+      ((msg as any)?.forward_origin || (msg as any)?.forward_from || (msg as any)?.forward_from_chat || incoming)) {
+    const forwarded = msg as any;
+    const savedText = String(forwarded.text || forwarded.caption || "").trim().slice(0, 12000);
+    const urls = [...savedText.matchAll(/https?:\\/\\/[^\\s<>]+/g)].map((m:any)=>String(m[0]).replace(/[),.]+$/,"")).slice(0,12);
+    const source = forwarded.forward_origin?.chat?.username || forwarded.forward_from_chat?.username || forwarded.forward_origin?.sender_user?.username || "Owner-saved";
+    const title = savedText.split("\\n").map((line:string)=>line.trim()).find(Boolean)?.slice(0,180) || (forwarded.video ? "Forwarded video" : forwarded.document ? "Forwarded file" : "Saved Telegram reference");
+    try {
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_owner_library (
+        id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL DEFAULT '',
+        urls_json TEXT NOT NULL DEFAULT '[]', source TEXT NOT NULL DEFAULT 'Owner-saved',
+        saved_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`).run();
+      const savedId = String(chatId) + ":" + String(forwarded.message_id || Date.now());
+      await env.DB.prepare("INSERT OR REPLACE INTO telegram_owner_library (id,title,content,urls_json,source,saved_at) VALUES (?,?,?,?,?,datetime('now'))")
+        .bind(savedId,title,savedText,JSON.stringify(urls),String(source).slice(0,100)).run();
+      await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+        method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({chat_id:chatId,text:"✅ Saved to your private MaseNet reference library. I’ll include it when users search for this title or its details."})
+      });
+      return json({ok:true,ownerReferenceSaved:true});
+    } catch(error) {
+      console.error("MaseNet owner reference save failed:",error instanceof Error?error.message:String(error));
+      return json({ok:false,error:"Could not save the forwarded reference."},500);
+    }
+  }
 
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
@@ -535,10 +565,29 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     let channelMatches: TelegramChannelPost[] = [];
     try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 5, env.DB), 25000, "Telegram channel search"); }
     catch (error) { console.error("Telegram command channel search failed:", error instanceof Error ? error.message : String(error)); }
-    const channelReply = channelMatches.length ? "\n\nI found matching posts in our official Telegram channels. Tap a button below to open the original post:" : "";
-    searchReplyMarkup = channelMatches.length
-      ? { inline_keyboard: channelMatches.slice(0,5).map(post => [{ text: "🔗 Open " + post.channel + " post", url: post.url }]) }
-      : { inline_keyboard: [[{ text: "📢 MaseMediaTv channel", url: "https://t.me/MaseMediaTv" }], [{ text: "📚 Ongoing Drama List", url: "https://t.me/Ongoing_drama_list" }]] };
+    let ownerMatches: Array<{title:string;content:string;urls:string[];source:string}> = [];
+    try {
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_owner_library (
+        id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL DEFAULT '',
+        urls_json TEXT NOT NULL DEFAULT '[]', source TEXT NOT NULL DEFAULT 'Owner-saved',
+        saved_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`).run();
+      const terms = normalize(query).split(/\\s+/).filter(term=>term.length>2).slice(0,6);
+      if (terms.length) {
+        const clauses = terms.map(()=>"(lower(title) LIKE ? OR lower(content) LIKE ?)").join(" OR ");
+        const values = terms.flatMap(term=>["%"+term+"%","%"+term+"%"]);
+        const rows = await env.DB.prepare("SELECT title,content,urls_json,source FROM telegram_owner_library WHERE "+clauses+" ORDER BY saved_at DESC LIMIT 8")
+          .bind(...values).all<{title:string;content:string;urls_json:string;source:string}>();
+        ownerMatches = (rows.results||[]).map(row=>({title:row.title,content:row.content,source:row.source,urls:(()=>{try{return JSON.parse(row.urls_json||"[]")}catch{return []}})()}));
+      }
+    } catch(error) { console.error("MaseNet owner reference search failed:",error instanceof Error?error.message:String(error)); }
+    const uniquePosts = [...new Map(channelMatches.map(post=>[post.url,post])).values()].slice(0,5);
+    const channelReply = uniquePosts.length ? "\\n\\nI found matching posts in our official Telegram channels. Open the original post or launch the Mini App:" : "";
+    const appButton = miniAppUrl.startsWith("https://") ? [{text:"🎬 Open MaseNet Mini App",web_app:{url:miniAppUrl}}] : [];
+    const postButtons = uniquePosts.map(post => [{ text: "🔗 " + (post.title || post.channel + " post").replace(/\\s+/g," ").slice(0,48), url: post.url }]);
+    const ownerButtons = ownerMatches.flatMap(item=>item.urls.slice(0,2).map(url=>[{text:"📎 "+item.title.slice(0,42),url}]));
+    searchReplyMarkup = {inline_keyboard:[...appButton.map(row=>[row]),...postButtons,...ownerButtons].slice(0,8)};
+    const ownerSummary = ownerMatches.length ? "\\n\\n📌 Saved by MaseNet admin:\\n" + ownerMatches.slice(0,3).map(item=>"• "+item.title+(item.urls.length?" — "+item.urls.length+" saved link(s)":"")).join("\\n") : "";
     if (combined.length || channelMatches.length) {
       reply = (combined.length ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n") : "Not in the catalogue, but I found these official channel posts:") + channelReply;
     } else {
