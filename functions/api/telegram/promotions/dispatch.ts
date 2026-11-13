@@ -254,6 +254,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     sent_at TEXT,
     PRIMARY KEY(campaign_slot,chat_id)
   )`).run();
+  await env.DB.prepare("DELETE FROM telegram_promo_delivery_log WHERE status='sending' AND claimed_at < datetime('now','-10 minutes')").run();
   const batchCount = Math.max(1, Math.ceil(targetList.length / batchSize));
   if (batchIndex >= batchCount) return json({ ok: true, skipped: "batch_complete", campaignSlot, batchIndex, batchCount });
   const batchTargets = targetList.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
