@@ -588,8 +588,13 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const ownerButtons = ownerMatches.flatMap(item=>item.urls.slice(0,2).map(url=>[{text:"📎 "+item.title.slice(0,42),url}]));
     searchReplyMarkup = {inline_keyboard:[...appButton.map(row=>[row]),...postButtons,...ownerButtons].slice(0,8)};
     const ownerSummary = ownerMatches.length ? "\\n\\n📌 Saved by MaseNet admin:\\n" + ownerMatches.slice(0,3).map(item=>"• "+item.title+(item.urls.length?" — "+item.urls.length+" saved link(s)":"")).join("\\n") : "";
-    if (combined.length || channelMatches.length) {
-      reply = (combined.length ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n") : "Not in the catalogue, but I found these official channel posts:") + channelReply;
+    if (combined.length || channelMatches.length || ownerMatches.length) {
+      const baseReply = combined.length
+        ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n")
+        : channelMatches.length
+          ? "Not in the catalogue, but I found these official channel posts:"
+          : "I found this in the references saved by the MaseNet admin:";
+      reply = baseReply + ownerSummary + channelReply;
     } else {
       // Keep a private, date-stamped record so the admin can see demand for missing titles.
       try {
