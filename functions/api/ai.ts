@@ -26,8 +26,44 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const body = await request.json().catch(() => ({})) as { message?: unknown; images?: Array<{data?:unknown;mimeType?:unknown}>; audios?: Array<{data?:unknown;mimeType?:unknown}>; adminMode?: boolean; viewerName?: string; history?: Array<{role?:unknown;content?:unknown}> };
   // Verify admin identity from the secure session cookie; ignore client claims for permissions.
   const authenticatedAdmin = await currentAdmin(request, env);
-  const message = String(body.message || "").split(/\n\nResponse preference:/i)[0].trim().slice(0, 2000);
+  let message = String(body.message || "").split(/\n\nResponse preference:/i)[0].trim().slice(0, 2000);
   const imageInputs = Array.isArray(body.images) ? body.images.slice(0, 3).filter((x) => typeof x?.data === "string" && typeof x?.mimeType === "string" && String(x.mimeType).startsWith("image/") && String(x.data).length <= 5_000_000) as Array<{data:string;mimeType:string}> : [];
+  const audioInputs = Array.isArray(body.audios) ? body.audios.slice(0, 1).filter((x) => typeof x?.data === "string" && typeof x?.mimeType === "string" && String(x.mimeType).startsWith("audio/") && String(x.data).length <= 2_800_000) as Array<{data:string;mimeType:string}> : [];
+
+  // Audio attachments were previously accepted by the UI but silently ignored by this route.
+  // Transcribe them before catalogue search or assistant reasoning so the attachment is actually used.
+  if (audioInputs.length) {
+    if (!env.OPENAI_API_KEY) {
+      return json({ text: "Audio transcription is temporarily unavailable. Please send the audio as text or try again later." }, 503);
+    }
+    try {
+      const audio = audioInputs[0];
+      const binary = atob(audio.data.replace(/^data:audio\/[^;]+;base64,/i, ""));
+      if (binary.length > 2 * 1024 * 1024) return json({ text: "Audio files must be 2 MB or smaller." }, 413);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+      const extension = audio.mimeType.includes("webm") ? "webm" : audio.mimeType.includes("ogg") ? "ogg" : audio.mimeType.includes("wav") ? "wav" : audio.mimeType.includes("mp4") ? "m4a" : audio.mimeType.includes("mpeg") ? "mp3" : "audio";
+      const form = new FormData();
+      form.append("file", new Blob([bytes.buffer as ArrayBuffer], { type: audio.mimeType }), "masenet-audio." + extension);
+      form.append("model", "whisper-1");
+      const transcription = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY },
+        body: form,
+        signal: AbortSignal.timeout(20000)
+      });
+      const result = await transcription.json().catch(() => ({})) as { text?: string; error?: { message?: string } };
+      if (!transcription.ok || !result.text?.trim()) {
+        console.error("MaseNet audio transcription failed:", transcription.status, result.error?.message || "Empty transcription");
+        return json({ text: "I couldn't transcribe that audio. Please try a clearer recording or send the words as text." }, 502);
+      }
+      message = [message, "Audio transcription: " + result.text.trim().slice(0, 4000)].filter(Boolean).join("\n\n");
+    } catch (error) {
+      console.error("MaseNet audio transcription error:", error instanceof Error ? error.message : String(error));
+      return json({ text: "I couldn't process that audio attachment. Please try again or send the words as text." }, 502);
+    }
+  }
+
   if (!message && !imageInputs.length) return json({ text: "Tell me what you would like help with, or attach an image or screenshot." });
 
   // Handle deletion intent before any language model or catalogue-search response.
@@ -158,7 +194,18 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         body: JSON.stringify({
           model: env.OPENAI_MODEL || "gpt-6-luna",
           instructions,
-          input: [...history, { role: "user", content: message }],
+          input: [...history, {
+            role: "user",
+            content: imageInputs.length
+              ? [
+                  { type: "input_text", text: message || "Please inspect the attached image and describe what is visible." },
+                  ...imageInputs.map((item) => ({
+                    type: "input_image",
+                    image_url: "data:" + item.mimeType + ";base64," + item.data.replace(/^data:image\/[^;]+;base64,/i, "")
+                  }))
+                ]
+              : message
+          }],
           max_output_tokens: 700
         })
       });
@@ -174,7 +221,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     }
   }
 
-  if (env.AI) {
+  if (env.AI && !imageInputs.length) {
     let customInstructions = "";
     try {
       const setting = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key='ai_instructions'").first<{value_json:string}>();
@@ -212,6 +259,10 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     } catch (error) {
       console.error("MaseNet Workers AI request failed", error instanceof Error ? error.message : "unknown error");
     }
+  }
+
+  if (imageInputs.length) {
+    return json({ text: "I couldn't inspect the image just now. Please retry the attachment, or describe what you want me to check." }, 503);
   }
 
   const fallback = /hello|hi\b|hey\b|good morning|good evening/i.test(message)
