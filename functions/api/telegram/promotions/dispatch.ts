@@ -15,6 +15,12 @@ interface Env {
 }
 
 type PromoTitle = { name: string; kind: string; year: number | null; description: string; poster_url: string; metadata_json: string };
+
+function isEndedMetadata(metadata: Record<string, unknown>): boolean {
+  const status = String(metadata.status || metadata.releaseStatus || metadata.availabilityStatus || "").trim().toLowerCase();
+  return metadata.ended === true || metadata.isEnded === true || metadata.completed === true || metadata.isCompleted === true ||
+    ["ended", "complete", "completed", "finished", "concluded"].includes(status);
+}
 type NewsItem = { title: string; link: string; summary: string; published: string; key: string; imageUrl: string; chineseDrama: boolean; chineseDramaRelease: boolean };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -217,7 +223,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   )`).run();
 
   const requestUrl = new URL(request.url);
-  const campaignSlot = (requestUrl.searchParams.get("slot") || String(Math.floor(Date.now() / 1800000))).slice(0, 80);
+  const campaignSlot = (requestUrl.searchParams.get("slot") || String(Math.floor(Date.now() / 3600000))).slice(0, 80);
   const batchIndex = Math.max(0, Math.min(20, Number.parseInt(requestUrl.searchParams.get("batch") || "0", 10) || 0));
   const batchSize = Math.max(5, Math.min(20, Number.parseInt(requestUrl.searchParams.get("batchSize") || "15", 10) || 15));
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_campaigns (
@@ -232,6 +238,22 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   if (savedCampaign?.payload_json) {
     try { campaign = JSON.parse(savedCampaign.payload_json) as Campaign; } catch { campaign = null; }
   }
+  // A campaign may have been prepared before an admin marked its title as ended.
+  // Re-check the catalogue immediately before any delivery, and discard stale campaigns.
+  if (campaign?.contentType === "catalogue") {
+    const matching = await env.DB.prepare("SELECT name,metadata_json FROM titles WHERE lower(name)=lower(?)")
+      .bind(campaign.selectedName).all<{name:string;metadata_json:string}>();
+    const stillAvailable = (matching.results || []).length > 0 &&
+      !(matching.results || []).some(row => {
+        let metadata: Record<string, unknown> = {};
+        try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
+        return isEndedMetadata(metadata);
+      });
+    if (!stillAvailable) {
+      await env.DB.prepare("DELETE FROM telegram_promo_campaigns WHERE slot=?").bind(campaignSlot).run();
+      campaign = null;
+    }
+  }
 
   let sentLast24h = 0;
   let catalogueCandidates = 0;
@@ -241,7 +263,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     const [catalogueResult, historyResult, catalogueCooldownResult, recentCountResult] = await Promise.all([
       env.DB.prepare("SELECT name,kind,year,description,poster_url,metadata_json FROM titles ORDER BY created_at DESC LIMIT 60").all<PromoTitle>(),
       env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-7 days')").all<{ title_name: string }>(),
-      env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-30 minutes')").all<{ title_name: string }>(),
+      env.DB.prepare("SELECT title_name FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-1 hour')").all<{ title_name: string }>(),
       env.DB.prepare("SELECT COUNT(*) AS count FROM telegram_promo_history WHERE last_sent_at >= datetime('now','-1 day')").first<{ count: number }>()
     ]);
     const recentlySent = new Set((historyResult.results || []).map(row => row.title_name.toLowerCase()));
@@ -252,11 +274,12 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
       return {
         row,
+        ended: isEndedMetadata(metadata),
         description: String(row.description || metadata.description || "").trim(),
         poster: String(row.poster_url || metadata.posterUrl || "").trim(),
         year: String(row.year || metadata.year || "").trim()
       };
-    }).filter(item => !!String(item.row.name || "").trim());
+    }).filter(item => !!String(item.row.name || "").trim() && !item.ended);
     const news = (await fetchEntertainmentNews()).filter(item => !recentlySent.has(item.key.toLowerCase()));
     sentLast24h = Number(recentCountResult?.count || 0);
     catalogueCandidates = catalogue.length;
