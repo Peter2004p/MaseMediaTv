@@ -4089,3 +4089,22 @@ html body #root .app nav.masenetLiquidDock .dockNotificationBadge{
 .app:has(.maseShortsPage) .maseShortItem{
   touch-action:pan-y!important;
 }
+
+/* Make the Shorts feed swipeable even while a YouTube embed is playing.
+   The cross-origin iframe otherwise captures touch gestures and prevents the
+   parent feed from receiving vertical swipes. Use the side YouTube action for
+   direct player interaction; the feed itself owns swipe navigation. */
+.maseShortsFeed{
+  touch-action:pan-y!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-y:contain!important;
+  scroll-snap-type:y mandatory!important;
+}
+.maseShortItem{
+  touch-action:pan-y!important;
+  scroll-snap-align:start!important;
+  scroll-snap-stop:always!important;
+}
+.maseShortPlayer iframe{
+  pointer-events:none!important;
+}
