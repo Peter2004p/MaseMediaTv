@@ -27,7 +27,7 @@ function cleanText(value: string) {
   return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 function tagValue(xml: string, tag: string) {
-  const match = xml.match(new RegExp("<" + tag + "(?:\\\\s[^>]*)?>([\\\\s\\\\S]*?)</" + tag + ">", "i"));
+  const match = xml.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "i"));
   return match ? cleanText(match[1]) : "";
 }
 async function hashKey(value: string) {
@@ -75,7 +75,7 @@ async function fetchEntertainmentNews(): Promise<NewsItem[]> {
     "https://news.google.com/rss/search?q=upcoming+Chinese+TV+drama+confirmed+release+date&hl=en-US&gl=US&ceid=US:en",
     "https://news.google.com/rss/search?q=Chinese+drama+casting+premiere+release+announcement&hl=en-US&gl=US&ceid=US:en",
     "https://news.google.com/rss/search?q=trending+Chinese+drama+popular+most+watched&hl=en-US&gl=US&ceid=US:en",
-    "https://news.google.com/rss/search?q=best+new+movies+to+watch+streaming+2026&hl=en-US&gl=US&ceid=US:en"
+    "https://news.google.com/rss/search?q=Chinese+drama+new+episodes+airing+schedule+this+week&hl=en-US&gl=US&ceid=US:en"
   ];
   const responses = await Promise.all(feeds.map(async url => {
     try {
@@ -132,7 +132,7 @@ async function generateNewsCaption(env: Env, item: NewsItem) {
   const date = parsedDate && Number.isFinite(parsedDate.getTime()) ? parsedDate.toISOString().slice(0, 10) : "";
   const fallback = `📰 Entertainment update\n\n${item.title}\n\n${summary.slice(0, 360)}\n\nThis is a report from an external publisher. Check the source for the full details and confirmation.`;
   if (!env.GEMINI_API_KEY) return fallback;
-  const prompt = `Create a concise Telegram entertainment-news update from this source only. Headline: ${item.title}. Publisher snippet: ${summary}. Published: ${date || "date not supplied"}. Attribute claims to the report, do not present unconfirmed release dates or casting as confirmed, do not add facts, and do not claim MaseNet has the title. End by inviting readers to discuss it. Max 600 characters, plain text, no URLs.`;
+  const prompt = `Create a concise Telegram entertainment-news update from this source only. Headline: ${item.title}. Publisher snippet: ${summary}. Published: ${date || "date not supplied"}. ${item.chineseDrama ? "Label this clearly as a Chinese drama premiere, release or airing update only if the supplied headline/snippet supports that. " : ""}Attribute claims to the report, do not present unconfirmed release dates or casting as confirmed, do not add facts, and do not claim MaseNet has the title. End by inviting readers to discuss it. Max 600 characters, plain text, no URLs.`;
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.55, maxOutputTokens: 200 } }),
@@ -243,11 +243,12 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       try { caption = await generateNewsCaption(env, chosenNews); }
       catch (error) {
         console.error("Gemini news caption failed:", error instanceof Error ? error.message : String(error));
-        caption = `📰 Entertainment update\\n\\n${chosenNews.title}\\n\\n${chosenNews.summary.slice(0, 360)}\\n\\nThis is an external report. Open the source for full details.`;
+        caption = `${chosenNews.chineseDrama ? "🏮 NEW CHINESE DRAMA UPDATE" : "📰 Entertainment update"}\\n\\n${chosenNews.title}\\n\\n${chosenNews.summary.slice(0, 360)}\\n\\nThis is an external report. Open the source for full details.`;
       }
+      const newsImage = chosenNews.imageUrl || await fetchArticleImage(chosenNews.link);
       campaign = {
-        contentType: "external_news", selectedName: chosenNews.title, historyKey: chosenNews.key,
-        caption, poster: "", sourceUrl: chosenNews.link, facts: chosenNews.title + ". " + chosenNews.summary
+        contentType: chosenNews.chineseDrama ? "chinese_drama_news" : "external_news", selectedName: chosenNews.title, historyKey: chosenNews.key,
+        caption, poster: "", imageUrl: newsImage, sourceUrl: chosenNews.link, facts: chosenNews.title + ". " + chosenNews.summary
       };
     } else if (chosenCatalogue) {
       const selectedName = chosenCatalogue.row.name;
