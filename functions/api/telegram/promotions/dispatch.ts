@@ -44,7 +44,7 @@ function imageFromFeed(block: string): string {
   ];
   for (const candidate of candidates) {
     const value = decodeXml(String(candidate || ""));
-    if (/^https:\\/\\//i.test(value) && /\\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(value)) return value;
+    if (/^https:\/\//i.test(value) && /\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(value)) return value;
   }
   return "";
 }
@@ -70,13 +70,13 @@ async function fetchEntertainmentNews(): Promise<NewsItem[]> {
   }));
   const items: NewsItem[] = [];
   for (const xml of responses) {
-    const blocks = xml.match(/<item(?:\\s[^>]*)?>[\\s\\S]*?<\\/item>/gi) || [];
+    const blocks = xml.match(/<item(?:\s[^>]*)?>[\s\S]*?<\/item>/gi) || [];
     for (const block of blocks) {
       const title = tagValue(block, "title");
       const link = tagValue(block, "link");
       const summary = tagValue(block, "description").slice(0, 500);
       const published = tagValue(block, "pubDate");
-      if (!title || !/^https:\\/\\//i.test(link)) continue;
+      if (!title || !/^https:\/\//i.test(link)) continue;
       if (!/(drama|film|movie|series|premiere|release|casting|chinese|cdrama|c-drama)/i.test(title)) continue;
       const chineseDrama = /(?:chinese|c-?drama|cdrama)/i.test(title + " " + summary);
       const imageUrl = imageFromFeed(block);
