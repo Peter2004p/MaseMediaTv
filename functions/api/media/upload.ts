@@ -36,12 +36,18 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
    pathPrefix = "subtitles";
    if(lowerName.endsWith(".vtt")) type = "text/vtt";
    else type = "application/x-subrip";
+  } else if(folder === "broadcasts") {
+   const imageType = ["image/jpeg","image/png","image/webp","image/gif"].includes(type);
+   const videoType = ["video/mp4","video/webm","video/quicktime"].includes(type);
+   if(!imageType && !videoType) return error("Broadcast media must be JPG, PNG, WebP, GIF, MP4, WebM or MOV.",415);
+   maxBytes = videoType ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+   pathPrefix = "broadcasts";
   } else if(folder === "videos" || folder === "media") {
-   return error("Video-file uploads are disabled. Add movie and drama streams using Bulk URLs or Auto Bulk URLs.",403);
+   return error("Video-file uploads are disabled for movie episodes. Use streaming URLs.",403);
   } else {
    return error("Unsupported upload folder. Use posters or subtitles. Video-file uploads are disabled; use streaming URLs.",400);
   }
-  if(file.size > maxBytes) return error(folder === "subtitles" ? "Subtitle files must be 2MB or smaller." : folder === "posters" ? "Poster images must be compressed below 400KB." : "Video files must be 50MB or smaller here. For larger episodes, paste a direct HTTPS stream URL.",413);
+  if(file.size > maxBytes) return error(folder === "subtitles" ? "Subtitle files must be 2MB or smaller." : folder === "posters" ? "Poster images must be compressed below 400KB." : folder === "broadcasts" ? (type.startsWith("video/") ? "Broadcast videos must be 50MB or smaller." : "Broadcast images must be 10MB or smaller.") : "Video files must be 50MB or smaller here. For larger episodes, paste a direct HTTPS stream URL.",413);
   const path = pathPrefix + "/" + crypto.randomUUID() + "-" + safeName(filename);
   try {
    await env.MEDIA_BUCKET.put(path,file.stream(),{httpMetadata:{contentType:type,cacheControl:"public, max-age=86400"}});
