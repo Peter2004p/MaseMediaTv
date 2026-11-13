@@ -150,15 +150,69 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
   }
 
 
-  // Five-second manual window. If the admin does not act, grant provisional access
-  // automatically. This never marks the YouTube subscription as genuinely verified.
-  // Manual approve/reject/flag callbacks win because they change status away from pending.
+  // Five-second manual window, followed by an AI visual plausibility screen.
+  // A positive AI result grants provisional access only; it never proves a real subscription.
+  // The database compare-and-set ensures a manual admin action always wins a race.
   waitUntil((async () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 5000));
+      const current = await env.DB.prepare(
+        "SELECT status FROM telegram_access_submissions WHERE id=?"
+      ).bind(submissionId).first<{status:string}>();
+      if (!current || current.status !== "pending") return;
+
+      let verdict: "likely_match" | "mismatch" | "unclear" = "unclear";
+      let reason = "AI could not confidently assess the screenshot; manual admin review is required.";
+      let aiAvailable = false;
+      if (env.OPENAI_API_KEY) {
+        try {
+          const aiResponse = await fetch("https://api.openai.com/v1/responses", {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: env.OPENAI_MODEL || "gpt-6-luna",
+              instructions: [
+                "You are a cautious visual screening assistant for a YouTube subscription screenshot. You cannot access YouTube accounts, verify subscriptions on the server, detect every edited image, or prove that the screenshot is genuine.",
+                "Return exactly one JSON object with keys verdict and reason. verdict must be likely_match, mismatch, or unclear.",
+                "Use likely_match ONLY when the screenshot clearly shows the YouTube channel MaseMedia TV or the exact handle @masemedia_tv AND a visible subscribed state such as 'Subscribed'.",
+                "Use mismatch when the screenshot clearly shows a different channel or clearly shows an unsubscribed state such as a visible 'Subscribe' button.",
+                "Use unclear for cropped, blurry, obscured, ambiguous, edited-looking, unsupported-language, or otherwise inconclusive evidence. Never infer hidden details.",
+                "Keep reason under 160 characters. Do not claim the subscription is genuinely verified."
+              ].join("\n"),
+              input: [{
+                role: "user",
+                content: [
+                  { type: "input_text", text: "Assess this submitted screenshot using the rules. Remember: this is only a visual plausibility screen, not real YouTube verification." },
+                  { type: "input_image", image_url: image }
+                ]
+              }],
+              max_output_tokens: 160
+            }),
+            signal: AbortSignal.timeout(12000)
+          });
+          if (!aiResponse.ok) throw new Error("OpenAI visual screening HTTP " + aiResponse.status);
+          const aiData = await aiResponse.json() as { output_text?: string; output?: Array<{content?:Array<{type?:string;text?:string}>}> };
+          const raw = (aiData.output_text || (aiData.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\n")).trim();
+          const parsed = JSON.parse(raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")) as { verdict?: string; reason?: string };
+          if (!["likely_match", "mismatch", "unclear"].includes(String(parsed.verdict))) throw new Error("AI returned an invalid screening verdict");
+          verdict = parsed.verdict as typeof verdict;
+          reason = String(parsed.reason || reason).slice(0, 160);
+          aiAvailable = true;
+        } catch (error) {
+          console.error("MaseNet AI screenshot plausibility screen failed:", error instanceof Error ? error.message : String(error));
+        }
+      } else {
+        console.error("MaseNet AI screenshot plausibility screen skipped: OPENAI_API_KEY is missing.");
+      }
+
+      const provisional = aiAvailable && verdict === "likely_match";
+      const finalStatus = provisional ? "approved_timeout" : "ai_review_required";
+      const aiLabel = provisional
+        ? "AI SCREENING: LIKELY VISUAL MATCH — PROVISIONAL ACCESS ONLY"
+        : "AI SCREENING: MANUAL REVIEW REQUIRED — NO AUTOMATIC VERIFICATION";
       const changed = await env.DB.prepare(
-        "UPDATE telegram_access_submissions SET status='approved_timeout',reviewed_at=datetime('now'),ai_verdict='timeout_provisional',ai_reason='No manual admin decision within five seconds; provisional access granted automatically.',ai_reviewed_at=datetime('now') WHERE id=? AND status='pending'"
-      ).bind(submissionId).run();
+        "UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now'),ai_verdict=?,ai_reason=?,ai_reviewed_at=datetime('now') WHERE id=? AND status='pending'"
+      ).bind(finalStatus, provisional ? "likely_match_provisional" : aiAvailable ? verdict : "review_required", reason, submissionId).run();
       if (!Number(changed.meta?.changes || 0)) return;
 
       await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews (
@@ -169,15 +223,15 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
         env.DB.prepare("SELECT youtube_ok,youtube_provisional FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number}>(),
         env.DB.prepare("SELECT chat_id FROM telegram_access_reviews WHERE chat_id=? AND status='warning' AND deadline_at IS NOT NULL AND datetime(deadline_at)>datetime('now')").bind(chatId).first<{chat_id:string}>()
       ]);
-      const preserveGraceAccess = !!activeWarning;
-      const nextYoutubeOk = preserveGraceAccess ? Number(previousAccess?.youtube_ok || 0) : 0;
-      const nextYoutubeProvisional = preserveGraceAccess
-        ? Math.max(Number(previousAccess?.youtube_provisional || 0), 1)
-        : 1;
-      await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=?,youtube_provisional=?,updated_at=datetime('now') WHERE chat_id=?")
-        .bind(nextYoutubeOk, nextYoutubeProvisional, chatId).run();
+      if (provisional) {
+        await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=1,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
+      } else if (!activeWarning) {
+        await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=0,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
+      } else {
+        // During an existing 24-hour warning, leave the current grace-period access unchanged.
+        console.log("MaseNet AI screenshot requires manual review during active 24-hour grace period:", chatId, previousAccess);
+      }
 
-      const label = "5-SECOND TIMEOUT: PROVISIONAL ACCESS GRANTED — NOT GENUINELY VERIFIED";
       if (adminMessageId) {
         const caption = [
           "🛡️ MASENET — YOUTUBE SUBSCRIPTION REVIEW",
@@ -187,31 +241,34 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
           "Telegram ID: " + chatId,
           "Submitted: " + submittedAt,
           "",
-          label,
-          "No admin action was received within five seconds. This is a provisional timeout decision only; it does NOT prove a genuine YouTube subscription.",
-          "You can still manually approve, reject or flag this submission below."
+          aiLabel,
+          "AI note: " + reason,
+          "IMPORTANT: AI only checks visible screenshot plausibility. It cannot verify a real YouTube account or prove the screenshot is genuine.",
+          "Your manual Approve, Reject or Flag action remains available."
         ].join("\n");
         await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/editMessageCaption", {
           method: "POST", headers: { "content-type": "application/json" },
           body: JSON.stringify({ chat_id: adminId, message_id: adminMessageId, caption })
-        }).catch(error => console.error("MaseNet timeout caption update failed:", String(error)));
+        }).catch(error => console.error("MaseNet AI review caption update failed:", String(error)));
       }
       await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: adminId,
-          text: "⏱️ " + label + "\nApplicant: " + fullName + "\nTelegram ID: " + chatId + "\n\nThis is not genuine verification. Your manual Approve, Reject or Flag action can still override the provisional decision."
+          text: "⏱️ " + aiLabel + "\nApplicant: " + fullName + "\nTelegram ID: " + chatId + "\nAI note: " + reason + "\n\nThis is not genuine YouTube verification. Your manual Approve, Reject or Flag action remains available."
         })
-      }).catch(error => console.error("MaseNet admin timeout notice failed:", String(error)));
+      }).catch(error => console.error("MaseNet admin AI screening notice failed:", String(error)));
       await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: "🟡 No admin decision arrived within five seconds, so provisional MaseNet access has been granted automatically. IMPORTANT: this does not mean your YouTube subscription screenshot has been genuinely verified. The admin can still review it and may reject it or require re-verification."
+          text: provisional
+            ? "🟡 Our AI found that your screenshot appears to show the correct MaseMedia TV YouTube channel in a subscribed state. Provisional MaseNet access is available. IMPORTANT: this is only a visual screening result, not genuine YouTube verification. The admin can still review your screenshot and may require re-verification."
+            : "🕒 Our AI could not confidently confirm the required channel and subscribed state from your screenshot. No automatic verification was granted. The admin can still review it; if needed, submit a clear, genuine screenshot showing @masemedia_tv and the Subscribed state."
         })
-      }).catch(error => console.error("MaseNet user timeout notice failed:", String(error)));
+      }).catch(error => console.error("MaseNet user AI screening notice failed:", String(error)));
     } catch (error) {
-      console.error("MaseNet five-second provisional access timeout failed:", error instanceof Error ? error.stack || error.message : String(error));
+      console.error("MaseNet five-second AI screenshot review failed:", error instanceof Error ? error.stack || error.message : String(error));
     }
   })());
 
