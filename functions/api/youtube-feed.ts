@@ -32,7 +32,28 @@ export const onRequestGet: PagesFunction = async () => {
     lastStatus = 502;
    } catch { lastStatus = 502; }
   }
-  if (!xml) throw new Error("YouTube channel and uploads feeds are unavailable (last HTTP " + (lastStatus || "network error") + ").");
+  if (!xml) {
+   // Keep the MaseMediaTv page useful when YouTube RSS is temporarily unavailable.
+   // This is a real Short supplied by the channel owner; automatic uploads resume
+   // as soon as either public feed becomes reachable again.
+   const fallbackVideoId = "UPRUHUTl1NI";
+   return new Response(JSON.stringify({
+    channelTitle: "MaseMediaTv",
+    channelId: CHANNEL_ID,
+    videos: [{
+     id: fallbackVideoId,
+     title: "Watch MaseMediaTv",
+     published: "",
+     url: "https://www.youtube.com/shorts/" + fallbackVideoId,
+     thumbnail: "https://i.ytimg.com/vi/" + fallbackVideoId + "/hqdefault.jpg"
+    }],
+    feedFallback: true,
+    feedWarning: "The live YouTube uploads feed is temporarily unavailable. Showing a verified channel video instead.",
+    refreshedAt: new Date().toISOString()
+   }), {
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=60, s-maxage=120, stale-while-revalidate=300" }
+   });
+  }
   const entries = xml.match(/<entry(?:\s[^>]*)?>[\s\S]*?<\/entry>/gi) || [];
   const videos = entries.map((entry) => {
    const id = tag(entry, "videoId") || (entry.match(/<id>yt:video:([^<]+)<\/id>/i)?.[1] || "");
