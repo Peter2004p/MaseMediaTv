@@ -8,6 +8,8 @@ type AutoEnv = Env & {
   GEMINI_MODEL?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
+  GROQ_API_KEY?: string;
+  GROQ_MODEL?: string;
   AI?: { run: (model: string, input: unknown) => Promise<any> };
 };
 
@@ -68,7 +70,25 @@ async function makeReply(env: AutoEnv, comment: string, author: string, videoTit
       errors.push(data.error?.message || (response.ok ? "OpenAI returned an empty reply." : "OpenAI HTTP " + response.status));
     } catch (error) { errors.push(error instanceof Error ? error.message : "OpenAI request failed."); }
   }
-  throw new Error(errors.join(" | ") || "No AI provider configured. Configure Gemini or Cloudflare Workers AI.");
+  if (env.GROQ_API_KEY) {
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + env.GROQ_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: env.GROQ_MODEL || "openai/gpt-oss-20b",
+          temperature: 0.35,
+          max_tokens: 150,
+          messages: [{ role: "system", content: system }, { role: "user", content: prompt }]
+        })
+      });
+      const data = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } };
+      const answer = String(data.choices?.[0]?.message?.content || "").trim();
+      if (response.ok && answer) return answer;
+      errors.push(data.error?.message || (response.ok ? "Groq returned an empty reply." : "Groq HTTP " + response.status));
+    } catch (error) { errors.push(error instanceof Error ? error.message : "Groq request failed."); }
+  }
+  throw new Error(errors.join(" | ") || "No AI provider configured. configure at least one AI provider.");
 }
 
 export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) => {
