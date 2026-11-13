@@ -10,6 +10,11 @@ interface Env {
   OPENAI_MODEL?: string;
 }
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
+function isEndedMetadata(metadata: Record<string, unknown>): boolean {
+  const status = String(metadata.status || metadata.releaseStatus || metadata.availabilityStatus || "").trim().toLowerCase();
+  return metadata.ended === true || metadata.isEnded === true || metadata.completed === true || metadata.isCompleted === true ||
+    ["ended", "complete", "completed", "finished", "concluded"].includes(status);
+}
 async function ensureSubscribers(env: Env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
     chat_id TEXT PRIMARY KEY,
@@ -46,6 +51,9 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
     ).all<{id:string;name:string;kind:string;year:number|null;metadata_json:string}>();
     const ranked = (rows.results || []).map((row) => {
       const name = String(row.name || "");
+      let metadata: Record<string, unknown> = {};
+      try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
+      const ended = isEndedMetadata(metadata);
       const normalizedName = name.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
       let episodeText = "";
       const episodeLabels: string[] = [];
@@ -67,8 +75,8 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
       else if (query.includes(normalizedName) && normalizedName.length > 3) score += 15;
       if (haystack.includes(query)) score += 18;
       score += terms.filter((term) => haystack.includes(term)).length * 6;
-      return {id:String(row.id),name,kind:String(row.kind || "Title"),year:row.year == null ? null : Number(row.year),episodeLabels,score};
-    }).filter((item) => item.score >= 6);
+      return {id:String(row.id),name,kind:String(row.kind || "Title"),year:row.year == null ? null : Number(row.year),episodeLabels,score,ended};
+    }).filter((item) => !item.ended && item.score >= 6);
     ranked.sort((a,b)=>b.score-a.score || a.name.localeCompare(b.name));
     return ranked.slice(0,5).map(({score,...item})=>item);
   } catch (error) {
@@ -87,7 +95,11 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
   } catch { /* Optional shared AI instructions. */ }
   try {
     const rows = await env.DB.prepare("SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 80").all<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
-    catalogueContext = (rows.results || []).map((title) => {
+    catalogueContext = (rows.results || []).filter(title => {
+      let metadata: Record<string, unknown> = {};
+      try { metadata = JSON.parse(title.metadata_json || "{}") as Record<string, unknown>; } catch {}
+      return !isEndedMetadata(metadata);
+    }).map((title) => {
       let episodes = "";
       try {
         const metadata = JSON.parse(title.metadata_json || "{}") as {episodes?:Array<{title?:unknown;name?:unknown;season?:unknown;episode?:unknown}>};
