@@ -40,6 +40,28 @@ async function sendMessage(env: Env, chatId: string | number, text: string, repl
 async function sendTyping(env: Env, chatId: string | number) {
   try { await telegramCall(env, "sendChatAction", { chat_id: chatId, action: "typing" }); } catch { /* Typing is optional. */ }
 }
+
+async function reserveTelegramAIRequest(env: Env, chatId: string, limit = 10): Promise<boolean> {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_ai_rate_limits (
+    chat_id TEXT PRIMARY KEY,
+    window_started_at INTEGER NOT NULL,
+    request_count INTEGER NOT NULL DEFAULT 0
+  )`).run();
+  const now = Math.floor(Date.now() / 1000);
+  const row = await env.DB.prepare(`
+    INSERT INTO telegram_ai_rate_limits (chat_id,window_started_at,request_count)
+    VALUES (?,?,1)
+    ON CONFLICT(chat_id) DO UPDATE SET
+      window_started_at=CASE WHEN telegram_ai_rate_limits.window_started_at <= ? THEN excluded.window_started_at ELSE telegram_ai_rate_limits.window_started_at END,
+      request_count=CASE WHEN telegram_ai_rate_limits.window_started_at <= ? THEN 1 ELSE telegram_ai_rate_limits.request_count + 1 END
+    RETURNING request_count
+  `).bind(chatId, now, now - 60, now - 60).first<{request_count:number}>();
+  // Opportunistic cleanup keeps the rate-limit table bounded without a separate cron.
+  if (now % 100 < 10) {
+    await env.DB.prepare("DELETE FROM telegram_ai_rate_limits WHERE window_started_at < ?").bind(now - 86400).run().catch(() => {});
+  }
+  return Number(row?.request_count || 0) <= limit;
+}
 async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:string;name:string;kind:string;year:number|null;episodeLabels:string[]}>> {
   const query = message.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   if (query.length < 2) return [];
@@ -121,6 +143,7 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
   }
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
+    signal: AbortSignal.timeout(18000),
     headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: env.OPENAI_MODEL || "gpt-6-luna",
@@ -362,6 +385,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles." + (channelMatches.length ? "\n\n📢 <b>Also found in our Telegram channel:</b>\n" + channelMatches.map(post => "• <a href=\"" + post.url + "\">" + post.title.replace(/[&<>\"]/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;", "\"":"&quot;" }[ch] || ch)) + "</a>").join("\n") : "");
         await sendMessage(env, chatId, resultText, keyboard, "HTML");
         return json({ ok: true, searchMatches: matches.length });
+      }
+      const allowedAIRequest = await reserveTelegramAIRequest(env, String(chatId), 10).catch((error) => {
+        console.error("Telegram AI rate-limit check failed:", error instanceof Error ? error.message : String(error));
+        return false;
+      });
+      if (!allowedAIRequest) {
+        await sendMessage(env, chatId, "You’re sending messages a little too quickly. Please wait about a minute, then try again.", keyboard);
+        return json({ ok: true, rateLimited: true });
       }
       await sendTyping(env, chatId);
       let answer: string;
