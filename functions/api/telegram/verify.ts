@@ -94,7 +94,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
     "🆔 Telegram user ID: " + chatId,
     "🕒 Submitted: " + submittedAt,
     "",
-    "REVIEW WINDOW: 5 seconds. If you do not act, AI visually screens the screenshot. Provisional access is possible only if the required visible details are clear.",
+    "REVIEW WINDOW: 5 seconds. If you do not act, provisional access is granted automatically. This does not genuinely verify a YouTube subscription.",
     "",
     "The separate admin action message contains the approval buttons.",
     "✅ Approve = manually confirm this screenshot",
@@ -126,7 +126,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
           "Telegram user ID: " + chatId,
           "Submission ID: " + submissionId,
           "",
-          "Choose an action within 5 seconds. After that, AI performs a visual plausibility screen; provisional access is conditional and is never genuine verification."
+          "Choose an action within 5 seconds. If you do not act, provisional access is granted automatically. This is never genuine verification. You can still manually approve, reject or flag afterward."
         ].join("\n"),
         reply_markup: {
           inline_keyboard: [[
