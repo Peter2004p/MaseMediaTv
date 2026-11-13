@@ -129,7 +129,7 @@ export async function searchPublicTelegramChannel(query: string, limit = 5, db?:
         const score = haystack.includes(q) ? 100 : matched >= required ? Math.round((matched / terms.length) * 80) : 0;
         const date = block.match(/<time[^>]+datetime="([^"]+)"/i)?.[1];
         const url = "https://t.me/" + channel.username + "/" + postId;
-        const title = postText.split("\\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || channel.label + " channel post";
+        const title = postText.split("\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || channel.label + " channel post";
         if (db) {
           const key = channel.username.toLowerCase() + ":" + postId;
           await db.prepare(`INSERT INTO telegram_channel_posts (post_id,title,post_text,post_date,post_url,source_channel,updated_at)
