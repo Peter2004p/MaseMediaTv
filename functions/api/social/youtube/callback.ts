@@ -1,6 +1,6 @@
 import { Env, json, currentAdmin } from "../../auth/_shared";
 
-type SocialEnv = Env & { YOUTUBE_CLIENT_ID?: string; YOUTUBE_CLIENT_SECRET?: string };
+type SocialEnv = Env & { YOUTUBE_CLIENT_ID?: string; YOUTUBE_CLIENT_SECRET?: string; YOUTUBE_TOKEN_ENCRYPTION_KEY?: string };
 const hash = async (value: string) => {
   const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return [...new Uint8Array(bytes)].map(x => x.toString(16).padStart(2,"0")).join("");
