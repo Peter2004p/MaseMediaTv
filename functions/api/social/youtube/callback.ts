@@ -39,9 +39,9 @@ export const onRequestGet: PagesFunction<SocialEnv> = async ({ request, env }) =
   let rawKey: Uint8Array;
   try { rawKey = Uint8Array.from(atob(encryptionKey), c => c.charCodeAt(0)); } catch { return fail("YOUTUBE_TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key."); }
   if (rawKey.length !== 32) return fail("YOUTUBE_TOKEN_ENCRYPTION_KEY must decode to exactly 32 bytes.");
-  const key = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["encrypt"]);
+  const key = await crypto.subtle.importKey("raw", rawKey.slice().buffer as ArrayBuffer, "AES-GCM", false, ["encrypt"]);
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = await crypto.subtle.encrypt({ name:"AES-GCM", iv }, key, new TextEncoder().encode(tokens.refresh_token));
+  const encrypted = await crypto.subtle.encrypt({ name:"AES-GCM", iv: iv.slice().buffer as ArrayBuffer }, key, new TextEncoder().encode(tokens.refresh_token));
   const packed = btoa(String.fromCharCode(...iv,...new Uint8Array(encrypted)));
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS social_connections (
     provider TEXT PRIMARY KEY, channel_id TEXT NOT NULL, channel_title TEXT NOT NULL,
