@@ -97,9 +97,12 @@ async function fetchEntertainmentNews(): Promise<NewsItem[]> {
       if (!title || !/^https:\/\//i.test(link)) continue;
       if (!/(drama|film|movie|series|premiere|release|casting|chinese|cdrama|c-drama)/i.test(title)) continue;
       const chineseDrama = /(?:chinese|c-?drama|cdrama)/i.test(title + " " + summary);
+      const releaseNotice = /(?:premiere|premieres|premiered|release date|released|starts airing|start airing|now airing|on air|airs on|debut(?:s|ed)?|streaming now|available to stream|broadcast(?:s|ing)?)/i.test(title + " " + summary);
+      const publishedMs = Date.parse(published);
+      if (Number.isFinite(publishedMs) && (Date.now() - publishedMs > 30 * 86400000 || publishedMs > Date.now() + 86400000)) continue;
       const imageUrl = imageFromFeed(block);
       const key = "news:" + await hashKey(link);
-      items.push({ title, link, summary, published, key, imageUrl, chineseDrama });
+      items.push({ title, link, summary, published, key, imageUrl, chineseDrama, chineseDramaRelease: chineseDrama && releaseNotice });
     }
   }
   return Array.from(new Map(items.map(item => [item.key, item])).values())
