@@ -584,7 +584,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const uniquePosts = [...new Map(channelMatches.map(post=>[post.url,post])).values()].slice(0,5);
     const channelReply = uniquePosts.length ? "\\n\\nI found matching posts in our official Telegram channels. Open the original post or launch the Mini App:" : "";
     const appButton = miniAppUrl.startsWith("https://") ? [{text:"🎬 Open MaseNet Mini App",web_app:{url:miniAppUrl}}] : [];
-    const postButtons = uniquePosts.map(post => [{ text: "🔗 " + (post.title || post.channel + " post").replace(/\\s+/g," ").slice(0,48), url: post.url }]);
+    const postButtons = uniquePosts.map(post => [{ text: "🔗 " + (post.title || post.channel + " post").replace(/\s+/g," ").slice(0,48), url: post.url }]);
     const ownerButtons = ownerMatches.flatMap(item=>item.urls.slice(0,2).map(url=>[{text:"📎 "+item.title.slice(0,42),url}]));
     searchReplyMarkup = {inline_keyboard:[...appButton.map(row=>[row]),...postButtons,...ownerButtons].slice(0,8)};
     const ownerSummary = ownerMatches.length ? "\\n\\n📌 Saved by MaseNet admin:\\n" + ownerMatches.slice(0,3).map(item=>"• "+item.title+(item.urls.length?" — "+item.urls.length+" saved link(s)":"")).join("\\n") : "";
