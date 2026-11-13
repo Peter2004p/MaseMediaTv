@@ -13,7 +13,7 @@ interface Env {
 }
 
 type PromoTitle = { name: string; kind: string; year: number | null; description: string; poster_url: string; metadata_json: string };
-type NewsItem = { title: string; link: string; summary: string; published: string; key: string; imageUrl: string; chineseDrama: boolean };
+type NewsItem = { title: string; link: string; summary: string; published: string; key: string; imageUrl: string; chineseDrama: boolean; chineseDramaRelease: boolean };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 const MINI_APP_URL = "https://t.me/MaseTv_Bot?startapp=home";
@@ -85,7 +85,7 @@ async function fetchEntertainmentNews(): Promise<NewsItem[]> {
     }
   }
   return Array.from(new Map(items.map(item => [item.key, item])).values())
-    .sort((a,b) => Number(b.chineseDrama)-Number(a.chineseDrama) || Date.parse(b.published || "")-Date.parse(a.published || ""));
+    .sort((a,b) => Number(b.chineseDramaRelease)-Number(a.chineseDramaRelease) || Number(b.chineseDrama)-Number(a.chineseDrama) || Date.parse(b.published || "")-Date.parse(a.published || ""));
 }
 
 async function generateCatalogueCaption(env: Env, title: string, description: string, kind: string, year: string) {
@@ -212,7 +212,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     catalogueCandidates = catalogue.length;
     newsCandidates = news.length;
     const preferNews = sentLast24h % 2 === 1;
-    const chosenNews = news.find(item => item.chineseDrama) || ((preferNews ? news[0] : undefined) || news[0]);
+    const chosenNews = news.find(item => item.chineseDramaRelease) || news.find(item => item.chineseDrama) || ((preferNews ? news[0] : undefined) || news[0]);
     const chosenCatalogue = (preferNews ? undefined : catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()))) || catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()));
     if (!chosenNews && !chosenCatalogue) {
       return json({ ok: true, skipped: "no_fresh_items", sentLast24h, catalogueCandidates, catalogueRecentlySpotlighted, newsCandidates, newsFeedItems: news.length, geminiConfigured: !!env.GEMINI_API_KEY });
