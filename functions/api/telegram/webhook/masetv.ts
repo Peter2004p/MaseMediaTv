@@ -411,7 +411,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     // Only search indexed Telegram posts when the message actually asks about catalogue,
     // releases, news or channel updates. Previously every ordinary question such as
     // "hey AI, how are you?" waited on this search and could add 12 seconds of avoidable delay.
-    const needsChannelContext = needsCatalogue || /\\b(?:news|updates?|announcements?|posts?|trailers?|release date|premiere)\\b/i.test(prompt);
+    const needsChannelContext = needsCatalogue || /\b(?:news|updates?|announcements?|posts?|trailers?|release date|premiere)\b/i.test(prompt);
     if (needsChannelContext && prompt.trim().length >= 3) {
       try {
         const channelHits = await withTimeout(searchPublicTelegramChannel(prompt, 4, env.DB), 6000, "Telegram channel search");
