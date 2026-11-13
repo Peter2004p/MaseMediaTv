@@ -4,7 +4,7 @@ import { api, auth, image } from './cloudflare-client';
 import { ProfileManager, WatchPartyPage } from './AccountFeatures';
 const Player = lazy(() => import('./FlootPlayer'));
 const PlayerLoading = () => <div role="status" aria-live="polite" style={{ minHeight: 180, display: "grid", placeItems: "center", borderRadius: 16, background: "#08090d", color: "#e8c77a", fontSize: 14 }}>Loading video player…</div>;
-import { House, Clapperboard, Search, UserRound, SlidersHorizontal, Play, Download, Plus, X, Send, ShieldCheck, Check, ArrowLeft, Upload, Link2, Bot, Trash2, ChevronRight, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Subtitles, RotateCcw, RotateCw, ImagePlus, LogOut, Save, Eye, EyeOff, Film, LayoutDashboard, Paperclip, Palette, Mic, Copy, ExternalLink, RefreshCw, Youtube, Facebook, Music2, Share2, Sparkles, Bell, Bookmark, CheckCheck } from 'lucide-react';
+import { House, Clapperboard, Search, UserRound, SlidersHorizontal, Play, Download, Plus, X, Send, ShieldCheck, Check, ArrowLeft, Upload, Link2, Bot, Trash2, ChevronRight, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Subtitles, RotateCcw, RotateCw, ImagePlus, LogOut, Save, Eye, EyeOff, Film, LayoutDashboard, Paperclip, Palette, Mic, Copy, ExternalLink, RefreshCw, Youtube, Facebook, Music2, Share2, MessageCircle, Sparkles, Bell, Bookmark, CheckCheck } from 'lucide-react';
 
 type Quality = '480p'|'720p'|'1080p';
 type StreamVariant = { quality:Quality; streamUrl:string; streamPath?:string; mimeType?:string; downloadUrl?:string; downloadPath?:string; subtitleTracks?:{label:string;url:string;path?:string;lang?:string;mimeType?:string}[] };
@@ -298,7 +298,7 @@ export default function App(){
    
   </div>
  </main>
- const content=route==='#/watch-party'?<WatchPartyPage titles={titles} profileId={activeProfileId} displayName={viewer?.name||'MaseNet viewer'} go={go}/>:route==='#/history'?<HistoryPage titles={titles} progress={progress} completed={completed} setProgress={setProgress} setCompleted={setCompleted} go={go}/>:route==='#/downloads'?<DownloadsPage titles={titles} go={go}/>:route==='#/notifications'?<NotificationsPage items={notificationItems} readIds={readNotificationIds} setReadIds={updateNotificationReads} go={go}/>:route==='#/my-list'?<WatchlistPage titles={myList} setSaved={setSaved} go={go}/>:route.startsWith('#/title/')?(selected?(selected.episodes?.length?<Detail title={selected} go={go} profileId={activeProfileId} progress={progress} setProgress={setProgress} positions={positions} setPositions={setPositions} lastEpisodes={lastEpisodes} setLastEpisodes={setLastEpisodes} completed={completed} setCompleted={setCompleted} saved={saved} setSaved={setSaved}/>:<main className="page detail"><button className="back" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Library</button><section className="detailHero"><Poster title={selected}/><div><small className="eyebrow">{selected.type} · {selected.year}</small><h1>{selected.name}</h1><p>{selected.description||'No description has been added yet.'}</p><div className="chips"><span>{selected.quality}</span><span>{selected.type==='Drama'?'Drama library':'Movie library'}</span></div></div></section><section className="emptyState"><h2>No playable episodes yet</h2><p>This title is in your library, but it has no episode/video URL saved. An admin can add the episode links in the dashboard.</p></section></main>):<main className="page detail"><section className="emptyState"><h2>{titlesLoaded?'Title not found':'Loading video…'}</h2><p>{titlesLoaded?'This title could not be matched to the catalog. Return to the library and open it again.':'MaseNet is loading the title and its playback details.'}</p><button className="secondary" onClick={()=>go('#/home')}><ArrowLeft size={14}/> Back to library</button></section></main>):route==='#/youtube'?<YouTubeChannelPage go={go}/>:route==='#/admin' && !canAdmin?<Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} saved={saved} setSaved={setSaved} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} catalogError={catalogError} broadcasts={broadcasts} requestMissingTitle={requestMissingTitle}/>:(route==='#/admin-statistics'||route==='#/admin') && canAdmin?<Admin isOwner={isAdmin} restricted={isBulkAdmin} titles={titles} onCreate={createTitle} onUpdate={updateTitle} onDelete={deleteTitle} onEpisodeUpdate={updateEpisode} onEpisodeDelete={deleteEpisode} tab={isBulkAdmin?'bulkUrl':route==='#/admin-statistics'?'statistics':adminTab} setTab={setAdminTab} rows={homepageRows} setRows={setHomepageRows} saveRows={saveRows} broadcasts={broadcasts} setBroadcasts={setBroadcasts} heroSettings={heroSettings} setHeroSettings={setHeroSettings} telegramStatus={telegramStatus} setTelegramStatus={setTelegramStatus}/>:<><Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} saved={saved} setSaved={setSaved} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} broadcasts={broadcasts} catalogError={catalogError} requestMissingTitle={requestMissingTitle}/></>;
+ const content=route==='#/watch-party'?<WatchPartyPage titles={titles} profileId={activeProfileId} displayName={viewer?.name||'MaseNet viewer'} go={go}/>:route==='#/history'?<HistoryPage titles={titles} progress={progress} completed={completed} setProgress={setProgress} setCompleted={setCompleted} go={go}/>:route==='#/downloads'?<DownloadsPage titles={titles} go={go}/>:route==='#/notifications'?<NotificationsPage items={notificationItems} readIds={readNotificationIds} setReadIds={updateNotificationReads} go={go}/>:route==='#/my-list'?<WatchlistPage titles={myList} setSaved={setSaved} go={go}/>:route.startsWith('#/title/')?(selected?(selected.episodes?.length?<Detail title={selected} go={go} profileId={activeProfileId} progress={progress} setProgress={setProgress} positions={positions} setPositions={setPositions} lastEpisodes={lastEpisodes} setLastEpisodes={setLastEpisodes} completed={completed} setCompleted={setCompleted} saved={saved} setSaved={setSaved}/>:<main className="page detail"><button className="back" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Library</button><section className="detailHero"><Poster title={selected}/><div><small className="eyebrow">{selected.type} · {selected.year}</small><h1>{selected.name}</h1><p>{selected.description||'No description has been added yet.'}</p><div className="chips"><span>{selected.quality}</span><span>{selected.type==='Drama'?'Drama library':'Movie library'}</span></div></div></section><section className="emptyState"><h2>No playable episodes yet</h2><p>This title is in your library, but it has no episode/video URL saved. An admin can add the episode links in the dashboard.</p></section></main>):<main className="page detail"><section className="emptyState"><h2>{titlesLoaded?'Title not found':'Loading video…'}</h2><p>{titlesLoaded?'This title could not be matched to the catalog. Return to the library and open it again.':'MaseNet is loading the title and its playback details.'}</p><button className="secondary" onClick={()=>go('#/home')}><ArrowLeft size={14}/> Back to library</button></section></main>):route==='#/youtube'?<YouTubeChannelPage go={go} viewer={viewer} activeProfileId={activeProfileId}/>:route==='#/admin' && !canAdmin?<Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} saved={saved} setSaved={setSaved} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} catalogError={catalogError} broadcasts={broadcasts} requestMissingTitle={requestMissingTitle}/>:(route==='#/admin-statistics'||route==='#/admin') && canAdmin?<Admin isOwner={isAdmin} restricted={isBulkAdmin} titles={titles} onCreate={createTitle} onUpdate={updateTitle} onDelete={deleteTitle} onEpisodeUpdate={updateEpisode} onEpisodeDelete={deleteEpisode} tab={isBulkAdmin?'bulkUrl':route==='#/admin-statistics'?'statistics':adminTab} setTab={setAdminTab} rows={homepageRows} setRows={setHomepageRows} saveRows={saveRows} broadcasts={broadcasts} setBroadcasts={setBroadcasts} heroSettings={heroSettings} setHeroSettings={setHeroSettings} telegramStatus={telegramStatus} setTelegramStatus={setTelegramStatus}/>:<><Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} saved={saved} setSaved={setSaved} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} broadcasts={broadcasts} catalogError={catalogError} requestMissingTitle={requestMissingTitle}/></>;
 
  return <div className={`app${inTelegramMiniApp?' telegram-mini-app':''} ios27-universal theme-${theme} experience-${experienceMode} motion-${motionProfile} density-${uiDensity} glass-${glassIntensity}${reduceMotion?' reduce-motion':''}${navAutoHidden?' nav-auto-hidden':''}${panel?' nav-overlay-open':''}`}>
   {inTelegramMiniApp&&telegramGate&&<div role="dialog" aria-modal="true" aria-label="MaseNet access verification" style={{position:'fixed',inset:0,zIndex:99999,background:'radial-gradient(ellipse at 50% -10%,rgba(61,130,255,.22),transparent 48%),#070b13',color:'#f5f7fb',display:'flex',alignItems:'center',justifyContent:'center',padding:'max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom))',overflowY:'auto',fontFamily:'inherit'}}>
@@ -717,13 +717,20 @@ function Reels({titles,go,saved,setSaved,viewerName,viewerId}:{titles:Title[];go
  </main>
 }
 
-function YouTubeChannelPage({go}:{go:(route:string)=>void}){
+function YouTubeChannelPage({go,viewer,activeProfileId}:{go:(route:string)=>void;viewer:{userId:string;name?:string;picture?:string;provider:'google'|'telegram'}|null;activeProfileId:string}){
  const [videos,setVideos]=useState<Array<{id:string;title:string;published:string;url:string;thumbnail:string}>>([]);
  const [channelTitle,setChannelTitle]=useState('MaseMediaTv');
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
  const [activeIndex,setActiveIndex]=useState(0);
  const [muted,setMuted]=useState(false);
+ const [commentsOpen,setCommentsOpen]=useState(false);
+ const [comments,setComments]=useState<Array<{id:string;text:string;displayName:string;avatar:string;createdAt:string}>>([]);
+ const [commentsCount,setCommentsCount]=useState(0);
+ const [commentDraft,setCommentDraft]=useState('');
+ const [commentBusy,setCommentBusy]=useState(false);
+ const [commentNotice,setCommentNotice]=useState('');
+ const [profile,setProfile]=useState<{id:string;name:string;avatar:string}|null>(null);
  const refresh=async()=>{
   try{
    const response=await fetch('/api/youtube-feed',{headers:{Accept:'application/json'},cache:'no-store'});
@@ -751,10 +758,58 @@ function YouTubeChannelPage({go}:{go:(route:string)=>void}){
   const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void load()},5*60*1000);
   return()=>{alive=false;window.clearInterval(timer)};
  },[]);
+ useEffect(()=>{
+  let alive=true;
+  if(!viewer?.userId||!activeProfileId){setProfile(null);return()=>{alive=false};}
+  fetch('/api/profiles',{credentials:'same-origin'}).then(r=>r.json()).then(data=>{
+   if(!alive)return;
+   const p=(Array.isArray(data.profiles)?data.profiles:[]).find((item:{id:string;name:string;avatar?:string})=>item.id===activeProfileId);
+   setProfile(p?{id:p.id,name:p.name,avatar:p.avatar||''}:null);
+  }).catch(()=>{if(alive)setProfile(null)});
+  return()=>{alive=false};
+ },[viewer?.userId,activeProfileId]);
+ const activeVideo=videos[activeIndex];
+ const loadComments=async(videoId:string)=>{
+  try{
+   const response=await fetch('/api/youtube-comments?videoId='+encodeURIComponent(videoId),{credentials:'same-origin',cache:'no-store'});
+   const data=await response.json();
+   if(!response.ok)throw new Error(data?.error||'Comments could not load.');
+   setComments(Array.isArray(data.comments)?data.comments:[]);
+   setCommentsCount(Number(data.count)||0);
+   setCommentNotice('');
+  }catch(e){setCommentNotice(e instanceof Error?e.message:'Comments could not load.');}
+ };
+ useEffect(()=>{
+  if(!activeVideo)return;
+  let alive=true;
+  const load=async()=>{try{
+   const response=await fetch('/api/youtube-comments?videoId='+encodeURIComponent(activeVideo.id),{credentials:'same-origin',cache:'no-store'});
+   const data=await response.json();
+   if(!response.ok)throw new Error('Comments unavailable');
+   if(alive){setComments(Array.isArray(data.comments)?data.comments:[]);setCommentsCount(Number(data.count)||0);}
+  }catch{if(alive&&commentsOpen)setCommentNotice('Comments are temporarily unavailable.');}};
+  void load();
+  const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void load()},5000);
+  return()=>{alive=false;window.clearInterval(timer)};
+ },[activeVideo?.id,commentsOpen]);
  const onFeedScroll=(event:{currentTarget:HTMLDivElement})=>{
   const el=event.currentTarget;
   const next=Math.max(0,Math.min(videos.length-1,Math.round(el.scrollTop/Math.max(1,el.clientHeight))));
-  if(next!==activeIndex){setActiveIndex(next);setMuted(false);}
+  if(next!==activeIndex){setActiveIndex(next);setMuted(false);setCommentsOpen(false);}
+ };
+ const postComment=async()=>{
+  if(!activeVideo||!viewer?.userId||!profile){setCommentNotice('Sign in and select a profile to comment.');return;}
+  const text=commentDraft.trim();
+  if(!text||commentBusy)return;
+  setCommentBusy(true);setCommentNotice('');
+  try{
+   const response=await fetch('/api/youtube-comments',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoId:activeVideo.id,profileId:profile.id,text})});
+   const data=await response.json();
+   if(!response.ok)throw new Error(data?.error||'Your comment could not be posted.');
+   setCommentDraft('');
+   await loadComments(activeVideo.id);
+  }catch(e){setCommentNotice(e instanceof Error?e.message:'Your comment could not be posted.');}
+  finally{setCommentBusy(false);}
  };
  return <main className="maseShortsPage">
   <header className="maseShortsTop">
@@ -763,7 +818,7 @@ function YouTubeChannelPage({go}:{go:(route:string)=>void}){
    <a href="https://www.youtube.com/channel/UCT8yUxTnY1d-arihLSCJfEA" target="_blank" rel="noopener noreferrer" aria-label="Subscribe to MaseMediaTv on YouTube"><Youtube size={22} fill="currentColor"/></a>
   </header>
   {error&&<div className="maseShortsError" role="status">{error}<button onClick={()=>{setLoading(true);void refresh()}}>Retry</button></div>}
-  {loading?<div className="maseShortsLoading"><span className="maseYouTubeSpinner"/>Loading videos…</div>:videos.length?<div className="maseShortsFeed" onScroll={onFeedScroll} aria-label="Scroll through MaseMediaTv videos">
+  {loading?<div className="maseShortsLoading"><span className="maseYouTubeSpinner"/>Loading videos…</div>:videos.length?<div className="maseShortsFeed" onScroll={onFeedScroll} aria-label="Swipe through MaseMediaTv videos">
    {videos.map((video,index)=><section className="maseShortItem" key={video.id}>
     <div className="maseShortPlayer">
      {index===activeIndex?<iframe src={'https://www.youtube-nocookie.com/embed/'+encodeURIComponent(video.id)+'?autoplay=1&mute='+(muted?'1':'0')+'&playsinline=1&rel=0&modestbranding=1'} title={video.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="eager"/>:<img src={video.thumbnail} alt="" loading="lazy"/>}
@@ -771,17 +826,34 @@ function YouTubeChannelPage({go}:{go:(route:string)=>void}){
     <div className="maseShortTopShade"/>
     <div className="maseShortMeta"><div className="maseShortChannel"><img src="/masemediatv-logo.svg" alt=""/><b>@MaseMediaTv</b><span>·</span><small>{video.published?new Date(video.published).toLocaleDateString():'Latest upload'}</small></div><h2>{video.title}</h2><p>More dramas, movie moments and updates from MaseMediaTv.</p></div>
     <div className="maseShortActions">
-     <span className="maseShortSoundOn" aria-label="Sound enabled">🔊<small>Sound on</small></span>
+     <button type="button" onClick={()=>{setCommentsOpen(true);void loadComments(video.id)}} aria-label="Open comments"><MessageCircle size={25}/><small>{index===activeIndex?commentsCount:0} Comments</small></button>
      <a href={video.url} target="_blank" rel="noopener noreferrer" aria-label="Open this video on YouTube"><Youtube size={25} fill="currentColor"/><small>YouTube</small></a>
      <button type="button" onClick={()=>{if(navigator.share)void navigator.share({title:video.title,url:video.url}).catch(()=>{});else window.open(video.url,'_blank','noopener,noreferrer')}} aria-label="Share video"><Share2 size={24}/><small>Share</small></button>
     </div>
     <span className="maseShortCounter">{index+1} / {videos.length}</span>
    </section>)}
   </div>:<div className="maseShortsEmpty"><Youtube size={36}/><h2>No videos available</h2><p>Public uploads from the MaseMediaTv channel will appear here automatically.</p><a href="https://www.youtube.com/channel/UCT8yUxTnY1d-arihLSCJfEA" target="_blank" rel="noopener noreferrer">Visit YouTube channel</a></div>}
+  {commentsOpen&&activeVideo&&<div className="maseCommentsBackdrop" onClick={()=>setCommentsOpen(false)}>
+   <section className="maseCommentsPanel" role="dialog" aria-modal="true" aria-label="Video comments" onClick={e=>e.stopPropagation()}>
+    <div className="maseCommentsHandle"/>
+    <header><div><strong>Comments</strong><span>{commentsCount.toLocaleString()} comments · Live</span></div><button type="button" onClick={()=>setCommentsOpen(false)} aria-label="Close comments"><X size={21}/></button></header>
+    <div className="maseCommentsList">
+     {comments.length?comments.map(item=><article className="maseComment" key={item.id}>
+      {item.avatar?<img src={item.avatar} alt=""/>:<span className="maseCommentAvatar">{(item.displayName||'M').slice(0,1).toUpperCase()}</span>}
+      <div><b>{item.displayName}</b><p>{item.text}</p><small>{item.createdAt?new Date(item.createdAt.replace(' ','T')+'Z').toLocaleString():''}</small></div>
+     </article>):<div className="maseCommentsEmpty">No comments yet. Be the first to join the conversation.</div>}
+    </div>
+    <form className="maseCommentComposer" onSubmit={e=>{e.preventDefault();void postComment()}}>
+     {profile?.avatar?<img src={profile.avatar} alt=""/>:<span className="maseCommentAvatar">{(profile?.name||viewer?.name||'M').slice(0,1).toUpperCase()}</span>}
+     <div className="maseCommentComposerInput"><small>{viewer?.userId?(profile?.name||'Choose a profile'):'Sign in required'}</small><input value={commentDraft} onChange={e=>setCommentDraft(e.target.value)} maxLength={1000} placeholder={viewer?.userId?'Add a public comment…':'Sign in to comment'} disabled={!viewer?.userId||!profile||commentBusy}/></div>
+     <button type="submit" disabled={!viewer?.userId||!profile||!commentDraft.trim()||commentBusy} aria-label="Post comment">{commentBusy?'…':<Send size={19}/>}</button>
+    </form>
+    {commentNotice&&<div className="maseCommentNotice" role="status">{commentNotice}</div>}
+   </section>
+  </div>}
   <button className="maseShortsRefresh" type="button" onClick={()=>{setLoading(true);void refresh()}} aria-label="Refresh videos"><RefreshCw size={17}/></button>
  </main>;
 }
-
 function Detail({title,go,profileId,progress,setProgress,positions,setPositions,lastEpisodes,setLastEpisodes,completed,setCompleted,saved,setSaved}:{title:Title;go:(x:string)=>void;profileId:string;progress:Record<string,number>;setProgress:(x:Record<string,number>)=>void;positions:Record<string,number>;setPositions:(x:Record<string,number>|((current:Record<string,number>)=>Record<string,number>))=>void;lastEpisodes:Record<string,string>;setLastEpisodes:(x:Record<string,string>|((current:Record<string,string>)=>Record<string,string>))=>void;completed:Record<string,boolean>;setCompleted:(x:Record<string,boolean>)=>void;saved:string[];setSaved:(x:string[])=>void}){
  const seasons=[...new Set(title.episodes.map(e=>e.season))];
  const initialEpisode=title.episodes.find(item=>item.id===lastEpisodes[title.id])||title.episodes[0];
