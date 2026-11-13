@@ -57,7 +57,7 @@ export const onRequestPost: PagesFunction<ProfileEnv> = async ({request,env}) =>
   try {
     const userId=await resolveUser(request,env); if(!userId)return json({error:"Sign in to manage profiles."},401);
     const raw=await request.text(); if(raw.length>5000)return json({error:"Request too large."},413);
-    const body=JSON.parse(raw||"{}") as {action?:string;id?:string;name?:string;avatar?:string;isKids?:boolean;pin?:string};
+    const body=JSON.parse(raw||"{}") as {action?:string;id?:string;name?:string;avatar?:string;isKids?:boolean;pin?:string;currentPin?:string};
     await ensure(env.DB,userId);
     if(body.action==="create"){
       const count=await env.DB.prepare("SELECT COUNT(*) AS n FROM user_profiles WHERE user_id=?").bind(userId).first<{n:number}>();
@@ -67,6 +67,13 @@ export const onRequestPost: PagesFunction<ProfileEnv> = async ({request,env}) =>
       const id=crypto.randomUUID().replace(/-/g,"");
       const pin=String(body.pin||"").trim();
       if(pin && !/^\d{4,6}$/.test(pin))return json({error:"Profile PIN must be 4 to 6 digits."},400);
+      const existingProfile=await env.DB.prepare("SELECT pin_hash FROM user_profiles WHERE id=? AND user_id=?").bind(id,userId).first<{pin_hash:string|null}>();
+      if(!existingProfile)return json({error:"Profile not found."},404);
+      if(pin && existingProfile.pin_hash){
+        const currentPin=String(body.currentPin||"").trim();
+        if(!/^\d{4,6}$/.test(currentPin) || await sha256("masenet-profile-pin:"+id+":"+currentPin)!==existingProfile.pin_hash)
+          return json({error:"Enter the current profile PIN before changing it."},403);
+      }
       const pinHash=pin?await sha256("masenet-profile-pin:"+id+":"+pin):null;
       try { await env.DB.prepare("INSERT INTO user_profiles(id,user_id,name,avatar,is_kids,pin_hash) VALUES(?,?,?,?,?,?)").bind(id,userId,name,String(body.avatar||"").slice(0,300),body.isKids?1:0,pinHash).run(); }
       catch { return json({error:"A profile with that name already exists."},409); }
