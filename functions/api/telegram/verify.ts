@@ -205,7 +205,7 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
         console.error("MaseNet AI screenshot plausibility screen skipped: OPENAI_API_KEY is missing.");
       }
 
-      const provisional = aiAvailable && verdict === "likely_match";
+      const provisional = aiAvailable && String(verdict) === "likely_match";
       const finalStatus = provisional ? "approved_timeout" : "ai_review_required";
       const aiLabel = provisional
         ? "AI SCREENING: LIKELY VISUAL MATCH — PROVISIONAL ACCESS ONLY"
