@@ -78,7 +78,11 @@ export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) =>
       }
     }
     if ((!admin || admin.role !== "owner") && !schedulerAuthorized) return json({ error: "Only the MaseNet owner or authorised scheduler can run automatic YouTube replies." }, 403);
-    await env.DB.prepare("CREATE TABLE IF NOT EXISTS social_comment_drafts (id TEXT PRIMARY KEY, comment_id TEXT NOT NULL UNIQUE, video_id TEXT, video_title TEXT, author TEXT, comment_text TEXT, draft_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL DEFAULT (datetime('now')), published_at TEXT)").run();
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS social_comment_drafts (id TEXT PRIMARY KEY, comment_id TEXT NOT NULL UNIQUE, video_id TEXT, video_title TEXT, author TEXT, comment_text TEXT, draft_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL DEFAULT (datetime('now')), published_at TEXT, last_error TEXT)").run();
+    const draftColumns = await env.DB.prepare("PRAGMA table_info(social_comment_drafts)").all<{ name: string }>();
+    if (!(draftColumns.results || []).some(column => column.name === "last_error")) {
+      await env.DB.prepare("ALTER TABLE social_comment_drafts ADD COLUMN last_error TEXT").run();
+    }
     const channel = await env.DB.prepare("SELECT channel_id FROM social_connections WHERE provider='youtube'").first<{ channel_id: string }>();
     if (!channel?.channel_id) throw new Error("YouTube channel is not connected.");
     const token = await youtubeToken(env);
@@ -86,6 +90,7 @@ export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) =>
     const payload = await list.json() as { items?: Array<any>; error?: { message?: string } };
     if (!list.ok) throw new Error(payload.error?.message || "Could not fetch YouTube comments.");
     let published = 0, skipped = 0, failed = 0;
+    const failureDetails: Array<{ commentId: string; stage: string; reason: string }> = [];
     for (const item of payload.items || []) {
       if (published >= 8) break;
       const snippet = item.snippet || {};
@@ -97,7 +102,9 @@ export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) =>
       const authorChannel = String(comment.authorChannelId?.value || "");
       if (!commentId || !text || text.length < 2 || snippet.totalReplyCount > 0 || authorChannel === channel.channel_id) { skipped++; continue; }
       const existing = await env.DB.prepare("SELECT status FROM social_comment_drafts WHERE comment_id=?").bind(commentId).first<{ status: string }>();
-      if (existing) { skipped++; continue; }
+      if (existing && existing.status !== "failed") { skipped++; continue; }
+      // A failed insert is retried only while YouTube still reports no replies.
+      // This avoids posting a duplicate when the previous insert succeeded but its response was lost.
       const videoId = String(snippet.videoId || "");
       let title = "YouTube video";
       if (videoId) {
@@ -111,21 +118,30 @@ export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) =>
         const reply = await makeReply(env, text, author, title);
         if (!reply || /^SKIP$/i.test(reply.trim())) { skipped++; continue; }
         const id = crypto.randomUUID();
-        await env.DB.prepare("INSERT INTO social_comment_drafts(id,comment_id,video_id,video_title,author,comment_text,draft_text,status) VALUES(?,?,?,?,?,?,?,'publishing')").bind(id, commentId, videoId, title, author, text, reply.slice(0, 1000)).run();
+        if (existing?.status === "failed") {
+          await env.DB.prepare("UPDATE social_comment_drafts SET video_id=?,video_title=?,author=?,comment_text=?,draft_text=?,status='publishing',last_error=NULL WHERE comment_id=? AND status='failed'").bind(videoId, title, author, text, reply.slice(0, 1000), commentId).run();
+        } else {
+          await env.DB.prepare("INSERT INTO social_comment_drafts(id,comment_id,video_id,video_title,author,comment_text,draft_text,status) VALUES(?,?,?,?,?,?,?,'publishing')").bind(id, commentId, videoId, title, author, text, reply.slice(0, 1000)).run();
+        }
         const sent = await fetch("https://www.googleapis.com/youtube/v3/comments?part=snippet", { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ snippet: { parentId: commentId, textOriginal: reply.slice(0, 1000) } }) });
         const result = await sent.json() as { id?: string; error?: { message?: string } };
         if (!sent.ok) {
-          await env.DB.prepare("UPDATE social_comment_drafts SET status='failed' WHERE comment_id=?").bind(commentId).run();
+          const reason = result.error?.message || ("YouTube API returned HTTP " + sent.status);
+          await env.DB.prepare("UPDATE social_comment_drafts SET status='failed',last_error=? WHERE comment_id=?").bind(reason.slice(0, 1000), commentId).run();
+          failureDetails.push({ commentId, stage: "youtube_publish", reason: reason.slice(0, 300) });
           failed++;
           continue;
         }
-        await env.DB.prepare("UPDATE social_comment_drafts SET status='published',published_at=datetime('now') WHERE comment_id=? AND status='publishing'").bind(commentId).run();
+        await env.DB.prepare("UPDATE social_comment_drafts SET status='published',published_at=datetime('now'),last_error=NULL WHERE comment_id=? AND status='publishing'").bind(commentId).run();
         published++;
-      } catch {
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "Unknown processing error";
+        await env.DB.prepare("UPDATE social_comment_drafts SET status='failed',last_error=? WHERE comment_id=? AND status='publishing'").bind(reason.slice(0, 1000), commentId).run().catch(() => undefined);
+        failureDetails.push({ commentId, stage: "reply_processing", reason: reason.slice(0, 300) });
         failed++;
       }
     }
-    return json({ ok: true, published, skipped, failed, checked: (payload.items || []).length });
+    return json({ ok: failed === 0, published, skipped, failed, checked: (payload.items || []).length, failureDetails });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Automatic YouTube replies failed." }, 500);
   }
