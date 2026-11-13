@@ -314,7 +314,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   // Treat ordinary greetings and natural-language questions as chat without requiring /ai.
   // Keep likely title/episode searches in the catalog-search flow below.
   const looksLikeCatalogSearch = /\b(?:episode|ep|season|movie|drama|film|s\d+e\d+)\b/i.test(incoming)
-    || /\b(?:find|search|look for)\b/i.test(incoming);
+    || /\b(?:find|search(?:ing)?|look(?:ing)?\s+for|do\s+you\s+have|have\s+you\s+got)\b/i.test(incoming);
   const conversationalMessage = !incoming.startsWith("/") && !looksLikeCatalogSearch && (
     /^(hey|hi|hello|yo|good morning|good afternoon|good evening|how are you|what's up|whats up|thanks|thank you|who are you|what can you do|tell me a joke|let's chat|lets chat)\b/i.test(incoming) ||
     /^(hey|hi|hello)\s+(?:ai|assistant|masenet|bot)\b/i.test(incoming) ||
@@ -492,7 +492,9 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     return json({ ok: true });
   }
 
-  const query = incoming.replace(/^\/start(?:\s+\S+)?/i, "").replace(/^\/search\s*/i, "").trim();
+  const query = incoming.replace(/^\/start(?:\s+\S+)?/i, "").replace(/^\/search\s*/i, "")
+    .replace(/^(?:hey\s+)?(?:i(?:'m| am)\s+)?(?:search(?:ing)?\s+for|look(?:ing)?\s+for|find\s+me|do\s+you\s+have|have\s+you\s+got)\s+/i, "")
+    .replace(/^(?:please\s+)?(?:can you\s+)?find\s+/i, "").trim();
   let reply = "Welcome to MaseNet! 🎬\nSend a movie, drama, or episode name to search the library.\nNeed help? Use /help. Ask a question with /ai your question.";
   if (query) {
     const needle = normalize(query).slice(0, 100);
@@ -529,7 +531,8 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     let channelMatches: TelegramChannelPost[] = [];
     try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 4, env.DB), 6500, "Telegram channel search"); }
     catch (error) { console.error("Telegram command channel search failed:", error instanceof Error ? error.message : String(error)); }
-    const channelReply = channelMatches.length ? "\n\nMatching posts from our official Telegram channels:\n" + channelMatches.map(post => "• " + post.title + "\nSource: " + post.channel + "\n" + post.text.slice(0, 650) + "\nOriginal post: " + post.url).join("\n\n") : "";
+    const channelReply = channelMatches.length ? "\n\nI searched the available indexed and public-preview messages in both official channels. Open the exact matching post using the button(s) below:" + channelMatches.map(post => "\\n• " + post.title + " — " + post.channel).join("") : "";
+    const channelKeyboard = channelMatches.length ? { inline_keyboard: channelMatches.slice(0,5).map(post => [{ text: "🔗 Open " + post.channel + " post", url: post.url }]) } : undefined;
     if (combined.length || channelMatches.length) {
       reply = (combined.length ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n") : "Not in the catalogue, but I found these official channel posts:") + channelReply;
     } else {
@@ -538,48 +541,9 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_missing_searches (id INTEGER PRIMARY KEY AUTOINCREMENT, query TEXT NOT NULL, chat_type TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
         await env.DB.prepare("INSERT INTO telegram_missing_searches (query, chat_type) VALUES (?, ?)").bind(query.slice(0, 300), String((msg as { chat?: { type?: string } }).chat?.type || "unknown")).run();
       } catch { /* Search still replies even if logging is unavailable. */ }
-      reply = "I couldn't find “" + query.slice(0, 100) + "” in the MaseNet catalog yet. I've recorded this request so the admin can review what users want. Try a shorter title or check again later.";
-      // A catalog miss must not end the conversation. Treat the unmatched message as a
-      // normal chat turn and let the AI respond, while being honest that the title was not found.
-      const chatSystem = "You are MaseNet's friendly Telegram AI assistant. MaseNet, MaseTv, and MaseMediaTv (MaseMedia TV) are alternate names for the same platform. The catalog lookup did not find a match for the user's message, but the user may be chatting rather than searching for a title. Respond naturally and keep the conversation going. Never include any website URL, Pages URL, raw Mini App URL, or Floot URL in your reply; the Telegram Mini App launch button is attached separately. If they ask for official social links, share only verified YouTube https://youtube.com/@masemedia_tv and Telegram bot https://t.me/MaseTv_Bot. Do not invent Instagram, Facebook, TikTok, or other handles. If their message clearly asks for a movie/drama/episode title, briefly say it was not found in the current catalog and suggest another spelling or title. Never invent catalog entries or streaming links. Never reveal secrets or private admin data. Keep the reply concise and friendly.";
-      if (env.AI) {
-        for (const model of ["@cf/google/gemma-4-26b-a4b-it", "@cf/meta/llama-3.1-8b-instruct-fast"]) {
-          try {
-            const result = await env.AI.run(model, { chat_template_kwargs: model.includes("gemma-4") ? { enable_thinking: false } : undefined, messages: [
-              { role: "system", content: chatSystem },
-              { role: "user", content: query.slice(0, 1000) }
-            ], max_tokens: 300 });
-            if (result && typeof result === "object") {
-              const data = result as { response?: string; output_text?: string; choices?: Array<{ message?: { content?: string } }> };
-              const suggestion = String(data.response || data.output_text || data.choices?.[0]?.message?.content || "").trim();
-              if (suggestion) { reply = suggestion.slice(0, 1200); break; }
-            }
-          } catch (error) {
-            console.error("MaseNet catalog-miss chat AI failed:", error instanceof Error ? error.message : String(error));
-          }
-        }
-      }
-      if (reply.startsWith("I couldn't find") && env.OPENAI_API_KEY) {
-        try {
-          const response = await fetch("https://api.openai.com/v1/responses", {
-            method: "POST",
-            headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: env.OPENAI_MODEL || "gpt-6-luna",
-              instructions: chatSystem,
-              input: query.slice(0, 1000),
-              max_output_tokens: 300
-            })
-          });
-          if (response.ok) {
-            const data = await response.json() as { output_text?: string; output?: Array<{content?:Array<{type?:string;text?:string}>}> };
-            const candidate = data.output_text || (data.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\n");
-            if (candidate.trim()) reply = candidate.trim().slice(0, 1200);
-          }
-        } catch (error) {
-          console.error("MaseNet catalog-miss OpenAI fallback failed:", error instanceof Error ? error.message : String(error));
-        }
-      }
+      reply = "I couldn't find “" + query.slice(0, 100) + "” in the MaseNet catalogue or in the channel messages currently indexed and publicly searchable. I have recorded your request for the admin. This does not mean the title is absent from older or pinned channel posts; Telegram's Bot API does not provide full historical channel search. Try another spelling or open the official channels below.";
+      // Keep title-search results deterministic. Never let a conversational model
+      // overwrite a verified search result or a transparent no-match explanation.
     }
   }
 
@@ -596,7 +560,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         .replace(/\n{3,}/g, "\n\n")
         .trim().slice(0, 3900),
       disable_web_page_preview: true,
-      ...(replyMarkup ? { reply_markup: replyMarkup } : {})
+      ...((typeof channelKeyboard !== "undefined" && channelKeyboard) ? { reply_markup: channelKeyboard } : replyMarkup ? { reply_markup: replyMarkup } : {})
     })
   });
   if (!send.ok) return json({ ok: false, error: "Telegram could not deliver the search reply." }, 502);
