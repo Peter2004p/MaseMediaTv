@@ -11,7 +11,7 @@ export const onRequestGet: PagesFunction<SocialEnv> = async ({ request, env }) =
   const cookie = request.headers.get("Cookie") || "";
   const match = cookie.match(/(?:^|;\s*)masenet_youtube_oauth_state=([^;]+)/);
   const cookieState = match ? decodeURIComponent(match[1]) : "";
-  const fail = (reason: string) => Response.redirect(new URL("/#/admin?youtube=error&reason="+encodeURIComponent(reason), url.origin), 302);
+  const fail = (reason: string) => Response.redirect(new URL("/#/admin", url.origin), 302);
   if (url.searchParams.has("error")) return fail("Google authorization was cancelled or denied.");
   if (!code || !state || !cookieState || state !== cookieState) return fail("The YouTube connection session expired. Start again from MaseNet.");
   const admin = await currentAdmin(request, env);
@@ -50,7 +50,7 @@ export const onRequestGet: PagesFunction<SocialEnv> = async ({ request, env }) =
   )`).run();
   await env.DB.prepare("INSERT INTO social_connections(provider,channel_id,channel_title,encrypted_refresh_token,connected_by) VALUES('youtube',?,?,?,?) ON CONFLICT(provider) DO UPDATE SET channel_id=excluded.channel_id,channel_title=excluded.channel_title,encrypted_refresh_token=excluded.encrypted_refresh_token,connected_by=excluded.connected_by,updated_at=datetime('now')")
     .bind(channel.id, channel.snippet?.title || "YouTube channel", packed, admin.id).run();
-  const headers = new Headers({ Location: new URL("/#/admin?youtube=connected", url.origin).toString(), "Cache-Control":"no-store" });
+  const headers = new Headers({ Location: new URL("/#/admin", url.origin).toString(), "Cache-Control":"no-store" });
   headers.append("Set-Cookie","masenet_youtube_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/social/youtube; Max-Age=0");
   return new Response(null,{status:302,headers});
 };
