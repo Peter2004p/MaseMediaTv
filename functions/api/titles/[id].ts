@@ -1,4 +1,23 @@
 import { Env, json, requireAdmin } from "../auth/_shared";
+const validateExternalEpisodeLinks = (episodes: unknown, requestUrl: string): string | null => {
+  if (!Array.isArray(episodes)) return null;
+  const ownOrigin = new URL(requestUrl).origin;
+  for (const episode of episodes) {
+    if (!episode || typeof episode !== "object" || Array.isArray(episode)) continue;
+    const item = episode as Record<string, unknown>;
+    const variants = Array.isArray(item.qualities) ? item.qualities as Record<string, unknown>[] : [];
+    const sources = [item.streamUrl, item.downloadUrl, ...variants.flatMap(v => [v.streamUrl, v.downloadUrl])];
+    for (const source of sources) {
+      if (typeof source !== "string" || !source.trim()) continue;
+      try {
+        const url = new URL(source);
+        if (url.protocol !== "https:") return "Movie and drama sources must use HTTPS.";
+        if (url.origin === ownOrigin && url.pathname === "/api/media/file") return "MaseNet-hosted video files are disabled. Save an external HTTPS source URL instead.";
+      } catch { return "Every movie and drama source must be a valid absolute HTTPS URL."; }
+    }
+  }
+  return null;
+};
 const normalizeName = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 const normalizeKind = (value: unknown) => {
   const type = String(value ?? "").trim().toLowerCase().replace(/[_-]+/g, " ");
@@ -8,6 +27,10 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
   const gate = await requireAdmin(request, env); if (gate.response) return gate.response;
   const requestedId = String(params.id || "");
   const body = await request.json() as Record<string, unknown>;
+  const sourceError = body.action === "updateEpisode"
+    ? validateExternalEpisodeLinks([body.episode], request.url)
+    : validateExternalEpisodeLinks(body.episodes, request.url);
+  if (sourceError) return json({ error: sourceError }, 400);
   const old = await env.DB.prepare("SELECT id FROM titles WHERE id=?").bind(requestedId).first<{id:string}>();
   if (body.action === "updateStatus") {
     const status = String(body.status || "").trim().toLowerCase();
