@@ -1,4 +1,23 @@
 import { Env, json, requireAdmin } from "../auth/_shared";
+const validateExternalEpisodeLinks = (episodes: unknown, requestUrl: string): string | null => {
+  if (!Array.isArray(episodes)) return null;
+  const ownOrigin = new URL(requestUrl).origin;
+  for (const episode of episodes) {
+    if (!episode || typeof episode !== "object" || Array.isArray(episode)) continue;
+    const item = episode as Record<string, unknown>;
+    const variants = Array.isArray(item.qualities) ? item.qualities as Record<string, unknown>[] : [];
+    const sources = [item.streamUrl, item.downloadUrl, ...variants.flatMap(v => [v.streamUrl, v.downloadUrl])];
+    for (const source of sources) {
+      if (typeof source !== "string" || !source.trim()) continue;
+      try {
+        const url = new URL(source);
+        if (url.protocol !== "https:") return "Movie and drama sources must use HTTPS.";
+        if (url.origin === ownOrigin && url.pathname === "/api/media/file") return "MaseNet-hosted video files are disabled. Save an external HTTPS source URL instead.";
+      } catch { return "Every movie and drama source must be a valid absolute HTTPS URL."; }
+    }
+  }
+  return null;
+};
 type StoredTitle = { id: string; name: string; kind: string; metadata_json: string; created_at: string };
 const normalizeTitleType = (...values: unknown[]): "Movie" | "Drama" => {
   for (const value of values) {
@@ -68,6 +87,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const gate = await requireAdmin(request, env); if (gate.response) return gate.response;
   const body = await request.json() as Record<string, unknown>;
+  const sourceError = validateExternalEpisodeLinks(body.episodes, request.url);
+  if (sourceError) return json({ error: sourceError }, 400);
   if (typeof body.name !== "string" || !body.name.trim()) return json({ error: "A title name is required." }, 400);
   const kind = normalizeTitleType(body.type) === "Drama" ? "drama" : "movie";
   const normalizedName = body.name.trim().normalize("NFKC").toLowerCase().replace(/[’\']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
