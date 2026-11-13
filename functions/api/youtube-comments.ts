@@ -1,9 +1,14 @@
-import { Env, json, cookie, sha256 } from "./auth/_shared";
+import { Env, json, cookie, sha256, currentAdmin } from "./auth/_shared";
 
 type CommentsEnv = Env;
 const validVideoId = (value: unknown) => typeof value === "string" && /^[A-Za-z0-9_-]{6,20}$/.test(value);
 
+// Match the exact identity model used by /api/profiles: admins own profiles under
+// "admin:<admin-id>", while normal members own profiles under their site user ID.
 async function authenticatedUser(request: Request, env: CommentsEnv): Promise<string | null> {
+  const admin = await currentAdmin(request, env);
+  if (admin) return "admin:" + admin.id;
+
   const token = cookie(request, "masetv_user_session");
   if (!token) return null;
   const row = await env.DB.prepare(
@@ -51,7 +56,7 @@ export const onRequestPost: PagesFunction<CommentsEnv> = async ({request,env}) =
     let body: {videoId?:unknown;profileId?:unknown;text?:unknown};
     try { body = JSON.parse(raw) as typeof body; } catch { return json({error:"Invalid comment data."},400); }
     if (!validVideoId(body.videoId)) return json({error:"A valid video is required."},400);
-    const text = typeof body.text === "string" ? body.text.trim().replace(/\u0000/g,"") : "";
+    const text = typeof body.text === "string" ? body.text.trim().replace(/\\u0000/g,"") : "";
     if (!text || text.length > 1000) return json({error:"Comments must contain 1–1000 characters."},400);
     const profileId = typeof body.profileId === "string" ? body.profileId : "";
     if (!/^[A-Za-z0-9_-]{8,80}$/.test(profileId)) return json({error:"Choose a MaseNet profile before commenting."},400);
