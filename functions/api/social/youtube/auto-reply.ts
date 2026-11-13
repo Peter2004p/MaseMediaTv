@@ -1,4 +1,4 @@
-import { Env, json } from "../../auth/_shared";
+import { Env, json, currentAdmin } from "../../auth/_shared";
 
 type AutoEnv = Env & {
   YOUTUBE_CLIENT_ID?: string;
@@ -61,10 +61,8 @@ async function makeReply(env: AutoEnv, comment: string, author: string, videoTit
 }
 
 export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) => {
-  const supplied = request.headers.get("x-masenet-auto-reply") || "";
-  if (!supplied) return json({ error: "Unauthorized." }, 401);
-  const setting = await env.DB.prepare("SELECT value FROM social_settings WHERE key='youtube_auto_reply_secret_hash'").first<{ value: string }>();
-  if (!setting?.value || await sha256(supplied) !== setting.value) return json({ error: "Unauthorized." }, 401);
+  const admin = await currentAdmin(request, env);
+  if (!admin || admin.role !== "owner") return json({ error: "Only the MaseNet owner can run automatic YouTube replies." }, 403);
   try {
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS social_comment_drafts (id TEXT PRIMARY KEY, comment_id TEXT NOT NULL UNIQUE, video_id TEXT, video_title TEXT, author TEXT, comment_text TEXT, draft_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL DEFAULT (datetime('now')), published_at TEXT)").run();
     const channel = await env.DB.prepare("SELECT channel_id FROM social_connections WHERE provider='youtube'").first<{ channel_id: string }>();
