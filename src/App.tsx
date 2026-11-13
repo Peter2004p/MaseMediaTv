@@ -725,7 +725,7 @@ function YouTubeChannelPage({go,viewer,activeProfileId}:{go:(route:string)=>void
  const [activeIndex,setActiveIndex]=useState(0);
  const [muted,setMuted]=useState(false);
  const [commentsOpen,setCommentsOpen]=useState(false);
- const [comments,setComments]=useState<Array<{id:string;text:string;displayName:string;avatar:string;createdAt:string}>>([]);
+ const [comments,setComments]=useState<Array<{id:string;text:string;displayName:string;avatar:string;createdAt:string;isAI?:number}>>([]);
  const [commentsCount,setCommentsCount]=useState(0);
  const [commentDraft,setCommentDraft]=useState('');
  const [commentBusy,setCommentBusy]=useState(false);
@@ -840,7 +840,7 @@ function YouTubeChannelPage({go,viewer,activeProfileId}:{go:(route:string)=>void
     <div className="maseCommentsList">
      {comments.length?comments.map(item=><article className="maseComment" key={item.id}>
       {item.avatar?<img src={item.avatar} alt=""/>:<span className="maseCommentAvatar">{(item.displayName||'M').slice(0,1).toUpperCase()}</span>}
-      <div><b>{item.displayName}</b><p>{item.text}</p><small>{item.createdAt?new Date(item.createdAt.replace(' ','T')+'Z').toLocaleString():''}</small></div>
+      <div><b>{item.displayName}{item.isAI===1&&<span className="maseCommentAiBadge">AI</span>}</b><p>{item.text}</p><small>{item.createdAt?new Date(item.createdAt.replace(' ','T')+'Z').toLocaleString():''}</small></div>
      </article>):<div className="maseCommentsEmpty">No comments yet. Be the first to join the conversation.</div>}
     </div>
     <form className="maseCommentComposer" onSubmit={e=>{e.preventDefault();void postComment()}}>
