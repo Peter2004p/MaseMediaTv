@@ -1,4 +1,4 @@
-import { Env, json, currentAdmin } from "../../auth/_shared";
+import { Env, json, currentAdmin } from "../auth/_shared";
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const admin = await currentAdmin(request, env);
