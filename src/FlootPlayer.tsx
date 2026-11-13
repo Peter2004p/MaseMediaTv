@@ -34,6 +34,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const [mkvSubtitleMenuOpen, setMkvSubtitleMenuOpen] = useState(false);
   const [mkvSubtitleReady, setMkvSubtitleReady] = useState(false);
   const [mkvSubtitleNotice, setMkvSubtitleNotice] = useState("");
+  const [mkvActiveSubtitleTrackId, setMkvActiveSubtitleTrackId] = useState<number | null>(null);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
@@ -71,7 +72,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return () => { active = false; };
   }, [isMkvSource, retry]);
 
-  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); }, [episode.id]);
+  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); setMkvActiveSubtitleTrackId(null); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
   // interfere with the custom element's own click/touch handling in WebViews.
 
@@ -80,31 +81,34 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     const element = mkvPlayerRef.current;
     if (!element) return;
     const syncTracks = () => {
+      // Movi creates/replaces its underlying engine during source loading.
+      // Its public element contract says to read element.player after loadedmetadata/loadeddata.
       const player = element.player;
-      const raw = player?.getSubtitleTracks?.() || [];
-      const tracks = raw.map((track:any, index:number) => ({
-        id: Number(track.id),
-        label: String(track.label || track.name || track.language || track.codec || "Subtitle track " + (index + 1)),
-        language: String(track.language || ""),
-        active: Boolean(track.active)
-      })).filter((track:any) => Number.isFinite(track.id));
-      setMkvSubtitleTracks(tracks);
-      const active = tracks.find((track:any) => track.active);
-      if (active) setMkvSubtitleNotice("Active subtitle: " + active.label);
+      if (!player) { setMkvSubtitleReady(false); return; }
+      const raw = player.getSubtitleTracks?.() || [];
+      setMkvSubtitleTracks((current) => raw.map((track:any, index:number) => {
+        const id = Number(track.id);
+        const previous = current.find(item => item.id === id);
+        return {
+          id,
+          label: String(track.label || track.language || track.codec || "Subtitle track " + (index + 1)),
+          language: String(track.language || ""),
+          active: id === mkvActiveSubtitleTrackId || Boolean(previous?.active)
+        };
+      }).filter((track:any) => Number.isFinite(track.id)));
       setMkvSubtitleReady(true);
     };
-    element.addEventListener("trackschange", syncTracks);
-    element.addEventListener("loadend", syncTracks);
-    element.addEventListener("subtitletrackchange", syncTracks);
+    // The source can finish loading before React's effect attaches. Sync once now,
+    // then listen for the actual Movi lifecycle and track events (not the unsupported loadend event).
+    const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitletrackchange"];
+    events.forEach(name => element.addEventListener(name, syncTracks));
     syncTracks();
-    const retryTimer = window.setTimeout(syncTracks, 500);
+    const retryTimers = [500, 1500, 3000].map(delay => window.setTimeout(syncTracks, delay));
     return () => {
-      window.clearTimeout(retryTimer);
-      element.removeEventListener("trackschange", syncTracks);
-      element.removeEventListener("loadend", syncTracks);
-      element.removeEventListener("subtitletrackchange", syncTracks);
+      retryTimers.forEach(timer => window.clearTimeout(timer));
+      events.forEach(name => element.removeEventListener(name, syncTracks));
     };
-  }, [isMkvSource, moviReady, episode.id, rawSrc, retry]);
+  }, [isMkvSource, moviReady, episode.id, rawSrc, retry, mkvActiveSubtitleTrackId]);
 
   const selectMkvSubtitle = async (trackId:number|null, label = "Subtitles turned off.") => {
     const player = mkvPlayerRef.current?.player;
@@ -119,6 +123,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
         return;
       }
       setMkvSubtitleNotice(trackId === null ? label : "Subtitle enabled: " + label);
+      setMkvActiveSubtitleTrackId(trackId);
       setMkvSubtitleTracks((current) => current.map(track => ({...track,active:track.id===trackId})));
       setMkvSubtitleMenuOpen(false);
     } catch {
