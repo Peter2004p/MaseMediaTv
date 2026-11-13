@@ -61,8 +61,11 @@ export async function searchIndexedTelegramChannel(db: D1Database, query: string
   return (rows.results || []).map(row => {
     const haystack = row.post_text.normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ");
     const matched = terms.filter(term => haystack.includes(term)).length;
-    const required = terms.length === 1 ? 1 : Math.max(2, Math.ceil(terms.length * 0.6));
-    const score = haystack.includes(normalized) ? 100 : matched >= required ? Math.round((matched / terms.length) * 80) : 0;
+    const headline = normalize(row.title);
+    const required = terms.length === 1 ? 1 : Math.max(2, Math.ceil(terms.length * 0.7));
+    const score = haystack.includes(normalized) && terms.length >= 2 ? 100 :
+      (terms.length === 1 && headline.split(" ").includes(terms[0])) ? 70 :
+      (terms.length >= 2 && matched >= required) ? Math.round((matched / terms.length) * 80) : 0;
     return {
       title: row.title,
       text: row.post_text.slice(0, 1200),
@@ -125,8 +128,11 @@ export async function searchPublicTelegramChannel(query: string, limit = 5, db?:
         if (!postText) continue;
         const haystack = normalize(postText);
         const matched = terms.filter(term => haystack.includes(term)).length;
-        const required = terms.length === 1 ? 1 : Math.max(2, Math.ceil(terms.length * 0.6));
-        const score = haystack.includes(q) ? 100 : matched >= required ? Math.round((matched / terms.length) * 80) : 0;
+        const headline = normalize(postText.split("\n").map(line => line.trim()).find(Boolean) || "");
+        const required = terms.length === 1 ? 1 : Math.max(2, Math.ceil(terms.length * 0.7));
+        const score = haystack.includes(q) && terms.length >= 2 ? 100 :
+          (terms.length === 1 && headline.split(" ").includes(terms[0])) ? 70 :
+          (terms.length >= 2 && matched >= required) ? Math.round((matched / terms.length) * 80) : 0;
         const date = block.match(/<time[^>]+datetime="([^"]+)"/i)?.[1];
         const url = "https://t.me/" + channel.username + "/" + postId;
         const title = postText.split("\n").map(line => line.trim()).find(Boolean)?.slice(0, 140) || channel.label + " channel post";
