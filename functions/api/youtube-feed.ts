@@ -8,7 +8,7 @@ const decodeXml = (value: string) => value
  .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
 const tag = (xml: string, name: string) => {
  const match = xml.match(new RegExp("<(?:[\\w-]+:)?" + name + "(?:\\s[^>]*)?>([\\s\\S]*?)</(?:[\\w-]+:)?" + name + ">","i"));
- return match ? decodeXml(match[1].replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1").trim()) : "";
+ return match ? decodeXml(match[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").trim()) : "";
 };
 
 function extractVideoRenderers(html: string) {
