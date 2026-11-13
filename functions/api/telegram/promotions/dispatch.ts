@@ -13,21 +13,21 @@ interface Env {
 }
 
 type PromoTitle = { name: string; kind: string; year: number | null; description: string; poster_url: string; metadata_json: string };
-type NewsItem = { title: string; link: string; summary: string; published: string; key: string };
+type NewsItem = { title: string; link: string; summary: string; published: string; key: string; imageUrl: string; chineseDrama: boolean };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 const MINI_APP_URL = "https://t.me/MaseTv_Bot?startapp=home";
 
 function decodeXml(value: string) {
-  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+  return value.replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
     .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
     .replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
 }
 function cleanText(value: string) {
-  return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
 }
 function tagValue(xml: string, tag: string) {
-  const match = xml.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "i"));
+  const match = xml.match(new RegExp("<" + tag + "(?:\\\\s[^>]*)?>([\\\\s\\\\S]*?)</" + tag + ">", "i"));
   return match ? cleanText(match[1]) : "";
 }
 async function hashKey(value: string) {
@@ -35,21 +35,33 @@ async function hashKey(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest)).slice(0, 12).map(v => v.toString(16).padStart(2, "0")).join("");
 }
-
+function imageFromFeed(block: string): string {
+  const candidates = [
+    block.match(/<media:content[^>]*url=["']([^"']+)["']/i)?.[1],
+    block.match(/<media:thumbnail[^>]*url=["']([^"']+)["']/i)?.[1],
+    block.match(/<enclosure[^>]*url=["']([^"']+)["']/i)?.[1],
+    block.match(/<img[^>]*src=["']([^"']+)["']/i)?.[1]
+  ];
+  for (const candidate of candidates) {
+    const value = decodeXml(String(candidate || ""));
+    if (/^https:\\/\\//i.test(value) && /\\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(value)) return value;
+  }
+  return "";
+}
 async function fetchEntertainmentNews(): Promise<NewsItem[]> {
+  // Search recent premiere/release and airing notices, not only broad "popular" stories.
   const feeds = [
-    // Upcoming Chinese dramas and casting/premiere announcements, including titles not in MaseNet.
-    "https://news.google.com/rss/search?q=upcoming+Chinese+drama+2026+OR+2027+release+date&hl=en-US&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=Chinese+drama+premiere+date+starts+airing+2026+OR+2027&hl=en-US&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=C-drama+new+series+release+date+premiere+this+week&hl=en-US&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=Chinese+drama+official+trailer+release+premiere+date&hl=en-US&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=upcoming+Chinese+TV+drama+confirmed+release+date&hl=en-US&gl=US&ceid=US:en",
     "https://news.google.com/rss/search?q=Chinese+drama+casting+premiere+release+announcement&hl=en-US&gl=US&ceid=US:en",
-    // Wider Asian and global movie/TV coverage, viral titles and audience recommendations.
-    "https://news.google.com/rss/search?q=trending+viral+movie+drama+series+popular+this+week&hl=en-US&gl=US&ceid=US:en",
-    "https://news.google.com/rss/search?q=best+new+movies+to+watch+streaming+2026&hl=en-US&gl=US&ceid=US:en",
     "https://news.google.com/rss/search?q=trending+Chinese+drama+popular+most+watched&hl=en-US&gl=US&ceid=US:en",
-    "https://news.google.com/rss/search?q=Asian+film+and+television+new+movie+drama+release&hl=en-US&gl=US&ceid=US:en"
+    "https://news.google.com/rss/search?q=best+new+movies+to+watch+streaming+2026&hl=en-US&gl=US&ceid=US:en"
   ];
   const responses = await Promise.all(feeds.map(async url => {
     try {
-      const response = await fetch(url, { headers: { "user-agent": "MaseNet-Entertainment-Updates/1.0" }, signal: AbortSignal.timeout(6500) });
+      const response = await fetch(url, { headers: { "user-agent": "MaseNet-Entertainment-Updates/1.0" }, signal: AbortSignal.timeout(7000) });
       return response.ok ? await response.text() : "";
     } catch (error) {
       console.warn("Entertainment feed unavailable:", error instanceof Error ? error.message : String(error));
@@ -58,19 +70,22 @@ async function fetchEntertainmentNews(): Promise<NewsItem[]> {
   }));
   const items: NewsItem[] = [];
   for (const xml of responses) {
-    const blocks = xml.match(new RegExp("<item(?:\\s[^>]*)?>[\\s\\S]*?</item>", "gi")) || [];
+    const blocks = xml.match(/<item(?:\\s[^>]*)?>[\\s\\S]*?<\\/item>/gi) || [];
     for (const block of blocks) {
       const title = tagValue(block, "title");
       const link = tagValue(block, "link");
       const summary = tagValue(block, "description").slice(0, 500);
       const published = tagValue(block, "pubDate");
-      if (!title || !/^https:\/\//i.test(link)) continue;
-      if (!/(drama|film|movie|series|premiere|release|casting|chinese|cdrama|asian)/i.test(title)) continue;
+      if (!title || !/^https:\\/\\//i.test(link)) continue;
+      if (!/(drama|film|movie|series|premiere|release|casting|chinese|cdrama|c-drama)/i.test(title)) continue;
+      const chineseDrama = /(?:chinese|c-?drama|cdrama)/i.test(title + " " + summary);
+      const imageUrl = imageFromFeed(block);
       const key = "news:" + await hashKey(link);
-      items.push({ title, link, summary, published, key });
+      items.push({ title, link, summary, published, key, imageUrl, chineseDrama });
     }
   }
-  return Array.from(new Map(items.map(item => [item.key, item])).values());
+  return Array.from(new Map(items.map(item => [item.key, item])).values())
+    .sort((a,b) => Number(b.chineseDrama)-Number(a.chineseDrama) || Date.parse(b.published || "")-Date.parse(a.published || ""));
 }
 
 async function generateCatalogueCaption(env: Env, title: string, description: string, kind: string, year: string) {
@@ -161,7 +176,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
 
-  type Campaign = { contentType: string; selectedName: string; historyKey: string; caption: string; poster: string; sourceUrl: string; facts: string };
+  type Campaign = { contentType: string; selectedName: string; historyKey: string; caption: string; poster: string; sourceUrl: string; facts: string; imageUrl?: string };
   const savedCampaign = await env.DB.prepare("SELECT payload_json FROM telegram_promo_campaigns WHERE slot=?").bind(campaignSlot).first<{ payload_json: string }>();
   let campaign: Campaign | null = null;
   if (savedCampaign?.payload_json) {
@@ -197,7 +212,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     catalogueCandidates = catalogue.length;
     newsCandidates = news.length;
     const preferNews = sentLast24h % 2 === 1;
-    const chosenNews = (preferNews ? news[0] : undefined) || news[0];
+    const chosenNews = news.find(item => item.chineseDrama) || ((preferNews ? news[0] : undefined) || news[0]);
     const chosenCatalogue = (preferNews ? undefined : catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()))) || catalogue.find(item => !recentlySpotlighted.has(item.row.name.toLowerCase()));
     if (!chosenNews && !chosenCatalogue) {
       return json({ ok: true, skipped: "no_fresh_items", sentLast24h, catalogueCandidates, catalogueRecentlySpotlighted, newsCandidates, newsFeedItems: news.length, geminiConfigured: !!env.GEMINI_API_KEY });
@@ -265,7 +280,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const batchTargets = targetList.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
 
   const results: Array<{ target: string; ok: boolean; error?: string }> = [];
-  const replyMarkup = campaign.contentType === "external_news"
+  const replyMarkup = campaign.contentType !== "catalogue"
     ? { inline_keyboard: [[{ text: "📰 Read source", url: campaign.sourceUrl }], [{ text: "🎬 Explore MaseNet", url: MINI_APP_URL }]] }
     : { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: MINI_APP_URL }]] };
   for (const target of batchTargets) {
@@ -280,7 +295,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       const method = hasPoster ? "sendPhoto" : "sendMessage";
       const payload = hasPoster
         ? { chat_id: target, photo: campaign.poster, caption: campaign.caption.slice(0, 1000), reply_markup: replyMarkup }
-        : { chat_id: target, text: campaign.caption.slice(0, 3800), reply_markup: replyMarkup, disable_web_page_preview: campaign.contentType === "catalogue" };
+        : { chat_id: target, text: campaign.caption.slice(0, 3800), reply_markup: replyMarkup, disable_web_page_preview: true };
       const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method, {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify(payload), signal: AbortSignal.timeout(10000)
