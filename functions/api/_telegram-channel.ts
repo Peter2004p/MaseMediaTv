@@ -1,6 +1,6 @@
 export type TelegramChannelPost = { title: string; text: string; url: string; channel: string; date?: string; score: number };
 
-const CHANNELS = [{ username: "MaseMediaTv", label: "MaseMediaTv" }, { username: "Ongoing_drama_list", label: "Ongoing Drama List" }] as const;
+const CHANNELS = [{ username: "MaseMediaTv", label: "MaseMediaTv" }, { username: "MoonDramaC", label: "MoonDramaC" }] as const;
 
 type TelegramChannelMessage = {
   message_id?: number;
