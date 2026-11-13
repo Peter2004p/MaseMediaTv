@@ -245,6 +245,15 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
   const targetList = Array.from(targets).sort();
   if (!targetList.length) return json({ ok: false, skipped: "no_telegram_targets" }, 503);
+  // A scheduled Worker can overlap or retry the same slot. Claim each recipient
+  // atomically so the same recommendation is never sent twice to one channel/user.
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_delivery_log (
+    campaign_slot TEXT NOT NULL, chat_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'sending',
+    claimed_at TEXT NOT NULL DEFAULT (datetime('now')),
+    sent_at TEXT,
+    PRIMARY KEY(campaign_slot,chat_id)
+  )`).run();
   const batchCount = Math.max(1, Math.ceil(targetList.length / batchSize));
   if (batchIndex >= batchCount) return json({ ok: true, skipped: "batch_complete", campaignSlot, batchIndex, batchCount });
   const batchTargets = targetList.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
@@ -254,6 +263,12 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     ? { inline_keyboard: [[{ text: "📰 Read source", url: campaign.sourceUrl }], [{ text: "🎬 Explore MaseNet", url: MINI_APP_URL }]] }
     : { inline_keyboard: [[{ text: "▶ Watch on MaseNet", url: MINI_APP_URL }]] };
   for (const target of batchTargets) {
+    const claim = await env.DB.prepare("INSERT OR IGNORE INTO telegram_promo_delivery_log (campaign_slot,chat_id,status,claimed_at) VALUES (?,?,'sending',datetime('now'))")
+      .bind(campaignSlot,target).run();
+    if (!Number(claim.meta?.changes || 0)) {
+      results.push({target,ok:true});
+      continue;
+    }
     try {
       const hasPoster = campaign.contentType === "catalogue" && /^https:\/\//i.test(campaign.poster);
       const method = hasPoster ? "sendPhoto" : "sendMessage";
@@ -264,9 +279,16 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify(payload), signal: AbortSignal.timeout(10000)
       });
-      if (response.ok) results.push({ target, ok: true });
-      else results.push({ target, ok: false, error: (await response.text()).slice(0, 220) });
+      if (response.ok) {
+        await env.DB.prepare("UPDATE telegram_promo_delivery_log SET status='sent',sent_at=datetime('now') WHERE campaign_slot=? AND chat_id=?").bind(campaignSlot,target).run();
+        results.push({ target, ok: true });
+      } else {
+        const detail=(await response.text()).slice(0,220);
+        await env.DB.prepare("DELETE FROM telegram_promo_delivery_log WHERE campaign_slot=? AND chat_id=? AND status='sending'").bind(campaignSlot,target).run();
+        results.push({ target, ok: false, error: detail });
+      }
     } catch (error) {
+      await env.DB.prepare("DELETE FROM telegram_promo_delivery_log WHERE campaign_slot=? AND chat_id=? AND status='sending'").bind(campaignSlot,target).run().catch(()=>undefined);
       results.push({ target, ok: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
