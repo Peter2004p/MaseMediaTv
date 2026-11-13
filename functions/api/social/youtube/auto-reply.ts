@@ -61,9 +61,23 @@ async function makeReply(env: AutoEnv, comment: string, author: string, videoTit
 }
 
 export const onRequestPost: PagesFunction<AutoEnv> = async ({ request, env }) => {
-  const admin = await currentAdmin(request, env);
-  if (!admin || admin.role !== "owner") return json({ error: "Only the MaseNet owner can run automatic YouTube replies." }, 403);
   try {
+    const admin = await currentAdmin(request, env);
+    let schedulerAuthorized = false;
+    const schedulerSecret = request.headers.get("x-masenet-auto-reply") || "";
+    if (schedulerSecret) {
+      await env.DB.prepare("CREATE TABLE IF NOT EXISTS social_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
+      const expected = await env.DB.prepare("SELECT setting_value FROM social_settings WHERE setting_key='youtube_auto_reply_secret_sha256'").first<{ setting_value: string }>();
+      if (expected?.setting_value) {
+        const supplied = await sha256(schedulerSecret);
+        if (supplied.length === expected.setting_value.length) {
+          let diff = 0;
+          for (let i = 0; i < supplied.length; i++) diff |= supplied.charCodeAt(i) ^ expected.setting_value.charCodeAt(i);
+          schedulerAuthorized = diff === 0;
+        }
+      }
+    }
+    if ((!admin || admin.role !== "owner") && !schedulerAuthorized) return json({ error: "Only the MaseNet owner or authorised scheduler can run automatic YouTube replies." }, 403);
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS social_comment_drafts (id TEXT PRIMARY KEY, comment_id TEXT NOT NULL UNIQUE, video_id TEXT, video_title TEXT, author TEXT, comment_text TEXT, draft_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL DEFAULT (datetime('now')), published_at TEXT)").run();
     const channel = await env.DB.prepare("SELECT channel_id FROM social_connections WHERE provider='youtube'").first<{ channel_id: string }>();
     if (!channel?.channel_id) throw new Error("YouTube channel is not connected.");
