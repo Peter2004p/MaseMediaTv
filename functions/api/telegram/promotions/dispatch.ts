@@ -259,9 +259,11 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     /masemediatv/i.test(String(row.title || "").replace(/[^a-z0-9]/gi, ""))
   );
   const targets = new Set<string>(hasMainChannelSubscriber ? [] : ["@MaseMediaTv"]);
+  const channelTargets = new Set<string>(hasMainChannelSubscriber ? [] : ["@MaseMediaTv"]);
   for (const row of subs.results || []) {
     if (!row.chat_id) continue;
     targets.add(String(row.chat_id));
+    if (row.chat_type === "channel" || row.chat_type === "supergroup") channelTargets.add(String(row.chat_id));
   }
   const targetList = Array.from(targets).sort();
   if (!targetList.length) return json({ ok: false, skipped: "no_telegram_targets" }, 503);
