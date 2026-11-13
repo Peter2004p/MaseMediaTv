@@ -24,7 +24,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const suppliedHash = params.get("hash") || "";
   params.delete("hash");
   const authDate = Number(params.get("auth_date") || 0);
-  if (!suppliedHash || !authDate || Math.abs(Date.now() / 1000 - authDate) > 86400)
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (!suppliedHash || !Number.isSafeInteger(authDate) || authDate <= 0 || authDate > nowSeconds + 60 || nowSeconds - authDate > 86400)
     return json({ error: "Telegram login data expired or invalid." }, 401);
 
   const entries: Array<[string, string]> = [];
