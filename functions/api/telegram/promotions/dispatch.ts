@@ -19,14 +19,14 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const MINI_APP_URL = "https://t.me/MaseTv_Bot?startapp=home";
 
 function decodeXml(value: string) {
-  return value.replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
+  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/&amp;/gi, "&").replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'")
     .replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
-    .replace(/&nbsp;|&#160;/gi, " ").replace(/&#(\\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
+    .replace(/&nbsp;|&#160;/gi, " ").replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
     .replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(parseInt(n, 16))).trim();
 }
 function cleanText(value: string) {
-  return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
+  return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 function tagValue(xml: string, tag: string) {
   const match = xml.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "i"));
@@ -39,10 +39,10 @@ async function hashKey(value: string) {
 }
 function validImageUrl(raw: string): string {
   const value = decodeXml(raw).replace(/^["']|["']$/g, "").trim();
-  if (!/^https:\\/\\//i.test(value)) return "";
+  if (!/^https:\/\//i.test(value)) return "";
   try {
     const url = new URL(value);
-    if (!/\\.(?:jpe?g|png|webp|gif|avif)$/i.test(url.pathname) && !/(image|img|photo|poster|media)/i.test(url.hostname + url.pathname + url.search)) return "";
+    if (!/\.(?:jpe?g|png|webp|gif|avif)$/i.test(url.pathname) && !/(image|img|photo|poster|media)/i.test(url.hostname + url.pathname + url.search)) return "";
     return url.toString();
   } catch { return ""; }
 }
@@ -50,7 +50,7 @@ function imageFromFeed(block: string): string {
   const candidates = [
     block.match(/<media:content[^>]*url=["']([^"']+)["']/i)?.[1],
     block.match(/<media:thumbnail[^>]*url=["']([^"']+)["']/i)?.[1],
-    block.match(/<enclosure[^>]*url=["']([^"']+)["'][^>]*type=["']image\\//i)?.[1],
+    block.match(/<enclosure[^>]*url=["']([^"']+)["'][^>]*type=["']image\//i)?.[1],
     block.match(/<img[^>]*src=["']([^"']+)["']/i)?.[1],
     block.match(/<img[^>]*srcset=["']([^ "' ,]+)[^"']*["']/i)?.[1]
   ];
@@ -79,8 +79,8 @@ async function fetchArticleImage(articleUrl: string): Promise<string> {
       const image = validImageUrl(String(match?.[1] || ""));
       if (image) return image;
     }
-    const jsonImage = html.match(/["'](?:image|thumbnailUrl)["']\\s*:\\s*["'](https?:\\\\?\\/\\/[^"']+)["']/i)?.[1];
-    return jsonImage ? validImageUrl(jsonImage.replace(/\\\\\\//g, "/")) : "";
+    const jsonImage = html.match(/["'](?:image|thumbnailUrl)["']\s*:\s*["'](https?:\\?\/[^"']+)["']/i)?.[1];
+    return jsonImage ? validImageUrl(jsonImage.replace(/\\\//g, "/")) : "";
   } catch (error) {
     console.warn("Publisher image fetch failed:", error instanceof Error ? error.message : String(error));
     return "";
@@ -264,7 +264,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       try { caption = await generateNewsCaption(env, chosenNews); }
       catch (error) {
         console.error("Gemini news caption failed:", error instanceof Error ? error.message : String(error));
-        caption = `${chosenNews.chineseDrama ? "🏮 NEW CHINESE DRAMA UPDATE" : "📰 Entertainment update"}\\n\\n${chosenNews.title}\\n\\n${chosenNews.summary.slice(0, 360)}\\n\\nThis is an external report. Open the source for full details.`;
+        caption = `${chosenNews.chineseDrama ? "🏮 NEW CHINESE DRAMA UPDATE" : "📰 Entertainment update"}\n\n${chosenNews.title}\n\n${chosenNews.summary.slice(0, 360)}\n\nThis is an external report. Open the source for full details.`;
       }
       const newsImage = chosenNews.imageUrl || await fetchArticleImage(chosenNews.link);
       campaign = {
