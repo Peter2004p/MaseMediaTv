@@ -69,7 +69,7 @@ async function fetchArticleImage(articleUrl: string): Promise<string> {
 async function fetchEntertainmentNews(): Promise<NewsItem[]> {
   // Search recent premiere/release and airing notices, not only broad "popular" stories.
   const feeds = [
-    "https://news.google.com/rss/search?q=Chinese+drama+premiere+date+starts+airing+2026+OR+2027&hl=en-US&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=Chinese+drama+premiere+date+starts+airing+" + new Date().getUTCFullYear() + "+OR+" + (new Date().getUTCFullYear() + 1) + "&hl=en-US&gl=US&ceid=US:en",
     "https://news.google.com/rss/search?q=C-drama+new+series+release+date+premiere+this+week&hl=en-US&gl=US&ceid=US:en",
     "https://news.google.com/rss/search?q=Chinese+drama+official+trailer+release+premiere+date&hl=en-US&gl=US&ceid=US:en",
     "https://news.google.com/rss/search?q=upcoming+Chinese+TV+drama+confirmed+release+date&hl=en-US&gl=US&ceid=US:en",
@@ -315,10 +315,11 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       continue;
     }
     try {
-      const hasPoster = campaign.contentType === "catalogue" && /^https:\/\//i.test(campaign.poster);
+      const posterImage = campaign.contentType === "catalogue" ? campaign.poster : (campaign.imageUrl || "");
+      const hasPoster = /^https:\/\//i.test(posterImage);
       const method = hasPoster ? "sendPhoto" : "sendMessage";
       const payload = hasPoster
-        ? { chat_id: target, photo: campaign.poster, caption: campaign.caption.slice(0, 1000), reply_markup: replyMarkup }
+        ? { chat_id: target, photo: posterImage, caption: campaign.caption.slice(0, 1000), reply_markup: replyMarkup }
         : { chat_id: target, text: campaign.caption.slice(0, 3800), reply_markup: replyMarkup, disable_web_page_preview: true };
       const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method, {
         method: "POST", headers: { "content-type": "application/json" },
