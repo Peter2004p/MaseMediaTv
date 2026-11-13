@@ -42,7 +42,7 @@ async function makeReply(env: AutoEnv, comment: string, author: string, videoTit
   const errors: string[] = [];
   if (env.GEMINI_API_KEY) {
     try {
-      const model = env.GEMINI_MODEL || "gemini-2.5-flash";
+      const model = env.GEMINI_MODEL || "gemini-3.8-flash";
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.35, maxOutputTokens: 180 } })
@@ -55,7 +55,7 @@ async function makeReply(env: AutoEnv, comment: string, author: string, videoTit
   }
   if (env.AI) {
     try {
-      const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", { messages: [{ role: "system", content: system }, { role: "user", content: prompt }] });
+      const result = await env.AI.run("@cf/google/gemma-4-26b-a4b-it", { messages: [{ role: "system", content: system }, { role: "user", content: prompt }] });
       const answer = String(result?.response || result?.result?.response || "").trim();
       if (answer) return answer;
       errors.push("Cloudflare Workers AI returned an empty reply.");
