@@ -14,9 +14,9 @@ dockerfile = "./Dockerfile"
 name = "MEDIA_ENGINE"
 class_name = "MediaEngineContainer"
 
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["MediaEngineContainer"]
+[exports.MediaEngineContainer]
+type = "durable-object"
+storage = "sqlite"
 
 [observability]
 enabled = true
