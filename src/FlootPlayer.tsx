@@ -84,18 +84,23 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     const element = mkvPlayerRef.current;
     if (!element) return;
     let metadataReady = false;
-    const syncTracks = () => {
-      // Read embedded tracks from Movi's live demuxer. The element can create its
-      // engine after the first metadata event, so this is also retried below.
+    const syncTracks = (event?: Event) => {
+      // Movi publishes the discovered embedded streams in trackschange.detail.subtitle.
+      // Prefer that authoritative event payload, then fall back to the live player API.
       const player = element.player;
-      if (!player) return;
       let raw:any[] = [];
       try {
-        raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
-        if (!raw.length && typeof player.getTracks === "function") {
-          raw = (player.getTracks() || []).filter((track:any) =>
-            String(track.type || track.kind || "").toLowerCase() === "subtitle"
-          );
+        const detail = (event as CustomEvent<any> | undefined)?.detail;
+        const eventSubtitles = Array.isArray(detail?.subtitle) ? detail.subtitle : [];
+        if (eventSubtitles.length) {
+          raw = eventSubtitles;
+        } else if (player) {
+          raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
+          if (!raw.length && typeof player.getTracks === "function") {
+            raw = (player.getTracks() || []).filter((track:any) =>
+              String(track.type || track.kind || "").toLowerCase() === "subtitle"
+            );
+          }
         }
       } catch { raw = []; }
       const mapped = raw.map((track:any, index:number) => {
