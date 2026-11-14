@@ -179,12 +179,31 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    const rangeLength=Number(partial[2])-Number(partial[1])+1;
    if(Number.isSafeInteger(rangeLength)&&rangeLength>0) outHeaders.set("content-length",String(rangeLength));
   } else if(upstream.status===200) {
+   const finalUrl=upstream.url||upstreamUrl;
    try {
-    const head=await fetchPublicHttps(upstream.url||upstreamUrl,headers,"HEAD");
+    const head=await fetchPublicHttps(finalUrl,headers,"HEAD");
     const size=head.headers.get("content-length");
     if(head.ok && size && /^\d+$/.test(size)) outHeaders.set("content-length",size);
     await head.body?.cancel();
-   } catch { /* Continue streaming if the provider does not support HEAD. */ }
+   } catch { /* Some media providers do not implement HEAD. */ }
+   // Many object-storage gateways omit Content-Length on both GET and HEAD,
+   // but still implement byte ranges. A one-byte probe reveals the complete
+   // object size from Content-Range without downloading or buffering the movie.
+   if(!outHeaders.has("content-length")) {
+    try {
+     const probeHeaders=new Headers(headers);
+     probeHeaders.delete("range");
+     probeHeaders.delete("if-range");
+     probeHeaders.set("range","bytes=0-0");
+     const probe=await fetchPublicHttps(finalUrl,probeHeaders,"GET");
+     const range=probe.headers.get("content-range")||"";
+     const total=range.match(/^bytes\s+0-0\/(\d+)$/i);
+     const probeLength=probe.headers.get("content-length")||"";
+     if(probe.status===206 && total && /^\d+$/.test(total[1])) outHeaders.set("content-length",total[1]);
+     else if(probe.status===200 && /^\d+$/.test(probeLength)) outHeaders.set("content-length",probeLength);
+     await probe.body?.cancel();
+    } catch { /* Keep the stream usable if the provider has no range support. */ }
+   }
   }
  }
  outHeaders.set("content-type",contentType || "application/octet-stream");
@@ -196,4 +215,27 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  }
  outHeaders.set("cache-control","no-store"); outHeaders.set("access-control-allow-origin","*"); outHeaders.set("access-control-expose-headers","content-length,content-range,accept-ranges,last-modified,etag"); outHeaders.set("accept-ranges",upstream.headers.get("accept-ranges")||"bytes"); outHeaders.set("x-content-type-options","nosniff");
  return new Response(upstream.body,{status:upstream.status,headers:outHeaders});
+};
+
+// Some demuxers ask HEAD before making their first byte-range GET. Resolve HEAD
+// through the same library authorization and proxy path, using a one-byte GET to
+// learn the complete object size when the origin omits it.
+export const onRequestHead = async ({ request, env }: { request:Request; env:Env }) => {
+ const headers=new Headers(request.headers);
+ headers.set("range","bytes=0-0");
+ headers.delete("if-range");
+ const probeRequest=new Request(request.url,{method:"GET",headers});
+ const ranged=await onRequestGet({request:probeRequest,env});
+ const out=new Headers();
+ for(const key of ["content-type","accept-ranges","etag","last-modified","cache-control","access-control-allow-origin","access-control-expose-headers","x-content-type-options"]) {
+  const value=ranged.headers.get(key);
+  if(value) out.set(key,value);
+ }
+ const contentRange=ranged.headers.get("content-range")||"";
+ const total=contentRange.match(/^bytes\\s+0-0\\/(\\d+)$/i);
+ const rangedLength=ranged.headers.get("content-length")||"";
+ if(ranged.status===206 && total && /^\\d+$/.test(total[1])) out.set("content-length",total[1]);
+ else if(ranged.status===200 && /^\\d+$/.test(rangedLength)) out.set("content-length",rangedLength);
+ await ranged.body?.cancel();
+ return new Response(null,{status:ranged.status===206?200:ranged.status,headers:out});
 };
