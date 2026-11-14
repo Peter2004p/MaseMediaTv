@@ -17,6 +17,7 @@ export default defineConfig({
             return 'vendor-react';
           }
           if (id.includes('/node_modules/hls.js/')) return 'vendor-hls';
+          if (id.includes('/node_modules/movi-player/') || id.includes('/node_modules/mediabunny/')) return 'vendor-player';
           if (id.includes('/node_modules/lucide-react/')) return 'vendor-icons';
         },
       },
