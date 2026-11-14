@@ -85,35 +85,55 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     const element = mkvPlayerRef.current;
     if (!element) return;
     let eventPlayer:any = null;
-    const syncTracks = () => {
+    const syncTracks = (eventPayload?: any) => {
       // Movi creates/replaces its underlying engine during source loading.
       // Its public element contract says to read element.player after loadedmetadata/loadeddata.
       const player = element.player;
       if (!player) { setMkvSubtitleReady(false); return; }
-      // The underlying Movi instance may not exist until the source starts loading.
-      // Bind its documented tracksChange event as soon as that instance is available.
+      // Bind to the current player instance as soon as it becomes available.
       if (eventPlayer !== player) {
         eventPlayer?.off?.("tracksChange", syncTracks);
         eventPlayer = player;
         eventPlayer?.on?.("tracksChange", syncTracks);
       }
-      // Read only the MKV subtitle track table. This does not alter the video
-      // source, demuxing pipeline, buffering, seeking, or playback lifecycle.
-      let raw:any[] = [];
-      try {
-        const fromPlayer = player.getSubtitleTracks?.();
-        if (Array.isArray(fromPlayer) && fromPlayer.length) raw = fromPlayer;
-        if (!raw.length) {
+      // Movi's tracksChange event already carries the authoritative Track[].
+      // Prefer that payload; fall back to its public track getters if this event
+      // was triggered by a DOM lifecycle event without a track payload.
+      let raw:any[] = Array.isArray(eventPayload)
+        ? eventPayload.filter((track:any) => String(track.type || track.kind || track.trackType || "").toLowerCase() === "subtitle")
+        : Array.isArray(eventPayload?.detail)
+          ? eventPayload.detail.filter((track:any) => String(track.type || track.kind || track.trackType || "").toLowerCase() === "subtitle")
+          : [];
+      // Read only embedded MKV subtitle metadata; do not touch source, demuxing,
+      // buffering, seeking, audio, controls, or the playback lifecycle.
+      if (!raw.length) {
+        try {
+          const fromPlayer = player.getSubtitleTracks?.();
+          if (Array.isArray(fromPlayer) && fromPlayer.length) raw = fromPlayer;
+        } catch { /* try the custom-element API below */ }
+      }
+      if (!raw.length) {
+        try {
           const fromElement = element.getSubtitleTracks?.();
           if (Array.isArray(fromElement) && fromElement.length) raw = fromElement;
+        } catch { /* try the all-tracks API below */ }
+      }
+      if (!raw.length) {
+        let allTracks:any[] = [];
+        try {
+          const playerTracks = player.getTracks?.();
+          if (Array.isArray(playerTracks) && playerTracks.length) allTracks = playerTracks;
+        } catch { /* use element tracks below */ }
+        if (!allTracks.length) {
+          try {
+            const elementTracks = element.getTracks?.();
+            if (Array.isArray(elementTracks)) allTracks = elementTracks;
+          } catch { /* no track metadata available yet */ }
         }
-        if (!raw.length) {
-          const allTracks = player.getTracks?.() || element.getTracks?.() || [];
-          if (Array.isArray(allTracks)) raw = allTracks.filter((track:any) =>
-            /subtitle|subtitles|text|caption/i.test(String(track.type || track.kind || track.trackType || ""))
-          );
-        }
-      } catch { raw = []; }
+        raw = allTracks.filter((track:any) =>
+          /subtitle|subtitles|text|caption/i.test(String(track.type || track.kind || track.trackType || ""))
+        );
+      }
       const discoveredTracks = raw.map((track:any, index:number) => {
         const rawId = track.id ?? track.trackId ?? track.index;
         const id = Number(rawId);
@@ -151,7 +171,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     // Some remote MKV files expose their track table only after the WASM demuxer
     // has fetched several byte ranges. Keep syncing for a short window, not just
     // the first three seconds, and listen to Movi's documented event spellings.
-    const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
+    const events = ["loadedmetadata", "loadeddata", "canplay", "tracksChange", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
     events.forEach(name => element.addEventListener(name, syncTracks));
     // Movi's documented programmatic event is subscribed once its player instance exists.
     syncTracks();
