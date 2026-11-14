@@ -16,7 +16,8 @@
     "react-dom": "^19.0.0",
     "mediabunny": "^1.57.0",
     "@mediabunny/server": "^1.0.0",
-    "hls.js": "^1.6.13"
+    "hls.js": "^1.6.13",
+    "movi-player": "^0.4.1"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
