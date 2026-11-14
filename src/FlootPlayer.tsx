@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import MaseNetVlcPlayer from './MaseNetVlcPlayer';
 
-const MoviPlayerTag: any = 'movi-player';
 
 type Quality = '480p' | '720p' | '1080p';
 type Track = { label?: string; url: string; path?: string; lang?: string; mimeType?: string };
@@ -22,7 +22,7 @@ const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value /
 const languageMatch=(available:string|undefined,preferred:string)=>{const a=String(available||'').toLowerCase().replace('_','-');const p=preferred.toLowerCase().replace('_','-');return !!p&&p!=='off'&&p!=='auto'&&(a===p||a.startsWith(p+'-')||p.startsWith(a+'-'));};
 
 export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, onPlaybackStarted, onPlaybackEnded, onPlaybackStateChange, syncCommand, profileId, playRequest = 0, resumeAtSeconds = 0, autoPlay = false, muted = false, reelMode = false }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null); const mkvPlayerRef = useRef<any>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
+  const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const hlsRecoveryAttemptsRef = useRef({ network: 0, media: 0 }); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [preferredSubtitleLanguage,setPreferredSubtitleLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-subtitle-language'+(profileId?'-'+profileId:''))||'off'}catch{return 'off'}}); const [preferredAudioLanguage,setPreferredAudioLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-audio-language'+(profileId?'-'+profileId:''))||'auto'}catch{return 'auto'}}); const [hlsAudioTracks,setHlsAudioTracks]=useState<{name?:string;lang?:string}[]>([]); const preferencesHydrated=useRef(false);
@@ -30,11 +30,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
   const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
-  const [mkvSubtitleTracks, setMkvSubtitleTracks] = useState<{id:number;label:string;language?:string;active?:boolean}[]>([]);
-  const [mkvSubtitleMenuOpen, setMkvSubtitleMenuOpen] = useState(false);
-  const [mkvSubtitleReady, setMkvSubtitleReady] = useState(false);
-  const [mkvSubtitleNotice, setMkvSubtitleNotice] = useState("");
-  const [mkvActiveSubtitleTrackId, setMkvActiveSubtitleTrackId] = useState<number | null>(null);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
@@ -53,7 +48,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     const srt = /\.srt(?:$|[?#])/i.test(value) || /subrip/i.test(t.mimeType || '');
     return safeUrl && (webVtt || (isMkvSource && srt));
   }).map(t => ({ ...t, url: String(t.url || t.path).trim() }));
-  const vlcIntent = '';
   const telegramWebView = typeof window !== 'undefined' && (/Telegram/i.test(navigator.userAgent) || Boolean((window as Window & { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp));
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
   const src = isHlsSource ? proxyUrl : rawSrc;
@@ -67,7 +61,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     if (!isMkvSource) { setMoviReady(false); return; }
     let active = true;
     setMoviReady(false);
-    import('movi-player/element/slim').then(() => {
+    import('movi-player/player').then(() => {
       if (active) { setMoviReady(true); setError(''); }
     }).catch(() => {
       if (active) setError('The MKV playback module could not load. Check your connection and tap Retry.');
@@ -75,64 +69,9 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return () => { active = false; };
   }, [isMkvSource, retry]);
 
-  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); setMkvActiveSubtitleTrackId(null); }, [episode.id]);
+  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
   // interfere with the custom element's own click/touch handling in WebViews.
-
-  useEffect(() => {
-    if (!isMkvSource || !moviReady) { setMkvSubtitleTracks([]); setMkvSubtitleReady(false); return; }
-    const element = mkvPlayerRef.current;
-    if (!element) return;
-    const syncTracks = () => {
-      // Movi creates/replaces its underlying engine during source loading.
-      // Its public element contract says to read element.player after loadedmetadata/loadeddata.
-      const player = element.player;
-      if (!player) { setMkvSubtitleReady(false); return; }
-      const raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
-      setMkvSubtitleTracks(raw.map((track:any, index:number) => {
-        const id = Number(track.id);
-        return {
-          id,
-          label: String(track.label || track.title || track.language || track.codec || "Subtitle track " + (index + 1)),
-          language: String(track.language || ""),
-          active: id === mkvActiveSubtitleTrackId || Boolean(track.active || track.isActive)
-        };
-      }).filter((track:any) => Number.isFinite(track.id)));
-      setMkvSubtitleReady(true);
-    };
-    // Some remote MKV files expose their track table only after the WASM demuxer
-    // has fetched several byte ranges. Keep syncing for a short window, not just
-    // the first three seconds, and listen to Movi's documented event spellings.
-    const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
-    events.forEach(name => element.addEventListener(name, syncTracks));
-    syncTracks();
-    const retryTimers = [500, 1500, 3000, 6000, 10000, 15000].map(delay => window.setTimeout(syncTracks, delay));
-    return () => {
-      retryTimers.forEach(timer => window.clearTimeout(timer));
-      events.forEach(name => element.removeEventListener(name, syncTracks));
-    };
-  }, [isMkvSource, moviReady, episode.id, rawSrc, retry, mkvActiveSubtitleTrackId]);
-
-  const selectMkvSubtitle = async (trackId:number|null, label = "Subtitles turned off.") => {
-    const player = mkvPlayerRef.current?.player;
-    if (!player?.selectSubtitleTrack) {
-      setMkvSubtitleNotice("The MKV subtitle selector is still loading. Retry after the video opens.");
-      return;
-    }
-    try {
-      const selected = await player.selectSubtitleTrack(trackId);
-      if (selected === false && trackId !== null) {
-        setMkvSubtitleNotice("This subtitle track could not be enabled.");
-        return;
-      }
-      setMkvSubtitleNotice(trackId === null ? label : "Subtitle enabled: " + label);
-      setMkvActiveSubtitleTrackId(trackId);
-      setMkvSubtitleTracks((current) => current.map(track => ({...track,active:track.id===trackId})));
-      setMkvSubtitleMenuOpen(false);
-    } catch {
-      setMkvSubtitleNotice("Could not switch this embedded subtitle track. Try another track.");
-    }
-  };
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
@@ -256,46 +195,17 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   }
 
   if (isMkvSource && !embed) {
-    return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
-      <div className="flootStyleFrame" style={{ minHeight: 220 }}>
-        <MoviPlayerTag
-          ref={mkvPlayerRef}
-          key={episode.id + ':' + rawSrc + ':' + retry}
-          src={mkvProxyUrl}
-          onError={() => { if (!mkvUseDirectSource) setMkvUseDirectSource(true); }}
-          controls
-          playsinline
-          subtitlepicker
-          theme="dark"
-          controlslist="nosubtitledrag"
-          subtitlesize="1.15"
-          subtitlebg="rgba(0,0,0,.65)"
-          style={{ display: 'block', width: '100%', height: '100%', minHeight: '220px', aspectRatio: '16 / 9', background: '#000' }}
-        >
-          {tracks.map((track, index) => {
-            const rawTrackUrl = String(track.url || track.path || '').trim();
-            const isAbsoluteHttps = /^https:\/\//i.test(rawTrackUrl);
-            const trackUrl = isAbsoluteHttps
-              ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&resource=' + encodeURIComponent(rawTrackUrl)
-              : rawTrackUrl;
-            const isSrt = /\.srt(?:$|[?#])/i.test(rawTrackUrl) || /subrip/i.test(track.mimeType || '');
-            return <track key={rawTrackUrl + index} kind="subtitles" src={trackUrl} srclang={track.lang || 'und'} label={track.label || track.lang || 'Subtitle ' + (index + 1)} default={index === 0} data-format={isSrt ? 'srt' : undefined} />;
-          })}
-        </MoviPlayerTag>
-      </div>
-      <div className="fspControls"><div className="fspRow fspOptions">
-        {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
-        <div className="fspSubtitleControl">
-          <button type="button" className="fspSubtitleButton" aria-expanded={mkvSubtitleMenuOpen} onClick={() => setMkvSubtitleMenuOpen(value => !value)}>▤ Embedded subtitles ({mkvSubtitleTracks.length})</button>
-          {mkvSubtitleMenuOpen && <div className="fspSubtitleMenu"><strong>MKV subtitle tracks</strong>
-            <button type="button" onClick={() => void selectMkvSubtitle(null)}>Off</button>
-            {mkvSubtitleTracks.map((track,index)=><button type="button" key={track.id} className={track.active?'selected':''} onClick={()=>void selectMkvSubtitle(track.id,track.label)}>{track.label}{track.language?' · '+track.language:''}</button>)}
-            {!mkvSubtitleTracks.length && <p>{mkvSubtitleReady?'No embedded subtitle tracks were found in this MKV.':'Reading subtitle tracks from the MKV…'}</p>}
-          </div>}
-        </div>
-        <span style={{ color: '#c9ccd5', fontSize: 12 }}>{mkvSubtitleNotice || (mkvSubtitleTracks.length ? 'Choose an embedded track here or in the player menu.' : 'Detecting embedded subtitle tracks…')}</span>
-      </div></div>
-    </section>;
+    return <MaseNetVlcPlayer
+      src={mkvProxyUrl}
+      title={episode.title}
+      onProgress={onProgress}
+      onPlaybackPosition={onPlaybackPosition}
+      onPlaybackStarted={onPlaybackStarted}
+      onPlaybackEnded={onPlaybackEnded}
+      onPlaybackStateChange={onPlaybackStateChange}
+      resumeAtSeconds={resumeAtSeconds}
+      autoPlay={autoPlay}
+    />;
   }
 
   return <div className={`flootStylePlayer${reelMode ? ' reelMode' : ''}`}>
