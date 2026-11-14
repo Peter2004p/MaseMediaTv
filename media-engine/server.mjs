@@ -81,6 +81,16 @@ async function readJson(req) {
   return JSON.parse(raw || "{}");
 }
 
+async function waitForPlaylist(file, child, timeoutMs = 30000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    try { const info = await stat(file); if (info.size > 0) return true; } catch {}
+    if (child.exitCode !== null) break;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  return false;
+}
+
 async function sendFile(res, file) {
   try {
     const info = await stat(file);
@@ -155,6 +165,13 @@ const server = http.createServer(async (req, res) => {
         await rm(dir, { recursive: true, force: true }).catch(() => {});
       }, 2 * 60 * 60 * 1000);
       cleanup.unref?.();
+      const ready = await waitForPlaylist(playlist, child, 30000);
+      if (!ready) {
+        try { child.kill("SIGTERM"); } catch {}
+        sessions.delete(id);
+        await rm(dir, { recursive: true, force: true }).catch(() => {});
+        return json(res, 504, { error: "FFmpeg did not prepare the first HLS segment in time", detail: session.stderr() });
+      }
       return json(res, 202, {
         id, status: "preparing",
         playlist: "/sessions/" + id + "/index.m3u8",
