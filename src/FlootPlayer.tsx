@@ -27,7 +27,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const [error, setError] = useState(''); const hlsRecoveryAttemptsRef = useRef({ network: 0, media: 0 }); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [preferredSubtitleLanguage,setPreferredSubtitleLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-subtitle-language'+(profileId?'-'+profileId:''))||'off'}catch{return 'off'}}); const [preferredAudioLanguage,setPreferredAudioLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-audio-language'+(profileId?'-'+profileId:''))||'auto'}catch{return 'auto'}}); const [hlsAudioTracks,setHlsAudioTracks]=useState<{name?:string;lang?:string}[]>([]); const preferencesHydrated=useRef(false);
   const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
-  const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
   const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
   const variants = useMemo<Variant[]>(() => {
@@ -51,9 +50,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const telegramWebView = typeof window !== 'undefined' && (/Telegram/i.test(navigator.userAgent) || Boolean((window as Window & { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp));
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
   const src = isHlsSource ? proxyUrl : rawSrc;
-  const mkvProxyUrl = mkvUseDirectSource ? rawSrc : proxyUrl;
-
-  useEffect(() => { setMkvUseDirectSource(false); }, [episode.id, rawSrc]);
+  const mkvProxyUrl = proxyUrl;
 
   // Load the large Matroska-capable player only when an MKV source is actually opened.
   // This keeps the regular MP4/HLS experience from downloading its multi-megabyte decoder bundle.
@@ -142,7 +139,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
         if (hlsRef.current === hls) hlsRef.current = null;
         if (video.canPlayType('application/vnd.apple.mpegurl')) {
           setError('Switching to the browser’s native HLS player…');
-          setAssistStatus('assisting');
           video.src = src;
           video.load();
           return;
