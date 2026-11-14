@@ -82,12 +82,12 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return () => { active = false; };
   }, [isMkvSource, retry]);
 
-  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); setMkvActiveSubtitleTrackId(null); }, [episode.id]);
+  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvAudioTracks([]); setMkvAudioMenuOpen(false); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); setMkvActiveSubtitleTrackId(null); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
   // interfere with the custom element's own click/touch handling in WebViews.
 
   useEffect(() => {
-    if (!isMkvSource || !moviReady) { setMkvSubtitleTracks([]); setMkvSubtitleReady(false); return; }
+    if (!isMkvSource || !moviReady) { setMkvSubtitleTracks([]); setMkvAudioTracks([]); setMkvSubtitleReady(false); return; }
     const element = mkvPlayerRef.current;
     if (!element) return;
     const syncTracks = () => {
