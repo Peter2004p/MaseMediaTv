@@ -27,7 +27,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const [error, setError] = useState(''); const hlsRecoveryAttemptsRef = useRef({ network: 0, media: 0 }); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [preferredSubtitleLanguage,setPreferredSubtitleLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-subtitle-language'+(profileId?'-'+profileId:''))||'off'}catch{return 'off'}}); const [preferredAudioLanguage,setPreferredAudioLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-audio-language'+(profileId?'-'+profileId:''))||'auto'}catch{return 'auto'}}); const [hlsAudioTracks,setHlsAudioTracks]=useState<{name?:string;lang?:string}[]>([]); const preferencesHydrated=useRef(false);
   const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
-  const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
+  const [mkvUseDirectSource, setMkvUseDirectSource] = useState(true);
   const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
   const [mkvSubtitleTracks, setMkvSubtitleTracks] = useState<{id:number;label:string;language?:string;active?:boolean}[]>([]);
@@ -59,7 +59,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const src = isHlsSource ? proxyUrl : rawSrc;
   const mkvProxyUrl = mkvUseDirectSource ? rawSrc : proxyUrl;
 
-  useEffect(() => { setMkvUseDirectSource(false); }, [episode.id, rawSrc]);
+  useEffect(() => { setMkvUseDirectSource(true); }, [episode.id, rawSrc]);
 
   // Load the large Matroska-capable player only when an MKV source is actually opened.
   // This keeps the regular MP4/HLS experience from downloading its multi-megabyte decoder bundle.
@@ -245,7 +245,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
   const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
   const pictureInPicture = async () => { const v = videoRef.current as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null; if (!v) return; try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled && v.requestPictureInPicture) { await v.requestPictureInPicture(); } else { setError('Picture-in-Picture is not supported in this browser or Telegram webview. Use Fullscreen instead.'); } } catch { setError('Picture-in-Picture could not start. Try playing the video first, or use Fullscreen.'); } };
-  const retrySource = () => { proxiedFallbackRef.current = false; hlsProbeRef.current = false; setError(''); setBuffering(true); setRetry(x => x + 1); };
+  const retrySource = () => { proxiedFallbackRef.current = false; hlsProbeRef.current = false; setMkvUseDirectSource(true); setMkvSubtitleNotice('Retrying direct MKV playback first…'); setError(''); setBuffering(true); setRetry(x => x + 1); };
 
   if (isMkvSource && !embed && !moviReady) {
     return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
@@ -262,7 +262,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
           ref={mkvPlayerRef}
           key={episode.id + ':' + rawSrc + ':' + retry}
           src={mkvProxyUrl}
-          onError={() => { if (!mkvUseDirectSource) setMkvUseDirectSource(true); }}
+          crossorigin="anonymous"
+          onError={() => { if (mkvUseDirectSource) { setMkvUseDirectSource(false); setMkvSubtitleNotice('Direct playback was blocked by the source. Trying the secure MaseNet proxy; the provider must still support byte-range requests.'); } }}
           controls
           playsinline
           subtitlepicker
