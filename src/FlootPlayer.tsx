@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import MaseNetVlcPlayer from './MaseNetVlcPlayer';
 
-const MoviPlayerTag: any = 'movi-player';
 
 type Quality = '480p' | '720p' | '1080p';
 type Track = { label?: string; url: string; path?: string; lang?: string; mimeType?: string };
@@ -67,7 +67,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     if (!isMkvSource) { setMoviReady(false); return; }
     let active = true;
     setMoviReady(false);
-    import('movi-player/element/slim').then(() => {
+    import('movi-player/player').then(() => {
       if (active) { setMoviReady(true); setError(''); }
     }).catch(() => {
       if (active) setError('The MKV playback module could not load. Check your connection and tap Retry.');
@@ -78,86 +78,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); setMkvActiveSubtitleTrackId(null); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
   // interfere with the custom element's own click/touch handling in WebViews.
-
-  useEffect(() => {
-    if (!isMkvSource || !moviReady) { setMkvSubtitleTracks([]); setMkvSubtitleReady(false); return; }
-    const element = mkvPlayerRef.current;
-    if (!element) return;
-    let metadataReady = false;
-    const syncTracks = (event?: Event) => {
-      // Movi's trackschange event exposes a track array in event.detail.
-      // Prefer the event payload, then query the player API as a fallback.
-      const player = element.player;
-      let raw:any[] = [];
-      try {
-        const detail = (event as CustomEvent<any> | undefined)?.detail;
-        if (Array.isArray(detail)) {
-          raw = detail.filter((track:any) =>
-            String(track.type || track.kind || "").toLowerCase().includes("subtitle")
-          );
-        }
-        if (!raw.length && player) {
-          raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
-          if (!raw.length && typeof player.getTracks === "function") {
-            raw = (player.getTracks() || []).filter((track:any) =>
-              String(track.type || track.kind || "").toLowerCase().includes("subtitle")
-            );
-          }
-        }
-      } catch { raw = []; }
-
-      const mapped = raw.map((track:any, index:number) => {
-        const id = Number(track.id ?? track.trackId ?? track.index ?? index);
-        const language = String(track.language || track.lang || "");
-        const codec = String(track.codec || track.subtitleType || track.codecName || "");
-        const title = String(track.title || track.label || track.name || "");
-        return {
-          id,
-          label: title || language || codec || "Embedded subtitle " + (index + 1),
-          language,
-          codec,
-          forced: Boolean(track.forced),
-          active: Boolean(track.active || track.isActive)
-        };
-      }).filter((track:any) => Number.isFinite(track.id));
-
-      setMkvSubtitleTracks(mapped);
-      if (mapped.length || metadataReady) setMkvSubtitleReady(true);
-    };
-    const onMetadata = () => { metadataReady = true; syncTracks(); };
-    const onTracksChange = (event: Event) => { metadataReady = true; syncTracks(event); };
-    // Listen to Movi's custom-element event and load lifecycle events. The
-    // native controls remain enabled; this menu is only a track-list mirror.
-    const events = ["trackschange", "loadend", "loadEnd", "loadedmetadata", "loadeddata", "canplay"];
-    events.forEach(name => element.addEventListener(name, name === "trackschange" ? onTracksChange : onMetadata));
-    syncTracks();
-    const retryTimers = [250, 500, 1000, 1500, 2500, 4000, 6000, 9000, 13000, 18000, 25000, 30000].map(delay => window.setTimeout(syncTracks, delay));
-    return () => {
-      retryTimers.forEach(timer => window.clearTimeout(timer));
-      events.forEach(name => element.removeEventListener(name, name === "trackschange" ? onTracksChange : onMetadata));
-    };
-  }, [isMkvSource, moviReady, episode.id, rawSrc, retry]);
-
-  const selectMkvSubtitle = async (trackId:number|null, label = "Subtitles turned off.") => {
-    const player = mkvPlayerRef.current?.player;
-    if (!player?.selectSubtitleTrack) {
-      setMkvSubtitleNotice("The MKV subtitle selector is still loading. Retry after the video opens.");
-      return;
-    }
-    try {
-      const selected = await player.selectSubtitleTrack(trackId);
-      if (selected === false && trackId !== null) {
-        setMkvSubtitleNotice("This subtitle track could not be enabled.");
-        return;
-      }
-      setMkvSubtitleNotice(trackId === null ? label : "Subtitle enabled: " + label);
-      setMkvActiveSubtitleTrackId(trackId);
-      setMkvSubtitleTracks((current) => current.map(track => ({...track,active:track.id===trackId})));
-      setMkvSubtitleMenuOpen(false);
-    } catch {
-      setMkvSubtitleNotice("Could not switch this embedded subtitle track. Try another track.");
-    }
-  };
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
@@ -281,35 +201,17 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   }
 
   if (isMkvSource && !embed) {
-    return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
-      <div className="flootStyleFrame" style={{ minHeight: 220 }}>
-        <MoviPlayerTag
-          ref={mkvPlayerRef}
-          key={episode.id + ':' + rawSrc + ':' + retry}
-          src={mkvProxyUrl}
-          onError={() => { if (!mkvUseDirectSource) setMkvUseDirectSource(true); }}
-          controls
-          playsinline
-          theme="dark"
-          controlslist="nosubtitledrag"
-          subtitlesize="1.15"
-          subtitlebg="rgba(0,0,0,.65)"
-          style={{ display: 'block', width: '100%', height: '100%', minHeight: '220px', aspectRatio: '16 / 9', background: '#000' }}
-        />
-      </div>
-      <div className="fspControls"><div className="fspRow fspOptions">
-        {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
-        <div className="fspSubtitleControl">
-          <button type="button" className="fspSubtitleButton" aria-expanded={mkvSubtitleMenuOpen} onClick={() => setMkvSubtitleMenuOpen(value => !value)}>▤ Embedded subtitles ({mkvSubtitleTracks.length})</button>
-          {mkvSubtitleMenuOpen && <div className="fspSubtitleMenu"><strong>MKV subtitle tracks</strong>
-            <button type="button" onClick={() => void selectMkvSubtitle(null)}>Off</button>
-            {mkvSubtitleTracks.map((track,index)=><button type="button" key={track.id} className={track.active?'selected':''} onClick={()=>void selectMkvSubtitle(track.id,track.label)}>{track.label}{track.language?' · '+track.language:''}{track.codec?' · '+track.codec:''}{track.forced?' · Forced':''}</button>)}
-            {!mkvSubtitleTracks.length && <p>{mkvSubtitleReady?'No embedded subtitle tracks were found in this MKV.':'Reading subtitle tracks from the MKV…'}</p>}
-          </div>}
-        </div>
-        <span style={{ color: '#c9ccd5', fontSize: 12 }}>{mkvSubtitleNotice || (mkvSubtitleTracks.length ? 'Choose an embedded track here or in the player menu.' : 'Detecting embedded subtitle tracks…')}</span>
-      </div></div>
-    </section>;
+    return <MaseNetVlcPlayer
+      src={mkvProxyUrl}
+      title={episode.title}
+      onProgress={onProgress}
+      onPlaybackPosition={onPlaybackPosition}
+      onPlaybackStarted={onPlaybackStarted}
+      onPlaybackEnded={onPlaybackEnded}
+      onPlaybackStateChange={onPlaybackStateChange}
+      resumeAtSeconds={resumeAtSeconds}
+      autoPlay={autoPlay}
+    />;
   }
 
   return <div className={`flootStylePlayer${reelMode ? ' reelMode' : ''}`}>
