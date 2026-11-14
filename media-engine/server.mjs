@@ -2,7 +2,7 @@ import http from "node:http";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, stat } from "node:fs/promises";
+import { mkdir, stat, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import net from "node:net";
@@ -111,6 +111,8 @@ const server = http.createServer(async (req, res) => {
       const source = await validateSource(url.searchParams.get("url") || "");
       const streamIndex = Number(url.searchParams.get("stream"));
       if (!Number.isInteger(streamIndex) || streamIndex < 0 || streamIndex > 100) return json(res, 400, { error: "Invalid subtitle stream index" });
+      const metadata = await probe(source);
+      if (!metadata.streams.some(s => s.index === streamIndex && s.codecType === "subtitle")) return json(res, 400, { error: "Requested stream is not a subtitle track" });
       const child = spawn("ffmpeg", ["-nostdin", "-hide_banner", "-loglevel", "error", "-i", source, "-map", "0:" + streamIndex, "-f", "webvtt", "pipe:1"]);
       const chunks = []; let size = 0; let stderr = "";
       child.stdout.on("data", b => { size += b.length; if (size <= 20 * 1024 * 1024) chunks.push(b); else child.kill("SIGKILL"); });
@@ -123,6 +125,8 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && url.pathname === "/sessions") {
       const body = await readJson(req);
       const source = await validateSource(String(body.url || ""));
+      const activeSessions = [...sessions.values()].filter(s => s.exitCode === undefined).length;
+      if (activeSessions >= 2) return json(res, 429, { error: "The media engine is busy. Retry when an active conversion finishes." });
       const info = await probe(source);
       if (!info.streams.some(s => s.codecType === "video")) return json(res, 422, { error: "No video stream was found in this source" });
       const id = randomUUID();
@@ -145,6 +149,12 @@ const server = http.createServer(async (req, res) => {
       const session = { id, dir, child, startedAt: Date.now(), stderr: () => stderr };
       sessions.set(id, session);
       child.on("close", code => { session.exitCode = code; });
+      const cleanup = setTimeout(async () => {
+        try { child.kill("SIGTERM"); } catch {}
+        sessions.delete(id);
+        await rm(dir, { recursive: true, force: true }).catch(() => {});
+      }, 2 * 60 * 60 * 1000);
+      cleanup.unref?.();
       return json(res, 202, {
         id, status: "preparing",
         playlist: "/sessions/" + id + "/index.m3u8",
