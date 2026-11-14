@@ -84,11 +84,19 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     if (!isMkvSource || !moviReady) { setMkvSubtitleTracks([]); setMkvSubtitleReady(false); return; }
     const element = mkvPlayerRef.current;
     if (!element) return;
+    let eventPlayer:any = null;
     const syncTracks = () => {
       // Movi creates/replaces its underlying engine during source loading.
       // Its public element contract says to read element.player after loadedmetadata/loadeddata.
       const player = element.player;
       if (!player) { setMkvSubtitleReady(false); return; }
+      // The underlying Movi instance may not exist until the source starts loading.
+      // Bind its documented tracksChange event as soon as that instance is available.
+      if (eventPlayer !== player) {
+        eventPlayer?.off?.("tracksChange", syncTracks);
+        eventPlayer = player;
+        eventPlayer?.on?.("tracksChange", syncTracks);
+      }
       // Read only the MKV subtitle track table. This does not alter the video
       // source, demuxing pipeline, buffering, seeking, or playback lifecycle.
       let raw:any[] = [];
@@ -145,10 +153,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     // the first three seconds, and listen to Movi's documented event spellings.
     const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
     events.forEach(name => element.addEventListener(name, syncTracks));
-    // Movi's documented programmatic event is camelCase and is emitted by the
-    // player instance (the custom element also re-emits a lowercase DOM event).
-    const eventPlayer = element.player;
-    eventPlayer?.on?.("tracksChange", syncTracks);
+    // Movi's documented programmatic event is subscribed once its player instance exists.
     syncTracks();
     const retryTimers = [500, 1500, 3000, 6000, 10000, 15000].map(delay => window.setTimeout(syncTracks, delay));
     return () => {
