@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 
 type Quality = "480p" | "720p" | "1080p";
-type Track = { label?: string; url: string; path?: string; lang?: string; mimeType?: string };
 type Variant = { quality: Quality; streamUrl: string; mimeType?: string; subtitleTracks?: Track[] };
 type Episode = { id: string; title: string; quality: Quality; streamUrl: string; mimeType?: string; subtitleTracks?: Track[]; qualities?: Variant[] };
 type Props = {
@@ -68,6 +67,9 @@ export default function MaseNetEnginePlayer({
   const rawSrc = selected?.streamUrl || episode.streamUrl;
   const embed = embedFor(rawSrc);
   useEffect(() => { setQuality(""); }, [episode.id]);
+  useEffect(() => {
+    setSelectedSubtitle(session?.subtitles?.length ? String(session.subtitles[0].index) : "off");
+  }, [session]);
 
   const startSession = useCallback(async () => {
     if (embed) { setLoading(false); return; }
@@ -210,7 +212,7 @@ export default function MaseNetEnginePlayer({
     `}</style>
     <div className="mnEngineScreen">
       {embed ? <iframe src={embed} title={episode.title} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen style={{ width: "100%", height: "100%", border: 0, position: "absolute", inset: 0 }} /> : <video ref={videoRef} playsInline preload="metadata" muted={muted}>
-        {session?.subtitles?.map(track => <track key={track.index} data-engine-subtitle={String(track.index)} kind="subtitles" src={track.url} srcLang={track.language || "und"} label={track.label} />)}
+        {session?.subtitles?.map(track => <track key={track.index} data-engine-subtitle={String(track.index)} kind="subtitles" src={track.url} srcLang={track.language || "und"} label={track.label} default={track.index === session?.subtitles?.[0]?.index} />)}
       </video>}
       {loading && <div className="mnEngineOverlay"><span>Preparing MaseNet Media Engine…</span><small>Reading video, audio and subtitle tracks</small></div>}
       {buffering && !loading && <div className="mnEngineOverlay"><span>Buffering…</span></div>}
@@ -223,8 +225,9 @@ export default function MaseNetEnginePlayer({
         <button onClick={togglePlay}>{playing ? "Pause" : "Play"}</button>
         <span className="mnEngineTime">{timeLabel(time)} / {timeLabel(duration)}</span>
         <button onClick={() => setVolume(v => v === 0 ? 1 : 0)}>{volume === 0 ? "Unmute" : "Mute"}</button>
+        <input aria-label="Volume" type="range" min={0} max={1} step={0.05} value={volume} onChange={e => setVolume(Number(e.target.value))} style={{ maxWidth: 84 }} />
         <select aria-label="Playback speed" value={speed} onChange={e => setSpeed(Number(e.target.value))}>{[0.5,0.75,1,1.25,1.5,2].map(v => <option key={v} value={v}>{v}×</option>)}</select>
-        <button onClick={() => setSubtitleMenuOpen(v => !v)}>Subtitles {session?.subtitles?.length ? "(" + session.subtitles.length + ")" : ""}</button>
+        <button onClick={() => setSubtitleMenuOpen(v => !v)}>Subtitles {selectedSubtitle !== "off" ? "on" : session?.subtitles?.length ? "(" + session.subtitles.length + ")" : ""}</button>
         <button onClick={toggleFullscreen}>Fullscreen</button>
       </div>
       {subtitleMenuOpen && <div className="mnEngineMenu">
