@@ -59,7 +59,10 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       let status = response.status;
       let contentType = response.headers.get("content-type") || "Not provided";
       if (status >= 200 && status < 300) {
-        return { ...base, status: "reachable", method: "HEAD", httpStatus: status, contentType, message: "Source responded to a HEAD request. Playback is not confirmed." };
+        const disposition = response.headers.get("content-disposition") || "";
+        const acceptRanges = response.headers.get("accept-ranges") || "Not declared";
+        const detectedFormat = /\.mkv(?:$|[?#])/i.test(url.pathname) || /matroska/i.test(contentType) || /\.mkv/i.test(disposition) ? "MKV" : /\.mp4(?:$|[?#])/i.test(url.pathname) || /video\/mp4/i.test(contentType) ? "MP4" : /\.m3u8(?:$|[?#])/i.test(url.pathname) || /mpegurl/i.test(contentType) ? "HLS" : "Unknown";
+        return { ...base, status: "reachable", method: "HEAD", httpStatus: status, contentType, acceptRanges, detectedFormat, contentLength: response.headers.get("content-length") || "Not provided", message: "Source responded to HEAD. This is a candidate only; browser playback and codec compatibility are not confirmed." };
       }
       if (status >= 300 && status < 400) {
         return { ...base, status: "redirect", method: "HEAD", httpStatus: status, message: "Source redirects. Redirect destination was not followed; test the final direct URL." };
@@ -81,7 +84,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
           contentType = ranged.headers.get("content-type") || contentType;
           try { await ranged.body?.cancel(); } catch { /* body cancellation is best-effort */ }
           if (status === 206) {
-            return { ...base, status: "range_reachable", method: "GET Range", httpStatus: status, contentType, message: "Provider accepted a one-byte range request. Response body was cancelled; playback is not confirmed." };
+            const acceptRanges = ranged.headers.get("accept-ranges") || "Not declared";
+            const detectedFormat = /\.mkv(?:$|[?#])/i.test(url.pathname) || /matroska/i.test(contentType) ? "MKV" : /\.mp4(?:$|[?#])/i.test(url.pathname) || /video\/mp4/i.test(contentType) ? "MP4" : /\.m3u8(?:$|[?#])/i.test(url.pathname) || /mpegurl/i.test(contentType) ? "HLS" : "Unknown";
+            return { ...base, status: "range_reachable", method: "GET Range", httpStatus: status, contentType, acceptRanges, detectedFormat, contentRange: ranged.headers.get("content-range") || "Not provided", message: "Provider accepted a byte-range request. Response body was cancelled; playback is not confirmed." };
           }
           if (status >= 200 && status < 300) {
             return { ...base, status: "range_reachable", method: "GET Range", httpStatus: status, contentType, message: "Provider responded to Range GET but did not confirm partial content. Response body was cancelled; playback is not confirmed." };
