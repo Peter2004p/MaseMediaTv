@@ -84,8 +84,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     const element = mkvPlayerRef.current;
     if (!element) return;
     const syncTracks = () => {
-      // Movi creates/replaces its underlying engine during source loading.
-      // Its public element contract says to read element.player after loadedmetadata/loadeddata.
+      // Movi recreates its engine during source loading. Always read the current
+      // element.player instance after the custom element reports track readiness.
       const player = element.player;
       if (!player) { setMkvSubtitleReady(false); return; }
       const raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
