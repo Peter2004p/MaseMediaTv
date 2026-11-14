@@ -668,7 +668,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
     if(!response.data?.url)throw new Error('The secure media link could not be created. Please try again.');
     url=String(response.data.url);
    }
-   if(!/^https?:\\/\\//i.test(url))throw new Error('This download entry has no valid HTTPS/HTTP link.');
+   if(!url.startsWith("https://")&&!url.startsWith("http://"))throw new Error("This download entry has no valid HTTPS/HTTP link.");
    // Use the range-aware proxy only for a URL explicitly saved in this episode's
    // download fields. The Worker validates the exact URL against the catalogue.
    // R2 signed paths remain direct because their short-lived URLs are not library URLs.
