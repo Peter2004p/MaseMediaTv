@@ -31,6 +31,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
   const [mkvSubtitleTracks, setMkvSubtitleTracks] = useState<{id:number;label:string;language?:string;active?:boolean}[]>([]);
+  const [mkvAudioTracks, setMkvAudioTracks] = useState<{id:number;label:string;language?:string;active?:boolean}[]>([]);
+  const [mkvAudioMenuOpen, setMkvAudioMenuOpen] = useState(false);
   const [mkvSubtitleMenuOpen, setMkvSubtitleMenuOpen] = useState(false);
   const [mkvSubtitleReady, setMkvSubtitleReady] = useState(false);
   const [mkvSubtitleNotice, setMkvSubtitleNotice] = useState("");
@@ -65,6 +67,11 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   // This keeps the regular MP4/HLS experience from downloading its multi-megabyte decoder bundle.
   useEffect(() => {
     if (!isMkvSource) { setMoviReady(false); return; }
+    if (typeof window !== 'undefined' && !window.crossOriginIsolated) {
+      setMoviReady(false);
+      setError('Advanced MKV decoding is blocked because this preview is not cross-origin isolated. Reload the preview after its security headers finish applying.');
+      return;
+    }
     let active = true;
     setMoviReady(false);
     import('movi-player/element/slim').then(() => {
@@ -88,7 +95,14 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       // Its public element contract says to read element.player after loadedmetadata/loadeddata.
       const player = element.player;
       if (!player) { setMkvSubtitleReady(false); return; }
-      const raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
+      const raw = player.getSubtitleTracks?.() || [];
+      const audio = player.getAudioTracks?.() || [];
+      setMkvAudioTracks(audio.map((track:any, index:number) => ({
+        id: Number(track.id),
+        label: String(track.label || track.title || track.language || track.codec || 'Audio track ' + (index + 1)),
+        language: String(track.language || ''),
+        active: Boolean(track.active || track.isActive)
+      })).filter((track:any) => Number.isFinite(track.id)));
       setMkvSubtitleTracks(raw.map((track:any, index:number) => {
         const id = Number(track.id);
         return {
@@ -112,6 +126,18 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       events.forEach(name => element.removeEventListener(name, syncTracks));
     };
   }, [isMkvSource, moviReady, episode.id, rawSrc, retry, mkvActiveSubtitleTrackId]);
+
+  const selectMkvAudio = (trackId:number, label:string) => {
+    const player = mkvPlayerRef.current?.player;
+    if (!player?.selectAudioTrack) { setMkvSubtitleNotice('The MKV audio selector is still loading.'); return; }
+    try {
+      const selected = player.selectAudioTrack(trackId);
+      if (selected === false) { setMkvSubtitleNotice('This audio track could not be selected.'); return; }
+      setMkvAudioTracks(current => current.map(track => ({...track, active: track.id === trackId})));
+      setMkvSubtitleNotice('Audio enabled: ' + label);
+      setMkvAudioMenuOpen(false);
+    } catch { setMkvSubtitleNotice('Could not switch this audio track.'); }
+  };
 
   const selectMkvSubtitle = async (trackId:number|null, label = "Subtitles turned off.") => {
     const player = mkvPlayerRef.current?.player;
@@ -265,6 +291,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
           crossorigin="anonymous"
           onError={() => { if (mkvUseDirectSource) { setMkvUseDirectSource(false); setMkvSubtitleNotice('Direct playback was blocked by the source. Trying the secure MaseNet proxy; the provider must still support byte-range requests.'); } }}
           controls
+          sw="auto"
+          fallback="native"
           playsinline
           subtitlepicker
           theme="dark"
@@ -286,6 +314,13 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       </div>
       <div className="fspControls"><div className="fspRow fspOptions">
         {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
+        <div className="fspSubtitleControl">
+          <button type="button" className="fspSubtitleButton" aria-expanded={mkvAudioMenuOpen} onClick={() => setMkvAudioMenuOpen(value => !value)}>♫ Audio ({mkvAudioTracks.length})</button>
+          {mkvAudioMenuOpen && <div className="fspSubtitleMenu"><strong>MKV audio tracks</strong>
+            {mkvAudioTracks.map(track => <button type="button" key={track.id} className={track.active?'selected':''} onClick={() => selectMkvAudio(track.id, track.label)}>{track.label}{track.language?' · '+track.language:''}</button>)}
+            {!mkvAudioTracks.length && <p>Reading audio tracks from the MKV…</p>}
+          </div>}
+        </div>
         <div className="fspSubtitleControl">
           <button type="button" className="fspSubtitleButton" aria-expanded={mkvSubtitleMenuOpen} onClick={() => setMkvSubtitleMenuOpen(value => !value)}>▤ Embedded subtitles ({mkvSubtitleTracks.length})</button>
           {mkvSubtitleMenuOpen && <div className="fspSubtitleMenu"><strong>MKV subtitle tracks</strong>
