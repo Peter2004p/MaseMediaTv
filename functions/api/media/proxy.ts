@@ -196,10 +196,10 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
      probeHeaders.set("range","bytes=0-0");
      const probe=await fetchPublicHttps(finalUrl,probeHeaders,"GET");
      const range=probe.headers.get("content-range")||"";
-     const total=range.match(/^bytes\\s+0-0\\/(\\d+)$/i);
+     const total=range.match(/^bytes\s+0-0\/(\d+)$/i);
      const probeLength=probe.headers.get("content-length")||"";
-     if(probe.status===206 && total && /^\\d+$/.test(total[1])) outHeaders.set("content-length",total[1]);
-     else if(probe.status===200 && /^\\d+$/.test(probeLength)) outHeaders.set("content-length",probeLength);
+     if(probe.status===206 && total && /^\d+$/.test(total[1])) outHeaders.set("content-length",total[1]);
+     else if(probe.status===200 && /^\d+$/.test(probeLength)) outHeaders.set("content-length",probeLength);
      await probe.body?.cancel();
     } catch { /* Continue streaming when the provider has no range support. */ }
    }
@@ -233,10 +233,10 @@ export const onRequestHead = async ({ request, env }: { request:Request; env:Env
   if(value) out.set(key,value);
  }
  const contentRange=ranged.headers.get("content-range")||"";
- const total=contentRange.match(/^bytes\\s+0-0\\/(\\d+)$/i);
+ const total=contentRange.match(/^bytes\s+0-0\/(\d+)$/i);
  const rangedLength=ranged.headers.get("content-length")||"";
- if(ranged.status===206 && total && /^\\d+$/.test(total[1])) out.set("content-length",total[1]);
- else if(ranged.status===200 && /^\\d+$/.test(rangedLength)) out.set("content-length",rangedLength);
+ if(ranged.status===206 && total && /^\d+$/.test(total[1])) out.set("content-length",total[1]);
+ else if(ranged.status===200 && /^\d+$/.test(rangedLength)) out.set("content-length",rangedLength);
  await ranged.body?.cancel();
  return new Response(null,{status:ranged.status===206?200:ranged.status,headers:out});
 };
