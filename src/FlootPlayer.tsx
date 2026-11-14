@@ -88,14 +88,32 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       // Its public element contract says to read element.player after loadedmetadata/loadeddata.
       const player = element.player;
       if (!player) { setMkvSubtitleReady(false); return; }
-      const raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
+      // Read only the MKV subtitle track table. This does not alter the video
+      // source, demuxing pipeline, buffering, seeking, or playback lifecycle.
+      let raw:any[] = [];
+      try {
+        const fromPlayer = player.getSubtitleTracks?.();
+        if (Array.isArray(fromPlayer) && fromPlayer.length) raw = fromPlayer;
+        if (!raw.length) {
+          const fromElement = element.getSubtitleTracks?.();
+          if (Array.isArray(fromElement) && fromElement.length) raw = fromElement;
+        }
+        if (!raw.length) {
+          const allTracks = player.getTracks?.() || element.getTracks?.() || [];
+          if (Array.isArray(allTracks)) raw = allTracks.filter((track:any) =>
+            /subtitle|subtitles|text|caption/i.test(String(track.type || track.kind || track.trackType || ""))
+          );
+        }
+      } catch { raw = []; }
       setMkvSubtitleTracks(raw.map((track:any, index:number) => {
-        const id = Number(track.id);
+        const rawId = track.id ?? track.trackId ?? track.index;
+        const id = Number(rawId);
+        const language = String(track.language || track.lang || track.languageCode || "");
         return {
           id,
-          label: String(track.label || track.title || track.language || track.codec || "Subtitle track " + (index + 1)),
-          language: String(track.language || ""),
-          active: id === mkvActiveSubtitleTrackId || Boolean(track.active || track.isActive)
+          label: String(track.label || track.title || track.name || language || track.codec || track.codecName || "Subtitle track " + (index + 1)),
+          language,
+          active: id === mkvActiveSubtitleTrackId || Boolean(track.active || track.isActive || track.selected)
         };
       }).filter((track:any) => Number.isFinite(track.id)));
       setMkvSubtitleReady(true);
@@ -114,13 +132,17 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   }, [isMkvSource, moviReady, episode.id, rawSrc, retry, mkvActiveSubtitleTrackId]);
 
   const selectMkvSubtitle = async (trackId:number|null, label = "Subtitles turned off.") => {
-    const player = mkvPlayerRef.current?.player;
-    if (!player?.selectSubtitleTrack) {
+    const element = mkvPlayerRef.current;
+    const player = element?.player;
+    const select = player?.selectSubtitleTrack || player?.setSubtitleTrack ||
+      element?.selectSubtitleTrack || element?.setSubtitleTrack;
+    const owner = player?.selectSubtitleTrack || player?.setSubtitleTrack ? player : element;
+    if (typeof select !== "function") {
       setMkvSubtitleNotice("The MKV subtitle selector is still loading. Retry after the video opens.");
       return;
     }
     try {
-      const selected = await player.selectSubtitleTrack(trackId);
+      const selected = await select.call(owner, trackId);
       if (selected === false && trackId !== null) {
         setMkvSubtitleNotice("This subtitle track could not be enabled.");
         return;
