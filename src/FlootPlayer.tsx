@@ -67,11 +67,9 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   // This keeps the regular MP4/HLS experience from downloading its multi-megabyte decoder bundle.
   useEffect(() => {
     if (!isMkvSource) { setMoviReady(false); return; }
-    if (typeof window !== 'undefined' && !window.crossOriginIsolated) {
-      setMoviReady(false);
-      setError('Advanced MKV decoding is blocked because this preview is not cross-origin isolated. Reload the preview after its security headers finish applying.');
-      return;
-    }
+    // Movi Player's slim FFmpeg/WASM path works without cross-origin isolation.
+    // Isolation only enables an optional SharedArrayBuffer fast path; do not block
+    // Android WebViews or Telegram Mini Apps when that optimization is unavailable.
     let active = true;
     setMoviReady(false);
     import('movi-player/element/slim').then(() => {
