@@ -24,7 +24,7 @@ const safeExternalUrl = (value: unknown): URL | null => {
   } catch { return null; }
 };
 
-// Admin-only, read-only HEAD checks. Never downloads movie bytes and never follows redirects.
+// Admin-only checks. HEAD is preferred; a one-byte Range GET is used as a fallback for servers that reject or fail HEAD. The response body is cancelled immediately and redirects are never followed.
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
   const gate = await requireAdmin(request, env);
   if (gate.response) return gate.response;
@@ -56,14 +56,48 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         signal: controller.signal,
         headers: { "User-Agent": "MaseNet-Source-Health/1.0" }
       });
-      const status = response.status;
+      let status = response.status;
+      let contentType = response.headers.get("content-type") || "Not provided";
       if (status >= 200 && status < 300) {
-        return { ...base, status: "reachable", httpStatus: status, contentType: response.headers.get("content-type") || "Not provided", message: "Source responded to a HEAD request." };
+        return { ...base, status: "reachable", method: "HEAD", httpStatus: status, contentType, message: "Source responded to a HEAD request. Playback is not confirmed." };
       }
       if (status >= 300 && status < 400) {
-        return { ...base, status: "redirect", httpStatus: status, message: "Source redirects. Redirect destination was not followed; test the final direct URL." };
+        return { ...base, status: "redirect", method: "HEAD", httpStatus: status, message: "Source redirects. Redirect destination was not followed; test the final direct URL." };
       }
-      return { ...base, status: status >= 500 ? "server_error" : "http_error", httpStatus: status, message: "Source returned an HTTP error." };
+
+      // Some file hosts return 500/405/501 to HEAD but support byte-range GET.
+      // Never consume the body: cancel as soon as response headers arrive.
+      if (status === 405 || status === 501 || status >= 500) {
+        const rangeController = new AbortController();
+        const rangeTimer = setTimeout(() => rangeController.abort(), 5000);
+        try {
+          const ranged = await fetch(url.toString(), {
+            method: "GET",
+            headers: { "Range": "bytes=0-0", "User-Agent": "MaseNet-Source-Health/1.0" },
+            redirect: "manual",
+            signal: rangeController.signal
+          });
+          status = ranged.status;
+          contentType = ranged.headers.get("content-type") || contentType;
+          try { await ranged.body?.cancel(); } catch { /* body cancellation is best-effort */ }
+          if (status === 206) {
+            return { ...base, status: "range_reachable", method: "GET Range", httpStatus: status, contentType, message: "Provider accepted a one-byte range request. Response body was cancelled; playback is not confirmed." };
+          }
+          if (status >= 200 && status < 300) {
+            return { ...base, status: "range_reachable", method: "GET Range", httpStatus: status, contentType, message: "Provider responded to Range GET but did not confirm partial content. Response body was cancelled; playback is not confirmed." };
+          }
+          if (status >= 300 && status < 400) {
+            return { ...base, status: "redirect", method: "GET Range", httpStatus: status, message: "Provider redirects on Range GET. Redirect destination was not followed." };
+          }
+          return { ...base, status: status >= 500 ? "server_error" : "http_error", method: "GET Range", httpStatus: status, message: "Provider also returned an HTTP error to the Range GET fallback." };
+        } catch (error) {
+          const timedOut = error instanceof Error && error.name === "AbortError";
+          return { ...base, status: timedOut ? "timeout" : "unreachable", method: "GET Range", message: timedOut ? "Range GET did not respond within 5 seconds." : "Could not reach this source with a Range GET fallback." };
+        } finally {
+          clearTimeout(rangeTimer);
+        }
+      }
+      return { ...base, status: "http_error", method: "HEAD", httpStatus: status, message: "Source returned an HTTP error." };
     } catch (error) {
       const timedOut = error instanceof Error && error.name === "AbortError";
       return { ...base, status: timedOut ? "timeout" : "unreachable", message: timedOut ? "Source did not respond within 5 seconds." : "Could not reach this source from MaseNet." };
@@ -77,5 +111,5 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return out;
   }, {} as Record<string, number>);
 
-  return json({ ok: true, checkedAt: new Date().toISOString(), method: "HEAD", note: "No movie or drama bytes were downloaded. Redirects were not followed.", counts, results });
+  return json({ ok: true, checkedAt: new Date().toISOString(), method: "HEAD with one-byte Range GET fallback", note: "The checker cancels each Range GET response immediately after headers. It does not intentionally consume video bytes or follow redirects.", counts, results });
 };
