@@ -1,0 +1,193 @@
+/* MaseNet mobile experience layer — additive, mobile-first refinements */
+:root {
+  color-scheme: dark;
+  --mase-safe-top: env(safe-area-inset-top, 0px);
+  --mase-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overscroll-behavior-y: contain; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+:where(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline: 2px solid rgba(230, 199, 131, .95);
+  outline-offset: 3px;
+}
+:where(button, a, input, select, textarea):disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+.app { min-height: 100vh; min-height: 100dvh; }
+.app :where(img, video) { max-width: 100%; }
+.app :where(button, input, select, textarea) { touch-action: manipulation; }
+
+@media (max-width: 760px) {
+  html, body, #root { min-height: 100%; }
+  body { overflow-x: clip; }
+  .app {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: var(--mase-safe-bottom);
+  }
+  .app .nav {
+    position: sticky;
+    top: calc(6px + var(--mase-safe-top));
+    bottom: auto;
+    left: auto;
+    transform: none;
+    z-index: 60;
+    width: calc(100% - 16px);
+    margin-top: 6px;
+    padding: 8px 10px;
+    gap: 10px;
+  }
+  .app :where(.nav button, .nav a, .searchDock button, .aiDock button, .telegram button) {
+    min-height: 40px;
+  }
+  .app :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    font-size: 16px;
+  }
+  .app :where(.page, main.page) {
+    scroll-margin-top: calc(72px + var(--mase-safe-top));
+  }
+  .app :where(.side, .aiSide, .backdrop, .modal, .dialog) {
+    max-height: 100dvh;
+  }
+  .app :where(.side, .aiSide) {
+    padding-bottom: max(12px, var(--mase-safe-bottom));
+  }
+  .app :where(.aiComposer, .composer, .chatComposer) {
+    padding-bottom: max(10px, var(--mase-safe-bottom));
+  }
+  .app :where(.iqGrid, .episodeGrid) {
+    min-width: 0;
+  }
+  .app :where(.iqCard, .episode, .maseNotificationItem) {
+    min-width: 0;
+  }
+  .app :where(.iqCard, .episode) :where(h3, h4, b, strong, small, span) {
+    overflow-wrap: anywhere;
+  }
+  .app :where(.playerSection, .detailHero, .iqHome, .maseUtilityPage) {
+    max-width: 100%;
+  }
+  .app :where(.nav, .searchDock, .aiDock, .telegram) {
+    -webkit-backdrop-filter: blur(16px) saturate(130%);
+    backdrop-filter: blur(16px) saturate(130%);
+  }
+}
+@media (max-width: 390px) {
+  .app .nav { gap: 6px; padding-inline: 8px; }
+  .app :where(.nav button, .nav a) { min-width: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .app :where(button, a, [role="button"]) { -webkit-user-select: none; user-select: none; }
+}
+
+/* Admin Studio: keep dense controls usable without horizontal page overflow. */
+.app .admin { min-width: 0; }
+.app .adminHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+}
+.app .adminHead > div { min-width: 0; }
+.app .adminHead h1 { overflow-wrap: anywhere; }
+.app .admin .tabbar {
+  position: sticky;
+  top: calc(62px + var(--mase-safe-top));
+  z-index: 12;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.app .admin .tabbar button { min-height: 42px; flex: 0 0 auto; }
+.app .admin :where(.adminCard, .bulk, .editPanel, .broadcastStudio, .adminOverview) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.app .admin :where(.formGrid, .adminGrid2, .broadcastGrid, .aiAdminGrid) {
+  min-width: 0;
+}
+.app .admin :where(.formGrid input, .formGrid select, .formGrid textarea, .bulk input, .bulk textarea) {
+  min-height: 44px;
+}
+@media (max-width: 760px) {
+  .app .admin { padding-inline: 10px; }
+  .app .adminHead { gap: 9px; flex-wrap: wrap; }
+  .app .adminHead h1 { font-size: clamp(25px, 7vw, 34px); }
+  .app .adminHead p { max-width: 58ch; line-height: 1.55; }
+  .app .admin .tabbar {
+    margin-inline: -2px;
+    padding: 7px 2px 10px;
+    background: linear-gradient(180deg, rgba(7,9,16,.96), rgba(7,9,16,.82));
+    backdrop-filter: blur(14px);
+  }
+  .app .admin .tabbar button { padding: 10px 12px; border-radius: 12px; }
+  .app .admin .adminCard { padding: 14px; border-radius: 17px; }
+  .app .admin .formGrid,
+  .app .admin .adminGrid2,
+  .app .admin .broadcastGrid,
+  .app .admin .aiAdminGrid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px;
+  }
+  .app .admin .formGrid > .wideField { grid-column: 1 / -1; }
+  .app .admin .adminSectionHead { flex-wrap: wrap; gap: 10px; }
+  .app .admin :where(.adminList, .adminListRow, .bulkRow, .adminItem) { min-width: 0; }
+  .app .admin :where(.adminListRow, .bulkRow) { overflow-wrap: anywhere; }
+  .app .admin :where(.adminListRow button, .bulkRow button) { min-height: 40px; }
+}
+@media (max-width: 390px) {
+  .app .admin { padding-inline: 8px; }
+  .app .admin .adminCard { padding: 11px; }
+  .app .admin .tabbar button { font-size: 10px; padding-inline: 10px; }
+}
+
+/* Discovery controls: scrollable filters, readable selectors and no cramped chips. */
+.app .iqHome .iqCategories {
+  display: flex;
+  gap: 7px;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.app .iqHome .iqCategories::-webkit-scrollbar { display: none; }
+.app .iqHome .maseDiscoverySelect { min-height: 38px; }
+.app .iqHome .maseDiscoverySelect select { min-height: 34px; font-size: 14px; }
+.app .iqHome .maseMagicForm { min-width: 0; }
+.app .iqHome .maseMagicForm :where(input, button) { min-height: 44px; }
+.app .iqHome .maseTastePanel { min-width: 0; }
+@media (max-width: 760px) {
+  .app .iqHome .iqPrimaryDock {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    border-radius: 20px;
+    padding: 7px;
+  }
+  .app .iqHome .iqPrimaryDock button { min-height: 58px; }
+  .app .iqHome .maseDiscoverySelect {
+    justify-content: space-between;
+    flex: 1 1 145px;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 11px;
+  }
+  .app .iqHome .maseDiscoverySelect select {
+    max-width: min(52vw, 170px);
+    min-width: 72px;
+    font-size: 14px;
+  }
+  .app .iqHome .maseMagicResultGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
