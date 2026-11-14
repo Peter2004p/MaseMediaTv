@@ -1,20 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 
 type Track={id:number;type?:string;language?:string;lang?:string;title?:string;label?:string;codec?:string;forced?:boolean;active?:boolean};
-type Props={src:string;title?:string;onProgress?:(n:number)=>void;onPlaybackPosition?:(n:number)=>void;onPlaybackStarted?:()=>void;onPlaybackEnded?:()=>void;onPlaybackStateChange?:(playing:boolean,time:number)=>void;resumeAtSeconds?:number;autoPlay?:boolean};
+type Props={src:string;fallbackSrc?:string;title?:string;onProgress?:(n:number)=>void;onPlaybackPosition?:(n:number)=>void;onPlaybackStarted?:()=>void;onPlaybackEnded?:()=>void;onPlaybackStateChange?:(playing:boolean,time:number)=>void;resumeAtSeconds?:number;autoPlay?:boolean};
 const stamp=(n:number)=>Number.isFinite(n)?Math.floor(n/60)+":"+String(Math.floor(n%60)).padStart(2,"0"):"0:00";
 const languageNames:Record<string,string>={eng:"English",en:"English",chi:"Chinese",zho:"Chinese",zh:"Chinese",kor:"Korean",ko:"Korean",jpn:"Japanese",ja:"Japanese",spa:"Spanish",es:"Spanish",fra:"French",fre:"French",fr:"French",deu:"German",ger:"German",de:"German",ita:"Italian",it:"Italian",por:"Portuguese",pt:"Portuguese",rus:"Russian",ru:"Russian",ara:"Arabic",ar:"Arabic",hin:"Hindi",hi:"Hindi",tha:"Thai",th:"Thai",vie:"Vietnamese",vi:"Vietnamese",ind:"Indonesian",id:"Indonesian",msa:"Malay",may:"Malay",ms:"Malay",tur:"Turkish",tr:"Turkish"};
 const cleanLanguage=(value:any)=>{const raw=String(value||"").trim();if(!raw)return "";const code=raw.toLowerCase().replace(/_/g,"-");const base=code.split("-")[0];return languageNames[code]||languageNames[base]||(/^[a-z]{2,3}(-[a-z0-9]+)?$/i.test(raw)?raw.toUpperCase():"");};
 const trackLabel=(t:any,index:number)=>{const language=cleanLanguage(t.language||t.lang||t.languageCode||t.language_id||t.tags?.language||t.metadata?.language);const title=String(t.title||t.label||"").trim();const usefulTitle=title&&!/by\\s*[:-]|subrip|srt|ass|ssa/i.test(title)?title:"";return language||usefulTitle||"Unknown language";};
 
-export default function MaseNetVlcPlayer({src,title="MaseNet video",onProgress,onPlaybackPosition,onPlaybackStarted,onPlaybackEnded,onPlaybackStateChange,resumeAtSeconds=0,autoPlay=false}:Props){
- const root=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),overlay=useRef<HTMLDivElement>(null),engine=useRef<any>(null);
+export default function MaseNetVlcPlayer({src,fallbackSrc,title="MaseNet video",onProgress,onPlaybackPosition,onPlaybackStarted,onPlaybackEnded,onPlaybackStateChange,resumeAtSeconds=0,autoPlay=false}:Props){
+ const root=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),overlay=useRef<HTMLDivElement>(null),engine=useRef<any>(null);\n const [directMode,setDirectMode]=useState(false),[retry,setRetry]=useState(0);\n const playbackSrc=directMode&&fallbackSrc?fallbackSrc:src;\n useEffect(()=>{setDirectMode(false);setRetry(0);},[src,fallbackSrc]);
  const [status,setStatus]=useState("loading"),[error,setError]=useState(""),[time,setTime]=useState(0),[duration,setDuration]=useState(0),[subs,setSubs]=useState<Track[]>([]),[audios,setAudios]=useState<Track[]>([]),[subId,setSubId]=useState<number|null>(null),[audioId,setAudioId]=useState<number|null>(null),[menu,setMenu]=useState<"sub"|"audio"|"settings"|null>(null),[rate,setRate]=useState(1),[volume,setVolume]=useState(1),[delay,setDelay]=useState(0);
  useEffect(()=>{let live=true,instance:any=null,observer:ResizeObserver|undefined;
   const start=async()=>{try{
    const mod:any=await import("movi-player/player");if(!live||!canvas.current)return;
    const Player=mod.MoviPlayer||mod.default;if(!Player)throw new Error("MaseNet playback engine failed to initialize.");
-   instance=new Player({source:{type:"url",url:src},canvas:canvas.current,renderer:"canvas",decoder:"auto"});engine.current=instance;
+   instance=new Player({source:{type:"url",url:playbackSrc},canvas:canvas.current,renderer:"canvas",decoder:"auto"});engine.current=instance;
    if(overlay.current)instance.setSubtitleOverlay?.(overlay.current);
    const sync=(list?:any[])=>{const all=Array.isArray(list)?list:instance.getTracks?.()||[];const s=instance.getSubtitleTracks?.()||all.filter((t:any)=>t.type==="subtitle");const a=instance.getAudioTracks?.()||all.filter((t:any)=>t.type==="audio");if(live){setSubs(s.map((t:any)=>({...t,language:t.language||t.lang||t.languageCode||t.tags?.language})));setAudios(a.map((t:any)=>({...t,language:t.language||t.lang||t.languageCode||t.tags?.language})));}};
    instance.on?.("tracksChange",sync);
@@ -29,7 +29,7 @@ export default function MaseNetVlcPlayer({src,title="MaseNet video",onProgress,o
    if(canvas.current&&typeof ResizeObserver!=="undefined"){observer=new ResizeObserver(entries=>{const r=entries[0]?.contentRect;if(r)instance?.resizeCanvas?.(Math.round(r.width*devicePixelRatio),Math.round(r.height*devicePixelRatio));});observer.observe(canvas.current);}
   }catch(e:any){if(live){setError(e?.message||"Unable to open this MKV stream.");setStatus("error");}}};
   void start();return()=>{live=false;observer?.disconnect();try{instance?.destroy?.();}catch{}engine.current=null;};
- },[src]);
+ },[playbackSrc,retry]);
  const p=()=>engine.current;
  const toggle=async()=>{try{if(p()?.getState?.()==="playing")p().pause();else await p()?.play();}catch(e:any){setError(e?.message||"Tap Play to start playback.");}};
  const seek=(n:number)=>{const d=p()?.getDuration?.()||duration;if(d>0)void p()?.seek(Math.max(0,Math.min(d,n)));};
@@ -38,7 +38,7 @@ export default function MaseNetVlcPlayer({src,title="MaseNet video",onProgress,o
  const delayBy=(n:number)=>{const next=delay+n;setDelay(next);p()?.setSubtitleDelay?.(next);};
  const fullscreen=()=>{const el=root.current as any;if(el?.requestFullscreen)void el.requestFullscreen();else el?.webkitRequestFullscreen?.();};
  return <section ref={root} className="mnvlc" aria-label={title}>
-  <div className="mnvlcScreen"><canvas ref={canvas}/><div ref={overlay} className="mnvlcSubtitleLayer"/>{status!=="playing"&&!error&&<button className="mnvlcPlay" onClick={()=>void toggle()}>▶</button>}{status==="loading"&&<div className="mnvlcMessage">Opening MKV and reading embedded tracks…</div>}{error&&<div className="mnvlcMessage mnvlcError"><b>Playback error</b><span>{error}</span></div>}</div>
+  <div className="mnvlcScreen"><canvas ref={canvas}/><div ref={overlay} className="mnvlcSubtitleLayer"/>{status!=="playing"&&!error&&<button className="mnvlcPlay" onClick={()=>void toggle()}>▶</button>}{status==="loading"&&<div className="mnvlcMessage">Opening MKV and reading embedded tracks…</div>}{error&&<div className="mnvlcMessage mnvlcError"><b>Playback error</b><span>{error}</span><div className="mnvlcRow"><button onClick={()=>{setError("");setStatus("loading");setRetry(n=>n+1);}}>Retry</button>{fallbackSrc&&!directMode&&<button onClick={()=>{setError("");setStatus("loading");setDirectMode(true);}}>Try direct source</button>}</div></div>}</div>
   <div className="mnvlcControls"><input aria-label="Seek" type="range" min="0" max={Math.max(1,duration)} step=".1" value={Math.min(time,duration||0)} onChange={e=>seek(Number(e.target.value))}/>
    <div className="mnvlcRow"><button onClick={()=>void toggle()}>{status==="playing"?"Ⅱ":"▶"}</button><button onClick={()=>seek(time-10)}>−10s</button><button onClick={()=>seek(time+10)}>+10s</button><span>{stamp(time)} / {stamp(duration)}</span><button onClick={()=>setMenu(menu==="sub"?null:"sub")}>Subtitles {subs.length}</button><button onClick={()=>setMenu(menu==="audio"?null:"audio")}>Audio {audios.length}</button><button onClick={()=>setMenu(menu==="settings"?null:"settings")}>⚙</button><button onClick={fullscreen}>⛶</button></div>
    {menu==="sub"&&<div className="mnvlcMenu"><b>Embedded subtitles</b><button onClick={()=>void selectSub(null)}>Off</button>{subs.map((t,i)=><button key={t.id??i} onClick={()=>void selectSub(t.id)}>{trackLabel(t,i)}{t.codec?" · "+String(t.codec).toUpperCase():""}{t.forced?" · Forced":""}</button>)}{!subs.length&&<small>No subtitle tracks reported by the MKV demuxer.</small>}<div className="mnvlcRow"><button onClick={()=>delayBy(-.5)}>−0.5s</button><button onClick={()=>delayBy(.5)}>+0.5s</button><small>Delay {delay.toFixed(1)}s</small></div></div>}
