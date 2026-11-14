@@ -667,7 +667,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
    // The Worker validates the exact external URL against this episode's stored download fields.
    const params=new URLSearchParams({episodeId:item.episode.id,source:url,download:'1'});
    const downloadUrl='/api/media/proxy?'+params.toString();
-   tab=window.open(url,'_blank','noopener,noreferrer');
+   tab=window.open(downloadUrl,'_blank','noopener,noreferrer');
    if(!tab)window.location.assign(downloadUrl);
    setMessage('Download request opened for '+item.title.name+'. The browser will save it when the provider supplies a downloadable file response.');
   }catch(error){
