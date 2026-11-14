@@ -47,10 +47,9 @@ async function findAuthorizedSource(env: Env, episodeId: string, source: string)
     try {
       const title = JSON.parse(row.metadata_json) as Title;
       const episodes = Array.isArray(title.episodes) ? title.episodes : [];
-      const episode = episodes.find(e =>
-        (episodeId && episodeId.length <= 200 && String(e.id) === episodeId) ||
-        [e.streamUrl, ...(e.qualities || []).map(q => q.streamUrl)].some(url => typeof url === "string" && url === source)
-      );
+      const episode = episodeId && episodeId.length <= 200
+        ? episodes.find(e => String(e.id) === episodeId)
+        : episodes.find(e => [e.streamUrl, ...(e.qualities || []).map(q => q.streamUrl)].some(url => typeof url === "string" && url === source));
       if (!episode) continue;
       const allowed = [episode.streamUrl, ...(episode.qualities || []).map(q => q.streamUrl)];
       if (allowed.includes(source)) return true;
@@ -127,10 +126,10 @@ export const onRequest = async ({ request, env, params }: { request: Request; en
     const payload = await readToken(token, config.token);
     if (!payload || payload.sid !== mediaMatch[1] || !await validatePayload(env, payload)) return json({ error: "Invalid or expired playback session" }, 403);
     const upstream = await fetch(config.base + "/sessions/" + payload.sid + "/" + mediaMatch[2], {
-      method: request.method,
+      method: "GET",
       headers: { authorization: "Bearer " + config.token }
     });
-    if (!upstream.ok) return new Response(upstream.body, { status: upstream.status, headers: { "content-type": upstream.headers.get("content-type") || "application/json", "cache-control": "no-store" } });
+    if (!upstream.ok) return new Response(request.method === "HEAD" ? null : upstream.body, { status: upstream.status, headers: { "content-type": upstream.headers.get("content-type") || "application/json", "cache-control": "no-store" } });
     if (mediaMatch[2] === "index.m3u8") {
       const playlist = await upstream.text();
       const rewritten = playlist.split(/\r?\n/).map(line => {
