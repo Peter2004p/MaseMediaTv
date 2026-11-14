@@ -63,7 +63,11 @@ export default function MaseNetEnginePlayer({
   const [audioTracks, setAudioTracks] = useState<{ label: string; lang: string }[]>([]);
   const [selectedAudio, setSelectedAudio] = useState(0);
   const [quality, setQuality] = useState("");
-  const embed = embedFor(episode.streamUrl);
+  const variants = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl }];
+  const selected = variants.find(v => v.quality === quality) || variants[0];
+  const rawSrc = selected?.streamUrl || episode.streamUrl;
+  const embed = embedFor(rawSrc);
+  useEffect(() => { setQuality(""); }, [episode.id]);
 
   const startSession = useCallback(async () => {
     if (embed) { setLoading(false); return; }
@@ -73,7 +77,7 @@ export default function MaseNetEnginePlayer({
       const response = await fetch("/api/media/engine/session", {
         method: "POST", credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ episodeId: episode.id, source: episode.streamUrl })
+        body: JSON.stringify({ episodeId: episode.id, source: rawSrc })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "MaseNet could not prepare this video.");
@@ -81,7 +85,7 @@ export default function MaseNetEnginePlayer({
     } catch (e) {
       setError(e instanceof Error ? e.message : "The new MaseNet media engine could not start.");
     } finally { setLoading(false); }
-  }, [episode.id, episode.streamUrl, embed]);
+  }, [episode.id, rawSrc, embed]);
 
   useEffect(() => { void startSession(); return () => { hlsRef.current?.destroy(); hlsRef.current = null; }; }, [startSession]);
 
@@ -205,7 +209,9 @@ export default function MaseNetEnginePlayer({
       @media(max-width:520px){.mnEnginePlayer .mnEngineControls{padding:8px}.mnEnginePlayer button,.mnEnginePlayer select{font-size:11px;padding:7px;min-height:42px}.mnEnginePlayer .mnEngineScreen{min-height:180px}}
     `}</style>
     <div className="mnEngineScreen">
-      {embed ? <iframe src={embed} title={episode.title} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen style={{ width: "100%", height: "100%", border: 0, position: "absolute", inset: 0 }} /> : <video ref={videoRef} playsInline preload="metadata" muted={muted} />}
+      {embed ? <iframe src={embed} title={episode.title} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen style={{ width: "100%", height: "100%", border: 0, position: "absolute", inset: 0 }} /> : <video ref={videoRef} playsInline preload="metadata" muted={muted}>
+        {session?.subtitles?.map(track => <track key={track.index} data-engine-subtitle={String(track.index)} kind="subtitles" src={track.url} srcLang={track.language || "und"} label={track.label} />)}
+      </video>}
       {loading && <div className="mnEngineOverlay"><span>Preparing MaseNet Media Engine…</span><small>Reading video, audio and subtitle tracks</small></div>}
       {buffering && !loading && <div className="mnEngineOverlay"><span>Buffering…</span></div>}
       {error && !loading && <div className="mnEngineOverlay"><div className="mnEngineError">{error}</div><button onClick={() => void startSession()}>Retry playback</button></div>}
@@ -226,7 +232,7 @@ export default function MaseNetEnginePlayer({
         {(session?.subtitles || []).map(track => <button key={track.index} onClick={() => chooseSubtitle(String(track.index))}>{track.label} · {track.codec}</button>)}
         {session?.subtitles?.length === 0 && <small>No embedded subtitle tracks detected.</small>}
       </div>}
-      {session?.subtitles?.map(track => <track key={track.index} data-engine-subtitle={String(track.index)} kind="subtitles" src={track.url} srcLang={track.language || "und"} label={track.label} />)}
+      {variants.length > 1 && <select aria-label="Video quality" value={selected?.quality || ""} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality} value={v.quality}>{v.quality}</option>)}</select>}
       {audioTracks.length > 1 && <div className="mnEngineRow" style={{ marginTop: 8 }}>
         <label htmlFor="mn-engine-audio" style={{ fontSize: 12 }}>Audio</label>
         <select id="mn-engine-audio" value={selectedAudio} onChange={e => chooseAudio(Number(e.target.value))}>{audioTracks.map((track, i) => <option key={i} value={i}>{track.label}</option>)}</select>
