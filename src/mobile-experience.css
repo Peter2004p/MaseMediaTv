@@ -1,0 +1,87 @@
+/* MaseNet mobile experience layer — additive, mobile-first refinements */
+:root {
+  color-scheme: dark;
+  --mase-safe-top: env(safe-area-inset-top, 0px);
+  --mase-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overscroll-behavior-y: contain; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+:where(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline: 2px solid rgba(230, 199, 131, .95);
+  outline-offset: 3px;
+}
+:where(button, a, input, select, textarea):disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+.app { min-height: 100vh; min-height: 100dvh; }
+.app :where(img, video) { max-width: 100%; }
+.app :where(button, input, select, textarea) { touch-action: manipulation; }
+
+@media (max-width: 760px) {
+  html, body, #root { min-height: 100%; }
+  body { overflow-x: clip; }
+  .app {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: var(--mase-safe-bottom);
+  }
+  .app .nav {
+    top: calc(6px + var(--mase-safe-top));
+    width: calc(100% - 16px);
+    margin-top: 6px;
+    padding: 8px 10px;
+    gap: 10px;
+  }
+  .app :where(.nav button, .nav a, .searchDock button, .aiDock button, .telegram button) {
+    min-height: 40px;
+  }
+  .app :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    font-size: 16px;
+  }
+  .app :where(.page, main.page) {
+    scroll-margin-top: calc(72px + var(--mase-safe-top));
+  }
+  .app :where(.side, .aiSide, .backdrop, .modal, .dialog) {
+    max-height: 100dvh;
+  }
+  .app :where(.side, .aiSide) {
+    padding-bottom: max(12px, var(--mase-safe-bottom));
+  }
+  .app :where(.aiComposer, .composer, .chatComposer) {
+    padding-bottom: max(10px, var(--mase-safe-bottom));
+  }
+  .app :where(.iqGrid, .episodeGrid) {
+    min-width: 0;
+  }
+  .app :where(.iqCard, .episode, .maseNotificationItem) {
+    min-width: 0;
+  }
+  .app :where(.iqCard, .episode) :where(h3, h4, b, strong, small, span) {
+    overflow-wrap: anywhere;
+  }
+  .app :where(.playerSection, .detailHero, .iqHome, .maseUtilityPage) {
+    max-width: 100%;
+  }
+  .app :where(.nav, .searchDock, .aiDock, .telegram) {
+    -webkit-backdrop-filter: blur(16px) saturate(130%);
+    backdrop-filter: blur(16px) saturate(130%);
+  }
+}
+@media (max-width: 390px) {
+  .app .nav { gap: 6px; padding-inline: 8px; }
+  .app :where(.nav button, .nav a) { min-width: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .app :where(button, a, [role="button"]) { -webkit-user-select: none; user-select: none; }
+}
