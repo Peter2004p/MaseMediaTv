@@ -193,6 +193,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   if (isMkvSource && !embed) {
     return <MaseNetVlcPlayer
       src={mkvProxyUrl}
+      fallbackSrc={rawSrc}
       title={episode.title}
       onProgress={onProgress}
       onPlaybackPosition={onPlaybackPosition}
