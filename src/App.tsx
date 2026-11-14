@@ -654,30 +654,21 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
  const [message,setMessage]=useState('');
  const items=useMemo(()=>titles.flatMap(title=>title.episodes.flatMap(episode=>{
   const variants=episode.qualities?.length?episode.qualities:[{quality:episode.quality,streamUrl:episode.streamUrl,streamPath:episode.streamPath,downloadUrl:episode.downloadUrl,downloadPath:episode.downloadPath}];
-  return variants.filter(v=>Boolean(v.downloadUrl||v.downloadPath)).map((variant,index)=>({key:title.id+'-'+episode.id+'-'+variant.quality+'-'+index,title,episode,variant}));
+  // Movie files are intentionally not stored in R2; only explicit external download URLs are offered.
+  return variants.filter(v=>Boolean(v.downloadUrl)).map((variant,index)=>({key:title.id+'-'+episode.id+'-'+variant.quality+'-'+index,title,episode,variant}));
  })),[titles]);
  const startDownload=async(item:typeof items[number])=>{
   if(busyId)return;
   setBusyId(item.key);setMessage('');
   let tab:Window|null=null;
   try{
-   let url=String(item.variant.downloadUrl||'').trim();
-   const path=String(item.variant.downloadPath||'').trim();
-   if(path){
-    const response=await api.get('/api/media/url',{path});
-    if(!response.data?.url)throw new Error('The secure media link could not be created. Please try again.');
-    url=String(response.data.url);
-   }
+   const url=String(item.variant.downloadUrl||'').trim();
    if(!url.startsWith("https://")&&!url.startsWith("http://"))throw new Error("This download entry has no valid HTTPS/HTTP link.");
-   // Use the range-aware proxy only for a URL explicitly saved in this episode's
-   // download fields. The Worker validates the exact URL against the catalogue.
-   // R2 signed paths remain direct because their short-lived URLs are not library URLs.
-   if(!path){
-    const params=new URLSearchParams({episodeId:item.episode.id,source:url,download:'1'});
-    url='/api/media/proxy?'+params.toString();
-   }
+   // The Worker validates the exact external URL against this episode's stored download fields.
+   const params=new URLSearchParams({episodeId:item.episode.id,source:url,download:'1'});
+   const downloadUrl='/api/media/proxy?'+params.toString();
    tab=window.open(url,'_blank','noopener,noreferrer');
-   if(!tab)window.location.assign(url);
+   if(!tab)window.location.assign(downloadUrl);
    setMessage('Download request opened for '+item.title.name+'. The browser will save it when the provider supplies a downloadable file response.');
   }catch(error){
    tab?.close();
@@ -686,7 +677,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
  };
  return <main className="page maseUtilityPage">
   <header className="maseUtilityHead"><div><span className="iqKicker">YOUR VIDEO LIBRARY</span><h1>Downloads</h1><p>Download movies and drama episodes with a safer, range-aware handoff.</p></div><span className="maseUtilityCount">{items.length} available</span></header>
-  <section className="downloadInfo"><Download size={19}/><span><b>Improved download handling</b><small>MaseNet now routes saved external download links through its secure media proxy, preserves byte-range requests for compatible hosts, and asks the browser to save the file. Interrupted-download resume still depends on the provider supporting HTTP Range requests. R2 signed links open directly.</small></span></section>
+  <section className="downloadInfo"><Download size={19}/><span><b>Improved download handling</b><small>MaseNet now routes saved external download links through its secure media proxy, preserves byte-range requests for compatible hosts, and asks the browser to save the file. Interrupted-download resume still depends on the provider supporting HTTP Range requests. Only explicit external download URLs are listed; MaseNet does not store movie files.</small></span></section>
   {message&&<p className="downloadFeedback" role="status">{message}</p>}
   {items.length?<section className="maseDownloadList">{items.map(item=><article className="maseDownloadItem" key={item.key}><button className="maseDownloadPoster" onClick={()=>go('#/title/'+encodeURIComponent(item.title.id))}><Poster title={item.title} small/></button><div className="maseDownloadCopy"><b>{item.title.name}</b><small>{item.title.type==='Drama'?'Season '+item.episode.season+' · Episode '+item.episode.episode+' · ':''}{item.episode.title} · {item.variant.quality}</small><span>Secure download handoff available</span></div><button className="primary maseDownloadAction" disabled={Boolean(busyId)} onClick={()=>void startDownload(item)}>{busyId===item.key?'Preparing…':<><Download size={15}/> Download</>}</button></article>)}</section>:<section className="emptyState"><Download size={34}/><h2>No downloads available yet</h2><p>Download links will appear here when an admin adds them to a movie or episode. You can still browse and stream the full library.</p><button className="primary" onClick={()=>go('#/home')}>Explore library</button></section>}
   <button className="secondary" onClick={()=>go('#/history')}>View watch history</button>
