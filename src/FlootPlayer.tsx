@@ -145,11 +145,16 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     // the first three seconds, and listen to Movi's documented event spellings.
     const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
     events.forEach(name => element.addEventListener(name, syncTracks));
+    // Movi's documented programmatic event is camelCase and is emitted by the
+    // player instance (the custom element also re-emits a lowercase DOM event).
+    const eventPlayer = element.player;
+    eventPlayer?.on?.("tracksChange", syncTracks);
     syncTracks();
     const retryTimers = [500, 1500, 3000, 6000, 10000, 15000].map(delay => window.setTimeout(syncTracks, delay));
     return () => {
       retryTimers.forEach(timer => window.clearTimeout(timer));
       events.forEach(name => element.removeEventListener(name, syncTracks));
+      eventPlayer?.off?.("tracksChange", syncTracks);
     };
   }, [isMkvSource, moviReady, episode.id, rawSrc, retry, mkvActiveSubtitleTrackId]);
 
