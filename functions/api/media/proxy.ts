@@ -14,11 +14,11 @@ const isPublicHttps = (value:string) => {
 };
 // Follow redirects manually so every destination is revalidated. Automatic redirects can
 // bypass the URL checks above if a public media host redirects to a private address.
-async function fetchPublicHttps(initialUrl:string, headers:Headers):Promise<Response> {
+async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"|"HEAD"="GET"):Promise<Response> {
  let target=initialUrl;
  for(let hop=0;hop<=5;hop++){
   if(!isPublicHttps(target)) throw new Error("Blocked unsafe redirect target");
-  const response=await fetch(target,{headers,redirect:"manual"});
+  const response=await fetch(target,{method,headers,redirect:"manual"});
   if(![301,302,303,307,308].includes(response.status)) return response;
   const location=response.headers.get("location");
   if(!location){await response.body?.cancel();throw new Error("Redirect missing location");}
@@ -169,7 +169,25 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   return new Response(rewritten,{status:200,headers:{"content-type":"application/vnd.apple.mpegurl","cache-control":"no-store","access-control-allow-origin":"*","x-content-type-options":"nosniff"}});
  }
  const outHeaders=new Headers();
- for(const key of ["content-length","content-range","accept-ranges","last-modified","etag"]) { const value=upstream.headers.get(key); if(value) outHeaders.set(key,value); } outHeaders.set("content-type",contentType || "application/octet-stream");
+ for(const key of ["content-length","content-range","accept-ranges","last-modified","etag"]) { const value=upstream.headers.get(key); if(value) outHeaders.set(key,value); }
+ // Matroska demuxers need a known size for byte-range reads. Derive the exact
+ // partial-body size from Content-Range, or ask the same validated URL with HEAD.
+ if(!outHeaders.has("content-length")) {
+  const contentRange=upstream.headers.get("content-range")||"";
+  const partial=contentRange.match(/^bytes\s+(\d+)-(\d+)\/(?:\d+|\*)$/i);
+  if(upstream.status===206 && partial) {
+   const rangeLength=Number(partial[2])-Number(partial[1])+1;
+   if(Number.isSafeInteger(rangeLength)&&rangeLength>0) outHeaders.set("content-length",String(rangeLength));
+  } else if(upstream.status===200) {
+   try {
+    const head=await fetchPublicHttps(upstream.url||upstreamUrl,headers,"HEAD");
+    const size=head.headers.get("content-length");
+    if(head.ok && size && /^\d+$/.test(size)) outHeaders.set("content-length",size);
+    await head.body?.cancel();
+   } catch { /* Continue streaming if the provider does not support HEAD. */ }
+  }
+ }
+ outHeaders.set("content-type",contentType || "application/octet-stream");
  // A download request must remain a streamed response (never buffer the whole movie
  // in the Worker). Content-Disposition tells Android browsers to save the file.
  if(reqUrl.searchParams.get("download")==="1" && !detectedPlaylist) {
