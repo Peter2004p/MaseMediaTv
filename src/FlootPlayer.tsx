@@ -100,11 +100,17 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       // Movi's tracksChange event already carries the authoritative Track[].
       // Prefer that payload; fall back to its public track getters if this event
       // was triggered by a DOM lifecycle event without a track payload.
-      let raw:any[] = Array.isArray(eventPayload)
-        ? eventPayload.filter((track:any) => String(track.type || track.kind || track.trackType || "").toLowerCase() === "subtitle")
-        : Array.isArray(eventPayload?.detail)
-          ? eventPayload.detail.filter((track:any) => String(track.type || track.kind || track.trackType || "").toLowerCase() === "subtitle")
-          : [];
+      // Movi's DOM event detail is version-dependent: older builds emit
+      // { audio, subtitle, video }, while newer builds emit Track[].
+      // The Event object itself is passed by addEventListener, so unwrap detail first.
+      const detail = eventPayload?.detail ?? eventPayload;
+      let raw:any[] = Array.isArray(detail)
+        ? detail.filter((track:any) => String(track.type || track.kind || track.trackType || "").toLowerCase() === "subtitle")
+        : Array.isArray(detail?.subtitle)
+          ? detail.subtitle
+          : Array.isArray(detail?.subtitles)
+            ? detail.subtitles
+            : [];
       // Read only embedded MKV subtitle metadata; do not touch source, demuxing,
       // buffering, seeking, audio, controls, or the playback lifecycle.
       if (!raw.length) {
@@ -181,7 +187,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     // has fetched several byte ranges. Keep syncing for a short window, not just
     // the first three seconds, and listen to Movi's documented event spellings.
     const events = ["loadedmetadata", "loadeddata", "canplay", "tracksChange", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
-    events.forEach(name => element.addEventListener(name, syncTracks));
+    events.forEach(name => element.addEventListener(name, (event:any) => syncTracks(event)));
     // Movi's documented programmatic event is subscribed once its player instance exists.
     syncTracks();
     const retryTimers = [500, 1500, 3000, 6000, 10000, 15000].map(delay => window.setTimeout(syncTracks, delay));
