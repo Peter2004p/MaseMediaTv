@@ -87,6 +87,28 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   // interfere with the custom element's own click/touch handling in WebViews.
 
   useEffect(() => {
+    if (!isMkvSource || !moviReady) return;
+    const element = mkvPlayerRef.current;
+    if (!element) return;
+    const handleMkvError = (event: Event) => {
+      const detail = (event as CustomEvent<any>).detail;
+      const reason = typeof detail === 'string' ? detail : String(detail?.message || detail?.error?.message || 'The external MKV source could not be opened.');
+      if (mkvUseDirectSource) {
+        setMkvUseDirectSource(false);
+        setMkvSubtitleNotice('Direct access was blocked. Retrying through MaseNet’s range-aware media proxy…');
+      } else {
+        setMkvSubtitleNotice('MaseNet proxy could not open this MKV: ' + reason);
+      }
+    };
+    element.addEventListener('error', handleMkvError);
+    element.addEventListener('errordisplay', handleMkvError);
+    return () => {
+      element.removeEventListener('error', handleMkvError);
+      element.removeEventListener('errordisplay', handleMkvError);
+    };
+  }, [isMkvSource, moviReady, mkvUseDirectSource, episode.id, rawSrc, retry]);
+
+  useEffect(() => {
     if (!isMkvSource || !moviReady) { setMkvSubtitleTracks([]); setMkvAudioTracks([]); setMkvSubtitleReady(false); return; }
     const element = mkvPlayerRef.current;
     if (!element) return;
@@ -289,7 +311,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
           key={episode.id + ':' + rawSrc + ':' + retry}
           src={mkvProxyUrl}
           crossorigin="anonymous"
-          onError={() => { if (mkvUseDirectSource) { setMkvUseDirectSource(false); setMkvSubtitleNotice('Direct playback was blocked by the source. Trying the secure MaseNet proxy; the provider must still support byte-range requests.'); } }}
           controls
           sw="auto"
           fallback="native"
