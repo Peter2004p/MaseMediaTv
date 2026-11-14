@@ -35,7 +35,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const [mkvSubtitleReady, setMkvSubtitleReady] = useState(false);
   const [mkvSubtitleNotice, setMkvSubtitleNotice] = useState("");
   const [mkvActiveSubtitleTrackId, setMkvActiveSubtitleTrackId] = useState<number | null>(null);
-  const mkvAutoSelectAttemptedRef = useRef(false);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
@@ -76,7 +75,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return () => { active = false; };
   }, [isMkvSource, retry]);
 
-  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); setMkvActiveSubtitleTrackId(null); mkvAutoSelectAttemptedRef.current = false; }, [episode.id, rawSrc]);
+  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); setMkvActiveSubtitleTrackId(null); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
   // interfere with the custom element's own click/touch handling in WebViews.
 
@@ -89,49 +88,22 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       // element.player instance after the custom element reports track readiness.
       const player = element.player;
       if (!player) { setMkvSubtitleReady(false); return; }
-      const raw = typeof player.getSubtitleTracks === "function" ? player.getSubtitleTracks() : [];
-      const mapped = raw.map((track:any, index:number) => {
+      const raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
+      setMkvSubtitleTracks(raw.map((track:any, index:number) => {
         const id = Number(track.id);
         return {
           id,
-          label: String(track.title || track.label || track.language || track.codec || "Subtitle track " + (index + 1)),
+          label: String(track.label || track.title || track.language || track.codec || "Subtitle track " + (index + 1)),
           language: String(track.language || ""),
-          active: id === mkvActiveSubtitleTrackId || Boolean(track.active || track.isActive),
-          forced: Boolean(track.forced)
+          active: id === mkvActiveSubtitleTrackId || Boolean(track.active || track.isActive)
         };
-      }).filter((track:any) => Number.isFinite(track.id));
-      setMkvSubtitleTracks(mapped);
+      }).filter((track:any) => Number.isFinite(track.id)));
       setMkvSubtitleReady(true);
-
-      // MKV embedded subtitles are off by default in Movi. Automatically enable
-      // one real embedded track once per source so captions actually appear.
-      // Respect a language preference when one matches; otherwise use the first
-      // embedded track. The viewer can still turn subtitles off or switch tracks.
-      if (mapped.length && !mkvAutoSelectAttemptedRef.current) {
-        mkvAutoSelectAttemptedRef.current = true;
-        const preferred = preferredSubtitleLanguage === "off" || preferredSubtitleLanguage === "auto"
-          ? undefined
-          : mapped.find((track:any) => languageMatch(track.language || track.label, preferredSubtitleLanguage));
-        const target = mapped.find((track:any) => track.active) || preferred || mapped[0];
-        if (target && typeof player.selectSubtitleTrack === "function") {
-          void Promise.resolve(player.selectSubtitleTrack(target.id)).then((success:any) => {
-            if (success === false) {
-              setMkvSubtitleNotice("The embedded subtitle track was found but this player could not activate it.");
-              return;
-            }
-            setMkvActiveSubtitleTrackId(target.id);
-            setMkvSubtitleTracks(current => current.map(track => ({...track, active:track.id===target.id})));
-            setMkvSubtitleNotice("Subtitles enabled: " + target.label);
-          }).catch(() => {
-            setMkvSubtitleNotice("The embedded subtitle track was found, but could not be rendered.");
-          });
-        }
-      }
     };
     // Some remote MKV files expose their track table only after the WASM demuxer
     // has fetched several byte ranges. Keep syncing for a short window, not just
     // the first three seconds, and listen to Movi's documented event spellings.
-    const events = ["loadstart", "loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
+    const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
     events.forEach(name => element.addEventListener(name, syncTracks));
     syncTracks();
     const retryTimers = [500, 1500, 3000, 6000, 10000, 15000].map(delay => window.setTimeout(syncTracks, delay));
@@ -139,7 +111,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       retryTimers.forEach(timer => window.clearTimeout(timer));
       events.forEach(name => element.removeEventListener(name, syncTracks));
     };
-  }, [isMkvSource, moviReady, episode.id, rawSrc, retry, mkvActiveSubtitleTrackId, preferredSubtitleLanguage]);
+  }, [isMkvSource, moviReady, episode.id, rawSrc, retry, mkvActiveSubtitleTrackId]);
 
   const selectMkvSubtitle = async (trackId:number|null, label = "Subtitles turned off.") => {
     const player = mkvPlayerRef.current?.player;
