@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-type Track={id:number;language?:string;title?:string;label?:string;codec?:string;forced?:boolean};
 type Props={src:string;title?:string;onProgress?:(n:number)=>void;onPlaybackPosition?:(n:number)=>void;onPlaybackStarted?:()=>void;onPlaybackEnded?:()=>void;onPlaybackStateChange?:(playing:boolean,time:number)=>void;resumeAtSeconds?:number;autoPlay?:boolean};
 const stamp=(n:number)=>Number.isFinite(n)?Math.floor(n/60)+":"+String(Math.floor(n%60)).padStart(2,"0"):"0:00";
 
@@ -34,7 +33,7 @@ export default function MaseNetVlcPlayer({src,title="MaseNet video",onProgress,o
  const selectAudio=(id:number)=>{const ok=p()?.selectAudioTrack?.(id);if(ok!==false){setAudioId(id);setMenu(null);}};
  const delayBy=(n:number)=>{const next=delay+n;setDelay(next);p()?.setSubtitleDelay?.(next);};
  const fullscreen=()=>{const el=root.current as any;if(el?.requestFullscreen)void el.requestFullscreen();else el?.webkitRequestFullscreen?.();};
- return <section ref={root} className="mnvlc" aria-label="MaseNet video player">
+ return <section ref={root} className="mnvlc" aria-label={title}>
   <div className="mnvlcScreen"><canvas ref={canvas}/><div ref={overlay} className="mnvlcSubtitleLayer"/>{status!=="playing"&&!error&&<button className="mnvlcPlay" onClick={()=>void toggle()}>▶</button>}{status==="loading"&&<div className="mnvlcMessage">Opening MKV and reading embedded tracks…</div>}{error&&<div className="mnvlcMessage mnvlcError"><b>Playback error</b><span>{error}</span></div>}</div>
   <div className="mnvlcControls"><input aria-label="Seek" type="range" min="0" max={Math.max(1,duration)} step=".1" value={Math.min(time,duration||0)} onChange={e=>seek(Number(e.target.value))}/>
    <div className="mnvlcRow"><button onClick={()=>void toggle()}>{status==="playing"?"Ⅱ":"▶"}</button><button onClick={()=>seek(time-10)}>−10s</button><button onClick={()=>seek(time+10)}>+10s</button><span>{stamp(time)} / {stamp(duration)}</span><button onClick={()=>setMenu(menu==="sub"?null:"sub")}>CC {subs.length}</button><button onClick={()=>setMenu(menu==="audio"?null:"audio")}>Audio {audios.length}</button><button onClick={()=>setMenu(menu==="settings"?null:"settings")}>⚙</button><button onClick={fullscreen}>⛶</button></div>
