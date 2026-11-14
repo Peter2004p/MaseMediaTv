@@ -147,3 +147,42 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   .app .admin .adminCard { padding: 11px; }
   .app .admin .tabbar button { font-size: 10px; padding-inline: 10px; }
 }
+
+/* Discovery controls: scrollable filters, readable selectors and no cramped chips. */
+.app .iqHome .iqCategories {
+  display: flex;
+  gap: 7px;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.app .iqHome .iqCategories::-webkit-scrollbar { display: none; }
+.app .iqHome .maseDiscoverySelect { min-height: 38px; }
+.app .iqHome .maseDiscoverySelect select { min-height: 34px; font-size: 14px; }
+.app .iqHome .maseMagicForm { min-width: 0; }
+.app .iqHome .maseMagicForm :where(input, button) { min-height: 44px; }
+.app .iqHome .maseTastePanel { min-width: 0; }
+@media (max-width: 760px) {
+  .app .iqHome .iqPrimaryDock {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    border-radius: 20px;
+    padding: 7px;
+  }
+  .app .iqHome .iqPrimaryDock button { min-height: 58px; }
+  .app .iqHome .maseDiscoverySelect {
+    justify-content: space-between;
+    flex: 1 1 145px;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 11px;
+  }
+  .app .iqHome .maseDiscoverySelect select {
+    max-width: min(52vw, 170px);
+    min-width: 72px;
+    font-size: 14px;
+  }
+  .app .iqHome .maseMagicResultGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
