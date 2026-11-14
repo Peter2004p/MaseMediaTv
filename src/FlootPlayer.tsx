@@ -30,7 +30,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
   const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
-  const [mkvSubtitleTracks, setMkvSubtitleTracks] = useState<{id:number;label:string;language?:string;active?:boolean}[]>([]);
+  const [mkvSubtitleTracks, setMkvSubtitleTracks] = useState<{id:number;label:string;language?:string;codec?:string;forced?:boolean;active?:boolean}[]>([]);
   const [mkvSubtitleMenuOpen, setMkvSubtitleMenuOpen] = useState(false);
   const [mkvSubtitleReady, setMkvSubtitleReady] = useState(false);
   const [mkvSubtitleNotice, setMkvSubtitleNotice] = useState("");
@@ -83,35 +83,51 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     if (!isMkvSource || !moviReady) { setMkvSubtitleTracks([]); setMkvSubtitleReady(false); return; }
     const element = mkvPlayerRef.current;
     if (!element) return;
+    let metadataReady = false;
     const syncTracks = () => {
-      // Movi creates/replaces its underlying engine during source loading.
-      // Its public element contract says to read element.player after loadedmetadata/loadeddata.
+      // Read embedded tracks from Movi's live demuxer. The element can create its
+      // engine after the first metadata event, so this is also retried below.
       const player = element.player;
-      if (!player) { setMkvSubtitleReady(false); return; }
-      const raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
-      setMkvSubtitleTracks(raw.map((track:any, index:number) => {
-        const id = Number(track.id);
+      if (!player) return;
+      let raw:any[] = [];
+      try {
+        raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
+        if (!raw.length && typeof player.getTracks === "function") {
+          raw = (player.getTracks() || []).filter((track:any) =>
+            String(track.type || track.kind || "").toLowerCase() === "subtitle"
+          );
+        }
+      } catch { raw = []; }
+      const mapped = raw.map((track:any, index:number) => {
+        const id = Number(track.id ?? track.trackId ?? track.index);
+        const language = String(track.language || track.lang || "");
+        const codec = String(track.codec || track.subtitleType || "");
+        const title = String(track.title || track.label || track.name || "");
+        const forced = Boolean(track.forced);
         return {
           id,
-          label: String(track.label || track.title || track.language || track.codec || "Subtitle track " + (index + 1)),
-          language: String(track.language || ""),
-          active: id === mkvActiveSubtitleTrackId || Boolean(track.active || track.isActive)
+          label: title || language || codec || "Embedded subtitle " + (index + 1),
+          language,
+          codec,
+          forced,
+          active: Boolean(track.active || track.isActive)
         };
-      }).filter((track:any) => Number.isFinite(track.id)));
-      setMkvSubtitleReady(true);
+      }).filter((track:any) => Number.isFinite(track.id));
+      setMkvSubtitleTracks(mapped);
+      if (mapped.length || metadataReady) setMkvSubtitleReady(true);
     };
-    // Some remote MKV files expose their track table only after the WASM demuxer
-    // has fetched several byte ranges. Keep syncing for a short window, not just
-    // the first three seconds, and listen to Movi's documented event spellings.
+    const onMetadata = () => { metadataReady = true; syncTracks(); };
+    // Movi emits trackschange when its Matroska demuxer has discovered streams.
+    // Listen before polling so tracks that appear after initial load are not missed.
     const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
-    events.forEach(name => element.addEventListener(name, syncTracks));
+    events.forEach(name => element.addEventListener(name, name === "trackschange" ? syncTracks : onMetadata));
     syncTracks();
-    const retryTimers = [500, 1500, 3000, 6000, 10000, 15000].map(delay => window.setTimeout(syncTracks, delay));
+    const retryTimers = [250, 500, 1000, 2000, 4000, 8000, 12000, 20000, 30000].map(delay => window.setTimeout(syncTracks, delay));
     return () => {
       retryTimers.forEach(timer => window.clearTimeout(timer));
-      events.forEach(name => element.removeEventListener(name, syncTracks));
+      events.forEach(name => element.removeEventListener(name, name === "trackschange" ? syncTracks : onMetadata));
     };
-  }, [isMkvSource, moviReady, episode.id, rawSrc, retry, mkvActiveSubtitleTrackId]);
+  }, [isMkvSource, moviReady, episode.id, rawSrc, retry]);
 
   const selectMkvSubtitle = async (trackId:number|null, label = "Subtitles turned off.") => {
     const player = mkvPlayerRef.current?.player;
@@ -265,23 +281,12 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
           onError={() => { if (!mkvUseDirectSource) setMkvUseDirectSource(true); }}
           controls
           playsinline
-          subtitlepicker
           theme="dark"
           controlslist="nosubtitledrag"
           subtitlesize="1.15"
           subtitlebg="rgba(0,0,0,.65)"
           style={{ display: 'block', width: '100%', height: '100%', minHeight: '220px', aspectRatio: '16 / 9', background: '#000' }}
-        >
-          {tracks.map((track, index) => {
-            const rawTrackUrl = String(track.url || track.path || '').trim();
-            const isAbsoluteHttps = /^https:\/\//i.test(rawTrackUrl);
-            const trackUrl = isAbsoluteHttps
-              ? '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&resource=' + encodeURIComponent(rawTrackUrl)
-              : rawTrackUrl;
-            const isSrt = /\.srt(?:$|[?#])/i.test(rawTrackUrl) || /subrip/i.test(track.mimeType || '');
-            return <track key={rawTrackUrl + index} kind="subtitles" src={trackUrl} srclang={track.lang || 'und'} label={track.label || track.lang || 'Subtitle ' + (index + 1)} default={index === 0} data-format={isSrt ? 'srt' : undefined} />;
-          })}
-        </MoviPlayerTag>
+        />
       </div>
       <div className="fspControls"><div className="fspRow fspOptions">
         {variants.length > 1 && <label>Quality <select value={selected?.quality || ''} onChange={e => setQuality(e.target.value)}>{variants.map(v => <option key={v.quality + v.streamUrl} value={v.quality}>{v.quality}</option>)}</select></label>}
@@ -289,7 +294,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
           <button type="button" className="fspSubtitleButton" aria-expanded={mkvSubtitleMenuOpen} onClick={() => setMkvSubtitleMenuOpen(value => !value)}>▤ Embedded subtitles ({mkvSubtitleTracks.length})</button>
           {mkvSubtitleMenuOpen && <div className="fspSubtitleMenu"><strong>MKV subtitle tracks</strong>
             <button type="button" onClick={() => void selectMkvSubtitle(null)}>Off</button>
-            {mkvSubtitleTracks.map((track,index)=><button type="button" key={track.id} className={track.active?'selected':''} onClick={()=>void selectMkvSubtitle(track.id,track.label)}>{track.label}{track.language?' · '+track.language:''}</button>)}
+            {mkvSubtitleTracks.map((track,index)=><button type="button" key={track.id} className={track.active?'selected':''} onClick={()=>void selectMkvSubtitle(track.id,track.label)}>{track.label}{track.language?' · '+track.language:''}{track.codec?' · '+track.codec:''}{track.forced?' · Forced':''}</button>)}
             {!mkvSubtitleTracks.length && <p>{mkvSubtitleReady?'No embedded subtitle tracks were found in this MKV.':'Reading subtitle tracks from the MKV…'}</p>}
           </div>}
         </div>
