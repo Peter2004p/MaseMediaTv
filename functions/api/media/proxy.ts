@@ -1,6 +1,6 @@
 import { json } from "../auth/_shared";
 interface Env { DB: D1Database; MEDIA_PROXY_ALLOWED_HOSTS?: string; }
-type EpisodeLike = { id?:string; streamUrl?:string; qualities?:{streamUrl?:string}[] };
+type EpisodeLike = { id?:string; streamUrl?:string; downloadUrl?:string; qualities?:{streamUrl?:string;downloadUrl?:string}[] };
 const isPublicHttps = (value:string) => {
  try {
   const u=new URL(value);
@@ -72,13 +72,13 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    // stream URL already stored in the library; never accept an arbitrary source URL.
    const found=episodeId && episodeId.length<=200 ? episodes.find((e:EpisodeLike)=>String(e.id)===episodeId) : undefined;
    const bySource=sourceHint
-    ? episodes.find((e:EpisodeLike)=>[e.streamUrl,...(e.qualities||[]).map(q=>q.streamUrl)].some((url)=>typeof url==="string" && url===sourceHint))
+    ? episodes.find((e:EpisodeLike)=>[e.streamUrl,e.downloadUrl,...(e.qualities||[]).flatMap(q=>[q.streamUrl,q.downloadUrl])].some((url)=>typeof url==="string" && url===sourceHint))
     : undefined;
    if(found||bySource){episode=found||bySource||null;break;}
   } catch {}
  }
  if(!episode) return json({error:"Episode not found in the Cloudflare library. Check the stored episode ID and source URL."},404);
- const allowed=[episode.streamUrl,...(episode.qualities||[]).map(q=>q.streamUrl)].filter((x):x is string=>typeof x==="string" && isPublicHttps(x));
+ const allowed=[episode.streamUrl,episode.downloadUrl,...(episode.qualities||[]).flatMap(q=>[q.streamUrl,q.downloadUrl])].filter((x):x is string=>typeof x==="string" && isPublicHttps(x));
  let upstreamUrl=requested||reqUrl.searchParams.get("source")||allowed[0]||"";
  if(!isPublicHttps(upstreamUrl)) return json({error:"This video source is not an allowed HTTPS URL"},400);
  if(!requested && !allowed.includes(upstreamUrl)) return json({error:"The requested source does not belong to this episode"},403);
