@@ -85,16 +85,20 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     if (!element) return;
     let metadataReady = false;
     const syncTracks = (event?: Event) => {
-      // Movi publishes the discovered embedded streams in trackschange.detail.subtitle.
-      // Prefer that authoritative event payload, then fall back to the live player API.
+      // Movi's trackschange event can carry either the complete track list or
+      // a subtitle-only list. Prefer that event data, then query the live API.
       const player = element.player;
       let raw:any[] = [];
       try {
         const detail = (event as CustomEvent<any> | undefined)?.detail;
-        const eventSubtitles = Array.isArray(detail?.subtitle) ? detail.subtitle : [];
-        if (eventSubtitles.length) {
-          raw = eventSubtitles;
-        } else if (player) {
+        if (Array.isArray(detail)) {
+          raw = detail.filter((track:any) => String(track.type || track.kind || "").toLowerCase() === "subtitle");
+        } else if (Array.isArray(detail?.subtitle)) {
+          raw = detail.subtitle;
+        } else if (Array.isArray(detail?.tracks)) {
+          raw = detail.tracks.filter((track:any) => String(track.type || track.kind || "").toLowerCase() === "subtitle");
+        }
+        if (!raw.length && player) {
           raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
           if (!raw.length && typeof player.getTracks === "function") {
             raw = (player.getTracks() || []).filter((track:any) =>
@@ -103,7 +107,10 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
           }
         }
       } catch { raw = []; }
-      const mapped = raw.map((track:any, index:number) => {
+      if (event?.type === "trackschange" || event?.type === "loadend" || event?.type === "loadEnd") {
+        metadataReady = true;
+      }
+    const mapped = raw.map((track:any, index:number) => {
         const id = Number(track.id ?? track.trackId ?? track.index);
         const language = String(track.language || track.lang || "");
         const codec = String(track.codec || track.subtitleType || "");
@@ -122,15 +129,16 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       if (mapped.length || metadataReady) setMkvSubtitleReady(true);
     };
     const onMetadata = () => { metadataReady = true; syncTracks(); };
-    // Movi emits trackschange when its Matroska demuxer has discovered streams.
-    // Listen before polling so tracks that appear after initial load are not missed.
-    const events = ["loadedmetadata", "loadeddata", "canplay", "trackschange", "subtitleTrackChange", "subtitletrackchange"];
-    events.forEach(name => element.addEventListener(name, name === "trackschange" ? syncTracks : onMetadata));
+    const onTracksChange = (event: Event) => { metadataReady = true; syncTracks(event); };
+    // Listen to Movi's custom-element event and load lifecycle events. The
+    // native controls remain enabled; this menu is only a track-list mirror.
+    const events = ["trackschange", "loadend", "loadEnd", "loadedmetadata", "loadeddata", "canplay"];
+    events.forEach(name => element.addEventListener(name, name === "trackschange" ? onTracksChange : onMetadata));
     syncTracks();
-    const retryTimers = [250, 500, 1000, 2000, 4000, 8000, 12000, 20000, 30000].map(delay => window.setTimeout(syncTracks, delay));
+    const retryTimers = [250, 500, 1000, 1500, 2500, 4000, 6000, 9000, 13000, 18000, 25000, 30000].map(delay => window.setTimeout(syncTracks, delay));
     return () => {
       retryTimers.forEach(timer => window.clearTimeout(timer));
-      events.forEach(name => element.removeEventListener(name, name === "trackschange" ? syncTracks : onMetadata));
+      events.forEach(name => element.removeEventListener(name, name === "trackschange" ? onTracksChange : onMetadata));
     };
   }, [isMkvSource, moviReady, episode.id, rawSrc, retry]);
 
