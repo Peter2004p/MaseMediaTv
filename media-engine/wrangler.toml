@@ -6,7 +6,6 @@ workers_dev = true
 [[containers]]
 class_name = "MediaEngineContainer"
 scheduling_policy = "durable_object"
-max_instances = 3
 
 [containers.images.base]
 dockerfile = "./Dockerfile"
