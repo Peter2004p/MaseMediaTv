@@ -28,7 +28,12 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
     padding-bottom: var(--mase-safe-bottom);
   }
   .app .nav {
+    position: sticky;
     top: calc(6px + var(--mase-safe-top));
+    bottom: auto;
+    left: auto;
+    transform: none;
+    z-index: 60;
     width: calc(100% - 16px);
     margin-top: 6px;
     padding: 8px 10px;
