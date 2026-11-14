@@ -85,18 +85,16 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     if (!element) return;
     let metadataReady = false;
     const syncTracks = (event?: Event) => {
-      // Movi's trackschange event can carry either the complete track list or
-      // a subtitle-only list. Prefer that event data, then query the live API.
+      // Movi's DOM trackschange event carries Track[] directly in event.detail.
+      // Use that list first, then query the live player API as a fallback.
       const player = element.player;
       let raw:any[] = [];
       try {
         const detail = (event as CustomEvent<any> | undefined)?.detail;
         if (Array.isArray(detail)) {
-          raw = detail.filter((track:any) => String(track.type || track.kind || "").toLowerCase() === "subtitle");
-        } else if (Array.isArray(detail?.subtitle)) {
-          raw = detail.subtitle;
-        } else if (Array.isArray(detail?.tracks)) {
-          raw = detail.tracks.filter((track:any) => String(track.type || track.kind || "").toLowerCase() === "subtitle");
+          raw = detail.filter((track:any) =>
+            String(track.type || track.kind || "").toLowerCase() === "subtitle"
+          );
         }
         if (!raw.length && player) {
           raw = player.getSubtitleTracks?.() || element.getSubtitleTracks?.() || [];
@@ -107,27 +105,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
           }
         }
       } catch { raw = []; }
-      if (event?.type === "trackschange" || event?.type === "loadend" || event?.type === "loadEnd") {
-        metadataReady = true;
-      }
-    const mapped = raw.map((track:any, index:number) => {
-        const id = Number(track.id ?? track.trackId ?? track.index);
-        const language = String(track.language || track.lang || "");
-        const codec = String(track.codec || track.subtitleType || "");
-        const title = String(track.title || track.label || track.name || "");
-        const forced = Boolean(track.forced);
-        return {
-          id,
-          label: title || language || codec || "Embedded subtitle " + (index + 1),
-          language,
-          codec,
-          forced,
-          active: Boolean(track.active || track.isActive)
-        };
-      }).filter((track:any) => Number.isFinite(track.id));
-      setMkvSubtitleTracks(mapped);
-      if (mapped.length || metadataReady) setMkvSubtitleReady(true);
-    };
     const onMetadata = () => { metadataReady = true; syncTracks(); };
     const onTracksChange = (event: Event) => { metadataReady = true; syncTracks(event); };
     // Listen to Movi's custom-element event and load lifecycle events. The
