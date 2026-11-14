@@ -232,7 +232,7 @@ export const onRequestHead = async ({ request, env }: { request:Request; env:Env
   if(value) out.set(key,value);
  }
  const contentRange=ranged.headers.get("content-range")||"";
- const total=contentRange.match(/^bytes\s+0-0\\/(\d+)$/i);
+ const total=contentRange.match(/^bytes\s+0-0\/(\d+)$/i);
  const rangedLength=ranged.headers.get("content-length")||"";
  if(ranged.status===206 && total && /^\d+$/.test(total[1])) out.set("content-length",total[1]);
  else if(ranged.status===200 && /^\d+$/.test(rangedLength)) out.set("content-length",rangedLength);
