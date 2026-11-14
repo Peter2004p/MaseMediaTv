@@ -659,7 +659,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
  const startDownload=async(item:typeof items[number])=>{
   if(busyId)return;
   setBusyId(item.key);setMessage('');
-  const tab=window.open('about:blank','_blank');
+  let tab:Window|null=null;
   try{
    let url=String(item.variant.downloadUrl||'').trim();
    const path=String(item.variant.downloadPath||'').trim();
@@ -668,20 +668,27 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
     if(!response.data?.url)throw new Error('The secure media link could not be created. Please try again.');
     url=String(response.data.url);
    }
-   if(!/^https?:\/\//i.test(url))throw new Error('This download entry has no valid HTTPS/HTTP link.');
-   if(tab)tab.location.href=url;
-   else window.location.assign(url);
-   setMessage('Download source opened for '+item.title.name+'. Your browser or the file host controls whether it downloads or streams.');
+   if(!/^https?:\\/\\//i.test(url))throw new Error('This download entry has no valid HTTPS/HTTP link.');
+   // Use the range-aware proxy only for a URL explicitly saved in this episode's
+   // download fields. The Worker validates the exact URL against the catalogue.
+   // R2 signed paths remain direct because their short-lived URLs are not library URLs.
+   if(!path){
+    const params=new URLSearchParams({episodeId:item.episode.id,source:url,download:'1'});
+    url='/api/media/proxy?'+params.toString();
+   }
+   tab=window.open(url,'_blank','noopener,noreferrer');
+   if(!tab)window.location.assign(url);
+   setMessage('Download request opened for '+item.title.name+'. The browser will save it when the provider supplies a downloadable file response.');
   }catch(error){
    tab?.close();
    setMessage(error instanceof Error?error.message:'Could not open this download source.');
   }finally{setBusyId('')}
  };
  return <main className="page maseUtilityPage">
-  <header className="maseUtilityHead"><div><span className="iqKicker">YOUR VIDEO LIBRARY</span><h1>Downloads</h1><p>Find available download sources for movies and drama episodes.</p></div><span className="maseUtilityCount">{items.length} available</span></header>
-  <section className="downloadInfo"><Download size={19}/><span><b>Download availability</b><small>Only titles with an admin-provided download link are listed. Some hosts may open a video stream instead of downloading; this depends on the source's download headers. MaseNet does not save files to your device automatically.</small></span></section>
+  <header className="maseUtilityHead"><div><span className="iqKicker">YOUR VIDEO LIBRARY</span><h1>Downloads</h1><p>Download movies and drama episodes with a safer, range-aware handoff.</p></div><span className="maseUtilityCount">{items.length} available</span></header>
+  <section className="downloadInfo"><Download size={19}/><span><b>Improved download handling</b><small>MaseNet now routes saved external download links through its secure media proxy, preserves byte-range requests for compatible hosts, and asks the browser to save the file. Interrupted-download resume still depends on the provider supporting HTTP Range requests. R2 signed links open directly.</small></span></section>
   {message&&<p className="downloadFeedback" role="status">{message}</p>}
-  {items.length?<section className="maseDownloadList">{items.map(item=><article className="maseDownloadItem" key={item.key}><button className="maseDownloadPoster" onClick={()=>go('#/title/'+encodeURIComponent(item.title.id))}><Poster title={item.title} small/></button><div className="maseDownloadCopy"><b>{item.title.name}</b><small>{item.title.type==='Drama'?'Season '+item.episode.season+' · Episode '+item.episode.episode+' · ':''}{item.episode.title} · {item.variant.quality}</small><span>Download source available</span></div><button className="primary maseDownloadAction" disabled={Boolean(busyId)} onClick={()=>void startDownload(item)}>{busyId===item.key?'Preparing…':<><Download size={15}/> Download</>}</button></article>)}</section>:<section className="emptyState"><Download size={34}/><h2>No downloads available yet</h2><p>Download links will appear here when an admin adds them to a movie or episode. You can still browse and stream the full library.</p><button className="primary" onClick={()=>go('#/home')}>Explore library</button></section>}
+  {items.length?<section className="maseDownloadList">{items.map(item=><article className="maseDownloadItem" key={item.key}><button className="maseDownloadPoster" onClick={()=>go('#/title/'+encodeURIComponent(item.title.id))}><Poster title={item.title} small/></button><div className="maseDownloadCopy"><b>{item.title.name}</b><small>{item.title.type==='Drama'?'Season '+item.episode.season+' · Episode '+item.episode.episode+' · ':''}{item.episode.title} · {item.variant.quality}</small><span>Secure download handoff available</span></div><button className="primary maseDownloadAction" disabled={Boolean(busyId)} onClick={()=>void startDownload(item)}>{busyId===item.key?'Preparing…':<><Download size={15}/> Download</>}</button></article>)}</section>:<section className="emptyState"><Download size={34}/><h2>No downloads available yet</h2><p>Download links will appear here when an admin adds them to a movie or episode. You can still browse and stream the full library.</p><button className="primary" onClick={()=>go('#/home')}>Explore library</button></section>}
   <button className="secondary" onClick={()=>go('#/history')}>View watch history</button>
   <button className="secondary maseBackButton" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Back to MaseNet</button>
   <style>{".downloadInfo{display:flex;gap:13px;align-items:flex-start;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.045);margin:18px 0 22px}.downloadInfo>svg{flex:none;color:#62e9ad}.downloadInfo span,.maseDownloadCopy{display:flex;flex-direction:column;gap:5px;min-width:0}.downloadInfo small,.maseDownloadCopy small{color:var(--muted,#aab0c0);line-height:1.5}.maseDownloadList{display:grid;gap:10px}.maseDownloadItem{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:13px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}.maseDownloadPoster{width:62px;height:82px;overflow:hidden;border:0;border-radius:9px;background:transparent;padding:0}.maseDownloadPoster .poster{width:100%;height:100%}.maseDownloadCopy>b{overflow-wrap:anywhere}.maseDownloadCopy>span{font-size:10px;color:#70e9b2}.maseDownloadAction{white-space:nowrap}.downloadFeedback{padding:12px 14px;border-radius:12px;background:rgba(0,213,138,.1);color:#9bf3ca}@media(max-width:520px){.maseDownloadItem{grid-template-columns:52px minmax(0,1fr);gap:10px}.maseDownloadPoster{width:52px;height:72px}.maseDownloadAction{grid-column:2;justify-self:start}.maseDownloadCopy small{font-size:10px}}"} </style>
