@@ -6,6 +6,7 @@ import './title-page.css';
 import './premium-ui.css';
 import './ultra-polish.css';
 import './mobile-experience.css';
+import './design-refinement.css';
 
 type ErrorBoundaryState = { hasError: boolean; message: string };
 
