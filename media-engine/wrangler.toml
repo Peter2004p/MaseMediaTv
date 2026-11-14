@@ -1,0 +1,23 @@
+name = "masenet-media-engine"
+main = "src/index.ts"
+compatibility_date = "2026-11-14"
+workers_dev = true
+
+[[containers]]
+class_name = "MediaEngineContainer"
+scheduling_policy = "durable_object"
+max_instances = 3
+
+[containers.images.base]
+dockerfile = "./Dockerfile"
+
+[[durable_objects.bindings]]
+name = "MEDIA_ENGINE"
+class_name = "MediaEngineContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MediaEngineContainer"]
+
+[observability]
+enabled = true
