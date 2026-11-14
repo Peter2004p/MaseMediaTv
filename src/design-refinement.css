@@ -1,0 +1,95 @@
+/* MaseNet design refinement — visual-only polish; no player, playback, subtitle, route, or data logic changes. */
+:root{
+  --mase-design-green:#00cf7b;
+  --mase-design-green-soft:rgba(0,207,123,.12);
+  --mase-design-line:rgba(232,242,236,.12);
+  --mase-design-panel:rgba(15,20,18,.88);
+}
+html{scroll-padding-top:88px}
+body{font-feature-settings:"ss01" on,"cv11" on}
+.app{background-color:#080b09}
+.app .nav{
+  top:max(7px,env(safe-area-inset-top));
+  width:calc(100% - 28px);
+  max-width:1440px;
+  min-height:58px;
+  padding:8px 13px;
+  border:1px solid var(--mase-design-line);
+  background:rgba(12,17,14,.92);
+  box-shadow:0 10px 34px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.06);
+}
+.app .brandMark{background:var(--mase-design-green);color:#04170e;box-shadow:0 4px 16px rgba(0,207,123,.2)}
+.app .brandName{font-weight:800;letter-spacing:-.045em}
+.app .nav nav button{min-height:40px;padding:9px 12px;font-weight:650;transition:background .18s ease,color .18s ease}
+.app .nav nav button:hover,.app .nav nav button[aria-current="page"]{background:var(--mase-design-green-soft);color:#eafff3}
+.app .navActions .icon{min-width:40px;min-height:40px;justify-content:center}
+.app :is(button,a,input,select,textarea):focus-visible{outline:2px solid #5df0ad;outline-offset:3px}
+.app .primary{background:var(--mase-design-green);border-color:var(--mase-design-green);color:#03170d;box-shadow:0 7px 22px rgba(0,207,123,.18);font-weight:800}
+.app .primary:hover{filter:brightness(1.07)}
+.app .secondary{border-color:rgba(235,245,239,.16);background:rgba(255,255,255,.055);color:#edf4ef}
+.app .iqHome{padding-top:clamp(14px,2vw,28px);padding-bottom:calc(120px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 0%,rgba(0,207,123,.045),transparent 52%)}
+.app .iqHome .iqHero{border:1px solid rgba(232,242,236,.16);box-shadow:0 24px 70px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.08)}
+.app .iqHome .iqHero h1{max-width:720px;letter-spacing:-.06em;text-wrap:balance}
+.app .iqHome .iqHeroCopy p{color:rgba(242,248,244,.82);line-height:1.62}
+.app .iqHome .iqTags span:first-child{color:#74f2b7;border-color:rgba(0,207,123,.34);background:rgba(0,70,40,.48)}
+.app .iqHome .iqHeroActions .primary{background:var(--mase-design-green);color:#03170d;border:1px solid rgba(120,255,190,.3);box-shadow:0 8px 26px rgba(0,207,123,.2)}
+.app .iqHome .iqHeroRail{border-color:rgba(232,242,236,.14);background:rgba(5,10,8,.76)}
+.app .iqHome .heroMini.active,.app .iqHome .heroMini:hover{background:rgba(0,207,123,.1);border-color:rgba(0,207,123,.28)}
+.app .iqHome .iqCategories{border-color:rgba(232,242,236,.13);background:rgba(12,17,14,.94);box-shadow:0 9px 28px rgba(0,0,0,.3)}
+.app .iqHome .iqCategories button{min-height:38px}
+.app .iqHome .iqCategories button.active,.app .iqHome .iqCategories button:hover{background:var(--mase-design-green);color:#03170d}
+.app .iqHome .iqKicker{color:#58e7a6}
+.app .iqHome .iqRowHead h2{font-weight:700;letter-spacing:-.045em}
+.app .iqHome .rowMore{min-height:36px;border-radius:10px}
+.app .iqHome .rowMore:hover{border-color:rgba(0,207,123,.48);color:#75f2b7}
+.app .iqHome .iqGrid{row-gap:20px}
+.app .iqHome .iqPoster{border:1px solid rgba(255,255,255,.08);box-shadow:0 9px 25px rgba(0,0,0,.28)}
+.app .iqHome .iqCard{border-radius:13px}
+.app .iqHome .iqCard:hover{border-color:rgba(0,207,123,.34);background:rgba(0,207,123,.035)}
+.app .iqHome .iqCard>b{font-weight:750;line-height:1.4}
+.app .iqHome .iqCard>small{line-height:1.45;color:#a6b3aa}
+.app .detail{max-width:1320px;margin:0 auto;padding:clamp(18px,3vw,36px) clamp(13px,2vw,24px) calc(130px + env(safe-area-inset-bottom))}
+.app .detailHero{border:1px solid rgba(232,242,236,.13);border-radius:22px;padding:clamp(15px,2.5vw,28px);background:linear-gradient(135deg,rgba(18,28,22,.9),rgba(10,14,12,.94));box-shadow:0 18px 50px rgba(0,0,0,.24)}
+.app .detail h1{letter-spacing:-.055em;text-wrap:balance}
+.app .chips span{border-color:rgba(232,242,236,.16);background:rgba(255,255,255,.035);color:#c8d5cd}
+.app .seasonTabs{flex-wrap:wrap}
+.app .seasonTabs button{min-height:40px}
+.app .seasonTabs .activeTab{background:var(--mase-design-green);color:#03170d;border-color:var(--mase-design-green)}
+.app .episode{min-height:62px;border-color:rgba(232,242,236,.1);background:rgba(255,255,255,.035)}
+.app .episode.selected{border-color:rgba(0,207,123,.48);background:rgba(0,207,123,.08)}
+.app .maseUtilityPage{max-width:1240px}
+.app .maseUtilityHead{border-color:var(--mase-design-line)}
+.app .adminHead{border-color:var(--mase-design-line);background:linear-gradient(130deg,rgba(17,28,21,.9),rgba(10,15,12,.92))}
+.app .adminCard{border-color:var(--mase-design-line);background:rgba(12,18,14,.82)}
+.app .adminBadge{border-color:rgba(0,207,123,.26);background:rgba(0,207,123,.08);color:#75eab0}
+.app .tabbar .tabActive{background:rgba(0,207,123,.12);color:#7cf0b6}
+.app .formGrid input:focus,.app .formGrid select:focus,.app .formGrid textarea:focus{border-color:rgba(0,207,123,.6);box-shadow:0 0 0 3px rgba(0,207,123,.09)}
+.app .aiDock{border:1px solid rgba(150,255,200,.35);box-shadow:0 8px 26px rgba(0,0,0,.36),0 0 20px rgba(0,207,123,.13)}
+.app .telegram{border:1px solid var(--mase-design-line);box-shadow:0 8px 28px rgba(0,0,0,.28)}
+.app .searchDock{border:1px solid rgba(232,242,236,.16);background:rgba(12,18,14,.96);box-shadow:0 16px 42px rgba(0,0,0,.4)}
+@media(max-width:760px){
+ .app .nav{width:calc(100% - 14px);margin:5px 7px 0;min-height:50px;padding:6px 8px;gap:7px}
+ .app .navActions{gap:2px}
+ .app .navActions .icon{min-width:40px;min-height:40px;padding:8px}
+ .app .iqHome{padding:8px 8px calc(112px + env(safe-area-inset-bottom))!important}
+ .app .iqHome .iqHero{border-radius:18px}
+ .app .iqHome .iqHeroActions button{min-height:44px}
+ .app .iqHome .iqCategories{top:58px;scrollbar-width:none}
+ .app .iqHome .iqRowHead{align-items:center}
+ .app .iqHome .iqGrid{scroll-padding-inline:4px}
+ .app .detail{padding:18px 12px calc(125px + env(safe-area-inset-bottom))}
+ .app .detailHero{gap:15px;border-radius:18px;padding:14px}
+ .app .detailHero>.poster{max-width:38vw}
+ .app .episodeGrid{grid-template-columns:1fr}
+ .app .episode{min-height:58px}
+ .app .adminCard{border-radius:17px;padding:14px}
+ .app .searchDock{top:calc(62px + env(safe-area-inset-top));width:calc(100% - 16px)}
+}
+@media(max-width:390px){
+ .app .brandName{font-size:14px}
+ .app .navActions .icon{min-width:36px;min-height:38px;padding:7px}
+ .app .iqHome .iqHero{border-radius:15px}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .nav nav button,.app .iqHome .iqCard,.app .iqHome .rowMore{transition:none!important}
+}
