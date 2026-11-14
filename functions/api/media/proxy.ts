@@ -114,6 +114,35 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  headers.set("origin",reqUrl.origin);
  headers.set("referer",reqUrl.origin+"/");
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
+ // Temporary, authorization-protected diagnostics: inspect upstream metadata only;
+ // never return or buffer the media body. This lets us distinguish a provider 502
+ // from a redirect, range, or Cloudflare fetch failure before promoting a fix.
+ if(reqUrl.searchParams.get("diagnostic")==="1") {
+  const inspect=(response:Response)=>({
+   status:response.status,
+   host:(()=>{try{return new URL(response.url||upstreamUrl).hostname;}catch{return "";}})(),
+   contentType:response.headers.get("content-type"),
+   contentLength:response.headers.get("content-length"),
+   contentRange:response.headers.get("content-range"),
+   acceptRanges:response.headers.get("accept-ranges"),
+   server:response.headers.get("server")
+  });
+  let headResult:any=null, rangeResult:any=null, headError:string|undefined, rangeError:string|undefined;
+  try {
+   const head=await fetchPublicHttps(upstreamUrl,new Headers(headers),"HEAD");
+   headResult=inspect(head);
+   await head.body?.cancel();
+  } catch(e) { headError=e instanceof Error?e.name+": "+e.message:"HEAD request failed"; }
+  try {
+   const rangeHeaders=new Headers(headers);
+   rangeHeaders.delete("if-range");
+   rangeHeaders.set("range","bytes=0-0");
+   const probe=await fetchPublicHttps(upstreamUrl,rangeHeaders,"GET");
+   rangeResult=inspect(probe);
+   await probe.body?.cancel();
+  } catch(e) { rangeError=e instanceof Error?e.name+": "+e.message:"Range request failed"; }
+  return json({diagnostic:true,sourceHost:new URL(upstreamUrl).hostname,head:headResult,headError,range:rangeResult,rangeError},200);
+ }
  let upstream:Response;
  try { upstream=await fetchPublicHttps(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
  if(!upstream.ok && upstream.status!==206) {
