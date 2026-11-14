@@ -22,7 +22,7 @@ const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value /
 const languageMatch=(available:string|undefined,preferred:string)=>{const a=String(available||'').toLowerCase().replace('_','-');const p=preferred.toLowerCase().replace('_','-');return !!p&&p!=='off'&&p!=='auto'&&(a===p||a.startsWith(p+'-')||p.startsWith(a+'-'));};
 
 export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, onPlaybackStarted, onPlaybackEnded, onPlaybackStateChange, syncCommand, profileId, playRequest = 0, resumeAtSeconds = 0, autoPlay = false, muted = false, reelMode = false }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null); const mkvPlayerRef = useRef<any>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
+  const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const hlsRecoveryAttemptsRef = useRef({ network: 0, media: 0 }); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [preferredSubtitleLanguage,setPreferredSubtitleLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-subtitle-language'+(profileId?'-'+profileId:''))||'off'}catch{return 'off'}}); const [preferredAudioLanguage,setPreferredAudioLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-audio-language'+(profileId?'-'+profileId:''))||'auto'}catch{return 'auto'}}); const [hlsAudioTracks,setHlsAudioTracks]=useState<{name?:string;lang?:string}[]>([]); const preferencesHydrated=useRef(false);
@@ -30,11 +30,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
   const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
-  const [mkvSubtitleTracks, setMkvSubtitleTracks] = useState<{id:number;label:string;language?:string;codec?:string;forced?:boolean;active?:boolean}[]>([]);
-  const [mkvSubtitleMenuOpen, setMkvSubtitleMenuOpen] = useState(false);
-  const [mkvSubtitleReady, setMkvSubtitleReady] = useState(false);
-  const [mkvSubtitleNotice, setMkvSubtitleNotice] = useState("");
-  const [mkvActiveSubtitleTrackId, setMkvActiveSubtitleTrackId] = useState<number | null>(null);
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
@@ -53,7 +48,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     const srt = /\.srt(?:$|[?#])/i.test(value) || /subrip/i.test(t.mimeType || '');
     return safeUrl && (webVtt || (isMkvSource && srt));
   }).map(t => ({ ...t, url: String(t.url || t.path).trim() }));
-  const vlcIntent = '';
   const telegramWebView = typeof window !== 'undefined' && (/Telegram/i.test(navigator.userAgent) || Boolean((window as Window & { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp));
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
   const src = isHlsSource ? proxyUrl : rawSrc;
@@ -75,7 +69,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return () => { active = false; };
   }, [isMkvSource, retry]);
 
-  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); setMkvSubtitleTracks([]); setMkvSubtitleMenuOpen(false); setMkvSubtitleReady(false); setMkvSubtitleNotice(''); setMkvActiveSubtitleTrackId(null); }, [episode.id]);
+  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
   // interfere with the custom element's own click/touch handling in WebViews.
 
