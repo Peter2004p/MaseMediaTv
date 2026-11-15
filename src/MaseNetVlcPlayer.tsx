@@ -8,7 +8,10 @@ const cleanLanguage=(value:any)=>{const raw=String(value||"").trim();if(!raw)ret
 const trackLabel=(t:any,index:number)=>{const language=cleanLanguage(t.language||t.lang||t.languageCode||t.language_id||t.tags?.language||t.metadata?.language);const title=String(t.title||t.label||"").trim();const usefulTitle=title&&!/by\\s*[:-]|subrip|srt|ass|ssa/i.test(title)?title:"";return language||usefulTitle||"Unknown language";};
 
 export default function MaseNetVlcPlayer({src,fallbackSrc,title="MaseNet video",onProgress,onPlaybackPosition,onPlaybackStarted,onPlaybackEnded,onPlaybackStateChange,resumeAtSeconds=0,autoPlay=false}:Props){
- const root=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),overlay=useRef<HTMLDivElement>(null),engine=useRef<any>(null);\n const [directMode,setDirectMode]=useState(false),[retry,setRetry]=useState(0);\n const playbackSrc=directMode&&fallbackSrc?fallbackSrc:src;\n useEffect(()=>{setDirectMode(false);setRetry(0);},[src,fallbackSrc]);
+ const root=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),overlay=useRef<HTMLDivElement>(null),engine=useRef<any>(null);
+ const [directMode,setDirectMode]=useState(false),[retry,setRetry]=useState(0);
+ const playbackSrc=directMode&&fallbackSrc?fallbackSrc:src;
+ useEffect(()=>{setDirectMode(false);setRetry(0);},[src,fallbackSrc]);
  const [status,setStatus]=useState("loading"),[error,setError]=useState(""),[time,setTime]=useState(0),[duration,setDuration]=useState(0),[subs,setSubs]=useState<Track[]>([]),[audios,setAudios]=useState<Track[]>([]),[subId,setSubId]=useState<number|null>(null),[audioId,setAudioId]=useState<number|null>(null),[menu,setMenu]=useState<"sub"|"audio"|"settings"|null>(null),[rate,setRate]=useState(1),[volume,setVolume]=useState(1),[delay,setDelay]=useState(0);
  useEffect(()=>{let live=true,instance:any=null,observer:ResizeObserver|undefined;
   const start=async()=>{try{
