@@ -4384,3 +4384,29 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
 .app:has(.mnvlc.mnvlcFullscreenActive) .homeFloat{
   opacity:0!important;visibility:hidden!important;pointer-events:none!important;
 }
+
+
+/* Fullscreen subtitle visibility only — no playback, source, track, audio, or control changes. */
+.mnvlc:fullscreen .mnvlcSubtitleLayer,
+.mnvlc:-webkit-full-screen .mnvlcSubtitleLayer,
+.mnvlc.mnvlcFullscreenActive .mnvlcSubtitleLayer{
+  position:absolute!important;
+  z-index:8!important;
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  color:#fff!important;
+  font-size:clamp(18px,2.4vw,32px)!important;
+  line-height:1.35!important;
+  text-align:center!important;
+  text-shadow:0 2px 5px #000,0 0 9px #000!important;
+  pointer-events:none!important;
+}
+.flootStylePlayer:fullscreen video::cue,
+.flootStylePlayer:-webkit-full-screen video::cue,
+.flootStylePlayer.fspFallbackFullscreen video::cue{
+  color:#fff;
+  background-color:rgba(0,0,0,.72);
+  font-size:1.05em;
+  text-shadow:0 2px 5px #000;
+}
