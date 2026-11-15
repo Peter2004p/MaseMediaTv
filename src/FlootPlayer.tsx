@@ -77,13 +77,26 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   useEffect(() => {
     if (!isMkvSource) { setMoviReady(false); return; }
     let active = true;
+    let settled = false;
     setMoviReady(false);
+    setError('');
+    // A slow or stalled chunk download must not leave the player on an
+    // endless "Preparing MKV playback…" screen.
+    const watchdog = setTimeout(() => {
+      if (active && !settled) {
+        setError('MKV playback is taking too long to load. Check your connection and tap Retry.');
+      }
+    }, 18000);
     import('movi-player/player').then(() => {
+      settled = true;
+      clearTimeout(watchdog);
       if (active) { setMoviReady(true); setError(''); }
     }).catch(() => {
+      settled = true;
+      clearTimeout(watchdog);
       if (active) setError('The MKV playback module could not load. Check your connection and tap Retry.');
     });
-    return () => { active = false; };
+    return () => { active = false; clearTimeout(watchdog); };
   }, [isMkvSource, retry]);
 
   useEffect(() => { setQuality(''); failedVariantUrlsRef.current.clear(); nativeRetryRef.current=0; setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
