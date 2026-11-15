@@ -19,26 +19,25 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
  useEffect(()=>{let live=true,instance:any=null,observer:ResizeObserver|undefined;
   const scheduleRetry=(message:string)=>{if(!live||retryTimer.current)return;if(automaticRetries.current>=2){if(switchAlternate())return;setError(message);setStatus("error");return;}const attempt=++automaticRetries.current;setError("Connection interrupted. Retrying playback ("+attempt+"/2)…");setStatus("loading");retryTimer.current=setTimeout(()=>{retryTimer.current=null;if(live){setError("");setRetry(n=>n+1);}},attempt===1?1200:3000);};
   const start=async()=>{try{
-   // Probe the MaseNet proxy before starting the MKV demuxer. This gives a
-   // useful provider/range error instead of Movi's opaque "HTTP 502" message.
+   // Run a lightweight diagnostic probe, but never make it a hard gate.
+   // Some providers reject the probe's small byte-range request even though
+   // their media stream can be opened by the decoder's normal range requests.
    try {
     const probeUrl=new URL(playbackSrc,window.location.href);
     if(probeUrl.pathname.includes("/api/media/proxy")) {
      probeUrl.searchParams.set("probe","1");
      const controller=new AbortController();
      const timer=setTimeout(()=>controller.abort(),10000);
-     let probeResponse:Response;
-     try { probeResponse=await fetch(probeUrl.toString(),{method:"GET",headers:{Range:"bytes=0-0"},signal:controller.signal,cache:"no-store"}); }
-     finally { clearTimeout(timer); }
-     const probeData:any=await probeResponse.json().catch(()=>null);
-     if(!probeResponse.ok) throw new Error(probeData?.error||("Video source check failed (HTTP "+probeResponse.status+")."));
-     if(probeData?.supportsRanges===false) throw new Error("This external source does not support byte-range requests required for stable MKV playback. Try another saved source or replace this link.");
-     if(probeData?.kind==="unknown") throw new Error("The external source did not identify itself as a supported video format. Replace the source URL with a direct MKV or MP4 stream.");
+     try {
+      const probeResponse=await fetch(probeUrl.toString(),{method:"GET",headers:{Range:"bytes=0-65535"},signal:controller.signal,cache:"no-store"});
+      // Diagnostics are advisory only: do not block the actual MKV engine
+      // on a provider's response to this separate preflight request.
+      await probeResponse.body?.cancel();
+     } finally { clearTimeout(timer); }
     }
-   } catch(probeError:any) {
-    if(!live)return;
-    const message=String(probeError?.name==="AbortError"?"The external video source timed out during its connection check.":probeError?.message||"The external video source could not be checked.");
-    setError(message);setStatus("error");return;
+   } catch {
+    // Continue to the actual decoder request; it may use a range pattern
+    // accepted by the provider even when the preflight request is rejected.
    }
    const mod:any=await import("movi-player/player");if(!live||!canvas.current)return;
    const Player=mod.MoviPlayer||mod.default;if(!Player)throw new Error("MaseNet playback engine failed to initialize.");
