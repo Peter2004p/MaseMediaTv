@@ -28,8 +28,9 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
  const [volume,setVolume]=useState(1),[mutedState,setMutedState]=useState(muted),[speed,setSpeed]=useState(1),[qualityMenu,setQualityMenu]=useState(false),[subtitleMenu,setSubtitleMenu]=useState(false),[audioMenu,setAudioMenu]=useState(false),[settingsMenu,setSettingsMenu]=useState(false);
  const [hlsSubs,setHlsSubs]=useState<HlsTrack[]>([]),[hlsAudios,setHlsAudios]=useState<HlsTrack[]>([]);
  const [full,setFull]=useState(false);
- const advanceSource=useCallback((message:string)=>{setError(message);setLoading(false);if(sourceIndex+1<sources.length){setSourceIndex(n=>n+1);setLoading(true);return;}if(variantIndex+1<variants.length){setVariantIndex(n=>n+1);setSourceIndex(0);retryCount.current=0;setLoading(true);return;}setError(message||'This source could not be played. It may be offline, expired, blocked by its host, or encoded with a browser-unsupported codec.');},[sourceIndex,sources.length,variantIndex,variants.length]);
- useEffect(()=>{setVariantIndex(0);setSourceIndex(0);setAttempt(0);retryCount.current=0;resumeApplied.current=false;lastPositionSent.current=-1;setError('');setTime(0);setDuration(0);},[episode.id]);
+ const advanceSource=useCallback((message:string)=>{setError(message);setLoading(false);if(sourceIndex+1<sources.length){setSourceIndex(n=>n+1);setLoading(true);return;}if(variantIndex+1<variants.length){setVariantIndex(n=>n+1);setSourceIndex(0);setLoading(true);return;}setError(message||'This source could not be played. It may be offline, expired, blocked by its host, or encoded with a browser-unsupported codec.');},[sourceIndex,sources.length,variantIndex,variants.length]);
+ useEffect(()=>{setVariantIndex(0);setSourceIndex(0);setAttempt(0);resumeApplied.current=false;lastPositionSent.current=-1;setError('');setTime(0);setDuration(0);},[episode.id]);
+ useEffect(()=>{setMutedState(muted);if(videoRef.current)videoRef.current.muted=muted;},[muted]);
  useEffect(()=>{
   const video=videoRef.current;if(!video||mkv)return;
   let alive=true,networkRetries=0,mediaRetries=0;
