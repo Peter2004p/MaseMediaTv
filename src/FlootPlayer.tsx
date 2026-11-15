@@ -29,6 +29,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
   const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
+  const [detectedSourceKind, setDetectedSourceKind] = useState('');
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
@@ -36,8 +37,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const selected = variants.find(v => v.quality === quality) || variants[0];
   const rawSrc = selected?.streamUrl || episode.streamUrl || '';
   const embed = embedFor(rawSrc, autoPlay);
-  const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');
-  const isMkvSource = /\.mkv(?:$|[?#])/i.test(rawSrc) || /matroska|x-matroska/i.test(selected?.mimeType || episode.mimeType || '');
+  const isHlsSource = /\\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '') || detectedSourceKind === 'hls';
+  const isMkvSource = /\\.mkv(?:$|[?#])/i.test(rawSrc) || /matroska|x-matroska/i.test(selected?.mimeType || episode.mimeType || '') || detectedSourceKind === 'mkv';
   const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => {
     const value = String(t.url || t.path || '').trim();
     // Native browser tracks require WebVTT. The Matroska player also accepts SRT
@@ -51,6 +52,23 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
   const src = isHlsSource ? proxyUrl : rawSrc;
   const mkvProxyUrl = proxyUrl;
+
+  // Probe extensionless external URLs through the same allow-listed proxy before
+  // selecting a player. No media is stored or converted by MaseNet.
+  useEffect(() => {
+    let active = true;
+    setDetectedSourceKind('');
+    const known = /\\.(mkv|m3u8|mp4|m4v|webm)(?:$|[?#])/i.test(rawSrc) ||
+      /matroska|x-matroska|mpegurl|video\\/(mp4|webm)/i.test(selected?.mimeType || episode.mimeType || '');
+    if (!rawSrc || known) return () => { active = false; };
+    fetch(proxyUrl + '&probe=1', { headers: { Range: 'bytes=0-4095' }, credentials: 'same-origin' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        if (active && ['mkv', 'hls', 'mp4', 'webm'].includes(data?.kind)) setDetectedSourceKind(data.kind);
+      })
+      .catch(() => { /* Keep the normal source path if probing is unavailable. */ });
+    return () => { active = false; };
+  }, [episode.id, rawSrc, proxyUrl, selected?.mimeType, episode.mimeType]);
 
   // Load the large Matroska-capable player only when an MKV source is actually opened.
   // This keeps the regular MP4/HLS experience from downloading its multi-megabyte decoder bundle.
