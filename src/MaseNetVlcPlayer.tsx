@@ -19,6 +19,27 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
  useEffect(()=>{let live=true,instance:any=null,observer:ResizeObserver|undefined;
   const scheduleRetry=(message:string)=>{if(!live||retryTimer.current)return;if(automaticRetries.current>=2){if(switchAlternate())return;setError(message);setStatus("error");return;}const attempt=++automaticRetries.current;setError("Connection interrupted. Retrying playback ("+attempt+"/2)…");setStatus("loading");retryTimer.current=setTimeout(()=>{retryTimer.current=null;if(live){setError("");setRetry(n=>n+1);}},attempt===1?1200:3000);};
   const start=async()=>{try{
+   // Probe the MaseNet proxy before starting the MKV demuxer. This gives a
+   // useful provider/range error instead of Movi's opaque "HTTP 502" message.
+   try {
+    const probeUrl=new URL(playbackSrc,window.location.href);
+    if(probeUrl.pathname.includes("/api/media/proxy")) {
+     probeUrl.searchParams.set("probe","1");
+     const controller=new AbortController();
+     const timer=setTimeout(()=>controller.abort(),10000);
+     let probeResponse:Response;
+     try { probeResponse=await fetch(probeUrl.toString(),{method:"GET",headers:{Range:"bytes=0-0"},signal:controller.signal,cache:"no-store"}); }
+     finally { clearTimeout(timer); }
+     const probeData:any=await probeResponse.json().catch(()=>null);
+     if(!probeResponse.ok) throw new Error(probeData?.error||("Video source check failed (HTTP "+probeResponse.status+")."));
+     if(probeData?.supportsRanges===false) throw new Error("This external source does not support byte-range requests required for stable MKV playback. Try another saved source or replace this link.");
+     if(probeData?.kind==="unknown") throw new Error("The external source did not identify itself as a supported video format. Replace the source URL with a direct MKV or MP4 stream.");
+    }
+   } catch(probeError:any) {
+    if(!live)return;
+    const message=String(probeError?.name==="AbortError"?"The external video source timed out during its connection check.":probeError?.message||"The external video source could not be checked.");
+    setError(message);setStatus("error");return;
+   }
    const mod:any=await import("movi-player/player");if(!live||!canvas.current)return;
    const Player=mod.MoviPlayer||mod.default;if(!Player)throw new Error("MaseNet playback engine failed to initialize.");
    instance=new Player({source:{type:"url",url:playbackSrc},canvas:canvas.current,renderer:"canvas",decoder:"auto"});engine.current=instance;
@@ -56,7 +77,7 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
  useEffect(()=>{revealControls();return()=>{if(controlsTimer.current)clearTimeout(controlsTimer.current);};},[status,menu]);
  const fullscreen=async()=>{const el=root.current as (HTMLDivElement&{webkitRequestFullscreen?:()=>Promise<void>|void})|null;const doc=document as Document&{webkitFullscreenElement?:Element;webkitExitFullscreen?:()=>void};const orientation=(screen as Screen&{orientation?:ScreenOrientation&{lock?:(v:"landscape")=>Promise<void>;unlock?:()=>void}}).orientation;try{if(document.fullscreenElement||doc.webkitFullscreenElement){if(document.exitFullscreen)await document.exitFullscreen();else doc.webkitExitFullscreen?.();el?.classList.remove("mnvlcFallbackFull");orientation?.unlock?.();return;}const request=el?.requestFullscreen||el?.webkitRequestFullscreen;if(request){await request.call(el);try{await orientation?.lock?.("landscape");}catch{/* Orientation lock is optional and browser-controlled. */}}else{el?.classList.add("mnvlcFallbackFull");}setControlsVisible(true);}catch{el?.classList.add("mnvlcFallbackFull");setControlsVisible(true);}};
  return <section ref={root} className={"mnvlc "+(controlsVisible?"mnvlcControlsVisible":"mnvlcControlsHidden")} onPointerMove={revealControls} onTouchStart={revealControls} aria-label={title}>
-  <div className="mnvlcScreen"><canvas ref={canvas}/><div ref={overlay} className="mnvlcSubtitleLayer"/>{status!=="playing"&&status!=="loading"&&!error&&<button type="button" className="mnvlcPlay" aria-label="Play video" onClick={()=>void toggle()}>▶</button>}{status==="loading"&&<div className="mnvlcMessage">Opening MKV and reading embedded tracks…</div>}{error&&<div className="mnvlcMessage mnvlcError"><b>Playback error</b><span>{error}</span><div className="mnvlcRow"><button onClick={()=>{automaticRetries.current=0;setError("");setStatus("loading");setRetry(n=>n+1);}}>Retry</button>{activeSource?.fallbackSrc&&!directMode&&<button onClick={()=>{automaticRetries.current=0;setError("");setStatus("loading");setDirectMode(true);}}>Try direct source</button>}</div></div>}</div>
+  <div className="mnvlcScreen"><canvas ref={canvas}/><div ref={overlay} className="mnvlcSubtitleLayer"/>{status!=="playing"&&status!=="loading"&&!error&&<button type="button" className="mnvlcPlay" aria-label="Play video" onClick={()=>void toggle()}>▶</button>}{status==="loading"&&<div className="mnvlcMessage">Opening MKV and reading embedded tracks…</div>}{error&&<div className="mnvlcMessage mnvlcError"><b>Playback error</b><span>{error}</span><div className="mnvlcRow"><button onClick={()=>{automaticRetries.current=0;setError("");setStatus("loading");setRetry(n=>n+1);}}>Retry</button></div></div>}</div>
   <div className="mnvlcControls" onClick={revealControls}><input aria-label="Seek" type="range" min="0" max={Math.max(1,duration)} step=".1" value={Math.min(time,duration||0)} onChange={e=>seek(Number(e.target.value))}/>
    <div className="mnvlcRow"><button onClick={()=>void toggle()}>{status==="playing"?"Ⅱ":"▶"}</button><button onClick={()=>seek(time-10)}>−10s</button><button onClick={()=>seek(time+10)}>+10s</button><button aria-label={muted?"Unmute":"Mute"} onClick={()=>{setMuted(v=>{p()?.setVolume?.(v?volume:0);return !v;});}}>{muted?"🔇":"🔊"}</button><span>{stamp(time)} / {stamp(duration)}</span><button onClick={()=>setMenu(menu==="sub"?null:"sub")}>Subtitles {subs.length}</button><button onClick={()=>setMenu(menu==="audio"?null:"audio")}>Audio {audios.length}</button><button onClick={()=>setMenu(menu==="settings"?null:"settings")}>⚙</button><button onClick={fullscreen}>⛶</button></div>
    {menu==="sub"&&<div className="mnvlcMenu"><b>Embedded subtitles</b><button onClick={()=>void selectSub(null)}>Off</button>{subs.map((t,i)=><button key={t.id??i} onClick={()=>void selectSub(t.id)}>{trackLabel(t,i)}{t.codec?" · "+String(t.codec).toUpperCase():""}{t.forced?" · Forced":""}</button>)}{!subs.length&&<small>No subtitle tracks reported by the MKV demuxer.</small>}<div className="mnvlcRow"><button onClick={()=>delayBy(-.5)}>−0.5s</button><button onClick={()=>delayBy(.5)}>+0.5s</button><small>Delay {delay.toFixed(1)}s</small></div></div>}
