@@ -1734,3 +1734,26 @@ div[role="dialog"][aria-label="MaseNet access verification"]>section a:focus-vis
 @keyframes mnGateLight{0%,100%{opacity:.25}50%{opacity:.95}}
 @media(max-width:420px){.mn-gate-overlay{padding:8px}.mn-gate-shell{padding:16px;border-radius:25px}.mn-gate-secure{font-size:9px;padding:7px 9px}.mn-gate-brand img{width:35px;height:35px}.mn-gate-step{grid-template-columns:34px 43px minmax(0,1fr);column-gap:8px;padding:12px;border-radius:20px}.mn-gate-step-number{width:32px;height:32px;font-size:19px}.mn-gate-step-icon{width:42px;height:42px;font-size:22px;border-radius:14px}.mn-gate-status{font-size:9px;padding:6px 7px}.mn-gate-step-copy h2{font-size:13px}.mn-gate-step-copy p{font-size:11px}.mn-gate-action{min-height:44px;font-size:12px}.mn-gate-proof{padding:13px}.mn-gate-final{padding:14px;grid-template-columns:44px minmax(0,1fr)}.mn-gate-final-icon{width:43px;height:43px;font-size:29px}.mn-gate-final-copy h2{font-size:14px}.mn-gate-check{font-size:16px;min-height:54px}}
 @media(prefers-reduced-motion:reduce){.mn-gate-overlay:before,.mn-gate-overlay:after,.mn-gate-shell,.mn-gate-shield,.mn-gate-step{animation:none!important;transition:none!important}}
+
+/* Compact Telegram verification layout: keep every action visible on short phones */
+.mn-gate-overlay{align-items:center;padding:max(6px,env(safe-area-inset-top)) 8px max(6px,env(safe-area-inset-bottom))}
+.mn-gate-shell{width:min(100%,480px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 12px);padding:12px;border-radius:23px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(116,201,255,.35) transparent}
+.mn-gate-topline{margin-bottom:0;gap:8px}.mn-gate-brand{gap:7px}.mn-gate-brand img{width:30px;height:30px}.mn-gate-brand-name{font-size:19px;letter-spacing:-.7px}
+.mn-gate-secure{padding:6px 9px;font-size:8px;letter-spacing:.45px;gap:5px}.mn-gate-secure span{font-size:13px}
+.mn-gate-hero{padding:0 0 9px}.mn-gate-shield{width:48px;height:48px;margin:0 auto 4px}.mn-gate-shield:before{inset:3px}.mn-gate-shield span{font-size:29px}
+.mn-gate-hero h1{font-size:clamp(19px,5vw,24px);line-height:1.12;letter-spacing:-.55px}.mn-gate-hero p{max-width:360px;margin:5px auto 0;font-size:11px;line-height:1.32}
+.mn-gate-steps{gap:7px}
+.mn-gate-step{grid-template-columns:28px 36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:7px;row-gap:6px;padding:9px 10px;border-radius:17px}
+.mn-gate-step-number{width:27px;height:27px;font-size:15px}.mn-gate-step-icon{width:34px;height:34px;border-radius:11px;font-size:18px}
+.mn-gate-step-copy{padding-right:0;align-self:center}.mn-gate-step-copy h2{font-size:12px;line-height:1.18}.mn-gate-step-copy p{margin-top:2px;font-size:10px;line-height:1.2}
+.mn-gate-status{position:absolute;top:7px;right:8px;grid-column:auto;grid-row:auto;padding:3px 6px;font-size:8px}
+.mn-gate-action{grid-column:2/4;min-height:32px;padding:6px 9px;gap:6px;font-size:11px}.mn-gate-action-icon{width:19px;height:19px;border-radius:6px;font-size:11px}.mn-gate-action b{font-size:18px;line-height:10px}
+.mn-gate-proof{margin-top:8px;padding:10px;border-radius:18px}.mn-gate-proof-heading{gap:8px;margin-bottom:7px}.mn-gate-camera{width:34px;height:34px;flex-basis:34px;border-radius:11px;font-size:19px}
+.mn-gate-proof-heading h2{font-size:12px;line-height:1.2}.mn-gate-proof-heading p{margin-top:2px;font-size:10px;line-height:1.25}
+.mn-gate-file{min-height:43px;padding:6px 8px;gap:8px;border-radius:13px}.mn-gate-gallery-icon{font-size:22px}.mn-gate-file b{font-size:11px}.mn-gate-file small{margin-top:1px;font-size:9px}
+.mn-gate-send{min-height:38px;margin-top:6px;padding:7px 9px;font-size:11px;gap:7px}.mn-gate-proof-approved,.mn-gate-proof-pending{padding:8px;font-size:10px;line-height:1.3}
+.mn-gate-review{gap:8px;margin-top:7px;padding:8px;border-radius:13px}.mn-gate-review>span{width:32px;height:32px;border-radius:9px;font-size:17px}.mn-gate-review b{font-size:11px}.mn-gate-review small{margin-top:1px;font-size:9px;line-height:1.25}
+.mn-gate-final{grid-template-columns:36px minmax(0,1fr);gap:8px;margin-top:8px;padding:10px;border-radius:18px}.mn-gate-final-icon{width:34px;height:34px;border-width:2px;font-size:23px}.mn-gate-final-copy h2{font-size:12px;line-height:1.2}.mn-gate-final-copy p{margin-top:3px;font-size:9px;line-height:1.25}
+.mn-gate-check{min-height:39px;padding:7px 9px;font-size:13px;gap:7px}.mn-gate-check span{font-size:17px}.mn-gate-message{margin:6px 2px 0;padding:7px 9px;font-size:10px;line-height:1.3}.mn-gate-help{margin:5px auto 0;padding:5px 7px;font-size:10px}
+@media(max-height:760px){.mn-gate-shell{padding:9px;border-radius:19px}.mn-gate-hero{padding-bottom:6px}.mn-gate-shield{width:38px;height:38px}.mn-gate-shield span{font-size:23px}.mn-gate-hero p{font-size:10px}.mn-gate-steps{gap:5px}.mn-gate-step{padding:7px 8px;row-gap:4px}.mn-gate-action{min-height:29px}.mn-gate-proof{margin-top:6px;padding:8px}.mn-gate-final{margin-top:6px;padding:8px}.mn-gate-check{min-height:35px}.mn-gate-help{margin-top:3px}}
+@media(prefers-reduced-motion:reduce){.mn-gate-overlay:before,.mn-gate-overlay:after,.mn-gate-shell,.mn-gate-shield,.mn-gate-step{animation:none!important;transition:none!important}}
