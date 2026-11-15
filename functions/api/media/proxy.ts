@@ -38,7 +38,13 @@ async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
  const cleanHeaders=new Headers(headers);
  cleanHeaders.delete("origin");
  cleanHeaders.delete("referer");
- const attempts=[cleanHeaders,new Headers(headers)];
+ // VLC can successfully open some signed media URLs that reject a browser-like
+ // request. Try a VLC-compatible identity as a bounded fallback, without exposing
+ // the signed URL or forwarding browser Origin/Referer values to the provider.
+ const vlcHeaders=new Headers(cleanHeaders);
+ vlcHeaders.set("user-agent","VLC/3.0.20 LibVLC/3.0.20");
+ vlcHeaders.set("accept","*/*");
+ const attempts=[cleanHeaders,vlcHeaders,new Headers(headers)];
  let lastError:unknown=null;
  for(let index=0;index<attempts.length;index++) {
   try {
