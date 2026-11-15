@@ -151,6 +151,22 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    }
   } catch { /* Keep the upstream content type if sniffing is unavailable. */ }
  }
+ // Lightweight format probe for extensionless third-party URLs. It uses the same
+ // library allow-list and byte-range proxy as playback, and never stores video bytes.
+ if(reqUrl.searchParams.get("probe")==="1") {
+  const finalPath=new URL(upstream.url||upstreamUrl).pathname.toLowerCase();
+  const isMkv=/matroska|x-matroska/i.test(contentType)||finalPath.endsWith(".mkv");
+  const isHls=detectedPlaylist||/mpegurl/i.test(contentType)||finalPath.endsWith(".m3u8");
+  const isMp4=/video\/mp4/i.test(contentType)||/\.(mp4|m4v)$/i.test(finalPath);
+  const isWebm=/video\/webm/i.test(contentType)||finalPath.endsWith(".webm");
+  await upstream.body?.cancel();
+  return json({
+   kind:isMkv?"mkv":isHls?"hls":isMp4?"mp4":isWebm?"webm":"unknown",
+   contentType,
+   status:upstream.status,
+   supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range")
+  },200);
+ }
  if(detectedPlaylist) {
   // Relative HLS segment URLs must resolve against the final URL after redirects,
   // not the original URL entered by the admin.
