@@ -46,7 +46,42 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
  const revealControls=()=>{setControlsVisible(true);if(controlsTimer.current)clearTimeout(controlsTimer.current);if(p()?.getState?.()==="playing"&&!menu){controlsTimer.current=setTimeout(()=>setControlsVisible(false),4000);}};
  useEffect(()=>{revealControls();return()=>{if(controlsTimer.current)clearTimeout(controlsTimer.current);};},[status,menu]);
  useEffect(()=>{const tg=(window as any).Telegram?.WebApp;const update=()=>{const wide=window.innerWidth>window.innerHeight;setLandscapeReady(wide);if(wide&&tg?.isFullscreen&&!tg?.isOrientationLocked){try{tg.lockOrientation?.();}catch{}}};const sync=()=>setFullscreenActive(Boolean(document.fullscreenElement||(document as any).webkitFullscreenElement||tg?.isFullscreen));const failed=()=>setFullscreenActive(false);window.addEventListener("resize",update);window.addEventListener("orientationchange",update);document.addEventListener("fullscreenchange",sync);document.addEventListener("webkitfullscreenchange",sync as EventListener);tg?.onEvent?.("fullscreenChanged",sync);tg?.onEvent?.("fullscreenFailed",failed);update();sync();return()=>{window.removeEventListener("resize",update);window.removeEventListener("orientationchange",update);document.removeEventListener("fullscreenchange",sync);document.removeEventListener("webkitfullscreenchange",sync as EventListener);tg?.offEvent?.("fullscreenChanged",sync);tg?.offEvent?.("fullscreenFailed",failed);};},[]);
- const fullscreen=async()=>{const el=root.current as any;const doc=document as any;const tg=(window as any).Telegram?.WebApp;const active=Boolean(document.fullscreenElement||doc.webkitFullscreenElement||tg?.isFullscreen||fullscreenActive);try{if(active){if(tg?.exitFullscreen)tg.exitFullscreen();else if(document.exitFullscreen)await document.exitFullscreen();else doc.webkitExitFullscreen?.();try{(screen.orientation as any)?.unlock?.();}catch{}try{tg?.unlockOrientation?.();}catch{}setFullscreenActive(false);return;}if(tg?.requestFullscreen)tg.requestFullscreen();else if(el?.requestFullscreen)await el.requestFullscreen({navigationUI:"hide"});else if(el?.webkitRequestFullscreen)el.webkitRequestFullscreen();setFullscreenActive(true);try{await (screen.orientation as any)?.lock?.("landscape");}catch{/* CSS rotates the player into landscape when orientation locking is unavailable. */}}catch{setControlsVisible(true);}};
+ const fullscreen=async()=>{
+  const el=root.current as any,doc=document as any,tg=(window as any).Telegram?.WebApp;
+  const active=Boolean(document.fullscreenElement||doc.webkitFullscreenElement||tg?.isFullscreen||fullscreenActive);
+  try{
+   if(active){
+    if(tg?.isFullscreen&&tg?.exitFullscreen)await Promise.resolve(tg.exitFullscreen());
+    else if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen();
+    else if(doc.webkitFullscreenElement)doc.webkitExitFullscreen?.();
+    try{(screen.orientation as any)?.unlock?.();}catch{}
+    try{tg?.unlockOrientation?.();}catch{}
+    setFullscreenActive(false);return;
+   }
+   let hostFullscreen=false;
+   if(tg?.requestFullscreen){
+    try{await Promise.resolve(tg.requestFullscreen());}catch{}
+    try{await (screen.orientation as any)?.lock?.("landscape");}catch{}
+    if(tg.isFullscreen)hostFullscreen=true;
+    else hostFullscreen=await new Promise<boolean>(resolve=>{
+     let finished=false;
+     const finish=(value:boolean)=>{if(finished)return;finished=true;tg.offEvent?.("fullscreenChanged",changed);resolve(value);};
+     const changed=()=>{if(tg.isFullscreen)finish(true);};
+     tg.onEvent?.("fullscreenChanged",changed);
+     window.setTimeout(()=>finish(Boolean(tg.isFullscreen)),1100);
+    });
+   }
+   if(!hostFullscreen&&!document.fullscreenElement&&!doc.webkitFullscreenElement){
+    if(el?.requestFullscreen)await el.requestFullscreen({navigationUI:"hide"});
+    else if(el?.webkitRequestFullscreen)await Promise.resolve(el.webkitRequestFullscreen());
+   }
+   setFullscreenActive(true);
+   try{await (screen.orientation as any)?.lock?.("landscape");}catch{/* The fixed landscape player fallback remains active. */}
+  }catch(error){
+   setFullscreenActive(true);setControlsVisible(true);
+   console.warn("MaseNet MKV fullscreen request failed; using the in-app landscape surface.",error);
+  }
+ };
  return <section ref={root} className={`mnvlc ${fullscreenActive?"mnvlcFullscreenActive":""} ${controlsVisible?"mnvlcControlsVisible":"mnvlcControlsHidden"}`} aria-label={title} onPointerMove={revealControls} onTouchStart={revealControls}>
   <div className="mnvlcScreen"><canvas ref={canvas}/>{fullscreenActive&&!landscapeReady&&<div className="mnvlcOrientationHint">Rotate your phone sideways for landscape playback</div>}<div ref={overlay} className="mnvlcSubtitleLayer"/>{status!=="playing"&&status!=="loading"&&!error&&<button type="button" className="mnvlcPlay" aria-label="Play video" onClick={()=>void toggle()}>▶</button>}{status==="loading"&&<div className="mnvlcMessage">Opening MKV and reading embedded tracks…</div>}{error&&<div className="mnvlcMessage mnvlcError"><b>Playback error</b><span>{error}</span><div className="mnvlcRow"><button onClick={()=>{automaticRetries.current=0;setError("");setStatus("loading");setRetry(n=>n+1);}}>Retry</button>{activeSource?.fallbackSrc&&!directMode&&<button onClick={()=>{automaticRetries.current=0;setError("");setStatus("loading");setDirectMode(true);}}>Try direct source</button>}</div></div>}</div>
   <div className="mnvlcControls" onClick={revealControls}><input aria-label="Seek" type="range" min="0" max={Math.max(1,duration)} step=".1" value={Math.min(time,duration||0)} onChange={e=>seek(Number(e.target.value))}/>
