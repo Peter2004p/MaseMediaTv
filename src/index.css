@@ -4319,3 +4319,53 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
 @media (orientation:landscape){
  .flootStylePlayer.fspFallbackFullscreen:not(:fullscreen),.mnvlc.mnvlcFullscreenActive:not(:fullscreen){left:0!important;top:0!important;width:100vw!important;height:100dvh!important;transform:none!important}
 }
+
+
+/* MaseNet cinematic fullscreen: occupy the entire landscape viewport and remove app overlays. */
+.flootStylePlayer.fspFallbackFullscreen,
+.flootStylePlayer:fullscreen,
+.mnvlc.mnvlcFullscreenActive,
+.mnvlc:fullscreen{
+  position:fixed!important;inset:0!important;z-index:2147483000!important;
+  width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  overflow:hidden!important;background:#000!important;box-shadow:none!important;
+}
+.flootStylePlayer.fspFallbackFullscreen .flootStyleFrame,
+.flootStylePlayer:fullscreen .flootStyleFrame,
+.mnvlc.mnvlcFullscreenActive .mnvlcScreen,
+.mnvlc:fullscreen .mnvlcScreen{
+  position:relative!important;flex:1 1 auto!important;min-width:0!important;min-height:0!important;
+  width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;
+  aspect-ratio:auto!important;border:0!important;border-radius:0!important;overflow:hidden!important;
+}
+.mnvlc.mnvlcFullscreenActive{display:flex!important;flex-direction:column!important}
+.mnvlc.mnvlcFullscreenActive .mnvlcScreen{display:flex!important;align-items:center!important;justify-content:center!important}
+.mnvlc.mnvlcFullscreenActive canvas,
+.flootStylePlayer.fspFallbackFullscreen video,
+.flootStylePlayer.fspFallbackFullscreen iframe{width:100%!important;height:100%!important;max-width:none!important;max-height:100%!important;object-fit:contain!important}
+@media(orientation:portrait){
+  .flootStylePlayer.fspFallbackFullscreen:not(:fullscreen),
+  .mnvlc.mnvlcFullscreenActive:not(:fullscreen){
+    left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;
+    width:100dvh!important;height:100vw!important;max-width:none!important;max-height:none!important;
+    transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center!important;
+  }
+}
+@media(orientation:landscape){
+  .flootStylePlayer.fspFallbackFullscreen:not(:fullscreen),
+  .mnvlc.mnvlcFullscreenActive:not(:fullscreen){
+    left:0!important;top:0!important;width:100vw!important;height:100dvh!important;transform:none!important;
+  }
+}
+/* Keep floating site actions completely outside the fullscreen viewing surface. */
+.app:has(.flootStylePlayer.fspFallbackFullscreen) .aiDock,
+.app:has(.flootStylePlayer.fspFallbackFullscreen) .aiDynamicIsland,
+.app:has(.flootStylePlayer.fspFallbackFullscreen) .homeFloat,
+.app:has(.flootStylePlayer.fspFallbackFullscreen) .telegramJoin,
+.app:has(.mnvlc.mnvlcFullscreenActive) .aiDock,
+.app:has(.mnvlc.mnvlcFullscreenActive) .aiDynamicIsland,
+.app:has(.mnvlc.mnvlcFullscreenActive) .homeFloat,
+.app:has(.mnvlc.mnvlcFullscreenActive) .telegramJoin{
+  display:none!important;visibility:hidden!important;pointer-events:none!important;
+}
