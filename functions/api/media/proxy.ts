@@ -186,21 +186,38 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  }
  const outHeaders=new Headers();
  for(const key of ["content-length","content-range","accept-ranges","last-modified","etag"]) { const value=upstream.headers.get(key); if(value) outHeaders.set(key,value); }
- // Matroska demuxers need a known size for byte-range reads. Derive the exact
- // partial-body size from Content-Range, or ask the same validated URL with HEAD.
+ // Matroska demuxers need the total resource size for range-based reads.
+ // Prefer the exact partial response length when the client requested a range.
+ // For a full 200 response, ask HEAD first, then fall back to a one-byte range
+ // request because some CDNs reject HEAD but correctly expose Content-Range.
  if(!outHeaders.has("content-length")) {
   const contentRange=upstream.headers.get("content-range")||"";
-  const partial=contentRange.match(/^bytes\s+(\d+)-(\d+)\/(?:\d+|\*)$/i);
+  const partial=contentRange.match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i);
   if(upstream.status===206 && partial) {
    const rangeLength=Number(partial[2])-Number(partial[1])+1;
    if(Number.isSafeInteger(rangeLength)&&rangeLength>0) outHeaders.set("content-length",String(rangeLength));
   } else if(upstream.status===200) {
+   let totalSize="";
    try {
     const head=await fetchPublicHttps(upstream.url||upstreamUrl,headers,"HEAD");
     const size=head.headers.get("content-length");
-    if(head.ok && size && /^\d+$/.test(size)) outHeaders.set("content-length",size);
+    if(head.ok && size && /^\d+$/.test(size)) totalSize=size;
     await head.body?.cancel();
-   } catch { /* Continue streaming if the provider does not support HEAD. */ }
+   } catch { /* Some media providers do not implement HEAD. */ }
+   if(!totalSize) {
+    try {
+     const rangeHeaders=new Headers(headers);
+     rangeHeaders.set("range","bytes=0-0");
+     const probe=await fetchPublicHttps(upstream.url||upstreamUrl,rangeHeaders,"GET");
+     const probeRange=probe.headers.get("content-range")||"";
+     const match=probeRange.match(/^bytes\s+\d+-\d+\/(\d+)$/i);
+     const probeLength=probe.headers.get("content-length")||"";
+     if(probe.status===206 && match && /^\d+$/.test(match[1])) totalSize=match[1];
+     else if(probe.status===200 && /^\d+$/.test(probeLength)) totalSize=probeLength;
+     await probe.body?.cancel();
+    } catch { /* Continue streaming when the provider exposes no resource size. */ }
+   }
+   if(totalSize) outHeaders.set("content-length",totalSize);
   }
  }
  outHeaders.set("content-type",contentType || "application/octet-stream");
