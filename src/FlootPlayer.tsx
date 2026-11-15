@@ -290,7 +290,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     />;
   }
 
-  return <div className={`flootStylePlayer ${controlsVisible ? 'fspControlsVisible' : 'fspControlsHidden'}${fullscreenActive ? ' fspFallbackFullscreen' : ''}${reelMode ? ' reelMode' : ''}`} onPointerMove={revealPlayerControls} onTouchStart={revealPlayerControls} onTouchEnd={(event) => handleFullscreenDoubleTap(event.target)} onDoubleClick={(event) => handleFullscreenDoubleTap(event.target)}>
+  return <div className={`flootStylePlayer ${controlsVisible ? 'fspControlsVisible' : 'fspControlsHidden'}${fullscreenActive ? ' fspFallbackFullscreen' : ''}${reelMode ? ' reelMode' : ''}`} onPointerMove={revealPlayerControls} onTouchStart={revealPlayerControls} onTouchEnd={(event) => handleFullscreenDoubleTap(event.target)} onDoubleClick={(event) => { if (!(event.target as HTMLElement).closest?.('button,a,input,select,textarea,[role="button"]')) void fullscreen(); }}>
     <div className="flootStyleFrame">
       {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload={autoPlay ? "auto" : "metadata"} autoPlay={autoPlay} muted={muted} controls={false} onClick={reelMode ? playPause : undefined}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {fullscreenActive && !landscapeReady && <div className="fspOrientationHint">Rotate your phone sideways for landscape playback</div>}{buffering && <div className="fspStatus">⏳ Buffering…</div>}
