@@ -323,6 +323,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
 .fspFallbackFullscreen .fspControls{position:relative!important;flex:0 0 auto!important;width:100%!important;box-sizing:border-box!important;padding:10px max(12px,env(safe-area-inset-right)) 12px max(12px,env(safe-area-inset-left))!important;background:rgba(8,9,13,.98)!important}
 .fspFallbackFullscreen .fspSubtitleMenu{max-height:35dvh!important}
 @media(orientation:landscape){.fspFallbackFullscreen .flootStyleFrame{min-height:0!important}}
+/* If a mobile WebView cannot lock the device orientation, rotate the fullscreen layer itself to keep the video and controls horizontal. */
+@media(orientation:portrait){.flootStylePlayer.fspFallbackFullscreen{width:100dvh!important;height:100vw!important;top:0!important;left:100vw!important;right:auto!important;bottom:auto!important;transform:rotate(90deg)!important;transform-origin:top left!important}.fspFallbackFullscreen .flootStyleFrame{width:100%!important;min-height:0!important;flex:1 1 auto!important}}
 /* Reels intentionally use a centered landscape player, not a full-screen portrait crop. */
 .reelMode{height:auto!important;min-height:0!important;width:100%;border:0!important;border-radius:0!important;background:#000!important;box-shadow:none!important;display:block!important;overflow:visible!important}
 .reelMode .flootStyleFrame{width:100%;aspect-ratio:16/9!important;min-height:0!important;height:auto!important;max-height:32dvh!important;flex:none!important;background:#000}
