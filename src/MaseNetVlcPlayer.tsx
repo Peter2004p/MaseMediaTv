@@ -36,7 +36,7 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
    try {
     await Promise.race([
      instance.load(),
-     new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error("MKV source did not finish opening within 25 seconds. The external host may be slow or unavailable.")),25000);})
+     new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error("MKV startup timeout: the source did not finish opening within 25 seconds. The external host may be slow or unavailable.")),25000);})
     ]);
    } finally { if(loadTimer)clearTimeout(loadTimer); }
    if(!live)return;sync();setDuration(instance.getDuration?.()||0);setStatus("ready");
