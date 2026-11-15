@@ -307,7 +307,7 @@ export default function App(){
   {inTelegramMiniApp&&telegramGate&&<div role="dialog" aria-modal="true" aria-label="MaseNet access verification" className="mn-gate-overlay">
    <section className="mn-gate-shell">
     <div className="mn-gate-topline">
-     <div className="mn-gate-brand"><img src="/masemediatv-logo.svg" alt="MaseNet"/><span className="mn-gate-brand-name">Mase<span>Net</span></span></div>
+     <div className="mn-gate-brand"><img src="/masenet-home-mark.svg" alt="MaseNet"/><span className="mn-gate-brand-name">Mase<span>Net</span></span></div>
      <span className="mn-gate-secure"><span>♧</span> SECURE ACCESS</span>
     </div>
     <div className="mn-gate-hero">
