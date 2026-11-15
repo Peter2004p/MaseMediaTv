@@ -199,7 +199,8 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
         "Keep reason under 160 characters. Never claim genuine YouTube verification."
       ].join("\\n");
       const parseVerdict = (raw: string) => {
-        const parsed = JSON.parse(raw.trim().replace(/^\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`$/, "")) as { verdict?: string; reason?: string };
+        const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+        const parsed = JSON.parse(cleaned) as { verdict?: string; reason?: string };
         if (!["likely_match", "mismatch", "unclear"].includes(String(parsed.verdict))) throw new Error("AI returned an invalid screening verdict");
         verdict = parsed.verdict as typeof verdict;
         reason = String(parsed.reason || reason).slice(0, 160);
