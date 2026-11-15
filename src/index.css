@@ -4410,3 +4410,45 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
   font-size:1.05em;
   text-shadow:0 2px 5px #000;
 }
+
+
+/* Landscape subtitle overlay recovery: keep the demuxer's existing subtitle
+   layer above the video canvas in both native and CSS-fallback fullscreen. */
+.mnvlc:fullscreen .mnvlcScreen,
+.mnvlc:-webkit-full-screen .mnvlcScreen,
+.mnvlc.mnvlcFullscreenActive .mnvlcScreen{
+  position:relative!important;
+  isolation:isolate!important;
+}
+.mnvlc:fullscreen .mnvlcSubtitleLayer,
+.mnvlc:-webkit-full-screen .mnvlcSubtitleLayer,
+.mnvlc.mnvlcFullscreenActive .mnvlcSubtitleLayer{
+  position:absolute!important;
+  inset:0!important;
+  z-index:2147483001!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:center!important;
+  padding:0 6% max(7%,env(safe-area-inset-bottom))!important;
+  width:100%!important;
+  height:100%!important;
+  box-sizing:border-box!important;
+  overflow:visible!important;
+  visibility:visible!important;
+  opacity:1!important;
+  color:#fff!important;
+  font-size:clamp(18px,2.6vw,34px)!important;
+  line-height:1.35!important;
+  text-align:center!important;
+  white-space:normal!important;
+  text-shadow:0 2px 5px #000,0 0 9px #000!important;
+  pointer-events:none!important;
+}
+.mnvlc:fullscreen .mnvlcSubtitleLayer *,
+.mnvlc:-webkit-full-screen .mnvlcSubtitleLayer *,
+.mnvlc.mnvlcFullscreenActive .mnvlcSubtitleLayer *{
+  visibility:visible!important;
+  opacity:1!important;
+  color:#fff!important;
+  text-shadow:0 2px 5px #000,0 0 9px #000!important;
+}
