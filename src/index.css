@@ -4369,3 +4369,18 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
 .app:has(.mnvlc.mnvlcFullscreenActive) .telegramJoin{
   display:none!important;visibility:hidden!important;pointer-events:none!important;
 }
+
+
+/* Clean, reversible fullscreen chrome: hide every floating site control around the video. */
+.app:has(.flootStylePlayer.fspFallbackFullscreen) .nav,
+.app:has(.flootStylePlayer.fspFallbackFullscreen) .telegram,
+.app:has(.flootStylePlayer.fspFallbackFullscreen) .aiDock,
+.app:has(.flootStylePlayer.fspFallbackFullscreen) .aiDynamicIsland,
+.app:has(.flootStylePlayer.fspFallbackFullscreen) .homeFloat,
+.app:has(.mnvlc.mnvlcFullscreenActive) .nav,
+.app:has(.mnvlc.mnvlcFullscreenActive) .telegram,
+.app:has(.mnvlc.mnvlcFullscreenActive) .aiDock,
+.app:has(.mnvlc.mnvlcFullscreenActive) .aiDynamicIsland,
+.app:has(.mnvlc.mnvlcFullscreenActive) .homeFloat{
+  opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+}
