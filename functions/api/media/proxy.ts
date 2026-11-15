@@ -14,6 +14,28 @@ const isPublicHttps = (value:string) => {
 };
 // Follow redirects manually so every destination is revalidated. Automatic redirects can
 // bypass the URL checks above if a public media host redirects to a private address.
+// External media providers can reject preview-domain Origin/Referer headers even
+// when the same source works from the production domain. Try a clean server-side
+// request first, then retry with the existing compatibility headers when needed.
+async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
+ const cleanHeaders=new Headers(headers);
+ cleanHeaders.delete("origin");
+ cleanHeaders.delete("referer");
+ const attempts=[cleanHeaders,new Headers(headers)];
+ let lastError:unknown=null;
+ for(let index=0;index<attempts.length;index++) {
+  try {
+   const response=await fetchPublicHttps(url,attempts[index]);
+   const retryable=response.status===401||response.status===403||response.status===429||response.status>=500;
+   if(!retryable||index===attempts.length-1) return response;
+   await response.body?.cancel();
+  } catch(error) {
+   lastError=error;
+  }
+ }
+ throw lastError instanceof Error?lastError:new Error("External media host could not be reached");
+}
+
 async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"|"HEAD"="GET"):Promise<Response> {
  let target=initialUrl;
  for(let hop=0;hop<=5;hop++){
@@ -189,7 +211,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  headers.set("referer",reqUrl.origin+"/");
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
- try { upstream=await fetchPublicHttps(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
+ try { upstream=await fetchMediaSource(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
  if(!upstream.ok && upstream.status!==206) {
   if(upstream.status===401 || upstream.status===403) return json({error:"The streaming provider rejected this link (HTTP "+upstream.status+"). It may be expired or its signature may no longer be valid. Replace it with a fresh URL from the provider."},upstream.status);
   if(upstream.status===404 || upstream.status===410) return json({error:"The streaming provider says this video or signed link is no longer available (HTTP "+upstream.status+"). Replace it with a fresh URL."},410);
