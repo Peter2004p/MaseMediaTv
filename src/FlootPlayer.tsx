@@ -202,42 +202,65 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
   const [fullscreenActive, setFullscreenActive] = useState(false);
   useEffect(() => {
-    const root = videoRef.current?.closest('.flootStylePlayer') as HTMLElement | null;
-    const sync = () => setFullscreenActive(!!document.fullscreenElement || !!(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement || !!root?.classList.contains('fspFallbackFullscreen'));
+    const video = videoRef.current as (HTMLVideoElement & { addEventListener: HTMLVideoElement['addEventListener'] }) | null;
+    const root = video?.closest('.flootStylePlayer') as HTMLElement | null;
+    const sync = () => {
+      const native = !!document.fullscreenElement || !!(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement;
+      setFullscreenActive(native || !!root?.classList.contains('fspFallbackFullscreen'));
+    };
     document.addEventListener('fullscreenchange', sync);
     document.addEventListener('webkitfullscreenchange', sync as EventListener);
-    return () => { document.removeEventListener('fullscreenchange', sync); document.removeEventListener('webkitfullscreenchange', sync as EventListener); };
+    video?.addEventListener('webkitbeginfullscreen', sync as EventListener);
+    video?.addEventListener('webkitendfullscreen', sync as EventListener);
+    return () => {
+      document.removeEventListener('fullscreenchange', sync);
+      document.removeEventListener('webkitfullscreenchange', sync as EventListener);
+      video?.removeEventListener('webkitbeginfullscreen', sync as EventListener);
+      video?.removeEventListener('webkitendfullscreen', sync as EventListener);
+    };
   }, []);
   const fullscreen = async () => {
     const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
     const root = video?.closest('.flootStylePlayer') as HTMLElement | null;
     if (!video || !root) return;
+    const doc = document as Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void };
+    const orientation = (screen as Screen & { orientation?: ScreenOrientation & { lock?: (value: 'landscape') => Promise<void>; unlock?: () => void } }).orientation;
+    const nativeFullscreen = !!document.fullscreenElement || !!doc.webkitFullscreenElement;
     try {
-      if (document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) {
+      if (root.classList.contains('fspFallbackFullscreen') && !nativeFullscreen) {
+        root.classList.remove('fspFallbackFullscreen');
+        setFullscreenActive(false);
+        try { orientation?.unlock?.(); } catch { /* orientation unlock is optional */ }
+        return;
+      }
+      if (nativeFullscreen) {
         if (document.exitFullscreen) await document.exitFullscreen();
-        else (document as Document & { webkitExitFullscreen?: () => void }).webkitExitFullscreen?.();
+        else doc.webkitExitFullscreen?.();
+        try { orientation?.unlock?.(); } catch { /* orientation unlock is optional */ }
         root.classList.remove('fspFallbackFullscreen');
         setFullscreenActive(false);
         return;
       }
-      const target = root.querySelector('.flootStyleFrame') as HTMLElement | null;
-      const request = target?.requestFullscreen || (target as (HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }) | null)?.webkitRequestFullscreen;
-      if (request) {
-        await request.call(target);
-        setFullscreenActive(true);
-        return;
-      }
-      // iOS Safari supports native fullscreen on the video element only.
-      if (video.webkitEnterFullscreen) {
+      // iOS Safari exposes native fullscreen on the video element rather than its wrapper.
+      if (video.webkitEnterFullscreen && !root.requestFullscreen) {
         video.webkitEnterFullscreen();
         setFullscreenActive(true);
         return;
       }
-      // Telegram/Android WebViews may omit Fullscreen API; emulate it with a fixed viewport layer.
+      // Fullscreen the complete player so its custom controls remain visible.
+      const target = root as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
+      const request = target.requestFullscreen || target.webkitRequestFullscreen;
+      if (request) {
+        await request.call(target);
+        setFullscreenActive(true);
+        // Supported Android browsers may lock orientation after entering fullscreen.
+        try { await orientation?.lock?.('landscape'); } catch { /* device/browser may not permit orientation lock */ }
+        return;
+      }
+      // Telegram WebViews without the Fullscreen API use the in-page fullscreen layer.
       root.classList.add('fspFallbackFullscreen');
       setFullscreenActive(true);
     } catch (error) {
-      // Do not silently swallow fullscreen failures; use the in-page fallback.
       root.classList.add('fspFallbackFullscreen');
       setFullscreenActive(true);
       console.warn('MaseNet fullscreen fallback activated:', error);
@@ -293,6 +316,13 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
 .fspSubtitleButton{border:1px solid rgba(255,255,255,.24);border-radius:9px;background:rgba(255,255,255,.08);color:#fff;padding:7px 10px;min-height:34px;font-size:12px;font-weight:700}
 .fspSubtitleMenu{position:absolute;z-index:30;left:0;bottom:calc(100% + 8px);width:min(260px,78vw);max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid rgba(255,255,255,.17);border-radius:13px;background:rgba(13,15,21,.98);box-shadow:0 15px 40px #0009;backdrop-filter:blur(18px)}
 .fspSubtitleMenu strong{font-size:12px;padding:2px 4px 6px}.fspSubtitleMenu button{width:100%;text-align:left;border:1px solid transparent;border-radius:8px;padding:8px 9px;background:#ffffff0a;color:#f6f6f8;font-size:12px}.fspSubtitleMenu button.selected{border-color:#dfbf74;background:#dfbf7420;color:#f4d891}.fspSubtitleMenu p,.fspSubtitleMenu small{font-size:11px;line-height:1.45;color:#c9ccd5;margin:5px 3px}
+/* Full-player fullscreen fallback for Telegram and mobile WebViews without Fullscreen API. */
+.flootStylePlayer.fspFallbackFullscreen{position:fixed!important;inset:0!important;z-index:2147483647!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)!important;box-sizing:border-box!important;border:0!important;border-radius:0!important;display:flex!important;flex-direction:column!important;overflow:auto!important;background:#000!important;isolation:isolate!important}
+.fspFallbackFullscreen .flootStyleFrame{flex:1 1 auto!important;width:100%!important;min-height:0!important;height:auto!important;max-height:none!important;aspect-ratio:auto!important;background:#000!important}
+.fspFallbackFullscreen .flootStyleFrame video,.fspFallbackFullscreen .flootStyleFrame iframe{object-fit:contain!important}
+.fspFallbackFullscreen .fspControls{position:relative!important;flex:0 0 auto!important;width:100%!important;box-sizing:border-box!important;padding:10px max(12px,env(safe-area-inset-right)) 12px max(12px,env(safe-area-inset-left))!important;background:rgba(8,9,13,.98)!important}
+.fspFallbackFullscreen .fspSubtitleMenu{max-height:35dvh!important}
+@media(orientation:landscape){.fspFallbackFullscreen .flootStyleFrame{min-height:0!important}}
 /* Reels intentionally use a centered landscape player, not a full-screen portrait crop. */
 .reelMode{height:auto!important;min-height:0!important;width:100%;border:0!important;border-radius:0!important;background:#000!important;box-shadow:none!important;display:block!important;overflow:visible!important}
 .reelMode .flootStyleFrame{width:100%;aspect-ratio:16/9!important;min-height:0!important;height:auto!important;max-height:32dvh!important;flex:none!important;background:#000}
