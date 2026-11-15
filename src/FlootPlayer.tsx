@@ -22,23 +22,24 @@ const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value /
 const languageMatch=(available:string|undefined,preferred:string)=>{const a=String(available||'').toLowerCase().replace('_','-');const p=preferred.toLowerCase().replace('_','-');return !!p&&p!=='off'&&p!=='auto'&&(a===p||a.startsWith(p+'-')||p.startsWith(a+'-'));};
 
 export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, onPlaybackStarted, onPlaybackEnded, onPlaybackStateChange, syncCommand, profileId, playRequest = 0, resumeAtSeconds = 0, autoPlay = false, muted = false, reelMode = false }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1);
+  const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1); const hlsRecoveryTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null); const nativeRetryTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null); const nativeRetryRef = useRef(0); const failedVariantUrlsRef = useRef<Set<string>>(new Set());
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const hlsRecoveryAttemptsRef = useRef({ network: 0, media: 0 }); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [preferredSubtitleLanguage,setPreferredSubtitleLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-subtitle-language'+(profileId?'-'+profileId:''))||'off'}catch{return 'off'}}); const [preferredAudioLanguage,setPreferredAudioLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-audio-language'+(profileId?'-'+profileId:''))||'auto'}catch{return 'auto'}}); const [hlsAudioTracks,setHlsAudioTracks]=useState<{name?:string;lang?:string}[]>([]); const preferencesHydrated=useRef(false);
   const [volume, setVolume] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-volume')); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 1; } catch { return 1; } }); const [speed, setSpeed] = useState(() => { try { const n = Number(localStorage.getItem('masenet-player-speed')); return [0.5, 0.75, 1, 1.25, 1.5, 2].includes(n) ? n : 1; } catch { return 1; } }); const [retry, setRetry] = useState(0);
-  const [mkvUseDirectSource, setMkvUseDirectSource] = useState(false);
   const hlsAutoSubtitleRef = useRef(false);
   const [moviReady, setMoviReady] = useState(false);
+  const [detectedSourceKind, setDetectedSourceKind] = useState('');
   const variants = useMemo<Variant[]>(() => {
     const values = episode.qualities?.length ? episode.qualities : [{ quality: episode.quality, streamUrl: episode.streamUrl, mimeType: episode.mimeType, subtitleTracks: episode.subtitleTracks }];
     return values.filter((v, i) => !!v.streamUrl && values.findIndex(x => x.quality === v.quality) === i);
   }, [episode]);
   const selected = variants.find(v => v.quality === quality) || variants[0];
   const rawSrc = selected?.streamUrl || episode.streamUrl || '';
+  const tryNextAvailableVariant=()=>{if(variants.length<2)return false;failedVariantUrlsRef.current.add(rawSrc);const next=variants.find(v=>!failedVariantUrlsRef.current.has(v.streamUrl));if(!next)return false;setError("This source is unavailable. Trying the "+next.quality+" source…");setQuality(next.quality);return true;};
   const embed = embedFor(rawSrc, autoPlay);
-  const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '');
-  const isMkvSource = /\.mkv(?:$|[?#])/i.test(rawSrc) || /matroska|x-matroska/i.test(selected?.mimeType || episode.mimeType || '');
+  const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '') || detectedSourceKind === 'hls';
+  const isMkvSource = /\.mkv(?:$|[?#])/i.test(rawSrc) || /matroska|x-matroska/i.test(selected?.mimeType || episode.mimeType || '') || detectedSourceKind === 'mkv';
   const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => {
     const value = String(t.url || t.path || '').trim();
     // Native browser tracks require WebVTT. The Matroska player also accepts SRT
@@ -51,9 +52,25 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const telegramWebView = typeof window !== 'undefined' && (/Telegram/i.test(navigator.userAgent) || Boolean((window as Window & { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp));
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
   const src = isHlsSource ? proxyUrl : rawSrc;
-  const mkvProxyUrl = mkvUseDirectSource ? rawSrc : proxyUrl;
+  const mkvProxyUrl = proxyUrl;
+  const mkvAlternateSources=useMemo(()=>variants.filter(v=>v.streamUrl!==rawSrc).map(v=>({src:'/api/media/proxy?episodeId='+encodeURIComponent(episode.id)+'&source='+encodeURIComponent(v.streamUrl),fallbackSrc:v.streamUrl})),[variants,rawSrc,episode.id]);
 
-  useEffect(() => { setMkvUseDirectSource(false); }, [episode.id, rawSrc]);
+  // Probe extensionless external URLs through the same allow-listed proxy before
+  // selecting a player. No media is stored or converted by MaseNet.
+  useEffect(() => {
+    let active = true;
+    setDetectedSourceKind('');
+    const known = /\.(mkv|m3u8|mp4|m4v|webm)(?:$|[?#])/i.test(rawSrc) ||
+      /matroska|x-matroska|mpegurl|video\/(mp4|webm)/i.test(selected?.mimeType || episode.mimeType || '');
+    if (!rawSrc || known) return () => { active = false; };
+    fetch(proxyUrl + '&probe=1', { headers: { Range: 'bytes=0-4095' }, credentials: 'same-origin' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        if (active && ['mkv', 'hls', 'mp4', 'webm'].includes(data?.kind)) setDetectedSourceKind(data.kind);
+      })
+      .catch(() => { /* Keep the normal source path if probing is unavailable. */ });
+    return () => { active = false; };
+  }, [episode.id, rawSrc, proxyUrl, selected?.mimeType, episode.mimeType]);
 
   // Load the large Matroska-capable player only when an MKV source is actually opened.
   // This keeps the regular MP4/HLS experience from downloading its multi-megabyte decoder bundle.
@@ -69,13 +86,13 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return () => { active = false; };
   }, [isMkvSource, retry]);
 
-  useEffect(() => { setQuality(''); setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
+  useEffect(() => { setQuality(''); failedVariantUrlsRef.current.clear(); nativeRetryRef.current=0; setSubtitle('off'); setSubtitleMenuOpen(false); setSubtitleNotice(''); }, [episode.id]);
   // Keep Movi's native subtitle picker untouched. DOM-wide menu styling can
   // interfere with the custom element's own click/touch handling in WebViews.
 
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
-    setError(''); hlsRecoveryAttemptsRef.current = { network: 0, media: 0 }; setHlsSubtitleTracks([]); setNativeSubtitleTracks([]); hlsAutoSubtitleRef.current = false; setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = false; hlsProbeRef.current = false;
+    setError(''); if(hlsRecoveryTimerRef.current)clearTimeout(hlsRecoveryTimerRef.current); hlsRecoveryTimerRef.current=null; if(nativeRetryTimerRef.current)clearTimeout(nativeRetryTimerRef.current); nativeRetryTimerRef.current=null; nativeRetryRef.current=0; hlsRecoveryAttemptsRef.current = { network: 0, media: 0 }; setHlsSubtitleTracks([]); setNativeSubtitleTracks([]); hlsAutoSubtitleRef.current = false; setBuffering(false); setTime(0); setDuration(0); setPlaying(false); proxiedFallbackRef.current = false; hlsProbeRef.current = false;
     hlsRef.current?.destroy(); hlsRef.current = null;
     if (!src || embed) return;
     if (isHlsSource && Hls.isSupported()) {
@@ -114,7 +131,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
           hls.subtitleTrack = Number(subtitle.slice(4));
         }
       };
-      hls.on(Hls.Events.MANIFEST_PARSED, () => { setError(''); setBuffering(false); syncHlsSubtitles(); const audio=hls.audioTracks; if(audio.length){const preferred=preferredAudioLanguage==='auto'?-1:audio.findIndex(t=>languageMatch(t.lang||t.name,preferredAudioLanguage));if(preferred>=0)hls.audioTrack=preferred;}});
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { if(hlsRecoveryTimerRef.current)clearTimeout(hlsRecoveryTimerRef.current); hlsRecoveryTimerRef.current=null; setError(''); setBuffering(false); syncHlsSubtitles(); const audio=hls.audioTracks; if(audio.length){const preferred=preferredAudioLanguage==='auto'?-1:audio.findIndex(t=>languageMatch(t.lang||t.name,preferredAudioLanguage));if(preferred>=0)hls.audioTrack=preferred;}});
       hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, syncHlsSubtitles);
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal) return;
@@ -123,13 +140,15 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR && attempts.network < 2) {
           attempts.network += 1;
           setError('Reconnecting to the stream (' + attempts.network + '/2)…');
-          hls.startLoad();
+          if(hlsRecoveryTimerRef.current)clearTimeout(hlsRecoveryTimerRef.current);
+          hlsRecoveryTimerRef.current=setTimeout(()=>{if(hlsRef.current===hls)hls.startLoad();},attempts.network===1?1200:3000);
           return;
         }
         if (data.type === Hls.ErrorTypes.MEDIA_ERROR && attempts.media < 1) {
           attempts.media += 1;
-          setError('Smart Assist is recovering the video decoder…');
-          hls.recoverMediaError();
+          setError('Recovering the video decoder…');
+          if(hlsRecoveryTimerRef.current)clearTimeout(hlsRecoveryTimerRef.current);
+          hlsRecoveryTimerRef.current=setTimeout(()=>{if(hlsRef.current===hls)hls.recoverMediaError();},350);
           return;
         }
         setBuffering(false);
@@ -142,7 +161,6 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
         if (hlsRef.current === hls) hlsRef.current = null;
         if (video.canPlayType('application/vnd.apple.mpegurl')) {
           setError('Switching to the browser’s native HLS player…');
-          setAssistStatus('assisting');
           video.src = src;
           video.load();
           return;
@@ -157,7 +175,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       setError('This browser does not support HLS playback. Try a browser-compatible MP4 source.');
       return;
     } else { video.src = src; video.load(); }
-    return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
+    return () => { if(hlsRecoveryTimerRef.current)clearTimeout(hlsRecoveryTimerRef.current); hlsRecoveryTimerRef.current=null; hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [src, rawSrc, embed, isHlsSource, isMkvSource, telegramWebView, selected?.mimeType, episode.mimeType, retry]);
 
   useEffect(() => {
@@ -166,9 +184,9 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     const tick = () => { setTime(v.currentTime || 0); if (v.duration > 0 && Number.isFinite(v.duration)) onProgress?.(Math.round(v.currentTime / v.duration * 100)); if (!reelMode && v.currentTime > 0) { const bucket = Math.floor(v.currentTime / 10); if (bucket !== lastSavedTimeRef.current) { lastSavedTimeRef.current = bucket; onPlaybackPosition?.(Math.floor(v.currentTime)); try { localStorage.setItem('masenet-resume-' + episode.id, String(Math.floor(v.currentTime))); } catch { /* Storage may be unavailable. */ } } } }; const ended = () => { if (!reelMode) { onPlaybackPosition?.(0); onPlaybackEnded?.(); try { localStorage.removeItem('masenet-resume-' + episode.id); } catch { /* Storage may be unavailable. */ } } };
     const play = () => { setPlaying(true); setBuffering(false); setError(''); onPlaybackStarted?.(); onPlaybackStateChange?.(true,v.currentTime||0); }; const pause = () => { setPlaying(false); onPlaybackStateChange?.(false,v.currentTime||0); };
     const wait = () => { setBuffering(true);  }; const ready = () => { setBuffering(false); setError('');  };
-    const fail = () => { setBuffering(false); if (!v.error) return; if ([2, 3, 4].includes(v.error.code) && !isHlsSource && !proxiedFallbackRef.current && rawSrc && /^https:\/\//i.test(rawSrc)) { proxiedFallbackRef.current = true; setError('Trying the stream through MaseNet’s secure video proxy…'); v.src = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc); v.load(); return; } if (v.error.code === 4 && proxiedFallbackRef.current && !hlsProbeRef.current && Hls.isSupported()) { hlsProbeRef.current = true; setError('Checking whether this endpoint is an HLS stream…'); const hls = new Hls({ enableWorker: true, backBufferLength: 30 }); hlsRef.current?.destroy(); hlsRef.current = hls; hls.loadSource('/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc)); hls.attachMedia(v); hls.on(Hls.Events.MANIFEST_PARSED, () => { setError(''); setBuffering(false); }); hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { hls.destroy(); if (hlsRef.current === hls) hlsRef.current = null; setBuffering(false); setError('This source is not a browser-playable MP4 or HLS stream. If it is MKV or VLC-only, it must be converted to MP4/HLS before MaseNet can play it.'); } }); return; } setError((({2:'Network error loading this video. The source may be offline, expired, or blocking playback.',3:'This browser cannot decode this video or audio codec. The source may use a VLC-supported codec that browsers do not support.',4:'The browser rejected this stream format. MaseNet checked the direct URL and secure proxy, and is checking for an HLS playlist. If it is an MKV/VLC-only source, it needs browser-compatible MP4/HLS conversion.'} as Record<number,string>)[v.error.code] || 'Video playback failed. Check the source URL or retry.')); };
+    const fail = () => { setBuffering(false); if (!v.error) return; if ([2, 3, 4].includes(v.error.code) && !isHlsSource && !proxiedFallbackRef.current && rawSrc && /^https:\/\//i.test(rawSrc)) { proxiedFallbackRef.current = true; setError('Trying the stream through MaseNet’s secure video proxy…'); v.src = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc); v.load(); return; } if (v.error.code === 4 && proxiedFallbackRef.current && !hlsProbeRef.current && Hls.isSupported()) { hlsProbeRef.current = true; setError('Checking whether this endpoint is an HLS stream…'); const hls = new Hls({ enableWorker: true, backBufferLength: 30 }); hlsRef.current?.destroy(); hlsRef.current = hls; hls.loadSource('/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc)); hls.attachMedia(v); hls.on(Hls.Events.MANIFEST_PARSED, () => { setError(''); setBuffering(false); }); hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { hls.destroy(); if (hlsRef.current === hls) hlsRef.current = null; setBuffering(false); setError('This source is not a browser-playable MP4 or HLS stream. If it is MKV or VLC-only, it must be converted to MP4/HLS before MaseNet can play it.'); } }); return; } if(v.error.code===2&&nativeRetryRef.current<2){const attempt=++nativeRetryRef.current;setError("Connection interrupted. Retrying ("+attempt+"/2)…");setBuffering(true);if(nativeRetryTimerRef.current)clearTimeout(nativeRetryTimerRef.current);nativeRetryTimerRef.current=setTimeout(()=>{if(videoRef.current===v)v.load();},attempt===1?1200:3000);return;} if([2,3,4].includes(v.error.code)&&tryNextAvailableVariant())return; setError((({2:'Network error loading this video. The source may be offline, expired, or blocking playback.',3:'This browser cannot decode this video or audio codec. The source may use a VLC-supported codec that browsers do not support.',4:'The browser rejected this stream format. MaseNet checked the direct URL and secure proxy, and is checking for an HLS playlist. If it is an MKV/VLC-only source, it needs browser-compatible MP4/HLS conversion.'} as Record<number,string>)[v.error.code] || 'Video playback failed. Check the source URL or retry.')); };
     v.addEventListener('loadedmetadata', metadata); v.addEventListener('ended', ended); v.textTracks.addEventListener('addtrack', tracksChanged); v.textTracks.addEventListener('change', tracksChanged); v.addEventListener('timeupdate', tick); v.addEventListener('play', play); v.addEventListener('pause', pause); v.addEventListener('waiting', wait); v.addEventListener('canplay', ready); v.addEventListener('error', fail);
-    return () => { v.removeEventListener('loadedmetadata', metadata); v.removeEventListener('ended', ended); v.textTracks.removeEventListener('addtrack', tracksChanged); v.textTracks.removeEventListener('change', tracksChanged); v.removeEventListener('timeupdate', tick); v.removeEventListener('play', play); v.removeEventListener('pause', pause); v.removeEventListener('waiting', wait); v.removeEventListener('canplay', ready); v.removeEventListener('error', fail); };
+    return () => { if(nativeRetryTimerRef.current)clearTimeout(nativeRetryTimerRef.current); nativeRetryTimerRef.current=null; v.removeEventListener('loadedmetadata', metadata); v.removeEventListener('ended', ended); v.textTracks.removeEventListener('addtrack', tracksChanged); v.textTracks.removeEventListener('change', tracksChanged); v.removeEventListener('timeupdate', tick); v.removeEventListener('play', play); v.removeEventListener('pause', pause); v.removeEventListener('waiting', wait); v.removeEventListener('canplay', ready); v.removeEventListener('error', fail); };
   }, [onProgress, onPlaybackPosition, onPlaybackStarted, onPlaybackEnded, onPlaybackStateChange, resumeAtSeconds, isMkvSource, isHlsSource, rawSrc, episode.id, telegramWebView]);
 
   const profileUnlockHeaders=()=>{try{const token=profileId?sessionStorage.getItem('masenet-profile-unlock-'+profileId):null;return token?{'X-MaseNet-Profile-Unlock':token}:{}}catch{return {}}};
@@ -184,7 +202,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
   const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
   const pictureInPicture = async () => { const v = videoRef.current as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null; if (!v) return; try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled && v.requestPictureInPicture) { await v.requestPictureInPicture(); } else { setError('Picture-in-Picture is not supported in this browser or Telegram webview. Use Fullscreen instead.'); } } catch { setError('Picture-in-Picture could not start. Try playing the video first, or use Fullscreen.'); } };
-  const retrySource = () => { proxiedFallbackRef.current = false; hlsProbeRef.current = false; setError(''); setBuffering(true); setRetry(x => x + 1); };
+  const retrySource = () => { proxiedFallbackRef.current = false; hlsProbeRef.current = false; nativeRetryRef.current=0; failedVariantUrlsRef.current.clear(); setError(''); setBuffering(true); setRetry(x => x + 1); };
 
   if (isMkvSource && !embed && !moviReady) {
     return <section className={'flootStylePlayer' + (reelMode ? ' reelMode' : '')} aria-label="MaseNet MKV video player">
@@ -197,6 +215,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   if (isMkvSource && !embed) {
     return <MaseNetVlcPlayer
       src={mkvProxyUrl}
+      fallbackSrc={rawSrc}
+      alternateSources={mkvAlternateSources}
       title={episode.title}
       onProgress={onProgress}
       onPlaybackPosition={onPlaybackPosition}
