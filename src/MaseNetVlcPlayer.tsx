@@ -33,7 +33,7 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
     if(!live||!overlay.current||!manualSubtitle.current)return;
     if(cue?.image){manualSubtitle.current.textContent="";manualSubtitle.current.style.display="none";overlay.current.classList.remove("mnvlcSubtitleNativeHidden");subtitleCueEnd.current=Number(cue.end)||0;return;}
     const raw=typeof cue?.text==="string"?cue.text:"";
-    const text=raw.replace(/\\N/g,"\\n").replace(/\\n/g,"\\n").replace(/\\r/g,"").replace(/\\{[^}]*\\}/g,"").trim();
+    const text=raw.replace(/\\N/g,"\n").replace(/\\n/g,"\n").replace(/\r/g,"").replace(/\{[^}]*\}/g,"").trim();
     if(!text){manualSubtitle.current.textContent="";manualSubtitle.current.style.display="none";overlay.current.classList.remove("mnvlcSubtitleNativeHidden");subtitleCueEnd.current=0;return;}
     manualSubtitle.current.textContent=text;
     manualSubtitle.current.style.display="flex";
