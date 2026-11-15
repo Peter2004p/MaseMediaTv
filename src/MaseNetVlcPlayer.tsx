@@ -22,7 +22,8 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
    const mod:any=await import("movi-player/player");if(!live||!canvas.current)return;
    const Player=mod.MoviPlayer||mod.default;if(!Player)throw new Error("MaseNet playback engine failed to initialize.");
    instance=new Player({source:{type:"url",url:playbackSrc},canvas:canvas.current,renderer:"canvas",decoder:"auto"});engine.current=instance;
-   if(overlay.current)instance.setSubtitleOverlay?.(overlay.current);
+   // The canvas renderer is created during load(); mounting the overlay before
+   // that point is a no-op in MoviPlayer. Attach it immediately after load.
    const sync=(list?:any[])=>{const all=Array.isArray(list)?list:instance.getTracks?.()||[];const s=instance.getSubtitleTracks?.()||all.filter((t:any)=>t.type==="subtitle");const a=instance.getAudioTracks?.()||all.filter((t:any)=>t.type==="audio");if(live){setSubs(s.map((t:any)=>({...t,language:t.language||t.lang||t.languageCode||t.tags?.language})));setAudios(a.map((t:any)=>({...t,language:t.language||t.lang||t.languageCode||t.tags?.language})));}};
    instance.on?.("tracksChange",sync);
    instance.on?.("timeUpdate",(t:number)=>{if(!live)return;const d=instance.getDuration?.()||0;setTime(t);setDuration(d);onPlaybackPosition?.(t);if(d>0)onProgress?.(Math.min(100,t/d*100));onPlaybackStateChange?.(instance.getState?.()==="playing",t);});
@@ -30,7 +31,7 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
    instance.on?.("stateChange",(s:string)=>{if(!live)return;setStatus(s);if(s==="playing"){automaticRetries.current=0;onPlaybackStarted?.();}onPlaybackStateChange?.(s==="playing",instance.getCurrentTime?.()||0);});
    instance.on?.("ended",()=>{if(live){setStatus("ended");onPlaybackEnded?.();}});
    instance.on?.("error",(e:any)=>{if(!live)return;const message=String(e?.message||"The MKV decoder reported an error.");if(/network|fetch|timeout|timed out|connection|HTTP 5\d\d|failed to load/i.test(message)){scheduleRetry(message);return;}if(switchAlternate())return;setError(message);setStatus("error");});
-   await instance.load();if(!live)return;sync();setDuration(instance.getDuration?.()||0);setStatus("ready");
+   await instance.load();if(!live)return;if(overlay.current)instance.setSubtitleOverlay?.(overlay.current);sync();setDuration(instance.getDuration?.()||0);setStatus("ready");
    if(resumeAtSeconds>0)await instance.seek(Math.min(resumeAtSeconds,Math.max(0,(instance.getDuration?.()||resumeAtSeconds)-1)));
    if(autoPlay){try{await instance.play();}catch{/* user gesture may be required */}}
    if(canvas.current&&typeof ResizeObserver!=="undefined"){observer=new ResizeObserver(entries=>{const r=entries[0]?.contentRect;if(r)instance?.resizeCanvas?.(Math.round(r.width*devicePixelRatio),Math.round(r.height*devicePixelRatio));});observer.observe(canvas.current);}
