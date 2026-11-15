@@ -211,7 +211,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     const root = videoRef.current?.closest('.flootStylePlayer') as HTMLElement | null;
     const update = () => { const wide = window.innerWidth > window.innerHeight; setLandscapeReady(wide); if (wide && tg?.isFullscreen && !tg?.isOrientationLocked) { try { tg.lockOrientation?.(); } catch {} } };
     const sync = () => setFullscreenActive(!!document.fullscreenElement || !!(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement || !!root?.classList.contains('fspFallbackFullscreen') || !!tg?.isFullscreen);
-    const failed = () => setFullscreenActive(false);
+    const failed = () => { root?.classList.add('fspFallbackFullscreen'); setFullscreenActive(true); };
     window.addEventListener('resize', update); window.addEventListener('orientationchange', update);
     document.addEventListener('fullscreenchange', sync); document.addEventListener('webkitfullscreenchange', sync as EventListener);
     tg?.onEvent?.('fullscreenChanged', sync); tg?.onEvent?.('fullscreenFailed', failed);
@@ -249,6 +249,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     } catch (error) {
       root.classList.add('fspFallbackFullscreen');
       setFullscreenActive(true);
+      root.classList.add('fspFallbackFullscreen');
+      setFullscreenActive(true);
       console.warn('MaseNet fullscreen fallback activated:', error);
     }
   };
@@ -279,7 +281,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     />;
   }
 
-  return <div className={`flootStylePlayer ${controlsVisible ? 'fspControlsVisible' : 'fspControlsHidden'}${fullscreenActive ? ' fspFallbackFullscreen' : ''}${reelMode ? ' reelMode' : ''}`} onPointerMove={revealPlayerControls} onTouchStart={revealPlayerControls}>
+  return <div className={`flootStylePlayer ${controlsVisible ? 'fspControlsVisible' : 'fspControlsHidden'}${fullscreenActive ? ' fspFallbackFullscreen' : ''}${reelMode ? ' reelMode' : ''}`} onPointerMove={revealPlayerControls} onTouchStart={revealPlayerControls} onClick={revealPlayerControls}>
     <div className="flootStyleFrame">
       {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload={autoPlay ? "auto" : "metadata"} autoPlay={autoPlay} muted={muted} controls={false} onClick={reelMode ? playPause : undefined}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {fullscreenActive && !landscapeReady && <div className="fspOrientationHint">Rotate your phone sideways for landscape playback</div>}{buffering && <div className="fspStatus">⏳ Buffering…</div>}
