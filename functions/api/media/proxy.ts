@@ -42,6 +42,80 @@ function resolveHlsResource(raw:string, base:string):string {
  }
  return resolved.toString();
 }
+
+function parseContentRangeTotal(value:string|null):number|null {
+ if(!value) return null;
+ const match=value.match(/^bytes\s+\d+-\d+\/(\d+)$/i);
+ if(!match) return null;
+ const total=Number(match[1]);
+ return Number.isSafeInteger(total)&&total>0?total:null;
+}
+function parseMatroskaSegmentTotal(bytes:Uint8Array):number|null {
+ const id=[0x18,0x53,0x80,0x67];
+ for(let i=0;i<=bytes.length-5;i++){
+  if(bytes[i]!==id[0]||bytes[i+1]!==id[1]||bytes[i+2]!==id[2]||bytes[i+3]!==id[3]) continue;
+  const first=bytes[i+4];
+  if(!first) continue;
+  let marker=0x80, vintLength=1;
+  while(vintLength<=8 && (first&marker)===0){marker>>=1;vintLength++;}
+  if(vintLength>8||i+4+vintLength>bytes.length) continue;
+  let size=BigInt(first&(marker-1));
+  for(let j=1;j<vintLength;j++) size=(size<<8n)|BigInt(bytes[i+4+j]);
+  const unknown=(1n<<BigInt(7*vintLength))-1n;
+  if(size===unknown) return null;
+  const total=BigInt(i+4+vintLength)+size;
+  if(total>0n&&total<=BigInt(Number.MAX_SAFE_INTEGER)) return Number(total);
+ }
+ return null;
+}
+async function readResponsePrefix(response:Response,limit:number):Promise<Uint8Array> {
+ const reader=response.body?.getReader();
+ if(!reader) return new Uint8Array();
+ const chunks:Uint8Array[]=[];
+ let total=0;
+ try {
+  while(total<limit){
+   const part=await reader.read();
+   if(part.done) break;
+   const chunk=part.value.subarray(0,Math.min(part.value.length,limit-total));
+   if(chunk.length){chunks.push(chunk);total+=chunk.length;}
+   if(total>=limit) break;
+  }
+ } finally {
+  try{await reader.cancel();}catch{}
+ }
+ const result=new Uint8Array(total);
+ let offset=0;
+ for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.length;}
+ return result;
+}
+const matroskaSizeCache=new Map<string,number>();
+async function probeMatroskaTotal(url:string,baseHeaders:Headers):Promise<number|null> {
+ const cached=matroskaSizeCache.get(url);
+ if(cached) return cached;
+ try {
+  const probeHeaders=new Headers(baseHeaders);
+  probeHeaders.set("range","bytes=0-65535");
+  probeHeaders.delete("if-range");
+  const response=await fetchPublicHttps(url,probeHeaders,"GET");
+  let total=parseContentRangeTotal(response.headers.get("content-range"));
+  if(!total && response.status===200){
+   const length=response.headers.get("content-length")||"";
+   if(/^\d+$/.test(length)) total=Number(length);
+  }
+  if(!total && (response.status===200||response.status===206)){
+   const prefix=await readResponsePrefix(response,65536);
+   total=parseMatroskaSegmentTotal(prefix);
+  } else await response.body?.cancel();
+  if(total){
+   if(matroskaSizeCache.size>=128) matroskaSizeCache.delete(matroskaSizeCache.keys().next().value as string);
+   matroskaSizeCache.set(url,total);
+   return total;
+  }
+ } catch { /* Unknown-size Matroska segments cannot be inferred safely. */ }
+ return null;
+}
+
 function proxyHlsResource(raw:string, base:string, origin:string, episodeId:string, sourceHint:string):string {
  const value=raw.trim();
  if(!/^https?:\/\//i.test(value) && !value.startsWith("/") && !value.startsWith("./") && !value.startsWith("../") && !value.startsWith("?") && !value.startsWith("#")) {
@@ -185,6 +259,12 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   return new Response(rewritten,{status:200,headers:{"content-type":"application/vnd.apple.mpegurl","cache-control":"no-store","access-control-allow-origin":"*","x-content-type-options":"nosniff"}});
  }
  const outHeaders=new Headers();
+ const isMatroska=/matroska|x-matroska/i.test(contentType)||sourcePath.endsWith(".mkv");
+ let matroskaTotal:number|null=null;
+ if(isMatroska) {
+  matroskaTotal=parseContentRangeTotal(upstream.headers.get("content-range"))||matroskaSizeCache.get(upstream.url||upstreamUrl)||null;
+  if(!matroskaTotal) matroskaTotal=await probeMatroskaTotal(upstream.url||upstreamUrl,headers);
+ }
  for(const key of ["content-length","content-range","accept-ranges","last-modified","etag"]) { const value=upstream.headers.get(key); if(value) outHeaders.set(key,value); }
  // Matroska demuxers need the total resource size for range-based reads.
  // Prefer the exact partial response length when the client requested a range.
@@ -220,6 +300,18 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    if(totalSize) outHeaders.set("content-length",totalSize);
   }
  }
+ if(isMatroska&&matroskaTotal) {
+  if(upstream.status===206) {
+   const actual=outHeaders.get("content-range")||"";
+   const actualParts=actual.match(/^bytes\s+(\d+)-(\d+)\/(?:\d+|\*)$/i);
+   const requested=rangeHeader.match(/^bytes=(\d+)-(\d+)$/i);
+   const start=actualParts?actualParts[1]:requested?.[1];
+   const end=actualParts?actualParts[2]:requested?.[2];
+   if(start!==undefined&&end!==undefined) outHeaders.set("content-range","bytes "+start+"-"+end+"/"+matroskaTotal);
+  } else if(upstream.status===200&&!outHeaders.has("content-length")) {
+   outHeaders.set("content-length",String(matroskaTotal));
+  }
+ }
  outHeaders.set("content-type",contentType || "application/octet-stream");
  // A download request must remain a streamed response (never buffer the whole movie
  // in the Worker). Content-Disposition tells Android browsers to save the file.
@@ -229,4 +321,33 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  }
  outHeaders.set("cache-control","no-store"); outHeaders.set("access-control-allow-origin","*"); outHeaders.set("access-control-expose-headers","content-length,content-range,accept-ranges,last-modified,etag"); outHeaders.set("accept-ranges",upstream.headers.get("accept-ranges")||"bytes"); outHeaders.set("x-content-type-options","nosniff");
  return new Response(upstream.body,{status:upstream.status,headers:outHeaders});
+};
+
+/**
+ * MoviPlayer asks for HEAD before its first byte-range read. Some external MKV
+ * providers omit both Content-Length and a numeric Content-Range total. Probe
+ * only the first 64 KiB and, when the Matroska Segment declares a finite size,
+ * expose that exact size without storing or transcoding the media.
+ */
+export const onRequestHead = async ({ request, env }: { request:Request; env:Env }) => {
+ const headers=new Headers(request.headers);
+ headers.set("range","bytes=0-65535");
+ headers.delete("if-range");
+ const probeRequest=new Request(request.url,{method:"GET",headers});
+ const response=await onRequestGet({request:probeRequest,env});
+ const outHeaders=new Headers(response.headers);
+ let total=parseContentRangeTotal(response.headers.get("content-range"));
+ if(!total&&response.status===200){
+  const length=response.headers.get("content-length")||"";
+  if(/^\d+$/.test(length)) total=Number(length);
+ }
+ if(!total&&(response.status===200||response.status===206)){
+  const prefix=await readResponsePrefix(response,65536);
+  total=parseMatroskaSegmentTotal(prefix);
+ } else await response.body?.cancel();
+ outHeaders.delete("content-range");
+ outHeaders.delete("content-length");
+ if(total) outHeaders.set("content-length",String(total));
+ outHeaders.set("accept-ranges",response.headers.get("accept-ranges")||"bytes");
+ return new Response(null,{status:response.status===206?200:response.status,headers:outHeaders});
 };
