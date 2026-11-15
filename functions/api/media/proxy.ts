@@ -136,19 +136,55 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  // When that happens, resolve the episode using the exact stored source URL instead.
  if(episodeId.length>200 && !sourceHint) return json({error:"Invalid episodeId and missing source lookup hint"},400);
  if(!episodeId && !sourceHint) return json({error:"Missing episodeId and source lookup hint"},400);
- const rows=await env.DB.prepare("SELECT metadata_json FROM titles").all<{metadata_json:string}>();
+ // Resolve only the title row that contains this episode. The previous implementation
+ // loaded and parsed every title's full metadata JSON on every byte-range request.
+ // MKV players issue many range requests, so that repeated whole-library scan made
+ // startup increasingly slow and could overload the shared proxy path.
+ let matchedRow:{metadata_json:string}|null=null;
+ try {
+  matchedRow=await env.DB.prepare(`
+   SELECT metadata_json
+   FROM titles
+   WHERE EXISTS (
+    SELECT 1
+    FROM json_each(
+     CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
+     '$.episodes'
+    ) AS episode_entry
+    WHERE
+     (? <> '' AND json_extract(episode_entry.value,'$.id') = ?)
+     OR
+     (? <> '' AND (
+      json_extract(episode_entry.value,'$.streamUrl') = ?
+      OR EXISTS (
+       SELECT 1
+       FROM json_each(
+        CASE
+         WHEN json_valid(json_extract(episode_entry.value,'$.qualities'))
+         THEN json_extract(episode_entry.value,'$.qualities')
+         ELSE '[]'
+        END
+       ) AS quality_entry
+       WHERE json_extract(quality_entry.value,'$.streamUrl') = ?
+      )
+     ))
+   )
+   LIMIT 1
+  `).bind(episodeId,episodeId,sourceHint,sourceHint,sourceHint).first<{metadata_json:string}>();
+ } catch {
+  return json({error:"MaseNet could not look up this episode in its library. Please retry."},503);
+ }
  let episode:EpisodeLike|null=null;
- for(const row of rows.results||[]) {
+ if(matchedRow) {
   try {
-   const title=JSON.parse(row.metadata_json);
+   const title=JSON.parse(matchedRow.metadata_json);
    const episodes=Array.isArray(title.episodes)?title.episodes as EpisodeLike[]:[];
-   // Some legacy public episodes have no stable ID. Resolve them only by an exact
-   // stream URL already stored in the library; never accept an arbitrary source URL.
+   // Keep the final equality check in application code; never accept an arbitrary source URL.
    const found=episodeId && episodeId.length<=200 ? episodes.find((e:EpisodeLike)=>String(e.id)===episodeId) : undefined;
    const bySource=sourceHint
     ? episodes.find((e:EpisodeLike)=>[e.streamUrl,...(e.qualities||[]).map(q=>q.streamUrl)].some((url)=>typeof url==="string" && url===sourceHint))
     : undefined;
-   if(found||bySource){episode=found||bySource||null;break;}
+   episode=found||bySource||null;
   } catch {}
  }
  if(!episode) return json({error:"Episode not found in the Cloudflare library. Check the stored episode ID and source URL."},404);
