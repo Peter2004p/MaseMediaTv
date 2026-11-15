@@ -4274,6 +4274,16 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
  html body #root .app .iqHome .maseCinematicHero .iqHeroDots button{transition:none!important}
 }
 
+
+/* Force a true widescreen player surface when the host cannot rotate the device. */
+@media (orientation:portrait){
+ .flootStylePlayer.fspFallbackFullscreen:not(:fullscreen){left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;width:100dvh!important;height:100vw!important;max-width:none!important;transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center!important}
+ .mnvlc.mnvlcFullscreenActive:not(:fullscreen){left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;width:100dvh!important;height:100vw!important;max-width:none!important;transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center!important}
+}
+@media (orientation:landscape){
+ .flootStylePlayer.fspFallbackFullscreen:not(:fullscreen),.mnvlc.mnvlcFullscreenActive:not(:fullscreen){left:0!important;top:0!important;width:100vw!important;height:100dvh!important;transform:none!important}
+}
+
 /* Fullscreen support for mobile browsers and Telegram WebViews */
 .flootStylePlayer.fspFallbackFullscreen{
   position:fixed!important;inset:0!important;z-index:2147483000!important;
