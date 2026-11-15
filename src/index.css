@@ -4273,3 +4273,30 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
  html body #root .app .iqHome .maseCinematicHero .iqHeroActions button,
  html body #root .app .iqHome .maseCinematicHero .iqHeroDots button{transition:none!important}
 }
+
+/* Fullscreen support for mobile browsers and Telegram WebViews */
+.flootStylePlayer.fspFallbackFullscreen{
+  position:fixed!important;inset:0!important;z-index:2147483000!important;
+  width:100vw!important;height:100dvh!important;max-width:none!important;
+  margin:0!important;padding:0!important;border-radius:0!important;
+  background:#000!important;display:flex!important;flex-direction:column!important;
+}
+.flootStylePlayer.fspFallbackFullscreen .flootStyleFrame{
+  flex:1 1 auto!important;width:100%!important;height:100%!important;
+  min-height:0!important;max-height:none!important;aspect-ratio:auto!important;
+  border-radius:0!important;display:flex!important;align-items:center!important;justify-content:center!important;
+}
+.flootStylePlayer.fspFallbackFullscreen video,
+.flootStylePlayer.fspFallbackFullscreen iframe{
+  width:100%!important;height:100%!important;max-height:100%!important;
+  object-fit:contain!important;
+}
+.flootStylePlayer:fullscreen,.flootStyleFrame:fullscreen{
+  width:100vw!important;height:100vh!important;max-width:none!important;
+  margin:0!important;padding:0!important;background:#000!important;border-radius:0!important;
+}
+.flootStylePlayer:fullscreen .flootStyleFrame,
+.flootStyleFrame:fullscreen{width:100%!important;height:100%!important;max-height:none!important;aspect-ratio:auto!important}
+@supports(height:100dvh){
+ .flootStylePlayer:fullscreen,.flootStyleFrame:fullscreen{height:100dvh!important}
+}
