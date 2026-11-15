@@ -189,6 +189,24 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       let verdict: "likely_match" | "mismatch" | "unclear" = "unclear";
       let reason = "AI could not confidently assess the screenshot; manual admin review is required.";
       let aiAvailable = false;
+      const screeningInstructions = [
+        "You are a cautious visual screening assistant for a YouTube subscription screenshot.",
+        "You cannot access YouTube accounts, verify subscriptions on the server, detect every edited image, or prove that a screenshot is genuine.",
+        "Return exactly one JSON object with keys verdict and reason. verdict must be likely_match, mismatch, or unclear.",
+        "Use likely_match ONLY when the screenshot clearly shows the YouTube channel MaseMedia TV or exact handle @masemedia_tv AND a visible subscribed state such as Subscribed.",
+        "Use mismatch when the screenshot clearly shows a different channel or a visible Subscribe button.",
+        "Use unclear for cropped, blurry, obscured, ambiguous, edited-looking, or inconclusive evidence. Never infer hidden details.",
+        "Keep reason under 160 characters. Never claim genuine YouTube verification."
+      ].join("\\n");
+      const parseVerdict = (raw: string) => {
+        const parsed = JSON.parse(raw.trim().replace(/^\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`$/, "")) as { verdict?: string; reason?: string };
+        if (!["likely_match", "mismatch", "unclear"].includes(String(parsed.verdict))) throw new Error("AI returned an invalid screening verdict");
+        verdict = parsed.verdict as typeof verdict;
+        reason = String(parsed.reason || reason).slice(0, 160);
+        aiAvailable = true;
+      };
+
+      // Primary vision screening provider.
       if (env.OPENAI_API_KEY) {
         try {
           const aiResponse = await fetch("https://api.openai.com/v1/responses", {
@@ -196,38 +214,56 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
             headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: env.OPENAI_MODEL || "gpt-6-astra",
-              instructions: [
-                "You are a cautious visual screening assistant for a YouTube subscription screenshot. You cannot access YouTube accounts, verify subscriptions on the server, detect every edited image, or prove that the screenshot is genuine.",
-                "Return exactly one JSON object with keys verdict and reason. verdict must be likely_match, mismatch, or unclear.",
-                "Use likely_match ONLY when the screenshot clearly shows the YouTube channel MaseMedia TV or the exact handle @masemedia_tv AND a visible subscribed state such as 'Subscribed'.",
-                "Use mismatch when the screenshot clearly shows a different channel or clearly shows an unsubscribed state such as a visible 'Subscribe' button.",
-                "Use unclear for cropped, blurry, obscured, ambiguous, edited-looking, unsupported-language, or otherwise inconclusive evidence. Never infer hidden details.",
-                "Keep reason under 160 characters. Do not claim the subscription is genuinely verified."
-              ].join("\n"),
-              input: [{
-                role: "user",
-                content: [
-                  { type: "input_text", text: "Assess this submitted screenshot using the rules. Remember: this is only a visual plausibility screen, not real YouTube verification." },
-                  { type: "input_image", image_url: image }
-                ]
-              }],
+              instructions: screeningInstructions,
+              input: [{ role: "user", content: [
+                { type: "input_text", text: "Assess this screenshot. This is only visual plausibility screening, not genuine YouTube verification." },
+                { type: "input_image", image_url: image }
+              ] }],
               max_output_tokens: 160
             }),
-            signal: AbortSignal.timeout(12000)
+            signal: AbortSignal.timeout(10000)
           });
           if (!aiResponse.ok) throw new Error("OpenAI visual screening HTTP " + aiResponse.status);
           const aiData = await aiResponse.json() as { output_text?: string; output?: Array<{content?:Array<{type?:string;text?:string}>}> };
-          const raw = (aiData.output_text || (aiData.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\n")).trim();
-          const parsed = JSON.parse(raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")) as { verdict?: string; reason?: string };
-          if (!["likely_match", "mismatch", "unclear"].includes(String(parsed.verdict))) throw new Error("AI returned an invalid screening verdict");
-          verdict = parsed.verdict as typeof verdict;
-          reason = String(parsed.reason || reason).slice(0, 160);
-          aiAvailable = true;
+          const raw = (aiData.output_text || (aiData.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\\n")).trim();
+          if (!raw) throw new Error("OpenAI returned an empty visual screening result");
+          parseVerdict(raw);
         } catch (error) {
-          console.error("MaseNet AI screenshot plausibility screen failed:", error instanceof Error ? error.message : String(error));
+          console.error("MaseNet OpenAI screenshot screening failed; trying Gemini fallback:", error instanceof Error ? error.message : String(error));
         }
-      } else {
-        console.error("MaseNet AI screenshot plausibility screen skipped: OPENAI_API_KEY is missing.");
+      }
+
+      // Gemini is a real fallback, not a silent approval. It runs when OpenAI is
+      // unavailable, misconfigured, rate-limited, or returns an unusable response.
+      if (!aiAvailable && env.GEMINI_API_KEY) {
+        try {
+          const geminiResponse = await fetch(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY),
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ role: "user", parts: [
+                  { text: screeningInstructions + "\\nAssess the attached screenshot and return only the JSON object." },
+                  { inline_data: { mime_type: mime, data: match[2] } }
+                ] }],
+                generationConfig: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 160 }
+              }),
+              signal: AbortSignal.timeout(10000)
+            }
+          );
+          if (!geminiResponse.ok) throw new Error("Gemini visual screening HTTP " + geminiResponse.status);
+          const geminiData = await geminiResponse.json() as { candidates?: Array<{content?:{parts?:Array<{text?:string}>}}> };
+          const raw = (geminiData.candidates?.[0]?.content?.parts || []).map(part => part.text || "").join("\\n").trim();
+          if (!raw) throw new Error("Gemini returned an empty visual screening result");
+          parseVerdict(raw);
+        } catch (error) {
+          console.error("MaseNet Gemini screenshot screening failed:", error instanceof Error ? error.message : String(error));
+        }
+      }
+
+      if (!aiAvailable) {
+        console.error("MaseNet automatic screenshot screening unavailable: configure a working OPENAI_API_KEY or GEMINI_API_KEY.");
       }
 
       const provisional = aiAvailable && String(verdict) === "likely_match";
