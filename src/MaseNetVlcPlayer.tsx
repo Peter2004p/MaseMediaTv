@@ -15,7 +15,7 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,title="MaseNet video",
  useEffect(()=>{if(retryTimer.current)clearTimeout(retryTimer.current);retryTimer.current=null;automaticRetries.current=0;setDirectMode(false);setRetry(0);},[src,fallbackSrc]);
  const [status,setStatus]=useState("loading"),[error,setError]=useState(""),[time,setTime]=useState(0),[duration,setDuration]=useState(0),[subs,setSubs]=useState<Track[]>([]),[audios,setAudios]=useState<Track[]>([]),[subId,setSubId]=useState<number|null>(null),[audioId,setAudioId]=useState<number|null>(null),[menu,setMenu]=useState<"sub"|"audio"|"settings"|null>(null),[rate,setRate]=useState(1),[volume,setVolume]=useState(1),[delay,setDelay]=useState(0);
  useEffect(()=>{let live=true,instance:any=null,observer:ResizeObserver|undefined;
-  const scheduleRetry=(message:string)=>{if(!live)return;if(automaticRetries.current>=2){setError(message);setStatus("error");return;}const attempt=++automaticRetries.current;setError("Connection interrupted. Retrying playback ("+attempt+"/2)…");setStatus("loading");retryTimer.current=setTimeout(()=>{if(live){setError("");setRetry(n=>n+1);}},attempt===1?1200:3000);};
+  const scheduleRetry=(message:string)=>{if(!live||retryTimer.current)return;if(automaticRetries.current>=2){setError(message);setStatus("error");return;}const attempt=++automaticRetries.current;setError("Connection interrupted. Retrying playback ("+attempt+"/2)…");setStatus("loading");retryTimer.current=setTimeout(()=>{retryTimer.current=null;if(live){setError("");setRetry(n=>n+1);}},attempt===1?1200:3000);};
   const start=async()=>{try{
    const mod:any=await import("movi-player/player");if(!live||!canvas.current)return;
    const Player=mod.MoviPlayer||mod.default;if(!Player)throw new Error("MaseNet playback engine failed to initialize.");
@@ -25,7 +25,7 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,title="MaseNet video",
    instance.on?.("tracksChange",sync);
    instance.on?.("timeUpdate",(t:number)=>{if(!live)return;const d=instance.getDuration?.()||0;setTime(t);setDuration(d);onPlaybackPosition?.(t);if(d>0)onProgress?.(Math.min(100,t/d*100));onPlaybackStateChange?.(instance.getState?.()==="playing",t);});
    instance.on?.("durationChange",(d:number)=>{if(live)setDuration(d);});
-   instance.on?.("stateChange",(s:string)=>{if(!live)return;setStatus(s);if(s==="playing")onPlaybackStarted?.();onPlaybackStateChange?.(s==="playing",instance.getCurrentTime?.()||0);});
+   instance.on?.("stateChange",(s:string)=>{if(!live)return;setStatus(s);if(s==="playing"){automaticRetries.current=0;onPlaybackStarted?.();}onPlaybackStateChange?.(s==="playing",instance.getCurrentTime?.()||0);});
    instance.on?.("ended",()=>{if(live){setStatus("ended");onPlaybackEnded?.();}});
    instance.on?.("error",(e:any)=>{if(!live)return;const message=String(e?.message||"The MKV decoder reported an error.");if(/network|fetch|timeout|timed out|connection|HTTP 5\d\d|failed to load/i.test(message)){scheduleRetry(message);return;}setError(message);setStatus("error");});
    await instance.load();if(!live)return;sync();setDuration(instance.getDuration?.()||0);setStatus("ready");
