@@ -1584,3 +1584,84 @@ html.masenet-low-performance .welcomeMotionScene *{animation-duration:8s!importa
 @media(max-height:700px){
  .welcomeAdExperience .welcomeSocialRail{bottom:calc(78px + env(safe-area-inset-bottom))!important}
 }
+
+
+/* Telegram Mini App verification — iOS 27 liquid-glass treatment */
+div[role="dialog"][aria-label="MaseNet access verification"]{
+  background:
+    radial-gradient(ellipse at 12% 8%,rgba(42,225,206,.16),transparent 34%),
+    radial-gradient(ellipse at 92% 18%,rgba(93,112,255,.2),transparent 38%),
+    linear-gradient(145deg,rgba(4,10,25,.97),rgba(5,12,27,.985))!important;
+  -webkit-backdrop-filter:blur(28px) saturate(145%)!important;
+  backdrop-filter:blur(28px) saturate(145%)!important;
+}
+div[role="dialog"][aria-label="MaseNet access verification"]>section{
+  position:relative!important;isolation:isolate!important;overflow:hidden!important;
+  border:1px solid rgba(205,232,255,.22)!important;
+  background:linear-gradient(145deg,rgba(36,54,82,.66),rgba(9,19,39,.76) 56%,rgba(18,29,56,.7))!important;
+  box-shadow:0 28px 90px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.17),0 0 42px rgba(63,155,255,.09)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(160%)!important;backdrop-filter:blur(34px) saturate(160%)!important;
+  animation:masenetGateEnter .72s cubic-bezier(.2,.8,.2,1) both;
+}
+div[role="dialog"][aria-label="MaseNet access verification"]>section:before{
+  content:"";position:absolute;z-index:-1;inset:-55% -35%;pointer-events:none;
+  background:linear-gradient(112deg,transparent 38%,rgba(255,255,255,.055) 46%,rgba(105,222,255,.11) 50%,transparent 58%);
+  transform:translateX(-42%) rotate(8deg);animation:masenetGateSheen 8s ease-in-out infinite;
+}
+div[role="dialog"][aria-label="MaseNet access verification"]>section:after{
+  content:"";position:absolute;z-index:-1;width:230px;height:230px;right:-130px;top:95px;border-radius:50%;
+  background:radial-gradient(circle,rgba(77,150,255,.17),transparent 70%);filter:blur(8px);
+  animation:masenetGateOrb 7s ease-in-out infinite;
+}
+div[role="dialog"][aria-label="MaseNet access verification"]>section>div:nth-of-type(2)>a{
+  position:relative;overflow:hidden;border:1px solid rgba(205,229,255,.16)!important;
+  background:linear-gradient(120deg,rgba(255,255,255,.105),rgba(255,255,255,.035))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.11),0 8px 22px rgba(0,0,0,.12);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%);
+  transition:transform .25s ease,border-color .25s ease,background .25s ease,box-shadow .25s ease;
+  animation:masenetGateCardIn .55s both;
+}
+div[role="dialog"][aria-label="MaseNet access verification"]>section>div:nth-of-type(2)>a:nth-child(2){animation-delay:.08s}
+div[role="dialog"][aria-label="MaseNet access verification"]>section>div:nth-of-type(2)>a:nth-child(3){animation-delay:.16s}
+div[role="dialog"][aria-label="MaseNet access verification"]>section>div:nth-of-type(2)>a:active{transform:scale(.985)}
+div[role="dialog"][aria-label="MaseNet access verification"]>section>div:nth-of-type(3){
+  border:1px solid rgba(128,205,255,.22)!important;
+  background:linear-gradient(145deg,rgba(67,127,207,.19),rgba(111,91,205,.11))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 12px 30px rgba(0,0,0,.14);
+  -webkit-backdrop-filter:blur(24px) saturate(155%);backdrop-filter:blur(24px) saturate(155%);
+}
+div[role="dialog"][aria-label="MaseNet access verification"]>section>div:nth-of-type(3) label{
+  border:1px dashed rgba(174,211,255,.55)!important;background:rgba(255,255,255,.075)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1);transition:background .2s ease,border-color .2s ease;
+}
+div[role="dialog"][aria-label="MaseNet access verification"]>section button{
+  transition:transform .2s ease,filter .2s ease,box-shadow .2s ease!important;
+}
+div[role="dialog"][aria-label="MaseNet access verification"]>section button:not(:disabled):active{
+  transform:scale(.975)!important;filter:brightness(1.12);
+}
+div[role="dialog"][aria-label="MaseNet access verification"]>section button:focus-visible,
+div[role="dialog"][aria-label="MaseNet access verification"]>section a:focus-visible{
+  outline:2px solid #83e8ff!important;outline-offset:3px;
+}
+@keyframes masenetGateEnter{from{opacity:0;transform:translateY(18px) scale(.975);filter:blur(8px)}to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
+@keyframes masenetGateCardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes masenetGateSheen{0%,100%{transform:translateX(-42%) rotate(8deg)}50%{transform:translateX(42%) rotate(8deg)}}
+@keyframes masenetGateOrb{0%,100%{transform:translate3d(0,0,0) scale(1);opacity:.55}50%{transform:translate3d(-30px,24px,0) scale(1.25);opacity:1}}
+@media(hover:hover){
+ div[role="dialog"][aria-label="MaseNet access verification"]>section>div:nth-of-type(2)>a:hover{
+  transform:translateY(-2px);border-color:rgba(134,220,255,.48)!important;
+  background:rgba(255,255,255,.105)!important;box-shadow:0 12px 28px rgba(30,126,255,.13),inset 0 1px 0 rgba(255,255,255,.18);
+ }
+}
+@media(max-width:520px){
+ div[role="dialog"][aria-label="MaseNet access verification"]>section{border-radius:26px!important;padding:18px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ div[role="dialog"][aria-label="MaseNet access verification"]>section,
+ div[role="dialog"][aria-label="MaseNet access verification"]>section:before,
+ div[role="dialog"][aria-label="MaseNet access verification"]>section:after,
+ div[role="dialog"][aria-label="MaseNet access verification"]>section>div:nth-of-type(2)>a{
+  animation:none!important;transition:none!important
+ }
+}
