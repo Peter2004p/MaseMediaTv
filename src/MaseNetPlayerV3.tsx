@@ -14,7 +14,7 @@ const isHls=(url:string,mime='')=>/\.m3u8(?:$|[?#])/i.test(url)||/mpegurl/i.test
 
 export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,onPlaybackStarted,onPlaybackEnded,onPlaybackStateChange,resumeAtSeconds=0,autoPlay=false,muted=false,reelMode=false}:Props){
  const videoRef=useRef<HTMLVideoElement>(null),rootRef=useRef<HTMLElement>(null),hlsRef=useRef<Hls|null>(null);
- const retryCount=useRef(0),resumeApplied=useRef(false),lastPositionSent=useRef(-1);
+ const resumeApplied=useRef(false),lastPositionSent=useRef(-1);
  const variants=useMemo(()=>{const list=episode.qualities?.length?[...episode.qualities]:[{quality:episode.quality,streamUrl:episode.streamUrl,mimeType:episode.mimeType,subtitleTracks:episode.subtitleTracks}];return list.filter((v,i)=>v.streamUrl&&list.findIndex(x=>x.quality===v.quality)===i);},[episode]);
  const [variantIndex,setVariantIndex]=useState(0),[sourceIndex,setSourceIndex]=useState(0),[attempt,setAttempt]=useState(0);
  const selected=variants[Math.min(variantIndex,Math.max(0,variants.length-1))]||variants[0];
@@ -26,16 +26,10 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
  const externalTracks=(selected?.subtitleTracks||episode.subtitleTracks||[]).filter(t=>/\.vtt(?:$|[?#])/i.test(t.url||t.path||'')).map(t=>({...t,url:t.url||t.path||''}));
  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[playing,setPlaying]=useState(false),[time,setTime]=useState(0),[duration,setDuration]=useState(0);
  const [volume,setVolume]=useState(1),[mutedState,setMutedState]=useState(muted),[speed,setSpeed]=useState(1),[qualityMenu,setQualityMenu]=useState(false),[subtitleMenu,setSubtitleMenu]=useState(false),[audioMenu,setAudioMenu]=useState(false),[settingsMenu,setSettingsMenu]=useState(false);
- const [hlsSubs,setHlsSubs]=useState<HlsTrack[]>([]),[hlsAudios,setHlsAudios]=useState<HlsTrack[]>([]),[activeSubtitle,setActiveSubtitle]=useState('off'),[activeAudio,setActiveAudio]=useState(-1);
+ const [hlsSubs,setHlsSubs]=useState<HlsTrack[]>([]),[hlsAudios,setHlsAudios]=useState<HlsTrack[]>([]);
  const [full,setFull]=useState(false);
  const advanceSource=useCallback((message:string)=>{setError(message);setLoading(false);if(sourceIndex+1<sources.length){setSourceIndex(n=>n+1);setLoading(true);return;}if(variantIndex+1<variants.length){setVariantIndex(n=>n+1);setSourceIndex(0);retryCount.current=0;setLoading(true);return;}setError(message||'This source could not be played. It may be offline, expired, blocked by its host, or encoded with a browser-unsupported codec.');},[sourceIndex,sources.length,variantIndex,variants.length]);
- useEffect(()=>{setVariantIndex(0);setSourceIndex(0);setAttempt(0);retryCount.current=0;resumeApplied.current=false;lastPositionSent.current=-1;setError('');setTime(0);setDuration(0);setActiveSubtitle('off');setActiveAudio(-1);},[episode.id]);
- useEffect(()=>{
-  if(!mkv)return;
-  let alive=true;setLoading(true);setError('');
-  const watchdog=window.setTimeout(()=>{if(alive){setLoading(false);setError('The Matroska engine is taking too long to initialise. Retry or try another saved quality.');}},25000);
-  return()=>{alive=false;window.clearTimeout(watchdog);};
- },[mkv,episode.id,url]);
+ useEffect(()=>{setVariantIndex(0);setSourceIndex(0);setAttempt(0);retryCount.current=0;resumeApplied.current=false;lastPositionSent.current=-1;setError('');setTime(0);setDuration(0);},[episode.id]);
  useEffect(()=>{
   const video=videoRef.current;if(!video||mkv)return;
   let alive=true,networkRetries=0,mediaRetries=0;
@@ -70,15 +64,15 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
   return()=>{alive=false;hlsRef.current?.destroy();hlsRef.current=null;video.pause();video.removeAttribute('src');video.load();video.removeEventListener('loadedmetadata',onMetadata);video.removeEventListener('canplay',onCanPlay);video.removeEventListener('waiting',onWaiting);video.removeEventListener('playing',onPlaying);video.removeEventListener('pause',onPause);video.removeEventListener('timeupdate',onTime);video.removeEventListener('ended',onEnd);video.removeEventListener('error',onError);};
  },[episode.id,url,activeSrc,hlsSource,mkv,attempt,variantIndex,sourceIndex,resumeAtSeconds,advanceSource]);
  useEffect(()=>{const root=rootRef.current;if(!root)return;const sync=()=>setFull(!!document.fullscreenElement||(document as Document&{webkitFullscreenElement?:Element}).webkitFullscreenElement===root||root.classList.contains('mnv3-fallback-full'));document.addEventListener('fullscreenchange',sync);document.addEventListener('webkitfullscreenchange',sync as EventListener);return()=>{document.removeEventListener('fullscreenchange',sync);document.removeEventListener('webkitfullscreenchange',sync as EventListener);};},[]);
- const retry=()=>{retryCount.current=0;setError('');setVariantIndex(0);setSourceIndex(0);setAttempt(n=>n+1);setLoading(true);};
+ const retry=()=>{setError('');setVariantIndex(0);setSourceIndex(0);setAttempt(n=>n+1);setLoading(true);};
  const togglePlay=()=>{const v=videoRef.current;if(!v)return;if(v.paused)void v.play().catch(()=>setError('Playback was blocked. Tap Play once more to start the video.'));else v.pause();};
  const seek=(seconds:number)=>{const v=videoRef.current;if(v&&Number.isFinite(v.duration))v.currentTime=Math.max(0,Math.min(v.duration,seconds));};
  const changeVolume=(n:number)=>{setVolume(n);setMutedState(n===0);if(videoRef.current){videoRef.current.volume=n;videoRef.current.muted=n===0;}};
  const toggleMute=()=>{const next=!mutedState;setMutedState(next);if(videoRef.current)videoRef.current.muted=next;};
  const toggleFullscreen=async()=>{const root=rootRef.current as (HTMLElement&{webkitRequestFullscreen?:()=>Promise<void>|void})|null;const video=videoRef.current as (HTMLVideoElement&{webkitEnterFullscreen?:()=>void})|null;if(!root)return;const doc=document as Document&{webkitFullscreenElement?:Element;webkitExitFullscreen?:()=>void};const orientation=(screen as Screen&{orientation?:ScreenOrientation&{lock?:(v:'landscape')=>Promise<void>;unlock?:()=>void}}).orientation;try{if(document.fullscreenElement||doc.webkitFullscreenElement){if(document.exitFullscreen)await document.exitFullscreen();else doc.webkitExitFullscreen?.();orientation?.unlock?.();root.classList.remove('mnv3-fallback-full');setFull(false);return;}if(video?.webkitEnterFullscreen&&/iPhone|iPod/i.test(navigator.userAgent)){video.webkitEnterFullscreen();setFull(true);return;}const request=root.requestFullscreen||root.webkitRequestFullscreen;if(request){await request.call(root);setFull(true);try{await orientation?.lock?.('landscape');}catch{/* Browser does not permit orientation locking. */}}else{root.classList.add('mnv3-fallback-full');setFull(true);}}catch{root.classList.add('mnv3-fallback-full');setFull(true);}};
  const togglePip=async()=>{const v=videoRef.current as (HTMLVideoElement&{requestPictureInPicture?:()=>Promise<PictureInPictureWindow>})|null;if(!v?.requestPictureInPicture)return;try{if(document.pictureInPictureElement)await document.exitPictureInPicture();else await v.requestPictureInPicture();}catch{setError('Picture-in-picture is not available in this browser or Telegram WebView.');}};
- const chooseSubtitle=(index:number)=>{const engine=hlsRef.current;if(engine&&hlsSubs.length){engine.subtitleDisplay=index>=0;engine.subtitleTrack=index;setActiveSubtitle(index<0?'off':'hls-'+index);}else{const v=videoRef.current;if(v){Array.from(v.textTracks).forEach((t,i)=>t.mode=index===i?'showing':'disabled');setActiveSubtitle(index<0?'off':'external-'+index);}}setSubtitleMenu(false);};
- const chooseAudio=(index:number)=>{const engine=hlsRef.current;if(engine){engine.audioTrack=index;setActiveAudio(index);}setAudioMenu(false);};
+ const chooseSubtitle=(index:number)=>{const engine=hlsRef.current;const v=videoRef.current;if(engine){const hlsIndex=index>=0&&index<hlsSubs.length?index:-1;engine.subtitleDisplay=hlsIndex>=0;engine.subtitleTrack=hlsIndex;}if(v){const externalIndex=index<0?-1:index-hlsSubs.length;Array.from(v.textTracks).forEach((t,i)=>t.mode=i===externalIndex?'showing':'disabled');}setSubtitleMenu(false);};
+ const chooseAudio=(index:number)=>{const engine=hlsRef.current;if(engine)engine.audioTrack=index;setAudioMenu(false);};
  const changeSpeed=(n:number)=>{setSpeed(n);if(videoRef.current)videoRef.current.playbackRate=n;};
  const qualityOptions=variants.map((v,i)=>({label:v.quality,index:i}));
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(!rootRef.current||!rootRef.current.contains(document.activeElement))return;if(['INPUT','SELECT','TEXTAREA'].includes((document.activeElement as HTMLElement)?.tagName))return;if(e.key===' '){e.preventDefault();togglePlay();}if(e.key==='ArrowLeft')seek((videoRef.current?.currentTime||0)-10);if(e.key==='ArrowRight')seek((videoRef.current?.currentTime||0)+10);if(e.key.toLowerCase()==='m')toggleMute();if(e.key.toLowerCase()==='f')void toggleFullscreen();};rootRef.current?.addEventListener('keydown',onKey);return()=>rootRef.current?.removeEventListener('keydown',onKey);});
