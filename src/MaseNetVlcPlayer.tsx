@@ -9,11 +9,13 @@ const trackLabel=(t:any,index:number)=>{const language=cleanLanguage(t.language|
 
 export default function MaseNetVlcPlayer({src,fallbackSrc,title="MaseNet video",onProgress,onPlaybackPosition,onPlaybackStarted,onPlaybackEnded,onPlaybackStateChange,resumeAtSeconds=0,autoPlay=false}:Props){
  const root=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),overlay=useRef<HTMLDivElement>(null),engine=useRef<any>(null);
+ const retryTimer=useRef<ReturnType<typeof setTimeout>|null>(null),automaticRetries=useRef(0);
  const [directMode,setDirectMode]=useState(false),[retry,setRetry]=useState(0);
  const playbackSrc=directMode&&fallbackSrc?fallbackSrc:src;
- useEffect(()=>{setDirectMode(false);setRetry(0);},[src,fallbackSrc]);
+ useEffect(()=>{if(retryTimer.current)clearTimeout(retryTimer.current);retryTimer.current=null;automaticRetries.current=0;setDirectMode(false);setRetry(0);},[src,fallbackSrc]);
  const [status,setStatus]=useState("loading"),[error,setError]=useState(""),[time,setTime]=useState(0),[duration,setDuration]=useState(0),[subs,setSubs]=useState<Track[]>([]),[audios,setAudios]=useState<Track[]>([]),[subId,setSubId]=useState<number|null>(null),[audioId,setAudioId]=useState<number|null>(null),[menu,setMenu]=useState<"sub"|"audio"|"settings"|null>(null),[rate,setRate]=useState(1),[volume,setVolume]=useState(1),[delay,setDelay]=useState(0);
  useEffect(()=>{let live=true,instance:any=null,observer:ResizeObserver|undefined;
+  const scheduleRetry=(message:string)=>{if(!live)return;if(automaticRetries.current>=2){setError(message);setStatus("error");return;}const attempt=++automaticRetries.current;setError("Connection interrupted. Retrying playback ("+attempt+"/2)…");setStatus("loading");retryTimer.current=setTimeout(()=>{if(live){setError("");setRetry(n=>n+1);}},attempt===1?1200:3000);};
   const start=async()=>{try{
    const mod:any=await import("movi-player/player");if(!live||!canvas.current)return;
    const Player=mod.MoviPlayer||mod.default;if(!Player)throw new Error("MaseNet playback engine failed to initialize.");
@@ -25,13 +27,13 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,title="MaseNet video",
    instance.on?.("durationChange",(d:number)=>{if(live)setDuration(d);});
    instance.on?.("stateChange",(s:string)=>{if(!live)return;setStatus(s);if(s==="playing")onPlaybackStarted?.();onPlaybackStateChange?.(s==="playing",instance.getCurrentTime?.()||0);});
    instance.on?.("ended",()=>{if(live){setStatus("ended");onPlaybackEnded?.();}});
-   instance.on?.("error",(e:any)=>{if(live){setError(e?.message||"The MKV decoder reported an error.");setStatus("error");}});
+   instance.on?.("error",(e:any)=>{if(!live)return;const message=String(e?.message||"The MKV decoder reported an error.");if(/network|fetch|timeout|timed out|connection|HTTP 5\d\d|failed to load/i.test(message)){scheduleRetry(message);return;}setError(message);setStatus("error");});
    await instance.load();if(!live)return;sync();setDuration(instance.getDuration?.()||0);setStatus("ready");
    if(resumeAtSeconds>0)await instance.seek(Math.min(resumeAtSeconds,Math.max(0,(instance.getDuration?.()||resumeAtSeconds)-1)));
    if(autoPlay){try{await instance.play();}catch{/* user gesture may be required */}}
    if(canvas.current&&typeof ResizeObserver!=="undefined"){observer=new ResizeObserver(entries=>{const r=entries[0]?.contentRect;if(r)instance?.resizeCanvas?.(Math.round(r.width*devicePixelRatio),Math.round(r.height*devicePixelRatio));});observer.observe(canvas.current);}
-  }catch(e:any){if(live){setError(e?.message||"Unable to open this MKV stream.");setStatus("error");}}};
-  void start();return()=>{live=false;observer?.disconnect();try{instance?.destroy?.();}catch{}engine.current=null;};
+  }catch(e:any){if(live){const message=String(e?.message||"Unable to open this MKV stream.");if(/network|fetch|timeout|timed out|connection|HTTP 5\d\d|failed to load/i.test(message))scheduleRetry(message);else{setError(message);setStatus("error");}}}};
+  void start();return()=>{live=false;if(retryTimer.current)clearTimeout(retryTimer.current);retryTimer.current=null;observer?.disconnect();try{instance?.destroy?.();}catch{}engine.current=null;};
  },[playbackSrc,retry]);
  const p=()=>engine.current;
  const toggle=async()=>{try{if(p()?.getState?.()==="playing")p().pause();else await p()?.play();}catch(e:any){setError(e?.message||"Tap Play to start playback.");}};
@@ -41,7 +43,7 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,title="MaseNet video",
  const delayBy=(n:number)=>{const next=delay+n;setDelay(next);p()?.setSubtitleDelay?.(next);};
  const fullscreen=()=>{const el=root.current as any;if(el?.requestFullscreen)void el.requestFullscreen();else el?.webkitRequestFullscreen?.();};
  return <section ref={root} className="mnvlc" aria-label={title}>
-  <div className="mnvlcScreen"><canvas ref={canvas}/><div ref={overlay} className="mnvlcSubtitleLayer"/>{status!=="playing"&&status!=="loading"&&!error&&<button type="button" className="mnvlcPlay" aria-label="Play video" onClick={()=>void toggle()}>▶</button>}{status==="loading"&&<div className="mnvlcMessage">Opening MKV and reading embedded tracks…</div>}{error&&<div className="mnvlcMessage mnvlcError"><b>Playback error</b><span>{error}</span><div className="mnvlcRow"><button onClick={()=>{setError("");setStatus("loading");setRetry(n=>n+1);}}>Retry</button>{fallbackSrc&&!directMode&&<button onClick={()=>{setError("");setStatus("loading");setDirectMode(true);}}>Try direct source</button>}</div></div>}</div>
+  <div className="mnvlcScreen"><canvas ref={canvas}/><div ref={overlay} className="mnvlcSubtitleLayer"/>{status!=="playing"&&status!=="loading"&&!error&&<button type="button" className="mnvlcPlay" aria-label="Play video" onClick={()=>void toggle()}>▶</button>}{status==="loading"&&<div className="mnvlcMessage">Opening MKV and reading embedded tracks…</div>}{error&&<div className="mnvlcMessage mnvlcError"><b>Playback error</b><span>{error}</span><div className="mnvlcRow"><button onClick={()=>{automaticRetries.current=0;setError("");setStatus("loading");setRetry(n=>n+1);}}>Retry</button>{fallbackSrc&&!directMode&&<button onClick={()=>{automaticRetries.current=0;setError("");setStatus("loading");setDirectMode(true);}}>Try direct source</button>}</div></div>}</div>
   <div className="mnvlcControls"><input aria-label="Seek" type="range" min="0" max={Math.max(1,duration)} step=".1" value={Math.min(time,duration||0)} onChange={e=>seek(Number(e.target.value))}/>
    <div className="mnvlcRow"><button onClick={()=>void toggle()}>{status==="playing"?"Ⅱ":"▶"}</button><button onClick={()=>seek(time-10)}>−10s</button><button onClick={()=>seek(time+10)}>+10s</button><span>{stamp(time)} / {stamp(duration)}</span><button onClick={()=>setMenu(menu==="sub"?null:"sub")}>Subtitles {subs.length}</button><button onClick={()=>setMenu(menu==="audio"?null:"audio")}>Audio {audios.length}</button><button onClick={()=>setMenu(menu==="settings"?null:"settings")}>⚙</button><button onClick={fullscreen}>⛶</button></div>
    {menu==="sub"&&<div className="mnvlcMenu"><b>Embedded subtitles</b><button onClick={()=>void selectSub(null)}>Off</button>{subs.map((t,i)=><button key={t.id??i} onClick={()=>void selectSub(t.id)}>{trackLabel(t,i)}{t.codec?" · "+String(t.codec).toUpperCase():""}{t.forced?" · Forced":""}</button>)}{!subs.length&&<small>No subtitle tracks reported by the MKV demuxer.</small>}<div className="mnvlcRow"><button onClick={()=>delayBy(-.5)}>−0.5s</button><button onClick={()=>delayBy(.5)}>+0.5s</button><small>Delay {delay.toFixed(1)}s</small></div></div>}
