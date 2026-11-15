@@ -37,8 +37,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const selected = variants.find(v => v.quality === quality) || variants[0];
   const rawSrc = selected?.streamUrl || episode.streamUrl || '';
   const embed = embedFor(rawSrc, autoPlay);
-  const isHlsSource = /\\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '') || detectedSourceKind === 'hls';
-  const isMkvSource = /\\.mkv(?:$|[?#])/i.test(rawSrc) || /matroska|x-matroska/i.test(selected?.mimeType || episode.mimeType || '') || detectedSourceKind === 'mkv';
+  const isHlsSource = /\.m3u8(?:$|[?#])/i.test(rawSrc) || /mpegurl/i.test(selected?.mimeType || episode.mimeType || '') || detectedSourceKind === 'hls';
+  const isMkvSource = /\.mkv(?:$|[?#])/i.test(rawSrc) || /matroska|x-matroska/i.test(selected?.mimeType || episode.mimeType || '') || detectedSourceKind === 'mkv';
   const tracks = (selected?.subtitleTracks || episode.subtitleTracks || []).filter(t => {
     const value = String(t.url || t.path || '').trim();
     // Native browser tracks require WebVTT. The Matroska player also accepts SRT
@@ -58,8 +58,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   useEffect(() => {
     let active = true;
     setDetectedSourceKind('');
-    const known = /\\.(mkv|m3u8|mp4|m4v|webm)(?:$|[?#])/i.test(rawSrc) ||
-      /matroska|x-matroska|mpegurl|video\\/(mp4|webm)/i.test(selected?.mimeType || episode.mimeType || '');
+    const known = /\.(mkv|m3u8|mp4|m4v|webm)(?:$|[?#])/i.test(rawSrc) ||
+      /matroska|x-matroska|mpegurl|video\/(mp4|webm)/i.test(selected?.mimeType || episode.mimeType || '');
     if (!rawSrc || known) return () => { active = false; };
     fetch(proxyUrl + '&probe=1', { headers: { Range: 'bytes=0-4095' }, credentials: 'same-origin' })
       .then(response => response.ok ? response.json() : null)
