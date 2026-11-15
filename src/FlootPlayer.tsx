@@ -200,7 +200,49 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   useEffect(()=>{if(!syncCommand)return;const video=videoRef.current;if(!video)return;const drift=Math.abs((video.currentTime||0)-syncCommand.currentTime);if(drift>2){try{video.currentTime=Math.max(0,syncCommand.currentTime)}catch{}}if(syncCommand.isPlaying){video.play().catch(()=>setError('Tap play to resume the shared Watch Party stream.'))}else{video.pause()}},[syncCommand?.revision]);
   const playPause = async () => { const v = videoRef.current; if (!v) return; setError(''); try { if (v.paused) await v.play(); else v.pause(); } catch { setError('Playback was blocked or the video URL is not playable. Tap Retry or choose another quality.'); } };
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
-  const fullscreen = async () => { const el = videoRef.current?.parentElement; try { if (document.fullscreenElement) await document.exitFullscreen(); else await el?.requestFullscreen(); } catch { /* Browser restrictions */ } };
+  const [fullscreenActive, setFullscreenActive] = useState(false);
+  useEffect(() => {
+    const root = videoRef.current?.closest('.flootStylePlayer') as HTMLElement | null;
+    const sync = () => setFullscreenActive(!!document.fullscreenElement || !!(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement || !!root?.classList.contains('fspFallbackFullscreen'));
+    document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync as EventListener);
+    return () => { document.removeEventListener('fullscreenchange', sync); document.removeEventListener('webkitfullscreenchange', sync as EventListener); };
+  }, []);
+  const fullscreen = async () => {
+    const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    const root = video?.closest('.flootStylePlayer') as HTMLElement | null;
+    if (!video || !root) return;
+    try {
+      if (document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else (document as Document & { webkitExitFullscreen?: () => void }).webkitExitFullscreen?.();
+        root.classList.remove('fspFallbackFullscreen');
+        setFullscreenActive(false);
+        return;
+      }
+      const target = root.querySelector('.flootStyleFrame') as HTMLElement | null;
+      const request = target?.requestFullscreen || (target as (HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }) | null)?.webkitRequestFullscreen;
+      if (request) {
+        await request.call(target);
+        setFullscreenActive(true);
+        return;
+      }
+      // iOS Safari supports native fullscreen on the video element only.
+      if (video.webkitEnterFullscreen) {
+        video.webkitEnterFullscreen();
+        setFullscreenActive(true);
+        return;
+      }
+      // Telegram/Android WebViews may omit Fullscreen API; emulate it with a fixed viewport layer.
+      root.classList.add('fspFallbackFullscreen');
+      setFullscreenActive(true);
+    } catch (error) {
+      // Do not silently swallow fullscreen failures; use the in-page fallback.
+      root.classList.add('fspFallbackFullscreen');
+      setFullscreenActive(true);
+      console.warn('MaseNet fullscreen fallback activated:', error);
+    }
+  };
   const pictureInPicture = async () => { const v = videoRef.current as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null; if (!v) return; try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled && v.requestPictureInPicture) { await v.requestPictureInPicture(); } else { setError('Picture-in-Picture is not supported in this browser or Telegram webview. Use Fullscreen instead.'); } } catch { setError('Picture-in-Picture could not start. Try playing the video first, or use Fullscreen.'); } };
   const retrySource = () => { proxiedFallbackRef.current = false; hlsProbeRef.current = false; nativeRetryRef.current=0; failedVariantUrlsRef.current.clear(); setError(''); setBuffering(true); setRetry(x => x + 1); };
 
