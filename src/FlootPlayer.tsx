@@ -201,43 +201,52 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const playPause = async () => { const v = videoRef.current; if (!v) return; setError(''); try { if (v.paused) await v.play(); else v.pause(); } catch { setError('Playback was blocked or the video URL is not playable. Tap Retry or choose another quality.'); } };
   const seek = (by: number) => { const v = videoRef.current; if (v && Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + by)); };
   const [fullscreenActive, setFullscreenActive] = useState(false);
+  const [landscapeReady, setLandscapeReady] = useState(typeof window !== 'undefined' ? window.innerWidth > window.innerHeight : false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealPlayerControls = () => { setControlsVisible(true); if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current); if (playing && !subtitleMenuOpen) controlsTimerRef.current = setTimeout(() => setControlsVisible(false), 4000); };
+  useEffect(() => { revealPlayerControls(); return () => { if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current); }; }, [playing, subtitleMenuOpen]);
   useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
     const root = videoRef.current?.closest('.flootStylePlayer') as HTMLElement | null;
-    const sync = () => setFullscreenActive(!!document.fullscreenElement || !!(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement || !!root?.classList.contains('fspFallbackFullscreen'));
-    document.addEventListener('fullscreenchange', sync);
-    document.addEventListener('webkitfullscreenchange', sync as EventListener);
-    return () => { document.removeEventListener('fullscreenchange', sync); document.removeEventListener('webkitfullscreenchange', sync as EventListener); };
+    const update = () => { const wide = window.innerWidth > window.innerHeight; setLandscapeReady(wide); if (wide && tg?.isFullscreen && !tg?.isOrientationLocked) { try { tg.lockOrientation?.(); } catch {} } };
+    const sync = () => setFullscreenActive(!!document.fullscreenElement || !!(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement || !!root?.classList.contains('fspFallbackFullscreen') || !!tg?.isFullscreen);
+    const failed = () => setFullscreenActive(false);
+    window.addEventListener('resize', update); window.addEventListener('orientationchange', update);
+    document.addEventListener('fullscreenchange', sync); document.addEventListener('webkitfullscreenchange', sync as EventListener);
+    tg?.onEvent?.('fullscreenChanged', sync); tg?.onEvent?.('fullscreenFailed', failed);
+    update(); sync();
+    return () => { window.removeEventListener('resize', update); window.removeEventListener('orientationchange', update); document.removeEventListener('fullscreenchange', sync); document.removeEventListener('webkitfullscreenchange', sync as EventListener); tg?.offEvent?.('fullscreenChanged', sync); tg?.offEvent?.('fullscreenFailed', failed); };
   }, []);
   const fullscreen = async () => {
     const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
     const root = video?.closest('.flootStylePlayer') as HTMLElement | null;
-    if (!video || !root) return;
+    const tg = (window as any).Telegram?.WebApp;
+    const doc = document as any;
+    if (!root) return;
     try {
-      if (document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) {
-        if (document.exitFullscreen) await document.exitFullscreen();
-        else (document as Document & { webkitExitFullscreen?: () => void }).webkitExitFullscreen?.();
+      const active = !!document.fullscreenElement || !!doc.webkitFullscreenElement || !!root.classList.contains('fspFallbackFullscreen') || !!tg?.isFullscreen;
+      if (active) {
+        if (tg?.exitFullscreen && tg.isFullscreen) tg.exitFullscreen();
+        else if (document.exitFullscreen) await document.exitFullscreen();
+        else doc.webkitExitFullscreen?.();
         root.classList.remove('fspFallbackFullscreen');
+        try { (screen.orientation as any)?.unlock?.(); } catch {}
+        try { tg?.unlockOrientation?.(); } catch {}
         setFullscreenActive(false);
         return;
       }
-      const target = root.querySelector('.flootStyleFrame') as HTMLElement | null;
-      const request = target?.requestFullscreen || (target as (HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }) | null)?.webkitRequestFullscreen;
-      if (request) {
-        await request.call(target);
-        setFullscreenActive(true);
-        return;
+      if (tg?.requestFullscreen) tg.requestFullscreen();
+      else {
+        const target = root.querySelector('.flootStyleFrame') as HTMLElement | null;
+        const request = target?.requestFullscreen || (target as (HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }) | null)?.webkitRequestFullscreen;
+        if (request) await request.call(target);
+        else if (video?.webkitEnterFullscreen) video.webkitEnterFullscreen();
+        else root.classList.add('fspFallbackFullscreen');
       }
-      // iOS Safari supports native fullscreen on the video element only.
-      if (video.webkitEnterFullscreen) {
-        video.webkitEnterFullscreen();
-        setFullscreenActive(true);
-        return;
-      }
-      // Telegram/Android WebViews may omit Fullscreen API; emulate it with a fixed viewport layer.
-      root.classList.add('fspFallbackFullscreen');
       setFullscreenActive(true);
+      try { await (screen.orientation as any)?.lock?.('landscape'); } catch { /* Embedded webviews may require the user to rotate the device. */ }
     } catch (error) {
-      // Do not silently swallow fullscreen failures; use the in-page fallback.
       root.classList.add('fspFallbackFullscreen');
       setFullscreenActive(true);
       console.warn('MaseNet fullscreen fallback activated:', error);
@@ -270,14 +279,14 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     />;
   }
 
-  return <div className={`flootStylePlayer${reelMode ? ' reelMode' : ''}`}>
+  return <div className={`flootStylePlayer ${controlsVisible ? 'fspControlsVisible' : 'fspControlsHidden'}${reelMode ? ' reelMode' : ''}`} onPointerMove={revealPlayerControls} onTouchStart={revealPlayerControls}>
     <div className="flootStyleFrame">
-      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload={autoPlay ? "auto" : "metadata"} autoPlay={autoPlay} muted={muted} controls={!reelMode} onClick={reelMode ? playPause : undefined}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
-      {buffering && <div className="fspStatus">⏳ Buffering…</div>}
+      {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload={autoPlay ? "auto" : "metadata"} autoPlay={autoPlay} muted={muted} controls={false} onClick={reelMode ? playPause : undefined}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
+      {fullscreenActive && !landscapeReady && <div className="fspOrientationHint">Rotate your phone sideways for landscape playback</div>}{buffering && <div className="fspStatus">⏳ Buffering…</div>}
       {error && <div className="fspError" role="alert"><strong>Playback issue</strong><span>{error}</span><button onClick={retrySource}>Retry</button></div>}
       {!embed && !playing && !error && <button className="fspBigPlay" onClick={playPause} aria-label="Play video">▶</button>}
     </div>
-    {!embed && <div className="fspControls">
+    {!embed && <div className="fspControls" onClick={revealPlayerControls}>
       <div className="fspRow"><button onClick={playPause} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Ⅱ' : '▶'}</button><button onClick={() => seek(-10)} aria-label="Back 10 seconds">↶ 10s</button><button onClick={() => seek(10)} aria-label="Forward 10 seconds">10s ↷</button><span className="fspTime">{timeLabel(time)} / {timeLabel(duration)}</span><button onClick={pictureInPicture} aria-label="Picture in Picture" title="Picture in Picture">▣</button><button onClick={fullscreen} aria-label="Fullscreen">⛶</button></div>
       <input className="fspSeek" aria-label="Seek video" type="range" min={0} max={duration || 0} step="0.1" value={Math.min(time, duration || 0)} onChange={e => { const n = Number(e.target.value); if (videoRef.current) videoRef.current.currentTime = n; setTime(n); }} />
       <div className="fspRow fspOptions">
@@ -287,7 +296,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
         <label>Volume <input type="range" min={0} max={1} step={0.05} value={volume} onChange={e => setVolume(Number(e.target.value))}/></label>
       </div>
     </div>}
-    <style>{`.flootStylePlayer{width:100%;color:#f6f4ef;background:#08090d;border:1px solid #ffffff20;border-radius:18px;overflow:hidden}.fspMkvNotice{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;padding:20px;box-sizing:border-box;text-align:center;background:radial-gradient(ellipse at top,#252a39,#050609 75%);overflow:auto}.fspMkvNotice p{max-width:540px;color:#d0d3dc;font-size:13px;line-height:1.5;margin:0}.fspMkvIcon{border:1px solid #ffffff40;background:#ffffff12;border-radius:14px;padding:10px 14px;font-weight:800;letter-spacing:2px}.fspVlcButton{display:inline-flex;align-items:center;justify-content:center;background:#e8c77a;color:#17120a;text-decoration:none;font-weight:800;border-radius:999px;padding:10px 18px;margin-top:3px}.fspDirectLink{color:#eee;text-decoration:underline;font-size:12px}.fspMkvNotice small{color:#aeb4c4;font-size:11px;max-width:520px}.flootStyleFrame{position:relative;aspect-ratio:16/9;background:#000;display:grid;place-items:center}.flootStyleFrame video,.flootStyleFrame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:contain;background:#000}.fspStatus{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:#10131bd9;border:1px solid #ffffff24;border-radius:999px;padding:7px 12px;font-size:12px}.fspError{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;padding:20px;background:#08090de8;font-size:13px}.fspError button{padding:8px 15px;border-radius:999px;background:#e8c77a;color:#17120a;border:0;font-weight:700}.fspBigPlay{position:absolute;z-index:2;border:1px solid #ffffff55;border-radius:50%;width:66px;height:66px;background:#d9b96b;color:#17120a;font-size:24px}.fspControls{padding:10px 12px;background:linear-gradient(#15171d,#090a0e)}.fspRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fspRow button{border:1px solid #ffffff1f;border-radius:9px;background:#ffffff0b;color:inherit;padding:7px 10px;min-height:34px}.fspTime{font-variant-numeric:tabular-nums;font-size:12px;color:#c5c5cb}.fspSeek{width:100%;margin:8px 0;accent-color:#dfbf74}.fspOptions{justify-content:space-between;font-size:12px;color:#d1d1d7}.fspOptions label{display:flex;align-items:center;gap:5px}.fspOptions select{max-width:130px;background:#191b22;color:#fff;border:1px solid #ffffff24;border-radius:8px;padding:6px}.fspOptions input[type=range]{width:70px;accent-color:#dfbf74}@media(max-width:560px){.fspOptions{align-items:flex-start;justify-content:flex-start;gap:10px}.fspOptions label{font-size:11px}.fspOptions select{max-width:105px}}.flootStylePlayer{border-radius:22px;border:1px solid rgba(255,255,255,.13);background:linear-gradient(145deg,#10131c,#050609 70%);box-shadow:0 22px 55px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.09);overflow:hidden;isolation:isolate}.flootStyleFrame{aspect-ratio:16/9;min-height:190px;max-height:72vh;background:radial-gradient(ellipse at 50% 20%,rgba(99,110,150,.13),transparent 62%),#020204}.flootStyleFrame:after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid rgba(255,255,255,.045);box-shadow:inset 0 0 45px rgba(0,0,0,.18)}.flootStyleFrame video,.flootStyleFrame iframe{object-fit:contain}.fspControls{padding:12px 14px 14px;background:linear-gradient(180deg,rgba(23,26,36,.98),rgba(7,8,12,.99));border-top:1px solid rgba(255,255,255,.08)}.fspRow button{border:1px solid rgba(255,255,255,.13);border-radius:12px;background:linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.035));box-shadow:inset 0 1px rgba(255,255,255,.07);transition:transform .18s ease,border-color .18s ease,background .18s ease}.fspRow button:hover{border-color:rgba(231,199,122,.55);background:rgba(231,199,122,.1)}.fspRow button:active{transform:scale(.95)}.fspSeek{height:5px;border-radius:999px;cursor:pointer}.fspOptions{gap:12px;padding-top:2px}
+    <style>{`.flootStylePlayer.fspControlsHidden .fspControls{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s}.flootStylePlayer.fspControlsVisible .fspControls{opacity:1;visibility:visible;transition:opacity .18s}.fspOrientationHint{position:absolute;z-index:5;top:14px;left:50%;transform:translateX(-50%);max-width:90%;padding:9px 13px;border-radius:999px;background:#10141ddd;color:#fff;font-size:12px;text-align:center;pointer-events:none}.flootStylePlayer:fullscreen .fspControls,.flootStylePlayer.fspFallbackFullscreen .fspControls{position:absolute;left:0;right:0;bottom:0;z-index:8;padding:12px max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:linear-gradient(transparent,#050609ed)}.flootStylePlayer{width:100%;color:#f6f4ef;background:#08090d;border:1px solid #ffffff20;border-radius:18px;overflow:hidden}.fspMkvNotice{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;padding:20px;box-sizing:border-box;text-align:center;background:radial-gradient(ellipse at top,#252a39,#050609 75%);overflow:auto}.fspMkvNotice p{max-width:540px;color:#d0d3dc;font-size:13px;line-height:1.5;margin:0}.fspMkvIcon{border:1px solid #ffffff40;background:#ffffff12;border-radius:14px;padding:10px 14px;font-weight:800;letter-spacing:2px}.fspVlcButton{display:inline-flex;align-items:center;justify-content:center;background:#e8c77a;color:#17120a;text-decoration:none;font-weight:800;border-radius:999px;padding:10px 18px;margin-top:3px}.fspDirectLink{color:#eee;text-decoration:underline;font-size:12px}.fspMkvNotice small{color:#aeb4c4;font-size:11px;max-width:520px}.flootStyleFrame{position:relative;aspect-ratio:16/9;background:#000;display:grid;place-items:center}.flootStyleFrame video,.flootStyleFrame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:contain;background:#000}.fspStatus{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:#10131bd9;border:1px solid #ffffff24;border-radius:999px;padding:7px 12px;font-size:12px}.fspError{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;padding:20px;background:#08090de8;font-size:13px}.fspError button{padding:8px 15px;border-radius:999px;background:#e8c77a;color:#17120a;border:0;font-weight:700}.fspBigPlay{position:absolute;z-index:2;border:1px solid #ffffff55;border-radius:50%;width:66px;height:66px;background:#d9b96b;color:#17120a;font-size:24px}.fspControls{padding:10px 12px;background:linear-gradient(#15171d,#090a0e)}.fspRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fspRow button{border:1px solid #ffffff1f;border-radius:9px;background:#ffffff0b;color:inherit;padding:7px 10px;min-height:34px}.fspTime{font-variant-numeric:tabular-nums;font-size:12px;color:#c5c5cb}.fspSeek{width:100%;margin:8px 0;accent-color:#dfbf74}.fspOptions{justify-content:space-between;font-size:12px;color:#d1d1d7}.fspOptions label{display:flex;align-items:center;gap:5px}.fspOptions select{max-width:130px;background:#191b22;color:#fff;border:1px solid #ffffff24;border-radius:8px;padding:6px}.fspOptions input[type=range]{width:70px;accent-color:#dfbf74}@media(max-width:560px){.fspOptions{align-items:flex-start;justify-content:flex-start;gap:10px}.fspOptions label{font-size:11px}.fspOptions select{max-width:105px}}.flootStylePlayer{border-radius:22px;border:1px solid rgba(255,255,255,.13);background:linear-gradient(145deg,#10131c,#050609 70%);box-shadow:0 22px 55px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.09);overflow:hidden;isolation:isolate}.flootStyleFrame{aspect-ratio:16/9;min-height:190px;max-height:72vh;background:radial-gradient(ellipse at 50% 20%,rgba(99,110,150,.13),transparent 62%),#020204}.flootStyleFrame:after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid rgba(255,255,255,.045);box-shadow:inset 0 0 45px rgba(0,0,0,.18)}.flootStyleFrame video,.flootStyleFrame iframe{object-fit:contain}.fspControls{padding:12px 14px 14px;background:linear-gradient(180deg,rgba(23,26,36,.98),rgba(7,8,12,.99));border-top:1px solid rgba(255,255,255,.08)}.fspRow button{border:1px solid rgba(255,255,255,.13);border-radius:12px;background:linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.035));box-shadow:inset 0 1px rgba(255,255,255,.07);transition:transform .18s ease,border-color .18s ease,background .18s ease}.fspRow button:hover{border-color:rgba(231,199,122,.55);background:rgba(231,199,122,.1)}.fspRow button:active{transform:scale(.95)}.fspSeek{height:5px;border-radius:999px;cursor:pointer}.fspOptions{gap:12px;padding-top:2px}
   .fspSmartAssist{display:inline-flex;align-items:center;gap:6px;color:#cbd1dc;font-size:11px;white-space:nowrap}.fspSmartDot{width:7px;height:7px;border-radius:50%;background:#8d98a9;box-shadow:0 0 0 3px #8d98a91c}.fspSmartDot.assisting{background:#e8c77a;box-shadow:0 0 0 3px #e8c77a24}.fspSmartDot.recovered{background:#65c98b;box-shadow:0 0 0 3px #65c98b24}.fspSmartDot.unavailable{background:#e58b7b;box-shadow:0 0 0 3px #e58b7b24}.fspOptions label{gap:7px}.fspOptions select{border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.12);max-width:140px}.fspOptions input[type=range]{cursor:pointer}.fspBigPlay{width:72px;height:72px;border:1px solid rgba(255,255,255,.8);box-shadow:0 0 0 9px rgba(255,255,255,.075),0 12px 40px rgba(0,0,0,.35),0 0 35px rgba(232,199,122,.18);transition:transform .22s ease,box-shadow .22s ease}.fspBigPlay:hover{transform:scale(1.07);box-shadow:0 0 0 12px rgba(255,255,255,.07),0 12px 40px rgba(0,0,0,.4)}.fspStatus{background:rgba(15,18,29,.88);border-color:rgba(255,255,255,.16);box-shadow:0 8px 28px rgba(0,0,0,.28);backdrop-filter:blur(16px)}.fspError{background:linear-gradient(145deg,rgba(12,14,21,.97),rgba(4,5,8,.96));backdrop-filter:blur(12px)}.fspError strong{font-size:15px;letter-spacing:-.02em}.fspError span{max-width:470px;color:#c6c8d1;line-height:1.55}.fspError button{border:1px solid rgba(255,226,160,.5);box-shadow:0 5px 18px rgba(210,173,96,.12);transition:transform .18s ease}.fspError button:active{transform:scale(.96)}@media(max-width:560px){.flootStylePlayer{border-radius:17px}.flootStyleFrame{min-height:180px}.fspControls{padding:9px}.fspRow{gap:6px}.fspRow button{padding:7px 9px;border-radius:10px}.fspOptions{gap:9px}.fspOptions select{max-width:112px}.fspBigPlay{width:62px;height:62px}}@media(prefers-reduced-motion:reduce){.fspRow button,.fspBigPlay,.fspError button{transition:none!important}}
 .fspLanguagePreference{display:grid;gap:5px;padding:7px 0;color:#d6d9e1;font-size:12px}.fspLanguagePreference select{width:100%;min-height:36px;border:1px solid rgba(255,255,255,.2);border-radius:9px;background:#161b27;color:#fff;padding:6px 9px}.fspSubtitleControl{position:relative;display:inline-flex;align-items:center}
 .fspSubtitleButton{border:1px solid rgba(255,255,255,.24);border-radius:9px;background:rgba(255,255,255,.08);color:#fff;padding:7px 10px;min-height:34px;font-size:12px;font-weight:700}
