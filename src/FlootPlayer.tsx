@@ -225,38 +225,27 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     const doc = document as any;
     if (!root) return;
     try {
-      const active = !!document.fullscreenElement || !!doc.webkitFullscreenElement || root.classList.contains('fspFallbackFullscreen') || !!tg?.isFullscreen || fullscreenActive;
+      const active = !!document.fullscreenElement || !!doc.webkitFullscreenElement || !!root.classList.contains('fspFallbackFullscreen') || !!tg?.isFullscreen;
       if (active) {
-        if (tg?.isFullscreen && tg?.exitFullscreen) await Promise.resolve(tg.exitFullscreen());
-        else if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
-        else if (doc.webkitFullscreenElement) doc.webkitExitFullscreen?.();
+        if (tg?.exitFullscreen && tg.isFullscreen) tg.exitFullscreen();
+        else if (document.exitFullscreen) await document.exitFullscreen();
+        else doc.webkitExitFullscreen?.();
         root.classList.remove('fspFallbackFullscreen');
         try { (screen.orientation as any)?.unlock?.(); } catch {}
         try { tg?.unlockOrientation?.(); } catch {}
         setFullscreenActive(false);
         return;
       }
-      let hostFullscreen = false;
-      if (tg?.requestFullscreen) {
-        try { await Promise.resolve(tg.requestFullscreen()); } catch {}
-        // Try immediately from the user's tap, then retry after Telegram confirms fullscreen.
-        try { await (screen.orientation as any)?.lock?.('landscape'); } catch {}
-        hostFullscreen = !!tg.isFullscreen || await new Promise<boolean>(resolve => {
-          let finished = false;
-          const finish = (value: boolean) => { if (finished) return; finished = true; tg.offEvent?.('fullscreenChanged', changed); resolve(value); };
-          const changed = () => { if (tg.isFullscreen) finish(true); };
-          tg.onEvent?.('fullscreenChanged', changed);
-          window.setTimeout(() => finish(!!tg.isFullscreen), 1100);
-        });
-      }
-      if (!hostFullscreen && !document.fullscreenElement && !doc.webkitFullscreenElement) {
-        const request = root.requestFullscreen || (root as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
-        if (request) await Promise.resolve(request.call(root));
+      if (tg?.requestFullscreen) tg.requestFullscreen();
+      else {
+        const target = root;
+        const request = target.requestFullscreen || (target as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
+        if (request) await request.call(target);
         else if (video?.webkitEnterFullscreen) video.webkitEnterFullscreen();
         else root.classList.add('fspFallbackFullscreen');
       }
       setFullscreenActive(true);
-      try { await (screen.orientation as any)?.lock?.('landscape'); } catch { /* Keep the in-app landscape fallback visible. */ }
+      try { await (screen.orientation as any)?.lock?.('landscape'); } catch { /* CSS rotates the fullscreen player when orientation locking is unavailable. */ }
     } catch (error) {
       root.classList.add('fspFallbackFullscreen');
       setFullscreenActive(true);
