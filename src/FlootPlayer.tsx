@@ -238,8 +238,8 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       }
       if (tg?.requestFullscreen) tg.requestFullscreen();
       else {
-        const target = root.querySelector('.flootStyleFrame') as HTMLElement | null;
-        const request = target?.requestFullscreen || (target as (HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }) | null)?.webkitRequestFullscreen;
+        const target = root;
+        const request = target.requestFullscreen || (target as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
         if (request) await request.call(target);
         else if (video?.webkitEnterFullscreen) video.webkitEnterFullscreen();
         else root.classList.add('fspFallbackFullscreen');
