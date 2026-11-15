@@ -53,6 +53,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
   const proxyUrl = '/api/media/proxy?episodeId=' + encodeURIComponent(episode.id) + '&source=' + encodeURIComponent(rawSrc);
   const src = isHlsSource ? proxyUrl : rawSrc;
   const mkvProxyUrl = proxyUrl;
+  const mkvAlternateSources=useMemo(()=>variants.filter(v=>v.streamUrl!==rawSrc).map(v=>({src:'/api/media/proxy?episodeId='+encodeURIComponent(episode.id)+'&source='+encodeURIComponent(v.streamUrl),fallbackSrc:v.streamUrl})),[variants,rawSrc,episode.id]);
 
   // Probe extensionless external URLs through the same allow-listed proxy before
   // selecting a player. No media is stored or converted by MaseNet.
@@ -215,6 +216,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return <MaseNetVlcPlayer
       src={mkvProxyUrl}
       fallbackSrc={rawSrc}
+      alternateSources={mkvAlternateSources}
       title={episode.title}
       onProgress={onProgress}
       onPlaybackPosition={onPlaybackPosition}
