@@ -30,6 +30,29 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"
  }
  throw new Error("Too many redirects");
 }
+// External media hosts vary: some reject a synthetic MaseNet Origin/Referer,
+// while others require the legacy browser-like headers. Try a clean server-to-server
+// request first, then retry once with the compatibility headers. This keeps CORS out
+// of the upstream request and avoids making every provider accept the same policy.
+async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
+ const cleanHeaders=new Headers(headers);
+ cleanHeaders.delete("origin");
+ cleanHeaders.delete("referer");
+ const attempts=[cleanHeaders,new Headers(headers)];
+ let lastError:unknown=null;
+ for(let index=0;index<attempts.length;index++) {
+  try {
+   const response=await fetchPublicHttps(url,attempts[index]);
+   const retryable=response.status===401||response.status===403||response.status===429||response.status>=500;
+   if(!retryable||index===attempts.length-1) return response;
+   await response.body?.cancel();
+  } catch(error) {
+   lastError=error;
+  }
+ }
+ throw lastError instanceof Error?lastError:new Error("External media host could not be reached");
+}
+
 // Resolve HLS child resources against the final playlist URL. Some CDNs sign
 // the playlist URL and expect the same authentication query parameters on relative
 // segment, variant, subtitle, and key URLs. Preserve child-specific parameters and
@@ -225,7 +248,13 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  headers.set("referer",reqUrl.origin+"/");
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
- try { upstream=await fetchPublicHttps(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
+ try { upstream=await fetchMediaSource(upstreamUrl,headers); } catch(error) {
+  const reason=error instanceof Error?error.message:"Connection failed";
+  // Keep the host/path and signed query out of the response; expose only a safe
+  // diagnostic so the player can distinguish network failure from provider HTTP errors.
+  const safeReason=reason.slice(0,140);
+  return json({error:"MaseNet could not connect to the external video host. "+safeReason},502);
+ }
  if(!upstream.ok && upstream.status!==206) {
   if(upstream.status===401 || upstream.status===403) return json({error:"The streaming provider rejected this link (HTTP "+upstream.status+"). It may be expired or its signature may no longer be valid. Replace it with a fresh URL from the provider."},upstream.status);
   if(upstream.status===404 || upstream.status===410) return json({error:"The streaming provider says this video or signed link is no longer available (HTTP "+upstream.status+"). Replace it with a fresh URL."},410);
