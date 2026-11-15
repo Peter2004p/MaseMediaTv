@@ -30,7 +30,16 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
    instance.on?.("stateChange",(s:string)=>{if(!live)return;setStatus(s);if(s==="playing"){automaticRetries.current=0;onPlaybackStarted?.();}onPlaybackStateChange?.(s==="playing",instance.getCurrentTime?.()||0);});
    instance.on?.("ended",()=>{if(live){setStatus("ended");onPlaybackEnded?.();}});
    instance.on?.("error",(e:any)=>{if(!live)return;const message=String(e?.message||"The MKV decoder reported an error.");if(/network|fetch|timeout|timed out|connection|HTTP 5\d\d|failed to load/i.test(message)){scheduleRetry(message);return;}if(switchAlternate())return;setError(message);setStatus("error");});
-   await instance.load();if(!live)return;sync();setDuration(instance.getDuration?.()||0);setStatus("ready");
+   // External hosts sometimes accept a request but never finish loading the
+   // Matroska stream. Bound startup time so the UI can retry or fail over.
+   let loadTimer:ReturnType<typeof setTimeout>|undefined;
+   try {
+    await Promise.race([
+     instance.load(),
+     new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error("MKV source did not finish opening within 25 seconds. The external host may be slow or unavailable.")),25000);})
+    ]);
+   } finally { if(loadTimer)clearTimeout(loadTimer); }
+   if(!live)return;sync();setDuration(instance.getDuration?.()||0);setStatus("ready");
    if(resumeAtSeconds>0)await instance.seek(Math.min(resumeAtSeconds,Math.max(0,(instance.getDuration?.()||resumeAtSeconds)-1)));
    if(autoPlay){try{await instance.play();}catch{/* user gesture may be required */}}
    if(canvas.current&&typeof ResizeObserver!=="undefined"){observer=new ResizeObserver(entries=>{const r=entries[0]?.contentRect;if(r)instance?.resizeCanvas?.(Math.round(r.width*devicePixelRatio),Math.round(r.height*devicePixelRatio));});observer.observe(canvas.current);}
