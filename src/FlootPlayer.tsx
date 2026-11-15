@@ -22,7 +22,7 @@ const timeLabel = (value: number) => Number.isFinite(value) ? Math.floor(value /
 const languageMatch=(available:string|undefined,preferred:string)=>{const a=String(available||'').toLowerCase().replace('_','-');const p=preferred.toLowerCase().replace('_','-');return !!p&&p!=='off'&&p!=='auto'&&(a===p||a.startsWith(p+'-')||p.startsWith(a+'-'));};
 
 export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, onPlaybackStarted, onPlaybackEnded, onPlaybackStateChange, syncCommand, profileId, playRequest = 0, resumeAtSeconds = 0, autoPlay = false, muted = false, reelMode = false }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1); const hlsRecoveryTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null); const nativeRetryTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null); const nativeRetryRef = useRef(0); const failedVariantUrlsRef = useRef<Set<string>>(new Set());
+  const lastFullscreenTapRef = useRef(0); const videoRef = useRef<HTMLVideoElement>(null); const hlsRef = useRef<Hls | null>(null); const proxiedFallbackRef = useRef(false); const hlsProbeRef = useRef(false); const lastSavedTimeRef = useRef(-1); const hlsRecoveryTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null); const nativeRetryTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null); const nativeRetryRef = useRef(0); const failedVariantUrlsRef = useRef<Set<string>>(new Set());
   const [quality, setQuality] = useState(''); const [subtitle, setSubtitle] = useState('off'); const [playing, setPlaying] = useState(false); const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(''); const hlsRecoveryAttemptsRef = useRef({ network: 0, media: 0 }); const [nativeSubtitleTracks, setNativeSubtitleTracks] = useState<{label:string;lang:string}[]>([]); const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false); const [subtitleNotice, setSubtitleNotice] = useState(''); const [hlsSubtitleTracks, setHlsSubtitleTracks] = useState<{name?:string;lang?:string}[]>([]); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0);
   const [preferredSubtitleLanguage,setPreferredSubtitleLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-subtitle-language'+(profileId?'-'+profileId:''))||'off'}catch{return 'off'}}); const [preferredAudioLanguage,setPreferredAudioLanguage]=useState(()=>{try{return localStorage.getItem('masenet-preferred-audio-language'+(profileId?'-'+profileId:''))||'auto'}catch{return 'auto'}}); const [hlsAudioTracks,setHlsAudioTracks]=useState<{name?:string;lang?:string}[]>([]); const preferencesHydrated=useRef(false);
@@ -254,6 +254,15 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
       console.warn('MaseNet fullscreen fallback activated:', error);
     }
   };
+  const handleFullscreenDoubleTap = (target: EventTarget | null) => {
+    const element = target as HTMLElement | null;
+    if (element?.closest?.('button,a,input,select,textarea,[role="button"]')) return;
+    const now = Date.now();
+    if (now - lastFullscreenTapRef.current < 320) {
+      lastFullscreenTapRef.current = 0;
+      void fullscreen();
+    } else lastFullscreenTapRef.current = now;
+  };
   const pictureInPicture = async () => { const v = videoRef.current as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null; if (!v) return; try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled && v.requestPictureInPicture) { await v.requestPictureInPicture(); } else { setError('Picture-in-Picture is not supported in this browser or Telegram webview. Use Fullscreen instead.'); } } catch { setError('Picture-in-Picture could not start. Try playing the video first, or use Fullscreen.'); } };
   const retrySource = () => { proxiedFallbackRef.current = false; hlsProbeRef.current = false; nativeRetryRef.current=0; failedVariantUrlsRef.current.clear(); setError(''); setBuffering(true); setRetry(x => x + 1); };
 
@@ -281,7 +290,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     />;
   }
 
-  return <div className={`flootStylePlayer ${controlsVisible ? 'fspControlsVisible' : 'fspControlsHidden'}${fullscreenActive ? ' fspFallbackFullscreen' : ''}${reelMode ? ' reelMode' : ''}`} onPointerMove={revealPlayerControls} onTouchStart={revealPlayerControls}>
+  return <div className={`flootStylePlayer ${controlsVisible ? 'fspControlsVisible' : 'fspControlsHidden'}${fullscreenActive ? ' fspFallbackFullscreen' : ''}${reelMode ? ' reelMode' : ''}`} onPointerMove={revealPlayerControls} onTouchStart={revealPlayerControls} onTouchEnd={(event) => handleFullscreenDoubleTap(event.target)} onDoubleClick={(event) => handleFullscreenDoubleTap(event.target)}>
     <div className="flootStyleFrame">
       {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload={autoPlay ? "auto" : "metadata"} autoPlay={autoPlay} muted={muted} controls={false} onClick={reelMode ? playPause : undefined}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {fullscreenActive && !landscapeReady && <div className="fspOrientationHint">Rotate your phone sideways for landscape playback</div>}{buffering && <div className="fspStatus">⏳ Buffering…</div>}
