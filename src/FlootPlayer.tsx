@@ -219,40 +219,37 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     return () => { window.removeEventListener('resize', update); window.removeEventListener('orientationchange', update); document.removeEventListener('fullscreenchange', sync); document.removeEventListener('webkitfullscreenchange', sync as EventListener); tg?.offEvent?.('fullscreenChanged', sync); tg?.offEvent?.('fullscreenFailed', failed); };
   }, []);
   const fullscreen = async () => {
-    const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void; webkitExitFullscreen?: () => void }) | null;
     const root = video?.closest('.flootStylePlayer') as HTMLElement | null;
     const tg = (window as any).Telegram?.WebApp;
     const doc = document as any;
     if (!root) return;
+    const nativeActive = !!document.fullscreenElement || !!doc.webkitFullscreenElement;
+    const active = nativeActive || !!tg?.isFullscreen || root.classList.contains('fspFallbackFullscreen') || fullscreenActive;
+    if (active) {
+      try { if (nativeActive && document.exitFullscreen) await document.exitFullscreen(); else if (nativeActive) doc.webkitExitFullscreen?.(); } catch {}
+      try { if (tg?.isFullscreen) await tg.exitFullscreen?.(); } catch {}
+      try { video?.webkitExitFullscreen?.(); } catch {}
+      root.classList.remove('fspFallbackFullscreen');
+      try { (screen.orientation as any)?.unlock?.(); } catch {}
+      try { tg?.unlockOrientation?.(); } catch {}
+      setFullscreenActive(false);
+      setControlsVisible(true);
+      return;
+    }
+    root.classList.add('fspFallbackFullscreen');
+    setFullscreenActive(true);
     try {
-      const active = !!document.fullscreenElement || !!doc.webkitFullscreenElement || !!root.classList.contains('fspFallbackFullscreen') || !!tg?.isFullscreen;
-      if (active) {
-        if (tg?.exitFullscreen && tg.isFullscreen) tg.exitFullscreen();
-        else if (document.exitFullscreen) await document.exitFullscreen();
-        else doc.webkitExitFullscreen?.();
-        root.classList.remove('fspFallbackFullscreen');
-        try { (screen.orientation as any)?.unlock?.(); } catch {}
-        try { tg?.unlockOrientation?.(); } catch {}
-        setFullscreenActive(false);
-        return;
-      }
       if (tg?.requestFullscreen) tg.requestFullscreen();
       else {
-        const target = root;
-        const request = target.requestFullscreen || (target as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
-        if (request) await request.call(target);
+        const request = root.requestFullscreen || (root as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
+        if (request) await request.call(root);
         else if (video?.webkitEnterFullscreen) video.webkitEnterFullscreen();
-        else root.classList.add('fspFallbackFullscreen');
       }
-      setFullscreenActive(true);
-      try { await (screen.orientation as any)?.lock?.('landscape'); } catch { /* CSS rotates the fullscreen player when orientation locking is unavailable. */ }
     } catch (error) {
-      root.classList.add('fspFallbackFullscreen');
-      setFullscreenActive(true);
-      root.classList.add('fspFallbackFullscreen');
-      setFullscreenActive(true);
       console.warn('MaseNet fullscreen fallback activated:', error);
     }
+    try { await (screen.orientation as any)?.lock?.('landscape'); } catch { /* CSS fallback keeps the viewing surface landscape. */ }
   };
   const handleFullscreenDoubleTap = (target: EventTarget | null) => {
     const element = target as HTMLElement | null;
@@ -290,7 +287,7 @@ export default function FlootPlayer({ episode, onProgress, onPlaybackPosition, o
     />;
   }
 
-  return <div className={`flootStylePlayer ${controlsVisible ? 'fspControlsVisible' : 'fspControlsHidden'}${fullscreenActive ? ' fspFallbackFullscreen' : ''}${reelMode ? ' reelMode' : ''}`} onPointerMove={revealPlayerControls} onTouchStart={revealPlayerControls} onTouchEnd={(event) => handleFullscreenDoubleTap(event.target)} onDoubleClick={(event) => { if (!(event.target as HTMLElement).closest?.('button,a,input,select,textarea,[role="button"]')) void fullscreen(); }}>
+  return <div className={`flootStylePlayer ${controlsVisible ? 'fspControlsVisible' : 'fspControlsHidden'}${fullscreenActive ? ' fspFallbackFullscreen' : ''}${reelMode ? ' reelMode' : ''}`} onPointerMove={revealPlayerControls} onTouchStart={revealPlayerControls} onTouchEnd={(event) => handleFullscreenDoubleTap(event.target)}>
     <div className="flootStyleFrame">
       {embed ? <iframe key={embed} src={embed} title={episode.title || 'MaseNet video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video ref={videoRef} playsInline preload={autoPlay ? "auto" : "metadata"} autoPlay={autoPlay} muted={muted} controls={false} onClick={reelMode ? playPause : undefined}>{tracks.map((t, i) => <track key={(t.url || t.path || '') + i} kind="subtitles" src={t.url} srcLang={t.lang || 'en'} label={t.label || t.lang || 'Subtitle ' + (i + 1)} />)}</video>}
       {fullscreenActive && !landscapeReady && <div className="fspOrientationHint">Rotate your phone sideways for landscape playback</div>}{buffering && <div className="fspStatus">⏳ Buffering…</div>}
