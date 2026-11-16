@@ -2,6 +2,8 @@ import './telegram-verification.css';
 import './welcome.css';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api, auth, image } from './cloudflare-client';
+import { Capacitor } from '@capacitor/core';
+import { nativeDownloads, type SavedVideo } from './native-downloads';
 import { ProfileManager, WatchPartyPage } from './AccountFeatures';
 const Player = lazy(() => import('./MaseNetPlayerV3'));
 const PlayerLoading = () => <div role="status" aria-live="polite" style={{ minHeight: 180, display: "grid", placeItems: "center", borderRadius: 16, background: "#08090d", color: "#e8c77a", fontSize: 14 }}>Loading video player…</div>;
@@ -639,40 +641,56 @@ function HistoryPage({titles,progress,completed,setProgress,setCompleted,go}:{ti
 
 function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
  const [busyId,setBusyId]=useState('');
+ const [progress,setProgress]=useState(0);
  const [message,setMessage]=useState('');
+ const [saved,setSaved]=useState<SavedVideo[]>(()=>nativeDownloads.list());
+ const [playing,setPlaying]=useState<SavedVideo|null>(null);
+ const native=Capacitor.isNativePlatform()&&nativeDownloads.isAvailable();
  const items=useMemo(()=>titles.flatMap(title=>title.episodes.flatMap(episode=>{
-  const variants=episode.qualities?.length?episode.qualities:[{quality:episode.quality,streamUrl:episode.streamUrl,streamPath:episode.streamPath,downloadUrl:episode.downloadUrl,downloadPath:episode.downloadPath}];
-  return variants.filter(v=>Boolean(v.downloadUrl||v.downloadPath)).map((variant,index)=>({key:title.id+'-'+episode.id+'-'+variant.quality+'-'+index,title,episode,variant}));
+  const variants=episode.qualities?.length?episode.qualities:[{quality:episode.quality,streamUrl:episode.streamUrl,streamPath:episode.streamPath,downloadUrl:episode.downloadUrl,downloadPath:episode.downloadPath,mimeType:episode.mimeType}];
+  return variants.filter(v=>Boolean(v.downloadUrl||v.downloadPath||v.streamUrl||v.streamPath)).map((variant,index)=>({key:title.id+'-'+episode.id+'-'+variant.quality+'-'+index,title,episode,variant}));
  })),[titles]);
  const startDownload=async(item:typeof items[number])=>{
   if(busyId)return;
-  setBusyId(item.key);setMessage('');
-  const tab=window.open('about:blank','_blank');
+  setBusyId(item.key);setProgress(0);setMessage('');
   try{
-   let url=String(item.variant.downloadUrl||'').trim();
-   const path=String(item.variant.downloadPath||'').trim();
+   let url=String(item.variant.downloadUrl||item.variant.streamUrl||'').trim();
+   const path=String(item.variant.downloadPath||item.variant.streamPath||'').trim();
    if(path){
     const response=await api.get('/api/media/url',{path});
     if(!response.data?.url)throw new Error('The secure media link could not be created. Please try again.');
     url=String(response.data.url);
    }
-   if(!/^https?:\/\//i.test(url))throw new Error('This download entry has no valid HTTPS/HTTP link.');
-   if(tab)tab.location.href=url;
-   else window.location.assign(url);
-   setMessage('Download source opened for '+item.title.name+'. Your browser or the file host controls whether it downloads or streams.');
+   if(!/^https:\/\//i.test(url))throw new Error('This episode has no valid secure download URL.');
+   const result=await nativeDownloads.save({
+    url,title:item.title.name,titleType:item.title.type,episodeTitle:item.episode.title||'Episode',
+    season:Number(item.episode.season||1),episode:Number(item.episode.episode||1),quality:item.variant.quality,
+    mimeType:item.variant.mimeType||item.episode.mimeType,
+    onProgress:setProgress
+   });
+   setSaved(nativeDownloads.list());
+   setMessage(result.title+' was saved on this phone and is ready for offline playback.');
   }catch(error){
-   tab?.close();
-   setMessage(error instanceof Error?error.message:'Could not open this download source.');
-  }finally{setBusyId('')}
+   setMessage(error instanceof Error?error.message:'Could not save this video. Check the source and try again.');
+  }finally{setBusyId('');setProgress(0)}
  };
+ const remove=async(item:SavedVideo)=>{
+  try{await nativeDownloads.remove(item.id);setSaved(nativeDownloads.list());if(playing?.id===item.id)setPlaying(null);setMessage('Download deleted from this phone.')}
+  catch(error){setMessage(error instanceof Error?error.message:'Could not delete this download.')}
+ };
+ const bytes=(value:number)=>value<1024*1024?(value/1024).toFixed(0)+' KB':(value/1024/1024).toFixed(1)+' MB';
+ if(!native)return <main className="page maseUtilityPage"><header className="maseUtilityHead"><div><span className="iqKicker">MASENET ANDROID APP</span><h1>Offline Downloads</h1><p>Offline video downloads are available only in the installed MaseNet Android app.</p></div></header><section className="emptyState"><Download size={34}/><h2>Open the Android app</h2><p>This feature is intentionally unavailable on the website and Telegram Mini App.</p></section><button className="secondary maseBackButton" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Back to MaseNet</button></main>;
  return <main className="page maseUtilityPage">
-  <header className="maseUtilityHead"><div><span className="iqKicker">YOUR VIDEO LIBRARY</span><h1>Downloads</h1><p>Find available download sources for movies and drama episodes.</p></div><span className="maseUtilityCount">{items.length} available</span></header>
-  <section className="downloadInfo"><Download size={19}/><span><b>Download availability</b><small>Only titles with an admin-provided download link are listed. Some hosts may open a video stream instead of downloading; this depends on the source's download headers. MaseNet does not save files to your device automatically.</small></span></section>
+  <header className="maseUtilityHead"><div><span className="iqKicker">ON THIS PHONE · OFFLINE READY</span><h1>My Downloads</h1><p>Videos are stored in MaseNet's private app storage. They do not use MaseNet server storage.</p></div><span className="maseUtilityCount">{saved.length} saved</span></header>
   {message&&<p className="downloadFeedback" role="status">{message}</p>}
-  {items.length?<section className="maseDownloadList">{items.map(item=><article className="maseDownloadItem" key={item.key}><button className="maseDownloadPoster" onClick={()=>go('#/title/'+encodeURIComponent(item.title.id))}><Poster title={item.title} small/></button><div className="maseDownloadCopy"><b>{item.title.name}</b><small>{item.title.type==='Drama'?'Season '+item.episode.season+' · Episode '+item.episode.episode+' · ':''}{item.episode.title} · {item.variant.quality}</small><span>Download source available</span></div><button className="primary maseDownloadAction" disabled={Boolean(busyId)} onClick={()=>void startDownload(item)}>{busyId===item.key?'Preparing…':<><Download size={15}/> Download</>}</button></article>)}</section>:<section className="emptyState"><Download size={34}/><h2>No downloads available yet</h2><p>Download links will appear here when an admin adds them to a movie or episode. You can still browse and stream the full library.</p><button className="primary" onClick={()=>go('#/home')}>Explore library</button></section>}
-  <button className="secondary" onClick={()=>go('#/history')}>View watch history</button>
+  {playing&&<section className="offlinePlayerPanel"><div className="adminSectionHead"><div><b>Playing offline</b><small>{playing.title} · {playing.quality}</small></div><button className="secondary" onClick={()=>setPlaying(null)}>Close player</button></div><Player episode={{id:playing.id,title:playing.title+' · '+playing.episodeTitle,quality:playing.quality as Quality,streamUrl:nativeDownloads.playableUrl(playing),mimeType:playing.mimeType}} autoPlay/></section>}
+  <section className="downloadInfo"><Download size={19}/><span><b>Downloads stay on this device</b><small>They remain available after closing MaseNet. Deleting a download frees the phone storage it used. Keep enough free space before starting a large video.</small></span></section>
+  <section className="adminSectionHead"><div><h2>Saved videos</h2><p>Tap Play to watch without an internet connection.</p></div></section>
+  {saved.length?<section className="maseDownloadList">{saved.map(item=><article className="maseDownloadItem" key={item.id}><div className="maseDownloadPoster"><div className="poster smallPoster"><b>▶</b><small>OFFLINE</small></div></div><div className="maseDownloadCopy"><b>{item.title}</b><small>{item.titleType==='Drama'?'Season '+item.season+' · Episode '+item.episode+' · ':''}{item.episodeTitle} · {item.quality}</small><span>{bytes(item.size)} · Saved {new Date(item.savedAt).toLocaleDateString()}</span></div><div className="maseDownloadActions"><button className="primary" onClick={()=>setPlaying(item)}><Play size={14}/> Play</button><button className="secondary danger" onClick={()=>void remove(item)}><Trash2 size={14}/> Delete</button></div></article>)}</section>:<section className="emptyState"><Download size={34}/><h2>No videos saved yet</h2><p>Choose an available MP4, M4V, WebM or MOV download below. HLS playlists are not treated as complete video files.</p></section>}
+  <section className="adminSectionHead" style={{marginTop:26}}><div><h2>Available videos</h2><p>Only direct video files can be saved in this first offline-download build.</p></div><span className="maseUtilityCount">{items.length} sources</span></section>
+  {items.length?<section className="maseDownloadList">{items.map(item=><article className="maseDownloadItem" key={item.key}><button className="maseDownloadPoster" onClick={()=>go('#/title/'+encodeURIComponent(item.title.id))}><Poster title={item.title} small/></button><div className="maseDownloadCopy"><b>{item.title.name}</b><small>{item.title.type==='Drama'?'Season '+item.episode.season+' · Episode '+item.episode.episode+' · ':''}{item.episode.title} · {item.variant.quality}</small><span>Save to this phone</span></div><button className="primary maseDownloadAction" disabled={Boolean(busyId)} onClick={()=>void startDownload(item)}>{busyId===item.key?'Downloading '+progress+'%':<><Download size={15}/> Download</>}</button></article>)}</section>:null}
   <button className="secondary maseBackButton" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Back to MaseNet</button>
-  <style>{".downloadInfo{display:flex;gap:13px;align-items:flex-start;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.045);margin:18px 0 22px}.downloadInfo>svg{flex:none;color:#62e9ad}.downloadInfo span,.maseDownloadCopy{display:flex;flex-direction:column;gap:5px;min-width:0}.downloadInfo small,.maseDownloadCopy small{color:var(--muted,#aab0c0);line-height:1.5}.maseDownloadList{display:grid;gap:10px}.maseDownloadItem{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:13px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}.maseDownloadPoster{width:62px;height:82px;overflow:hidden;border:0;border-radius:9px;background:transparent;padding:0}.maseDownloadPoster .poster{width:100%;height:100%}.maseDownloadCopy>b{overflow-wrap:anywhere}.maseDownloadCopy>span{font-size:10px;color:#70e9b2}.maseDownloadAction{white-space:nowrap}.downloadFeedback{padding:12px 14px;border-radius:12px;background:rgba(0,213,138,.1);color:#9bf3ca}@media(max-width:520px){.maseDownloadItem{grid-template-columns:52px minmax(0,1fr);gap:10px}.maseDownloadPoster{width:52px;height:72px}.maseDownloadAction{grid-column:2;justify-self:start}.maseDownloadCopy small{font-size:10px}}"} </style>
+  <style>{".downloadInfo{display:flex;gap:13px;align-items:flex-start;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.045);margin:18px 0 22px}.downloadInfo>svg{flex:none;color:#62e9ad}.downloadInfo span,.maseDownloadCopy{display:flex;flex-direction:column;gap:5px;min-width:0}.downloadInfo small,.maseDownloadCopy small{color:var(--muted,#aab0c0);line-height:1.5}.maseDownloadList{display:grid;gap:10px}.maseDownloadItem{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:13px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}.maseDownloadPoster{width:62px;height:82px;overflow:hidden;border:0;border-radius:9px;background:transparent;padding:0}.maseDownloadPoster .poster{width:100%;height:100%}.maseDownloadCopy>b{overflow-wrap:anywhere}.maseDownloadCopy>span{font-size:10px;color:#70e9b2}.maseDownloadAction{white-space:nowrap}.maseDownloadActions{display:flex;gap:6px;flex-wrap:wrap}.offlinePlayerPanel{margin:18px 0;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.04)}@media(max-width:560px){.maseDownloadItem{grid-template-columns:52px minmax(0,1fr);gap:10px}.maseDownloadPoster{width:52px;height:72px}.maseDownloadAction,.maseDownloadActions{grid-column:2;justify-self:start}.maseDownloadCopy small{font-size:10px}}</style>
  </main>;
 }
 
