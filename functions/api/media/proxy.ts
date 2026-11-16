@@ -183,7 +183,7 @@ function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,
    try{
     const response=await fetchMediaSource(url,headers);
     const range=response.headers.get("content-range")||"";
-    const match=range.match(/^bytes\\s+(\\d+)-(\\d+)\\/(\\d+|\\*)$/i);
+    const match=range.match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i);
     if(response.status!==206||!match||Number(match[1])!==start+sent||!response.body){
      await response.body?.cancel();
      continue;
@@ -460,7 +460,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  outHeaders.set("cache-control","no-store"); outHeaders.set("access-control-allow-origin","*"); outHeaders.set("access-control-expose-headers","content-length,content-range,accept-ranges,last-modified,etag"); outHeaders.set("accept-ranges",upstream.headers.get("accept-ranges")||"bytes"); outHeaders.set("x-content-type-options","nosniff");
  if(upstream.status===206 && rangeHeader){
   const range=outHeaders.get("content-range")||"";
-  const match=range.match(/^bytes\\s+(\\d+)-(\\d+)\\/(\\d+)$/i);
+  const match=range.match(/^bytes\s+(\d+)-(\d+)\/(\d+)$/i);
   if(match){
    const rangeStart=Number(match[1]),rangeEnd=Number(match[2]);
    if(Number.isSafeInteger(rangeStart)&&Number.isSafeInteger(rangeEnd)&&rangeEnd>=rangeStart){
