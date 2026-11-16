@@ -164,6 +164,67 @@ function proxyHlsResource(raw:string, base:string, origin:string, episodeId:stri
  const nestedEpisodeId=episodeId.length<=200?episodeId:"";
  return origin+"/api/media/proxy?episodeId="+encodeURIComponent(nestedEpisodeId)+"&source="+encodeURIComponent(sourceHint)+"&resource="+encodeURIComponent(absolute);
 }
+
+/**
+ * Recover an interrupted byte-range response without restarting the movie.
+ * The browser still receives one continuous 206 response; the Worker resumes
+ * the missing suffix from the external host using another Range request.
+ */
+function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,start:number,end:number):ReadableStream<Uint8Array> {
+ const expected=end-start+1;
+ let reader=initial.body?.getReader()||null;
+ let sent=0,retries=0,closed=false;
+ const reconnect=async()=>{
+  while(retries<3){
+   retries++;
+   const headers=new Headers(baseHeaders);
+   headers.set("range","bytes="+(start+sent)+"-"+end);
+   headers.delete("if-range");
+   try{
+    const response=await fetchMediaSource(url,headers);
+    const range=response.headers.get("content-range")||"";
+    const match=range.match(/^bytes\\s+(\\d+)-(\\d+)\\/(\\d+|\\*)$/i);
+    if(response.status!==206||!match||Number(match[1])!==start+sent||!response.body){
+     await response.body?.cancel();
+     continue;
+    }
+    reader=response.body.getReader();
+    return true;
+   }catch{}
+  }
+  return false;
+ };
+ return new ReadableStream<Uint8Array>({
+  async pull(controller){
+   if(closed)return;
+   for(;;){
+    if(!reader){
+     if(!(await reconnect())){closed=true;controller.error(new Error("External source interrupted repeatedly while resuming a byte range."));return;}
+    }
+    try{
+     const part=await reader!.read();
+     if(part.done){
+      reader=null;
+      if(sent>=expected){closed=true;controller.close();return;}
+      if(!(await reconnect())){closed=true;controller.error(new Error("External source ended the byte range before all bytes arrived."));return;}
+      continue;
+     }
+     const remaining=expected-sent;
+     if(remaining<=0){closed=true;controller.close();return;}
+     const chunk=part.value.length>remaining?part.value.subarray(0,remaining):part.value;
+     if(chunk.length){sent+=chunk.length;controller.enqueue(chunk);}
+     if(sent>=expected){closed=true;try{await reader!.cancel();}catch{}controller.close();return;}
+     return;
+    }catch{
+     reader=null;
+     if(!(await reconnect())){closed=true;controller.error(new Error("External source connection could not be resumed."));return;}
+    }
+   }
+  },
+  async cancel(){closed=true;try{await reader?.cancel();}catch{}}
+ });
+}
+
 export const onRequestGet = async ({ request, env }: { request:Request; env:Env }) => {
  const reqUrl=new URL(request.url), episodeId=reqUrl.searchParams.get("episodeId")||"", requested=reqUrl.searchParams.get("resource");
  const sourceHint=reqUrl.searchParams.get("source")||"";
@@ -397,6 +458,18 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   outHeaders.set("content-disposition", 'attachment; filename="MaseNet-video.'+extension+'"');
  }
  outHeaders.set("cache-control","no-store"); outHeaders.set("access-control-allow-origin","*"); outHeaders.set("access-control-expose-headers","content-length,content-range,accept-ranges,last-modified,etag"); outHeaders.set("accept-ranges",upstream.headers.get("accept-ranges")||"bytes"); outHeaders.set("x-content-type-options","nosniff");
+ if(upstream.status===206 && rangeHeader){
+  const range=outHeaders.get("content-range")||"";
+  const match=range.match(/^bytes\\s+(\\d+)-(\\d+)\\/(\\d+)$/i);
+  if(match){
+   const rangeStart=Number(match[1]),rangeEnd=Number(match[2]);
+   if(Number.isSafeInteger(rangeStart)&&Number.isSafeInteger(rangeEnd)&&rangeEnd>=rangeStart){
+    outHeaders.set("content-length",String(rangeEnd-rangeStart+1));
+    const body=resumeInterruptedRange(upstream,upstream.url||upstreamUrl,headers,rangeStart,rangeEnd);
+    return new Response(body,{status:206,headers:outHeaders});
+   }
+  }
+ }
  return new Response(upstream.body,{status:upstream.status,headers:outHeaders});
 };
 
