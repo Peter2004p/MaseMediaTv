@@ -655,24 +655,41 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
   if(busyId)return;
   setBusyId(item.key);setProgress(0);setMessage('');
   try{
-   let url=String(item.variant.downloadUrl||item.variant.streamUrl||'').trim();
    const streamUrl=String(item.variant.streamUrl||item.episode.streamUrl||'').trim();
-   const mimeType=String(item.variant.mimeType||item.episode.mimeType||'');
-   const isHls=/\.m3u8(?:$|[?#])/i.test(url)||/mpegurl/i.test(mimeType);
-   const path=String(item.variant.downloadPath||item.variant.streamPath||'').trim();
-   if(isHls){
-    if(!streamUrl)throw new Error('This HLS source has no stored episode stream URL.');
-    url=window.location.origin+'/api/media/proxy?episodeId='+encodeURIComponent(item.episode.id)+'&source='+encodeURIComponent(streamUrl);
-   }else if(path){
+   const downloadUrl=String(item.variant.downloadUrl||'').trim();
+   const path=String(item.variant.downloadPath||item.variant.streamPath||item.episode.downloadPath||item.episode.streamPath||'').trim();
+   let sourceUrl=streamUrl||downloadUrl;
+   if(!sourceUrl&&path){
     const response=await api.get('/api/media/url',{path});
-    if(!response.data?.url)throw new Error('The secure media link could not be created. Please try again.');
-    url=String(response.data.url);
+    sourceUrl=String(response.data?.url||'');
    }
-   if(!/^https:\/\//i.test(url))throw new Error('This episode has no valid secure download URL.');
+   if(!/^https:\/\//i.test(sourceUrl))throw new Error('MaseNet could not get a secure video link for this episode. Ask the admin to refresh its streaming URL.');
+   let mimeType=String(item.variant.mimeType||item.episode.mimeType||'');
+   let kind='';
+   // Ask MaseNet's own media proxy to identify extensionless links before choosing
+   // a download method. Otherwise an HLS playlist can be saved as a tiny .mp4 file.
+   if(streamUrl){
+    const probe=await api.get('/api/media/proxy',{episodeId:item.episode.id,source:streamUrl,probe:'1'});
+    kind=String(probe.data?.kind||'').toLowerCase();
+    if(probe.data?.contentType) mimeType=String(probe.data.contentType);
+   }
+   const isHls=kind==='hls'||/\.m3u8(?:$|[?#])/i.test(sourceUrl)||/mpegurl/i.test(mimeType);
+   if(isHls){
+    if(!streamUrl)throw new Error('MaseNet needs the episode streaming URL to save this HLS video offline.');
+    sourceUrl=window.location.origin+'/api/media/proxy?episodeId='+encodeURIComponent(item.episode.id)+'&source='+encodeURIComponent(streamUrl);
+    mimeType='application/vnd.apple.mpegurl';
+   }else if(streamUrl){
+    // Route direct files through the same trusted proxy used by playback. This
+    // avoids provider hotlink/CORS failures in Android's native file downloader.
+    sourceUrl=window.location.origin+'/api/media/proxy?episodeId='+encodeURIComponent(item.episode.id)+'&source='+encodeURIComponent(streamUrl)+'&download=1';
+   }else if(downloadUrl){
+    sourceUrl=downloadUrl;
+   }
+   if(!/^https:\/\//i.test(sourceUrl))throw new Error('This episode has no valid secure download URL.');
    const result=await nativeDownloads.save({
-    url,title:item.title.name,titleType:item.title.type,episodeTitle:item.episode.title||'Episode',
+    url:sourceUrl,title:item.title.name,titleType:item.title.type,episodeTitle:item.episode.title||'Episode',
     season:Number(item.episode.season||1),episode:Number(item.episode.episode||1),quality:item.variant.quality,
-    mimeType:isHls?'application/vnd.apple.mpegurl':mimeType,episodeId:item.episode.id,
+    mimeType,episodeId:item.episode.id,
     onProgress:setProgress
    });
    setSaved(nativeDownloads.list());
