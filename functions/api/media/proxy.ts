@@ -433,10 +433,25 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
       const child=await fetchMediaSource(first,headers);
       firstChildStatus=child.status;
       firstChildType=child.headers.get("content-type")||"";
-      const childIsPlaylist=/mpegurl|text\/plain/i.test(firstChildType)||/\.m3u8(?:$|[?#])/i.test(first);
+      const childFinalUrl=child.url||first;
+      try {
+       const finalChildUrl=new URL(childFinalUrl);
+       firstChildFinalHost=finalChildUrl.hostname;
+       firstChildPathExtension=finalChildUrl.pathname.match(/\.([a-z0-9]{1,8})$/i)?.[1]?.toLowerCase()||"";
+      } catch {}
+      // Inspect only a bounded clone to identify HTML challenge/error pages.
+      // Never return upstream HTML or signed URLs in the diagnostic payload.
+      if(/text\/html|application\/xhtml\+xml/i.test(firstChildType)) {
+       try {
+        const prefix=await readResponsePrefix(child.clone(),8192);
+        const html=new TextDecoder().decode(prefix);
+        firstChildHtmlTitle=html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g," ").trim().slice(0,120)||"";
+       } catch {}
+      }
+      const childIsPlaylist=/mpegurl|text\/plain/i.test(firstChildType)||/\.m3u8(?:$|[?#])/i.test(childFinalUrl);
       if(childIsPlaylist&&child.ok){
        const childManifest=await child.text();
-       const segment=firstResource(childManifest,child.url||first);
+       const segment=firstResource(childManifest,childFinalUrl);
        if(segment&&isPublicHttps(segment)){
         const segmentResponse=await fetchMediaSource(segment,headers);
         nestedSegmentStatus=segmentResponse.status;
