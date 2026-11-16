@@ -67,7 +67,7 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
     ]);
    } finally { if(loadTimer)clearTimeout(loadTimer); }
    if(!live)return;sync();setDuration(instance.getDuration?.()||0);setStatus("ready");if(!firstFrameSeen){startupTimer=setTimeout(()=>{startupTimer=null;if(live&&!firstFrameSeen)scheduleRetry("The MKV source opened but did not produce a decoded frame. Reconnecting…");},25000);}
-   const resumeTarget=Math.max(resumeAtSeconds,lastKnownTime.current||0);if(resumeTarget>0)await instance.seek(Math.min(resumeTarget,Math.max(0,(instance.getDuration?.()||resumeTarget)-1)));
+   const resumeTarget=Number.isFinite(lastKnownTime.current)?lastKnownTime.current:resumeAtSeconds;if(resumeTarget>0)await instance.seek(Math.min(resumeTarget,Math.max(0,(instance.getDuration?.()||resumeTarget)-1)));
    if(autoPlay){try{await instance.play();}catch{/* user gesture may be required */}}
    if(canvas.current&&typeof ResizeObserver!=="undefined"){observer=new ResizeObserver(()=>resizeRenderer());observer.observe(canvas.current);const screenEl=root.current?.querySelector(".mnvlcScreen");if(screenEl)observer.observe(screenEl);resizeRenderer();}
   }catch(e:any){if(live){const message=String(e?.message||"Unable to open this MKV stream.");if(/network|fetch|timeout|timed out|connection|HTTP 5\d\d|failed to load/i.test(message))scheduleRetry(message);else if(!switchAlternate()){setError(message);setStatus("error");}}}};
