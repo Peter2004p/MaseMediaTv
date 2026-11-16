@@ -50,7 +50,13 @@ async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
  const vlcHeaders=new Headers(cleanHeaders);
  vlcHeaders.set("user-agent","VLC/3.0.20 LibVLC/3.0.20");
  vlcHeaders.set("accept","*/*");
- const attempts=[cleanHeaders,vlcHeaders,new Headers(headers)];
+ const vlcRefererHeaders=new Headers(vlcHeaders);
+ const originalHeaders=new Headers(headers);
+ if(originalHeaders.has("referer")) {
+  vlcRefererHeaders.set("referer",originalHeaders.get("referer")!);
+  if(originalHeaders.has("origin")) vlcRefererHeaders.set("origin",originalHeaders.get("origin")!);
+ }
+ const attempts=[cleanHeaders,vlcHeaders,vlcRefererHeaders,originalHeaders];
  let lastError:unknown=null;
  for(let index=0;index<attempts.length;index++) {
   try {
@@ -69,6 +75,21 @@ async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
 // the playlist URL and expect the same authentication query parameters on relative
 // segment, variant, subtitle, and key URLs. Preserve child-specific parameters and
 // inherit only missing parameters when the child stays on the same HTTPS host.
+function headersForHlsChild(baseHeaders:Headers, sourceHint:string):Headers {
+ const headers=new Headers(baseHeaders);
+ try {
+  const source=new URL(sourceHint);
+  if(source.protocol==="https:") {
+   // Some HLS CDNs require the originating stream host as Referer/Origin.
+   // A MaseNet-site referrer can make the CDN return an HTML landing page instead
+   // of the media resource, even though the manifest itself is accessible.
+   headers.set("origin",source.origin);
+   headers.set("referer",source.toString());
+  }
+ } catch {}
+ return headers;
+}
+
 function resolveHlsResource(raw:string, base:string):string {
  const resolved=new URL(raw.trim(),base);
  const parent=new URL(base);
@@ -335,7 +356,8 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  headers.set("referer",reqUrl.origin+"/");
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
- try { upstream=await fetchMediaSource(upstreamUrl,headers); } catch(error) {
+ const requestHeaders=requested?headersForHlsChild(headers,sourceHint):headers;
+ try { upstream=await fetchMediaSource(upstreamUrl,requestHeaders); } catch(error) {
   const reason=error instanceof Error?error.message:"Connection failed";
   // Keep the host/path and signed query out of the response; expose only a safe
   // diagnostic so the player can distinguish network failure from provider HTTP errors.
@@ -430,7 +452,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
       const childUrl=new URL(first);
       firstChildHost=childUrl.hostname;
       firstChildHasQuery=childUrl.search.length>0;
-      const child=await fetchMediaSource(first,headers);
+      const child=await fetchMediaSource(first,headersForHlsChild(headers,sourceHint));
       firstChildStatus=child.status;
       firstChildType=child.headers.get("content-type")||"";
       const childFinalUrl=child.url||first;
@@ -453,7 +475,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
        const childManifest=await child.text();
        const segment=firstResource(childManifest,childFinalUrl);
        if(segment&&isPublicHttps(segment)){
-        const segmentResponse=await fetchMediaSource(segment,headers);
+        const segmentResponse=await fetchMediaSource(segment,headersForHlsChild(headers,sourceHint));
         nestedSegmentStatus=segmentResponse.status;
         await segmentResponse.body?.cancel();
        }
@@ -555,7 +577,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    const rangeStart=Number(match[1]),rangeEnd=Number(match[2]);
    if(Number.isSafeInteger(rangeStart)&&Number.isSafeInteger(rangeEnd)&&rangeEnd>=rangeStart){
     outHeaders.set("content-length",String(rangeEnd-rangeStart+1));
-    const body=resumeInterruptedRange(upstream,upstream.url||upstreamUrl,headers,rangeStart,rangeEnd);
+    const body=resumeInterruptedRange(upstream,upstream.url||upstreamUrl,requestHeaders,rangeStart,rangeEnd);
     return new Response(body,{status:206,headers:outHeaders});
    }
   }
