@@ -24,6 +24,18 @@ async function saveHlsOffline(input: {
   const folder = 'masenet-downloads/' + id;
   await Filesystem.mkdir({ directory: Directory.Data, path: folder, recursive: true });
   const resources = new Map<string, string>();
+  const resolveResource = (raw: string, base: string) => {
+    const resolved = new URL(raw.trim(), base);
+    const parent = new URL(base);
+    // Some CDNs put a shared signature on the playlist URL and omit it from
+    // relative segment/key URLs. Carry only missing parameters on the same host.
+    if (resolved.protocol === 'https:' && parent.protocol === 'https:' && resolved.hostname === parent.hostname) {
+      parent.searchParams.forEach((value, key) => {
+        if (!resolved.searchParams.has(key)) resolved.searchParams.append(key, value);
+      });
+    }
+    return resolved.toString();
+  };
   let completed = 0, total = 0, totalBytes = 0;
   const fetchPlaylist = async (url: string) => {
     // Fetch playlist text with Capacitor's native downloader rather than browser
@@ -78,7 +90,7 @@ async function saveHlsOffline(input: {
         if (lines[i].startsWith('#EXT-X-STREAM-INF:')) {
           const bandwidth = Number(/BANDWIDTH=(\d+)/i.exec(lines[i])?.[1] || 0);
           const uri = lines.slice(i + 1).find(line => line.trim() && !line.trim().startsWith('#'));
-          if (uri) variants.push({ bandwidth, uri: new URL(uri.trim(), current.url).toString() });
+          if (uri) variants.push({ bandwidth, uri: resolveResource(uri.trim(), current.url) });
         }
       }
       if (!variants.length) break;
@@ -93,10 +105,10 @@ async function saveHlsOffline(input: {
     if (!lines.some(line => line.trim() === '#EXT-X-ENDLIST')) throw new Error('This is a live or unfinished HLS stream. Only completed VOD playlists can be saved offline.');
     if (lines.some(line => /^#EXT-X-BYTERANGE:/i.test(line))) throw new Error('This HLS stream uses byte-range segments. This source layout is not supported for offline saving yet.');
     if (lines.some(line => /^#EXT-X-KEY:.*METHOD=(SAMPLE-AES|SAMPLE-AES-CTR)/i.test(line))) throw new Error('This HLS stream uses SAMPLE-AES encryption, which is not supported for offline saving.');
-    const segmentUrls = lines.filter(line => line.trim() && !line.trim().startsWith('#')).map(line => new URL(line.trim(), current.url).toString());
+    const segmentUrls = lines.filter(line => line.trim() && !line.trim().startsWith('#')).map(line => resolveResource(line.trim(), current.url));
     const tagUrls = lines.flatMap(line => {
       const match = /^#EXT-X-(?:KEY|MAP):.*?URI="([^"]+)"/i.exec(line);
-      return match ? [new URL(match[1], current.url).toString()] : [];
+      return match ? [resolveResource(match[1], current.url)] : [];
     });
     total = segmentUrls.length + tagUrls.length;
     if (!segmentUrls.length) throw new Error('MaseNet did not find any video segments in this HLS playlist.');
@@ -106,14 +118,14 @@ async function saveHlsOffline(input: {
       const trimmed = line.trim();
       if (!trimmed) { rewritten.push(line); continue; }
       if (!trimmed.startsWith('#')) {
-        const resourceUrl = new URL(trimmed, current.url).toString();
+        const resourceUrl = resolveResource(trimmed, current.url);
         const localName = await downloadResource(resourceUrl, 'segment');
         rewritten.push(localName);
         continue;
       }
       const match = /^#EXT-X-(KEY|MAP):(.*?URI="([^"]+)")(.*)$/i.exec(line);
       if (match) {
-        const resourceUrl = new URL(match[3], current.url).toString();
+        const resourceUrl = resolveResource(match[3], current.url);
         const kind = match[1].toUpperCase() === 'KEY' ? 'key' : 'init';
         const localName = await downloadResource(resourceUrl, kind);
         rewritten.push(line.replace(match[3], localName));
