@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type InstallChoice = { outcome: 'accepted' | 'dismissed'; platform: string };
 type InstallPromptEvent = Event & {
@@ -11,6 +11,7 @@ export default function PWAInstallPrompt() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [platform, setPlatform] = useState<'android' | 'ios' | 'other'>('other');
   const [canPrompt, setCanPrompt] = useState(false);
+  const deferredPrompt = useRef<InstallPromptEvent | null>(null);
 
   useEffect(() => {
     const telegram = (window as Window & { Telegram?: { WebApp?: { initData?: string; platform?: string } } }).Telegram?.WebApp;
@@ -21,7 +22,7 @@ export default function PWAInstallPrompt() {
     if (standalone) return;
 
     const ua = navigator.userAgent;
-    const detected = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) ? 'ios' : 'other';
+    const detected = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : 'other';
     setPlatform(detected);
 
     try {
@@ -29,17 +30,16 @@ export default function PWAInstallPrompt() {
       if (dismissedAt && Date.now() - dismissedAt < 7 * 24 * 60 * 60 * 1000) return;
     } catch {}
 
-    let promptEvent: InstallPromptEvent | null = null;
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
-      promptEvent = event as InstallPromptEvent;
+      deferredPrompt.current = event as InstallPromptEvent;
       setCanPrompt(true);
       setVisible(true);
     };
     const onInstalled = () => {
       setVisible(false);
       setHelpOpen(false);
-      promptEvent = null;
+      deferredPrompt.current = null;
     };
 
     window.addEventListener('beforeinstallprompt', onBeforeInstall);
@@ -61,13 +61,12 @@ export default function PWAInstallPrompt() {
   }, []);
 
   const install = async () => {
-    const w = window as Window & { __masenetInstallPrompt?: InstallPromptEvent };
-    const event = w.__masenetInstallPrompt;
+    const event = deferredPrompt.current;
     if (event) {
       await event.prompt();
       const choice = await event.userChoice;
       if (choice.outcome === 'accepted') setVisible(false);
-      w.__masenetInstallPrompt = undefined;
+      deferredPrompt.current = null;
       setCanPrompt(false);
       return;
     }
