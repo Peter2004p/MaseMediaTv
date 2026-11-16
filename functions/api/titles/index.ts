@@ -162,8 +162,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`).run();
-      const channelTargets = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND chat_type IN ('channel','supergroup')").all<{chat_id:string}>();
-      const targetIds=[...(channelTargets.results||[]).map(x=>x.chat_id),...(!isNewTitle?followedTelegramChats:[])];
+      // Private bot subscribers are the primary notification audience. Include
+      // registered channels/groups as well, while respecting active=0 opt-outs.
+      const subscriberTargets = await env.DB.prepare("SELECT chat_id FROM telegram_subscribers WHERE active=1 AND chat_type IN ('private','channel','supergroup')").all<{chat_id:string}>();
+      const targetIds=[...(subscriberTargets.results||[]).map(x=>x.chat_id),...(!isNewTitle?followedTelegramChats:[])];
       const targets={results:[...new Set(targetIds)].map(chat_id=>({chat_id}))};
       // Telegram notifications must open the Mini App, not the public website.
       // startapp is passed through Telegram's configured main Mini App for this bot.
