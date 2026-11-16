@@ -50,7 +50,7 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
   const onError=()=>{if(!alive||!video.error)return;const code=video.error.code;fail('The browser could not decode or fetch this source (media error '+code+'). Trying a fallback source or another quality…');};
   video.addEventListener('loadedmetadata',onMetadata);video.addEventListener('canplay',onCanPlay);video.addEventListener('waiting',onWaiting);video.addEventListener('playing',onPlaying);video.addEventListener('pause',onPause);video.addEventListener('timeupdate',onTime);video.addEventListener('ended',onEnd);video.addEventListener('error',onError);
   if(hlsSource&&Hls.isSupported()){
-   const engine=new Hls({enableWorker:true,lowLatencyMode:false,backBufferLength:45,maxBufferLength:30,maxMaxBufferLength:60,manifestLoadingTimeOut:20000,levelLoadingTimeOut:20000,fragLoadingTimeOut:30000,manifestLoadingMaxRetry:2,levelLoadingMaxRetry:3,fragLoadingMaxRetry:3});
+   const engine=new Hls({enableWorker:true,enableSoftwareAES:true,lowLatencyMode:false,backBufferLength:45,maxBufferLength:30,maxMaxBufferLength:60,manifestLoadingTimeOut:25000,levelLoadingTimeOut:25000,fragLoadingTimeOut:35000,manifestLoadingMaxRetry:3,levelLoadingMaxRetry:3,fragLoadingMaxRetry:4,manifestLoadingRetryDelay:1000,levelLoadingRetryDelay:1000,fragLoadingRetryDelay:1000});
    hlsRef.current=engine;engine.loadSource(activeSrc);engine.attachMedia(video);
    const syncTracks=()=>{setHlsSubs(engine.subtitleTracks.map(t=>({name:t.name,lang:t.lang,url:t.url})));setHlsAudios(engine.audioTracks.map(t=>({name:t.name,lang:t.lang})));};
    engine.on(Hls.Events.MANIFEST_PARSED,()=>{if(!alive)return;setLoading(false);setError('');syncTracks();});
@@ -58,7 +58,7 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
    engine.on(Hls.Events.ERROR,(_event,data)=>{if(!alive||!data.fatal)return;
     if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&networkRetries<2){networkRetries++;setError('Reconnecting to the stream ('+networkRetries+'/2)…');window.setTimeout(()=>{if(alive)engine.startLoad();},networkRetries*1200);return;}
     if(data.type===Hls.ErrorTypes.MEDIA_ERROR&&mediaRetries<1){mediaRetries++;setError('Recovering the video decoder…');engine.recoverMediaError();return;}
-    fail('The HLS stream failed after automatic recovery. Trying another source or quality…');
+    const status=Number(data.response?.code||0);const detail=status===401||status===403?'The streaming host rejected the signed HLS link (HTTP '+status+'). It may have expired or the provider may have rejected the request.':status===404||status===410?'The HLS playlist or one of its segments is no longer available (HTTP '+status+').':status===0?'The HLS playlist or a video segment could not be reached. Check the provider’s CORS policy, network access and signed segment URLs.':'The HLS request failed (HTTP '+status+').';fail(detail+' Trying the alternate source or quality…');
    });
   }else if(hlsSource&&video.canPlayType('application/vnd.apple.mpegurl')){video.src=activeSrc;video.load();}
   else if(hlsSource){fail('HLS is not supported by this browser.');}
