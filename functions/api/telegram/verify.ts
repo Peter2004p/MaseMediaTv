@@ -323,9 +323,9 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: provisional
-            ? "🟡 Our AI found that your screenshot appears to show the correct MaseMedia TV YouTube channel in a subscribed state. Provisional MaseNet access is available. IMPORTANT: this is only a visual screening result, not genuine YouTube verification. The admin can still review your screenshot and may require re-verification."
-            : "🕒 Our AI could not confidently confirm the required channel and subscribed state from your screenshot. No automatic verification was granted. The admin can still review it; if needed, submit a clear, genuine screenshot showing @masemedia_tv and the Subscribed state."
+          text: aiAvailable && String(verdict) === "likely_match"
+            ? "🟡 AI visual screening suggests the screenshot may show the correct MaseMedia TV channel and a subscribed state. Provisional MaseNet access is available after the five-second timeout. IMPORTANT: this is not genuine YouTube verification. The admin can still review your screenshot and may require re-verification."
+            : "🟡 Provisional MaseNet access was granted after the five-second timeout, but AI could not confidently confirm the required channel and subscribed state. This is NOT genuine YouTube verification. The admin must review your screenshot and may require a genuine replacement."
         })
       }).catch(error => console.error("MaseNet user AI screening notice failed:", String(error)));
     } catch (error) {
