@@ -1,4 +1,8 @@
 /** Cookie-backed Cloudflare Pages API and authentication adapter used by the MaseNet application. */
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
+
 type ApiResult<T=any> = { data:T };
 async function request<T=any>(method:string,path:string,body?:unknown,params?:Record<string,string>):Promise<ApiResult<T>> {
   const url=new URL(path,window.location.origin);
@@ -19,10 +23,52 @@ export const api={
  put:<T=any>(path:string,body?:unknown)=>request<T>("PUT",path,body),
  delete:<T=any>(path:string)=>request<T>("DELETE",path),
 };
+
+let nativeAuthResolver:((user:any)=>void)|null=null;
+let nativeAuthRejecter:((error:Error)=>void)|null=null;
+async function completeNativeAuthUrl(rawUrl:string){
+  if(!rawUrl.startsWith('tv.masemedia.masenet://auth'))return;
+  const url=new URL(rawUrl);
+  const code=url.searchParams.get('code');
+  if(!code)return;
+  try{
+    await request('POST','/api/auth/native/exchange',{code});
+    const result=await request<{user?:any}>('GET','/api/auth/me');
+    const user=result.data?.user||null;
+    if(!user)throw new Error('Google sign-in returned to MaseNet, but the account session could not be loaded. Please try again.');
+    nativeAuthResolver?.(user);
+    nativeAuthResolver=null;
+    nativeAuthRejecter=null;
+  }catch(error){
+    const failure=error instanceof Error?error:new Error('MaseNet could not finish Google sign-in.');
+    nativeAuthRejecter?.(failure);
+    nativeAuthResolver=null;
+    nativeAuthRejecter=null;
+  }
+}
+if(Capacitor.isNativePlatform()){
+  void App.addListener('appUrlOpen',event=>{void completeNativeAuthUrl(event.url)});
+  void App.getLaunchUrl().then(result=>{if(result?.url)void completeNativeAuthUrl(result.url)}).catch(()=>{});
+}
+
 /** Cookie-backed Google and Telegram authentication. */
 export const auth={
  getUser:async()=>{const r=await request<{user?:any}>("GET","/api/auth/me");return r.data?.user||null;},
- signIn:async():Promise<any>=>{window.location.assign("/api/auth/google");return await new Promise<any>(()=>{});},
+ signIn:async():Promise<any>=>{
+   if(Capacitor.isNativePlatform()){
+     if(nativeAuthResolver)throw new Error('A Google sign-in attempt is already open.');
+     const result=new Promise<any>((resolve,reject)=>{nativeAuthResolver=resolve;nativeAuthRejecter=reject});
+     try{
+       await Browser.open({url:new URL('/api/auth/google?native=1',window.location.origin).toString(),presentationStyle:'popover'});
+     }catch(error){
+       nativeAuthResolver=null;nativeAuthRejecter=null;
+       throw error instanceof Error?error:new Error('Could not open secure Google sign-in.');
+     }
+     return result;
+   }
+   window.location.assign("/api/auth/google");
+   return await new Promise<any>(()=>{});
+ },
  signOut:async()=>{await request("POST","/api/auth/logout");},
 };
 /** Keep image resizing local; the backend must validate uploads and store them in R2. */
