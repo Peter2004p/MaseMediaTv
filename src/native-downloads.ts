@@ -57,8 +57,9 @@ async function saveHlsOffline(input: {
       try { await Filesystem.deleteFile({ directory: Directory.Data, path: tempPath }); } catch {}
     }
   };
-  const downloadResource = async (url: string, kind: string) => {
-    const existing = resources.get(url);
+  const downloadResource = async (url: string, kind: string, byteRange?: { start: number; end: number }) => {
+    const resourceKey = url + (byteRange ? '|bytes=' + byteRange.start + '-' + byteRange.end : '');
+    const existing = resources.get(resourceKey);
     if (existing) return existing;
     const extension = kind === 'key' ? 'key' : kind === 'init' ? 'mp4' : (/\.m4s(?:$|[?#])/i.test(url) ? 'm4s' : /\.mp4(?:$|[?#])/i.test(url) ? 'mp4' : 'ts');
     const path = folder + '/' + kind + '-' + String(resources.size + 1).padStart(5, '0') + '.' + extension;
@@ -69,13 +70,20 @@ async function saveHlsOffline(input: {
       input.onProgress?.(Math.min(99, Math.floor((completed + current) / Math.max(total, 1) * 100)));
     });
     try {
-      await FileTransfer.downloadFile({ url, path: target.uri, progress: true });
+      await FileTransfer.downloadFile({
+        url, path: target.uri, progress: true,
+        ...(byteRange ? { headers: { Range: 'bytes=' + byteRange.start + '-' + byteRange.end } } : {})
+      });
       const stat = await Filesystem.stat({ directory: Directory.Data, path });
-      totalBytes += Number(stat.size || 0);
-      resources.set(url, path.slice(folder.length + 1));
+      const downloadedBytes = Number(stat.size || 0);
+      if (byteRange && downloadedBytes !== byteRange.end - byteRange.start + 1) {
+        throw new Error('The HLS host did not return the requested byte range. This stream cannot currently be saved offline from this provider.');
+      }
+      totalBytes += downloadedBytes;
+      resources.set(resourceKey, path.slice(folder.length + 1));
       completed++;
       input.onProgress?.(Math.min(99, Math.floor(completed / Math.max(total, 1) * 100)));
-      return resources.get(url)!;
+      return resources.get(resourceKey)!;
     } finally {
       await listener.remove();
     }
@@ -103,23 +111,34 @@ async function saveHlsOffline(input: {
     }
     const lines = current.text.split(/\r?\n/);
     if (!lines.some(line => line.trim() === '#EXT-X-ENDLIST')) throw new Error('This is a live or unfinished HLS stream. Only completed VOD playlists can be saved offline.');
-    if (lines.some(line => /^#EXT-X-BYTERANGE:/i.test(line))) throw new Error('This HLS stream uses byte-range segments. This source layout is not supported for offline saving yet.');
     if (lines.some(line => /^#EXT-X-KEY:.*METHOD=(SAMPLE-AES|SAMPLE-AES-CTR)/i.test(line))) throw new Error('This HLS stream uses SAMPLE-AES encryption, which is not supported for offline saving.');
-    const segmentUrls = lines.filter(line => line.trim() && !line.trim().startsWith('#')).map(line => resolveResource(line.trim(), current.url));
-    const tagUrls = lines.flatMap(line => {
-      const match = /^#EXT-X-(?:KEY|MAP):.*?URI="([^"]+)"/i.exec(line);
-      return match ? [resolveResource(match[1], current.url)] : [];
-    });
-    total = segmentUrls.length + tagUrls.length;
-    if (!segmentUrls.length) throw new Error('MaseNet did not find any video segments in this HLS playlist.');
+    const segmentCount = lines.filter(line => line.trim() && !line.trim().startsWith('#')).length;
+    const tagCount = lines.filter(line => /^#EXT-X-(?:KEY|MAP):.*?URI="/i.test(line)).length;
+    total = segmentCount + tagCount;
+    if (!segmentCount) throw new Error('MaseNet did not find any video segments in this HLS playlist.');
     if (total > 12000) throw new Error('This HLS stream contains too many segments to save safely on this phone.');
     const rewritten: string[] = [];
+    let pendingRange: { length: number; offset?: number } | null = null;
+    const previousRangeEnd = new Map<string, number>();
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) { rewritten.push(line); continue; }
+      if (/^#EXT-X-BYTERANGE:/i.test(trimmed)) {
+        const spec = /^#EXT-X-BYTERANGE:(\d+)(?:@(\d+))?/i.exec(trimmed);
+        if (!spec) throw new Error('MaseNet found an invalid HLS byte-range instruction.');
+        pendingRange = { length: Number(spec[1]), offset: spec[2] === undefined ? undefined : Number(spec[2]) };
+        continue;
+      }
       if (!trimmed.startsWith('#')) {
         const resourceUrl = resolveResource(trimmed, current.url);
-        const localName = await downloadResource(resourceUrl, 'segment');
+        let byteRange: { start: number; end: number } | undefined;
+        if (pendingRange) {
+          const start = pendingRange.offset ?? previousRangeEnd.get(resourceUrl) ?? 0;
+          byteRange = { start, end: start + pendingRange.length - 1 };
+          previousRangeEnd.set(resourceUrl, byteRange.end + 1);
+          pendingRange = null;
+        }
+        const localName = await downloadResource(resourceUrl, 'segment', byteRange);
         rewritten.push(localName);
         continue;
       }
@@ -127,8 +146,17 @@ async function saveHlsOffline(input: {
       if (match) {
         const resourceUrl = resolveResource(match[3], current.url);
         const kind = match[1].toUpperCase() === 'KEY' ? 'key' : 'init';
-        const localName = await downloadResource(resourceUrl, kind);
-        rewritten.push(line.replace(match[3], localName));
+        const rangeSpec = /(?:^|,)BYTERANGE="(\d+)(?:@(\d+))?"/i.exec(match[2]);
+        let byteRange: { start: number; end: number } | undefined;
+        if (rangeSpec) {
+          const start = rangeSpec[2] === undefined ? previousRangeEnd.get(resourceUrl) ?? 0 : Number(rangeSpec[2]);
+          byteRange = { start, end: start + Number(rangeSpec[1]) - 1 };
+          previousRangeEnd.set(resourceUrl, byteRange.end + 1);
+        }
+        const localName = await downloadResource(resourceUrl, kind, byteRange);
+        let rewrittenTag = line.replace(match[3], localName);
+        if (byteRange) rewrittenTag = rewrittenTag.replace(/,?BYTERANGE="\d+(?:@\d+)?"/i, '');
+        rewritten.push(rewrittenTag);
       } else {
         rewritten.push(line);
       }
