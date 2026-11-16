@@ -35,7 +35,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_access_verification (chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0, youtube_provisional INTEGER NOT NULL DEFAULT 0, masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
   try { await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN youtube_provisional INTEGER NOT NULL DEFAULT 0").run(); } catch { /* Column already exists. */ }
   const chatId = String(user.id);
-  const savedAccess = await env.DB.prepare("SELECT youtube_ok,youtube_provisional FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number}>();
+  const savedAccess = await env.DB.prepare("SELECT youtube_ok,youtube_provisional,masemedia_ok,moondramac_ok FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number;masemedia_ok:number;moondramac_ok:number}>();
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews(chat_id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'clear',reason TEXT NOT NULL DEFAULT '',flagged_at TEXT,deadline_at TEXT,updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
   let review=await env.DB.prepare("SELECT status,reason,deadline_at FROM telegram_access_reviews WHERE chat_id=?").bind(chatId).first<{status:string;reason:string;deadline_at:string|null}>();
   if(review&&["warning","submitted"].includes(review.status)&&review.deadline_at){
@@ -43,19 +43,18 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     review=await env.DB.prepare("SELECT status,reason,deadline_at FROM telegram_access_reviews WHERE chat_id=?").bind(chatId).first<{status:string;reason:string;deadline_at:string|null}>();
   }
   if(review?.status==="restricted")return json({error:"Your MaseNet account is restricted until the admin manually approves a genuine replacement screenshot.",verificationRequired:true,reviewStatus:review.status,deadlineAt:review.deadline_at},403);
-  const membership = { masemedia: false, moondramac: false };
-  for (const [channel, key] of [["@MaseMediaTv","masemedia"],["@MoonDramaC","moondramac"]] as const) {
-    try {
-      const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getChatMember?chat_id=" + encodeURIComponent(channel) + "&user_id=" + encodeURIComponent(chatId));
-      const data = await response.json().catch(() => ({})) as {ok?:boolean;result?:{status?:string}};
-      membership[key] = !!response.ok && !!data.ok && ["member","administrator","creator"].includes(String(data.result?.status || ""));
-    } catch { membership[key] = false; }
-  }
-  await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,updated_at) VALUES (?,?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,updated_at=datetime('now')").bind(chatId,membership.masemedia?1:0,membership.moondramac?1:0).run();
+  // access-status has already validated the signed Telegram initData and refreshed
+  // channel membership. Reuse that authoritative D1 result here instead of calling
+  // Telegram getChatMember a second time during the login handoff (which can fail
+  // transiently/rate-limit and strand a user after access was granted).
   const youtubeVerified = !!savedAccess?.youtube_ok;
   const provisionalAccess = !youtubeVerified && !!savedAccess?.youtube_provisional;
+  const membership = {
+    masemedia: !!savedAccess?.masemedia_ok,
+    moondramac: !!savedAccess?.moondramac_ok
+  };
   if ((!youtubeVerified && !provisionalAccess) || !membership.masemedia || !membership.moondramac) {
-    return json({ error: "Complete the YouTube subscription and Telegram channel checks to unlock MaseNet.", verificationRequired: true, youtubeVerified, provisionalAccess, membership }, 403);
+    return json({ error: "Access checks are not complete yet. Please refresh your access status.", verificationRequired: true, youtubeVerified, provisionalAccess, membership }, 403);
   }
 
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS site_users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL DEFAULT '', picture TEXT NOT NULL DEFAULT '', provider TEXT NOT NULL DEFAULT 'google', created_at TEXT NOT NULL DEFAULT (datetime('now')), last_login_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
