@@ -29,9 +29,20 @@ export const nativeDownloads = {
     if (/\.m3u8(?:$|[?#])/i.test(url) || /mpegurl/i.test(input.mimeType || '')) {
       throw new Error('This is an HLS streaming playlist, not a single video file. Offline HLS downloading needs a separate segment-aware download engine; this source has not been saved.');
     }
-    const extension = /\.([a-z0-9]{2,5})(?:$|[?#])/i.exec(new URL(url).pathname)?.[1]?.toLowerCase() || 'mp4';
-    if (!['mp4','m4v','webm','mov'].includes(extension)) {
-      throw new Error('This video format is not enabled for offline downloads yet. Supported files: MP4, M4V, WebM and MOV.');
+    const pathnameExtension = /\.([a-z0-9]{2,5})$/i.exec(new URL(url).pathname)?.[1]?.toLowerCase();
+    const suppliedMime = String(input.mimeType || '').toLowerCase().split(';')[0].trim();
+    const mimeExtensions: Record<string, string> = {
+      'video/mp4': 'mp4',
+      'video/x-m4v': 'm4v',
+      'video/webm': 'webm',
+      'video/quicktime': 'mov',
+      'video/x-matroska': 'mkv',
+      'video/matroska': 'mkv',
+      'application/x-matroska': 'mkv',
+    };
+    const extension = pathnameExtension || mimeExtensions[suppliedMime] || 'mp4';
+    if (!['mp4','m4v','webm','mov','mkv'].includes(extension)) {
+      throw new Error('This video format is not enabled for offline downloads yet. Supported files: MP4, M4V, WebM, MOV and MKV.');
     }
     const id = safe(input.title) + '-' + safe(String(input.season || 0) + '-' + String(input.episode || 0)) + '-' + safe(input.quality) + '-' + Date.now();
     const path = 'masenet-downloads/' + id + '.' + extension;
@@ -48,7 +59,7 @@ export const nativeDownloads = {
       const item: SavedVideo = {
         id, title: input.title, titleType: input.titleType, episodeTitle: input.episodeTitle,
         season: input.season, episode: input.episode, quality: input.quality,
-        path, uri, size: Number(stat.size || 0), savedAt: Date.now(), mimeType: input.mimeType || (extension === 'webm' ? 'video/webm' : 'video/mp4')
+        path, uri, size: Number(stat.size || 0), savedAt: Date.now(), mimeType: input.mimeType || (extension === 'webm' ? 'video/webm' : extension === 'mkv' ? 'video/x-matroska' : extension === 'mov' ? 'video/quicktime' : 'video/mp4')
       };
       write([item, ...read().filter(existing => existing.id !== id)]);
       input.onProgress?.(100);
