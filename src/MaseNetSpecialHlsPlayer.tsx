@@ -12,7 +12,7 @@ export default function MaseNetSpecialHlsPlayer({src,title,onProgress,onPlayback
  const [textTracks,setTextTracks]=useState<any[]>([]),[audioTracks,setAudioTracks]=useState<any[]>([]),[menu,setMenu]=useState<'subtitles'|'audio'|'speed'|null>(null),[full,setFull]=useState(false);
  const position=useRef(resumeAtSeconds),attempt=useRef(0),started=useRef(false);
  useEffect(()=>{
-  let alive=true,engine:'shaka'|'hls'|null=null,shaka:any=null,hls:Hls|null=null,retryTimer:ReturnType<typeof setTimeout>|null=null,startTimer:ReturnType<typeof setTimeout>|null=null;
+  let alive=true,engine:'shaka'|'hls'|null=null,shaka:any=null,hls:Hls|null=null,retryTimer:ReturnType<typeof setTimeout>|null=null,startTimer:ReturnType<typeof setTimeout>|null=null,loadTimer:ReturnType<typeof setTimeout>|null=null;
   const video=videoRef.current;if(!video)return;
   position.current=resumeAtSeconds;attempt.current=0;started.current=false;
   const clearRetry=()=>{if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}};
@@ -32,6 +32,7 @@ export default function MaseNetSpecialHlsPlayer({src,title,onProgress,onPlayback
   };
   const startHlsFallback=async(reason:string)=>{
    if(!alive||engine==='hls')return;
+   if(loadTimer){clearTimeout(loadTimer);loadTimer=null;}
    try{await shaka?.destroy?.();}catch{}shaka=null;shakaRef.current=null;
    try{
     if(!Hls.isSupported())throw new Error('This browser does not support the fallback HLS decoder.');
@@ -39,12 +40,12 @@ export default function MaseNetSpecialHlsPlayer({src,title,onProgress,onPlayback
     hlsRef.current=hls;engine='hls';setEngineName('Special HLS · hls.js recovery');
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{if(!alive)return;setStatus('ready');setError('');syncTracks();if(position.current>0&&Number.isFinite(video.duration)&&video.duration>position.current+2)video.currentTime=position.current;if(autoPlay)void video.play().catch(()=>{});});
     hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED,syncTracks);hls.on(Hls.Events.AUDIO_TRACKS_UPDATED,syncTracks);
-    hls.on(Hls.Events.ERROR,(_event,data)=>{if(!alive||!data.fatal)return;if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&attempt.current<4){attempt.current++;setError('Reconnecting to the media segments…');setTimeout(()=>{if(alive)hls?.startLoad();},1000*attempt.current);return;}if(data.type===Hls.ErrorTypes.MEDIA_ERROR){try{hls?.recoverMediaError();return;}catch{}}recover(reason+' (hls.js '+String(data.details||data.type)+')');});
+    hls.on(Hls.Events.ERROR,(_event,data)=>{if(!alive||!data.fatal)return;const httpStatus=Number(data.response?.code||0);const detail=String(data.details||data.type||'network error');if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&attempt.current<4){attempt.current++;setStatus('loading');setError('Reconnecting to the media segments… (attempt '+attempt.current+'/4)');setTimeout(()=>{if(alive)hls?.startLoad();},1000*attempt.current);return;}if(data.type===Hls.ErrorTypes.MEDIA_ERROR){try{hls?.recoverMediaError();return;}catch{}}const responseText=String(data.response?.text||'').replace(/<[^>]*>/g,' ').replace(/\\s+/g,' ').trim().slice(0,180);recover(reason+' (hls.js '+detail+(httpStatus?' · HTTP '+httpStatus:'')+(responseText?' · '+responseText:'')+').');});
     hls.loadSource(src);hls.attachMedia(video);
    }catch(e:any){if(alive){setStatus('error');setError(reason+' '+String(e?.message||e));}}
   };
   const boot=async(fromRecovery=false)=>{
-   if(!alive)return;clearRetry();
+   if(!alive)return;clearRetry();if(loadTimer){clearTimeout(loadTimer);loadTimer=null;}if(startTimer){clearTimeout(startTimer);startTimer=null;}
    try{await shaka?.destroy?.();}catch{}try{hls?.destroy();}catch{}
    shaka=null;hls=null;shakaRef.current=null;hlsRef.current=null;video.pause();video.removeAttribute('src');video.load();
    setStatus('loading');setError('');if(!fromRecovery)setEngineName('Special HLS · Shaka adaptive engine');
@@ -55,7 +56,7 @@ export default function MaseNetSpecialHlsPlayer({src,title,onProgress,onPlayback
     shaka.addEventListener('error',(event:any)=>{const d=event.detail||{};if(alive&&engine==='shaka')void startHlsFallback('Shaka could not decode the playlist or a media segment (error '+String(d.code||'unknown')+').');});
     shaka.addEventListener('trackschanged',syncTracks);
     shaka.configure({streaming:{lowLatencyMode:false,bufferingGoal:40,rebufferingGoal:8,bufferBehind:30,retryParameters:{maxAttempts:5,baseDelay:800,backoffFactor:2,fuzzFactor:.3,timeout:30000,stallTimeout:15000,connectionTimeout:15000}},manifest:{retryParameters:{maxAttempts:5,baseDelay:800,backoffFactor:2,timeout:30000}}});
-    await shaka.attach(video);await shaka.load(src);if(!alive)return;
+    await shaka.attach(video);await Promise.race([shaka.load(src),new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error('The playlist or first media segment did not respond within 25 seconds.')),25000);})]);if(loadTimer){clearTimeout(loadTimer);loadTimer=null;}if(!alive)return;
     syncTracks();setEngineName('Special HLS · Shaka');setStatus('ready');setError('');
     if(position.current>0&&Number.isFinite(video.duration)&&video.duration>position.current+2)video.currentTime=position.current;
     if(autoPlay)await video.play().catch(()=>{});
@@ -68,7 +69,7 @@ export default function MaseNetSpecialHlsPlayer({src,title,onProgress,onPlayback
   video.addEventListener('ended',()=>{if(alive){setStatus('ended');setPlaying(false);onPlaybackEnded?.();onPlaybackPosition?.(0);}});
   video.addEventListener('pause',()=>{if(alive){setPlaying(false);onPlaybackStateChange?.(false,video.currentTime||0);}});
   void boot();
-  return()=>{alive=false;clearRetry();if(startTimer)clearTimeout(startTimer);video.removeEventListener('playing',onPlaying);video.removeEventListener('timeupdate',updateTime);video.removeEventListener('durationchange',updateTime);try{hls?.destroy();}catch{}try{void shaka?.destroy?.();}catch{}hlsRef.current=null;shakaRef.current=null;restartRef.current=()=>{};};
+  return()=>{alive=false;clearRetry();if(startTimer)clearTimeout(startTimer);if(loadTimer)clearTimeout(loadTimer);video.removeEventListener('playing',onPlaying);video.removeEventListener('timeupdate',updateTime);video.removeEventListener('durationchange',updateTime);try{hls?.destroy();}catch{}try{void shaka?.destroy?.();}catch{}hlsRef.current=null;shakaRef.current=null;restartRef.current=()=>{};};
  },[src]);
  useEffect(()=>{const v=videoRef.current;if(v&&playRequest>0)void v.play().catch(()=>setError('Tap Play to start the stream.'));},[playRequest]);
  const toggle=()=>{const v=videoRef.current;if(!v)return;if(v.paused)void v.play().catch(()=>setError('Tap Play again to start streaming.'));else v.pause();};
