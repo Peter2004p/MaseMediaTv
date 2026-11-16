@@ -384,7 +384,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   const safeReason=reason.slice(0,140);
   return json({error:"MaseNet could not connect to the external video host. "+safeReason},502);
  }
- if(upstream.ok && /text\\/html|application\\/xhtml\\+xml/i.test(upstream.headers.get("content-type")||"")) {
+ if(upstream.ok && /text\/html|application\/xhtml\+xml/i.test(upstream.headers.get("content-type")||"")) {
   await upstream.body?.cancel();
   return json({error:"The streaming provider returned an HTML challenge page instead of video data, even after VLC-compatible retries. This source host is blocking server-side playback; another browser player cannot decode this response."},502);
  }
