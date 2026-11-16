@@ -281,7 +281,6 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       // Timeout access is provisional regardless of AI certainty or provider uptime.
       // The AI result is recorded for the admin; it never changes youtube_ok or revokes
       // the five-second provisional grant by itself.
-      const provisional = true;
       const aiLabel = aiAvailable
         ? "AI SCREENING: " + String(verdict).toUpperCase() + " — PROVISIONAL ACCESS ONLY; ADMIN REVIEW REQUIRED"
         : "AI SCREENING UNAVAILABLE — PROVISIONAL ACCESS ONLY; ADMIN REVIEW REQUIRED";
