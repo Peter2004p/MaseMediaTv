@@ -504,9 +504,9 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
     }
     childHosts=Array.from(discovered).slice(0,20);
     // Probe the first actual HLS byte range; a plain GET may return a landing page.
-    const manifestLines=manifest.split(/\\r?\\n/);
+    const manifestLines=manifest.split(/\r?\n/);
     for(let i=0;i<manifestLines.length;i++){
-     const match=manifestLines[i].trim().match(/^#EXT-X-BYTERANGE:(\\d+)(?:@(\\d+))?/i);
+     const match=manifestLines[i].trim().match(/^#EXT-X-BYTERANGE:(\d+)(?:@(\d+))?/i);
      if(match){
       const length=Number(match[1]),offset=match[2]===undefined?0:Number(match[2]);
       if(Number.isSafeInteger(length)&&length>0&&Number.isSafeInteger(offset)&&offset>=0){firstByteRange={length,offset};break;}
