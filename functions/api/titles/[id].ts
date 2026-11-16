@@ -1,4 +1,5 @@
 import { Env, json, requireAdmin } from "../auth/_shared";
+import { sendTelegramTitleNotifications } from "../_telegram-notifications";
 const validateExternalEpisodeLinks = (episodes: unknown, requestUrl: string): string | null => {
   if (!Array.isArray(episodes)) return null;
   const ownOrigin = new URL(requestUrl).origin;
@@ -132,9 +133,34 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
   if (!targetId) return json({ error: "Title not found. Refresh the Admin Library and reopen this movie." }, 404);
   const title: Record<string, unknown> = { ...body, id: targetId };
   title.type = kind === "drama" ? "Drama" : "Movie";
+
+  // Compare the saved episode list before writing. This catches uploads that
+  // merge a new episode into an existing drama through the normal title editor.
+  const before = await env.DB.prepare("SELECT metadata_json FROM titles WHERE id=?")
+    .bind(targetId).first<{ metadata_json: string }>();
+  let previousMetadata: Record<string, unknown> = {};
+  try { previousMetadata = JSON.parse(before?.metadata_json || "{}") as Record<string, unknown>; } catch {}
+  const previousEpisodes = Array.isArray(previousMetadata.episodes)
+    ? previousMetadata.episodes as Record<string, unknown>[] : [];
+  const nextEpisodes = Array.isArray(title.episodes)
+    ? title.episodes as Record<string, unknown>[] : [];
+  const previousEpisodeKeys = new Set(previousEpisodes.map(ep =>
+    String(Number(ep.season) || 1) + "|" + String(Number(ep.episode) || 1)
+  ));
+  const newEpisodes = nextEpisodes.filter(ep =>
+    !previousEpisodeKeys.has(String(Number(ep.season) || 1) + "|" + String(Number(ep.episode) || 1))
+  );
+
   await env.DB.prepare("UPDATE titles SET name=?,kind=?,metadata_json=?,updated_at=datetime('now') WHERE id=?")
     .bind(title.name, kind, JSON.stringify(title), targetId).run();
-  return json({ title });
+
+  const telegramNotifications = await sendTelegramTitleNotifications(
+    env,
+    title as { id?: string; name?: string; type?: string; year?: string | number; description?: string; posterUrl?: string },
+    false,
+    newEpisodes as { season?: number | string; episode?: number | string; title?: string }[]
+  );
+  return json({ title, telegramNotifications });
 };
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
   const gate = await requireAdmin(request, env); if (gate.response) return gate.response;
