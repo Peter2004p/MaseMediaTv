@@ -47,8 +47,8 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
    instance.on?.("tracksChange",sync);
    instance.on?.("timeUpdate",(t:number)=>{if(!live)return;const d=instance.getDuration?.()||0;setTime(t);setDuration(d);onPlaybackPosition?.(t);if(d>0)onProgress?.(Math.min(100,t/d*100));onPlaybackStateChange?.(instance.getState?.()==="playing",t);});
    instance.on?.("durationChange",(d:number)=>{if(live)setDuration(d);});
-   instance.on?.("frame",()=>{if(!live)return;firstFrameSeen=true;if(firstFrameTimer){clearTimeout(firstFrameTimer);firstFrameTimer=null;}});
-   instance.on?.("stateChange",(s:string)=>{if(!live)return;setStatus(s);if(s==="playing"){automaticRetries.current=0;onPlaybackStarted?.();if(firstFrameTimer)clearTimeout(firstFrameTimer);if(!firstFrameSeen)firstFrameTimer=setTimeout(()=>{firstFrameTimer=null;if(live&&!firstFrameSeen)scheduleRetry("The source opened but did not deliver a video frame. Reconnecting to the stream…");},15000);}onPlaybackStateChange?.(s==="playing",instance.getCurrentTime?.()||0);});
+   instance.on?.("frame",()=>{if(!live)return;if(!firstFrameSeen){firstFrameSeen=true;automaticRetries.current=0;onPlaybackStarted?.();}if(firstFrameTimer){clearTimeout(firstFrameTimer);firstFrameTimer=null;}});
+   instance.on?.("stateChange",(s:string)=>{if(!live)return;setStatus(s);if(s==="playing"){if(firstFrameTimer)clearTimeout(firstFrameTimer);if(!firstFrameSeen)firstFrameTimer=setTimeout(()=>{firstFrameTimer=null;if(live&&!firstFrameSeen)scheduleRetry("The source opened but did not deliver a video frame. Reconnecting to the stream…");},15000);}onPlaybackStateChange?.(s==="playing",instance.getCurrentTime?.()||0);});
    instance.on?.("ended",()=>{if(live){setStatus("ended");onPlaybackEnded?.();}});
    instance.on?.("error",(e:any)=>{if(!live)return;const message=String(e?.message||"The MKV decoder reported an error.");if(/network|fetch|timeout|timed out|connection|HTTP 5\d\d|failed to load/i.test(message)){scheduleRetry(message);return;}if(switchAlternate())return;setError(message);setStatus("error");});
    // External media hosts may accept a request but never complete the MKV open.
