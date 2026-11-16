@@ -1,14 +1,28 @@
 {
+  "id": "/",
   "name": "MaseNet | MaseMedia TV",
   "short_name": "MaseNet",
-  "description": "Discover entertainment updates and content from MaseMedia TV.",
+  "description": "Discover movies, dramas and entertainment from MaseMedia TV.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#070910",
   "theme_color": "#070910",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "categories": ["entertainment", "video"],
   "icons": [
-    { "src": "/masemediatv-logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "/masenet-app-icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/masenet-app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }
