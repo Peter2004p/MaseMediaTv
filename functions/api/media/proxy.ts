@@ -309,7 +309,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    const child=new URL(requested);
    const sourceHost=new URL(sourceHint || allowed[0] || upstreamUrl).hostname.toLowerCase();
    const configured=(env.MEDIA_PROXY_ALLOWED_HOSTS||"").split(",").map(host=>host.trim().toLowerCase()).filter(Boolean);
-   const allowedHosts=new Set([sourceHost,...configured]);
+   const knownHlsCdnHosts=new Set(["exoidol.space"]);\n   const allowedHosts=new Set([sourceHost,...knownHlsCdnHosts,...configured]);
    if(!isPublicHttps(child.toString()) || !allowedHosts.has(child.hostname.toLowerCase()))
     return json({error:"This HLS resource host is not an approved media CDN. Add its hostname to MEDIA_PROXY_ALLOWED_HOSTS if it is a trusted CDN."},403);
   } catch { return json({error:"Invalid HLS resource URL"},400); }
