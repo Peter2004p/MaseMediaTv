@@ -44,6 +44,9 @@ jobs:
       - name: Generate the Android wrapper
         run: npx cap add android
 
+      - name: Prepare Capacitor Android assets directory
+        run: mkdir -p android/app/src/main/assets
+
       - name: Synchronize native Android project
         run: npx cap sync android
 
