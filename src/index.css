@@ -4302,8 +4302,7 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
 }
 
 
-/* Refined compact iOS-inspired glass library filter dock */
-* Refined compact glass filter dock — two deliberate, non-overlapping rows */
+/* Compact two-row Liquid Glass library filter dock */
 .iqHome .iqCategories{position:sticky;top:8px;z-index:8;box-sizing:border-box;display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%;max-width:100%;min-width:0;margin:14px 0 24px;padding:12px;border:1px solid rgba(220,237,255,.15);border-radius:21px;background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(18,25,39,.83) 44%,rgba(255,255,255,.045));box-shadow:0 12px 34px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.16),inset 0 -1px 0 rgba(255,255,255,.035);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);overflow:hidden}
 .iqHome .iqCategoryPills,.iqHome .iqFilterControls{box-sizing:border-box;display:flex;align-items:center;justify-content:flex-start;flex-wrap:nowrap;gap:8px;width:100%;min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 .iqHome .iqCategoryPills::-webkit-scrollbar,.iqHome .iqFilterControls::-webkit-scrollbar{display:none}
