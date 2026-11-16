@@ -20,8 +20,9 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
  const selected=variants[Math.min(variantIndex,Math.max(0,variants.length-1))]||variants[0];
  const url=selected?.streamUrl||episode.streamUrl||'',mime=selected?.mimeType||episode.mimeType||'';
  const mkv=isMkv(url,mime),hlsSource=isHls(url,mime);
- const proxy=useMemo(()=>'/api/media/proxy?episodeId='+encodeURIComponent(episode.id)+'&source='+encodeURIComponent(url),[episode.id,url]);
- const sources=useMemo(()=>hlsSource?[proxy,url]:[url,proxy],[hlsSource,proxy,url]);
+ const localFile=/^file:/i.test(url)||url.includes('_capacitor_file_');
+ const proxy=useMemo(()=>localFile?'':'/api/media/proxy?episodeId='+encodeURIComponent(episode.id)+'&source='+encodeURIComponent(url),[episode.id,url,localFile]);
+ const sources=useMemo(()=>localFile?[url]:hlsSource?[proxy,url]:[url,proxy],[hlsSource,localFile,proxy,url]);
  const activeSrc=sources[Math.min(sourceIndex,sources.length-1)]||url;
  const externalTracks=(selected?.subtitleTracks||episode.subtitleTracks||[]).filter(t=>/\.vtt(?:$|[?#])/i.test(t.url||t.path||'')).map(t=>({...t,url:t.url||t.path||''}));
  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[playing,setPlaying]=useState(false),[time,setTime]=useState(0),[duration,setDuration]=useState(0);
