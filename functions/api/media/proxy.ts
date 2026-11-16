@@ -418,13 +418,30 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    let firstChildPathExtension="";
    let firstChildHtmlTitle="";
    let nestedSegmentStatus:number|null=null;
-   const firstResource=(text:string,base:string):string=>{
+   let sampledChildren:{status:number;type:string;host:string;extension:string;html:boolean}[]=[];
+   let playlistTags:{streamInfo:number;media:number;keys:number;maps:number;byteranges:number;discontinuities:number}= {streamInfo:0,media:0,keys:0,maps:0,byteranges:0,discontinuities:0};
+   const firstResources=(text:string,base:string,limit=8):string[]=>{
+    const found:string[]=[];
     for(const line of text.split(/\r?\n/)){
      const value=line.trim();
-     if(!value||value.startsWith("#")) continue;
-     try{return resolveHlsResource(value,base);}catch{}
+     if(!value) continue;
+     if(value.startsWith("#")){
+      const tag=value.split(":")[0];
+      if(tag==="#EXT-X-STREAM-INF") playlistTags.streamInfo++;
+      else if(tag==="#EXT-X-MEDIA") playlistTags.media++;
+      else if(tag==="#EXT-X-KEY") playlistTags.keys++;
+      else if(tag==="#EXT-X-MAP") playlistTags.maps++;
+      else if(tag==="#EXT-X-BYTERANGE") playlistTags.byteranges++;
+      else if(tag==="#EXT-X-DISCONTINUITY") playlistTags.discontinuities++;
+      for(const match of value.matchAll(/URI=(["'])(.*?)\1/g)){
+       try{const resolved=resolveHlsResource(match[2],base);if(isPublicHttps(resolved)&&!found.includes(resolved))found.push(resolved);}catch{}
+      }
+      continue;
+     }
+     try{const resolved=resolveHlsResource(value,base);if(isPublicHttps(resolved)&&!found.includes(resolved))found.push(resolved);}catch{}
+     if(found.length>=limit) break;
     }
-    return "";
+    return found.slice(0,limit);
    };
    if(isHls) {
     finalHost=new URL(upstream.url||upstreamUrl).hostname;
@@ -446,41 +463,37 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
      }
     }
     childHosts=Array.from(discovered).slice(0,20);
-    const first=firstResource(manifest,base);
-    if(first&&isPublicHttps(first)){
+    const samples=firstResources(manifest,base,8);
+    const first=samples[0]||"";
+    for(let sampleIndex=0;sampleIndex<samples.length;sampleIndex++){
+     const sampleUrl=samples[sampleIndex];
      try{
-      const childUrl=new URL(first);
-      firstChildHost=childUrl.hostname;
-      firstChildHasQuery=childUrl.search.length>0;
-      const child=await fetchMediaSource(first,headersForHlsChild(headers,sourceHint));
-      firstChildStatus=child.status;
-      firstChildType=child.headers.get("content-type")||"";
-      const childFinalUrl=child.url||first;
-      try {
-       const finalChildUrl=new URL(childFinalUrl);
-       firstChildFinalHost=finalChildUrl.hostname;
-       firstChildPathExtension=finalChildUrl.pathname.match(/\.([a-z0-9]{1,8})$/i)?.[1]?.toLowerCase()||"";
-      } catch {}
-      // Inspect only a bounded clone to identify HTML challenge/error pages.
-      // Never return upstream HTML or signed URLs in the diagnostic payload.
-      if(/text\/html|application\/xhtml\+xml/i.test(firstChildType)) {
-       try {
-        const prefix=await readResponsePrefix(child.clone(),8192);
-        const html=new TextDecoder().decode(prefix);
-        firstChildHtmlTitle=html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g," ").trim().slice(0,120)||"";
-       } catch {}
-      }
-      const childIsPlaylist=/mpegurl|text\/plain/i.test(firstChildType)||/\.m3u8(?:$|[?#])/i.test(childFinalUrl);
-      if(childIsPlaylist&&child.ok){
-       const childManifest=await child.text();
-       const segment=firstResource(childManifest,childFinalUrl);
-       if(segment&&isPublicHttps(segment)){
-        const segmentResponse=await fetchMediaSource(segment,headersForHlsChild(headers,sourceHint));
-        nestedSegmentStatus=segmentResponse.status;
-        await segmentResponse.body?.cancel();
+      const child=await fetchMediaSource(sampleUrl,headersForHlsChild(headers,sourceHint));
+      const type=child.headers.get("content-type")||"";
+      const finalUrl=child.url||sampleUrl;
+      let host="",extension="";
+      try{const parsed=new URL(finalUrl);host=parsed.hostname;extension=parsed.pathname.match(/\.([a-z0-9]{1,8})$/i)?.[1]?.toLowerCase()||"";}catch{}
+      const html=/text\/html|application\/xhtml\+xml/i.test(type);
+      sampledChildren.push({status:child.status,type:type.slice(0,100),host,extension,html});
+      if(sampleIndex===0){
+       const parsed=new URL(sampleUrl);
+       firstChildHost=parsed.hostname;
+       firstChildHasQuery=parsed.search.length>0;
+       firstChildStatus=child.status;
+       firstChildType=type;
+       firstChildFinalHost=host;
+       firstChildPathExtension=extension;
+       if(html){
+        try{const prefix=await readResponsePrefix(child.clone(),8192);const markup=new TextDecoder().decode(prefix);firstChildHtmlTitle=markup.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g," ").trim().slice(0,120)||"";}catch{}
        }
-      }else await child.body?.cancel();
-     }catch{firstChildStatus=0;}
+       const childIsPlaylist=/mpegurl|text\/plain/i.test(type)||/\.m3u8(?:$|[?#])/i.test(finalUrl);
+       if(childIsPlaylist&&child.ok){
+        const childManifest=await child.text();
+        const nested=firstResources(childManifest,finalUrl,1)[0];
+        if(nested){const segmentResponse=await fetchMediaSource(nested,headersForHlsChild(headers,sourceHint));nestedSegmentStatus=segmentResponse.status;await segmentResponse.body?.cancel();}
+       } else await child.body?.cancel();
+      } else await child.body?.cancel();
+     }catch{sampledChildren.push({status:0,type:"fetch-error",host:"",extension:"",html:false});}
     }
    } else await upstream.body?.cancel();
   return json({
@@ -488,7 +501,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    contentType,
    status:upstream.status,
    supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range"),
-   ...(isHls?{finalHost,childHosts,childCount,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,firstChildFinalHost,firstChildPathExtension,firstChildHtmlTitle,nestedSegmentStatus}:{})
+   ...(isHls?{finalHost,childHosts,childCount,playlistTags,sampledChildren,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,firstChildFinalHost,firstChildPathExtension,firstChildHtmlTitle,nestedSegmentStatus}:{})
   },200);
  }
  if(detectedPlaylist) {
