@@ -15,11 +15,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-apk:
-    name: Build installable Android APK
+    name: Build and publish MaseNet Android installer
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -80,3 +80,15 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish direct APK download
+        uses: ncipollo/release-action@v1
+        with:
+          tag: masenet-android-latest
+          name: MaseNet Android Installer
+          artifacts: android/app/build/outputs/apk/debug/app-debug.apk
+          artifactContentType: application/vnd.android.package-archive
+          allowUpdates: true
+          replacesArtifacts: true
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
