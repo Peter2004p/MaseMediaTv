@@ -1,5 +1,7 @@
 import { Component, StrictMode, type ErrorInfo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import App from './App';
 import PWAInstallPrompt from './PWAInstallPrompt';
 import './index.css';
@@ -49,8 +51,22 @@ if (root) {
   );
 }
 
+// Native Android Back navigates the in-app history first; it exits only from the home screen.
+if (Capacitor.isNativePlatform()) {
+  void CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+    const currentRoute = window.location.hash || '#/home';
+    if (currentRoute !== '#/home' && currentRoute !== '#/' && currentRoute !== '') {
+      if (window.history.length > 1) window.history.back();
+      else window.location.hash = '#/home';
+      return;
+    }
+    if (canGoBack && window.history.length > 1) window.history.back();
+    else void CapacitorApp.exitApp();
+  });
+}
+
 const telegramApp = (window as Window & { Telegram?: { WebApp?: { initData?: string; platform?: string } } }).Telegram?.WebApp;
-if ('serviceWorker' in navigator && !telegramApp?.initData && (!telegramApp?.platform || telegramApp.platform === 'unknown')) {
+if ('serviceWorker' in navigator && !Capacitor.isNativePlatform() && !telegramApp?.initData && (!telegramApp?.platform || telegramApp.platform === 'unknown')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(error => {
       console.warn('MaseNet offline app shell could not be registered:', error);
