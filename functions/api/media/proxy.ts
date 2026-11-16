@@ -392,6 +392,9 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    let firstChildHost="";
    let firstChildType="";
    let firstChildHasQuery=false;
+   let firstChildFinalHost="";
+   let firstChildPathExtension="";
+   let firstChildHtmlTitle="";
    let nestedSegmentStatus:number|null=null;
    const firstResource=(text:string,base:string):string=>{
     for(const line of text.split(/\r?\n/)){
@@ -448,7 +451,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    contentType,
    status:upstream.status,
    supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range"),
-   ...(isHls?{finalHost,childHosts,childCount,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,nestedSegmentStatus}:{})
+   ...(isHls?{finalHost,childHosts,childCount,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,firstChildFinalHost,firstChildPathExtension,firstChildHtmlTitle,nestedSegmentStatus}:{})
   },200);
  }
  if(detectedPlaylist) {
