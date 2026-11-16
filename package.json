@@ -23,7 +23,7 @@
     "@capacitor/app": "^7.0.0",
     "@capacitor/browser": "^7.0.0",
     "@capacitor/filesystem": "^7.1.9",
-    "@capacitor/file-transfer": "^7.1.0"
+    "@capacitor/file-transfer": "^1.0.12"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
