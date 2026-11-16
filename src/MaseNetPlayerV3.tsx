@@ -11,6 +11,7 @@ type HlsTrack={id?:number;name?:string;lang?:string;url?:string};
 const stamp=(n:number)=>Number.isFinite(n)?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'0:00';
 const isMkv=(url:string,mime='')=>/\.mkv(?:$|[?#])/i.test(url)||/matroska|x-matroska/i.test(mime);
 const isHls=(url:string,mime='')=>/\.m3u8(?:$|[?#])/i.test(url)||/mpegurl/i.test(mime);
+const isDash=(url:string,mime='')=>/\.mpd(?:$|[?#])/i.test(url)||/dash\+xml/i.test(mime);
 
 export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,onPlaybackStarted,onPlaybackEnded,onPlaybackStateChange,resumeAtSeconds=0,autoPlay=false,muted=false,reelMode=false,playRequest=0}:Props){
  const videoRef=useRef<HTMLVideoElement>(null),rootRef=useRef<HTMLElement>(null),hlsRef=useRef<Hls|null>(null),shakaRef=useRef<any>(null);
@@ -19,12 +20,12 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
  const [variantIndex,setVariantIndex]=useState(0),[sourceIndex,setSourceIndex]=useState(0),[attempt,setAttempt]=useState(0);
  const selected=variants[Math.min(variantIndex,Math.max(0,variants.length-1))]||variants[0];
  const url=selected?.streamUrl||episode.streamUrl||'',mime=selected?.mimeType||episode.mimeType||'';
- const mkv=isMkv(url,mime),hlsSource=isHls(url,mime);
+ const mkv=isMkv(url,mime),hlsSource=isHls(url,mime),dashSource=isDash(url,mime);
  const proxy=useMemo(()=>'/api/media/proxy?episodeId='+encodeURIComponent(episode.id)+'&source='+encodeURIComponent(url),[episode.id,url]);
  const sources=useMemo(()=>hlsSource?[proxy,url]:[url,proxy],[hlsSource,proxy,url]);
  const activeSrc=sources[Math.min(sourceIndex,sources.length-1)]||url;
  const externalTracks=(selected?.subtitleTracks||episode.subtitleTracks||[]).filter(t=>/\.vtt(?:$|[?#])/i.test(t.url||t.path||'')).map(t=>({...t,url:t.url||t.path||''}));
- const [loading,setLoading]=useState(true),[error,setError]=useState(''),[playing,setPlaying]=useState(false),[time,setTime]=useState(0),[duration,setDuration]=useState(0);
+ const [loading,setLoading]=useState(true),[error,setError]=useState(''),[playing,setPlaying]=useState(false),[time,setTime]=useState(0),[duration,setDuration]=useState(0),[isLive,setIsLive]=useState(false);
  const [volume,setVolume]=useState(1),[mutedState,setMutedState]=useState(muted),[speed,setSpeed]=useState(1),[qualityMenu,setQualityMenu]=useState(false),[subtitleMenu,setSubtitleMenu]=useState(false),[audioMenu,setAudioMenu]=useState(false),[settingsMenu,setSettingsMenu]=useState(false);
  const [hlsSubs,setHlsSubs]=useState<HlsTrack[]>([]),[hlsAudios,setHlsAudios]=useState<HlsTrack[]>([]);
  const [full,setFull]=useState(false);
@@ -35,27 +36,30 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
   const video=videoRef.current;if(!video||mkv)return;
   let alive=true,networkRetries=0,mediaRetries=0,alternateEngineStarted=false,stallTimer:ReturnType<typeof window.setTimeout>|null=null;
   const clearStall=()=>{if(stallTimer!==null){window.clearTimeout(stallTimer);stallTimer=null;}};
-  setLoading(true);setError('');setPlaying(false);setTime(0);setDuration(0);setHlsSubs([]);setHlsAudios([]);
+  setLoading(true);setError('');setPlaying(false);setTime(0);setDuration(0);setIsLive(false);setHlsSubs([]);setHlsAudios([]);
   resumeApplied.current=false;
   hlsRef.current?.destroy();hlsRef.current=null;void shakaRef.current?.destroy?.();shakaRef.current=null;
   const fail=(message:string)=>{if(!alive)return;advanceSource(message);};
   const startAlternateHlsEngine=async()=>{if(!alive||alternateEngineStarted)return;alternateEngineStarted=true;setLoading(true);setError('Switching to the alternate HLS playback engine…');try{hlsRef.current?.destroy();hlsRef.current=null;const imported:any=await import('shaka-player');const shaka=imported.default||imported;shaka.polyfill.installAll();if(!shaka.Player.isBrowserSupported())throw new Error('This browser does not support the alternate HLS engine.');const player=new shaka.Player();shakaRef.current=player;player.addEventListener('error',(event:any)=>{if(!alive)return;const detail=event.detail||{};fail('The alternate HLS engine could not load this stream (Shaka error '+String(detail.code||'unknown')+'). Trying the original source or another quality…');});const syncTracks=()=>{if(!alive)return;setHlsSubs((player.getTextTracks?.()||[]).map((t:any)=>({id:t.id,name:t.label||t.language,lang:t.language})));setHlsAudios((player.getAudioTracks?.()||[]).map((t:any)=>({id:t.id,name:t.label||t.language,lang:t.language})));};player.addEventListener('trackschanged',syncTracks);await player.attach(video);player.configure({streaming:{retryParameters:{maxAttempts:3,baseDelay:1000,backoffFactor:2,fuzzFactor:0.5,timeout:30000}}});await player.load(activeSrc);if(!alive){await player.destroy();return;}syncTracks();setLoading(false);setError('');applyResume();if(autoPlay&&video.paused)void video.play().catch(()=>{});}catch(error:any){if(alive)fail('The alternate HLS engine also failed: '+String(error?.message||error)+' Trying the original source or another quality…');}};
+  const syncLiveState=()=>{const hlsLive=!!hlsRef.current?.levels?.some((level:any)=>level.details?.live);const shakaLive=shakaRef.current?.isLive?.()===true;setIsLive(!Number.isFinite(video.duration)||hlsLive||shakaLive);};
   const applyResume=()=>{if(resumeApplied.current||!Number.isFinite(video.duration)||video.duration<=0)return;resumeApplied.current=true;if(resumeAtSeconds>0&&video.duration>resumeAtSeconds+5)video.currentTime=resumeAtSeconds;};
-  const onMetadata=()=>{if(!alive)return;setDuration(Number.isFinite(video.duration)?video.duration:0);applyResume();setLoading(false);setError('');};
+  const onMetadata=()=>{if(!alive)return;setDuration(Number.isFinite(video.duration)?video.duration:0);syncLiveState();applyResume();setLoading(false);setError('');};
+  const onDurationChange=()=>{if(!alive)return;setDuration(Number.isFinite(video.duration)?video.duration:0);syncLiveState();};
   const onCanPlay=()=>{if(alive){clearStall();setLoading(false);setError('');applyResume();if(autoPlay&&video.paused)void video.play().catch(()=>{});}};
   const onWaiting=()=>{if(!alive||video.paused)return;setLoading(true);if(stallTimer===null)stallTimer=window.setTimeout(()=>{stallTimer=null;if(alive&&!video.paused)fail('The stream stopped delivering video data. Trying another connection or quality…');},18000);};
   const onPlaying=()=>{if(alive){clearStall();setLoading(false);setError('');setPlaying(true);onPlaybackStarted?.();}};
   const onPause=()=>{if(alive){setPlaying(false);onPlaybackStateChange?.(false,video.currentTime||0);}};
-  const onTime=()=>{if(!alive)return;clearStall();const t=video.currentTime||0,d=video.duration||0;setTime(t);if(d>0)onProgress?.(Math.min(100,Math.round(t/d*100)));onPlaybackPosition?.(Math.floor(t));onPlaybackStateChange?.(!video.paused,t);if(Math.floor(t/10)!==lastPositionSent.current)lastPositionSent.current=Math.floor(t/10);};
+  const onTime=()=>{if(!alive)return;clearStall();syncLiveState();const t=video.currentTime||0,d=video.duration||0;setTime(t);if(d>0)onProgress?.(Math.min(100,Math.round(t/d*100)));onPlaybackPosition?.(Math.floor(t));onPlaybackStateChange?.(!video.paused,t);if(Math.floor(t/10)!==lastPositionSent.current)lastPositionSent.current=Math.floor(t/10);};
   const onEnd=()=>{if(alive){setPlaying(false);onPlaybackEnded?.();onPlaybackPosition?.(0);}};
-  const onError=()=>{if(!alive||!video.error)return;if(hlsSource&&alternateEngineStarted)return;const code=video.error.code;if(hlsSource&&!alternateEngineStarted){void startAlternateHlsEngine();return;}fail('The browser could not decode or fetch this source (media error '+code+'). Trying a fallback source or another quality…');};
-  video.addEventListener('loadedmetadata',onMetadata);video.addEventListener('canplay',onCanPlay);video.addEventListener('waiting',onWaiting);video.addEventListener('playing',onPlaying);video.addEventListener('pause',onPause);video.addEventListener('timeupdate',onTime);video.addEventListener('ended',onEnd);video.addEventListener('error',onError);
-  if(hlsSource&&Hls.isSupported()){
+  const onError=()=>{if(!alive||!video.error)return;if((hlsSource||dashSource)&&alternateEngineStarted)return;const code=video.error.code;if((hlsSource||dashSource)&&!alternateEngineStarted){void startAlternateHlsEngine();return;}fail('The browser could not decode or fetch this source (media error '+code+'). Trying a fallback source or another quality…');};
+  video.addEventListener('loadedmetadata',onMetadata);video.addEventListener('durationchange',onDurationChange);video.addEventListener('canplay',onCanPlay);video.addEventListener('waiting',onWaiting);video.addEventListener('playing',onPlaying);video.addEventListener('pause',onPause);video.addEventListener('timeupdate',onTime);video.addEventListener('ended',onEnd);video.addEventListener('error',onError);
+  if(dashSource){void startAlternateHlsEngine();}
+  else if(hlsSource&&Hls.isSupported()){
    const engine=new Hls({enableWorker:true,enableSoftwareAES:true,lowLatencyMode:false,backBufferLength:45,maxBufferLength:30,maxMaxBufferLength:60,manifestLoadingTimeOut:25000,levelLoadingTimeOut:25000,fragLoadingTimeOut:35000,manifestLoadingMaxRetry:3,levelLoadingMaxRetry:3,fragLoadingMaxRetry:4,manifestLoadingRetryDelay:1000,levelLoadingRetryDelay:1000,fragLoadingRetryDelay:1000});
    hlsRef.current=engine;engine.loadSource(activeSrc);engine.attachMedia(video);
    const syncTracks=()=>{setHlsSubs(engine.subtitleTracks.map(t=>({name:t.name,lang:t.lang,url:t.url})));setHlsAudios(engine.audioTracks.map(t=>({name:t.name,lang:t.lang})));};
    engine.on(Hls.Events.MANIFEST_PARSED,()=>{if(!alive)return;setLoading(false);setError('');syncTracks();});
-   engine.on(Hls.Events.SUBTITLE_TRACKS_UPDATED,syncTracks);engine.on(Hls.Events.AUDIO_TRACKS_UPDATED,syncTracks);
+   engine.on(Hls.Events.SUBTITLE_TRACKS_UPDATED,syncTracks);engine.on(Hls.Events.AUDIO_TRACKS_UPDATED,syncTracks);engine.on(Hls.Events.LEVEL_UPDATED,syncLiveState);
    engine.on(Hls.Events.ERROR,(_event,data)=>{if(!alive||!data.fatal||alternateEngineStarted)return;
     if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&networkRetries<2){networkRetries++;setError('Reconnecting to the stream ('+networkRetries+'/2)…');window.setTimeout(()=>{if(alive)engine.startLoad();},networkRetries*1200);return;}
     if(data.type===Hls.ErrorTypes.MEDIA_ERROR&&mediaRetries<1){mediaRetries++;setError('Recovering the video decoder…');engine.recoverMediaError();return;}
@@ -64,13 +68,14 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
   }else if(hlsSource&&video.canPlayType('application/vnd.apple.mpegurl')){video.src=activeSrc;video.load();}
   else if(hlsSource){void startAlternateHlsEngine();}
   else{video.src=activeSrc;video.load();}
-  return()=>{alive=false;clearStall();hlsRef.current?.destroy();hlsRef.current=null;void shakaRef.current?.destroy?.();shakaRef.current=null;video.pause();video.removeAttribute('src');video.load();video.removeEventListener('loadedmetadata',onMetadata);video.removeEventListener('canplay',onCanPlay);video.removeEventListener('waiting',onWaiting);video.removeEventListener('playing',onPlaying);video.removeEventListener('pause',onPause);video.removeEventListener('timeupdate',onTime);video.removeEventListener('ended',onEnd);video.removeEventListener('error',onError);};
- },[episode.id,url,activeSrc,hlsSource,mkv,attempt,variantIndex,sourceIndex,resumeAtSeconds,advanceSource]);
+  return()=>{alive=false;clearStall();hlsRef.current?.destroy();hlsRef.current=null;void shakaRef.current?.destroy?.();shakaRef.current=null;video.pause();video.removeAttribute('src');video.load();video.removeEventListener('loadedmetadata',onMetadata);video.removeEventListener('durationchange',onDurationChange);video.removeEventListener('canplay',onCanPlay);video.removeEventListener('waiting',onWaiting);video.removeEventListener('playing',onPlaying);video.removeEventListener('pause',onPause);video.removeEventListener('timeupdate',onTime);video.removeEventListener('ended',onEnd);video.removeEventListener('error',onError);};
+ },[episode.id,url,activeSrc,hlsSource,dashSource,mkv,attempt,variantIndex,sourceIndex,resumeAtSeconds,advanceSource]);
  useEffect(()=>{if(playRequest>0){const v=videoRef.current;if(v)void v.play().catch(()=>setError('Tap Play to start playback in this browser.'));}},[playRequest]);
  useEffect(()=>{const root=rootRef.current;if(!root)return;const sync=()=>setFull(!!document.fullscreenElement||(document as Document&{webkitFullscreenElement?:Element}).webkitFullscreenElement===root||root.classList.contains('mnv3-fallback-full'));document.addEventListener('fullscreenchange',sync);document.addEventListener('webkitfullscreenchange',sync as EventListener);return()=>{document.removeEventListener('fullscreenchange',sync);document.removeEventListener('webkitfullscreenchange',sync as EventListener);};},[]);
  const retry=()=>{setError('');setVariantIndex(0);setSourceIndex(0);setAttempt(n=>n+1);setLoading(true);};
  const togglePlay=()=>{const v=videoRef.current;if(!v)return;if(v.paused)void v.play().catch(()=>setError('Playback was blocked. Tap Play once more to start the video.'));else v.pause();};
  const seek=(seconds:number)=>{const v=videoRef.current;if(v&&Number.isFinite(v.duration))v.currentTime=Math.max(0,Math.min(v.duration,seconds));};
+ const goLive=()=>{const v=videoRef.current;if(!v)return;try{const ranges=v.seekable;if(ranges.length){const end=ranges.end(ranges.length-1);v.currentTime=Math.max(ranges.start(ranges.length-1),end-1.5);return;}const end=shakaRef.current?.seekRange?.()?.end;if(Number.isFinite(end))v.currentTime=Math.max(0,end-1.5);}catch{}};
  const changeVolume=(n:number)=>{setVolume(n);setMutedState(n===0);if(videoRef.current){videoRef.current.volume=n;videoRef.current.muted=n===0;}};
  const toggleMute=()=>{const next=!mutedState;setMutedState(next);if(videoRef.current)videoRef.current.muted=next;};
  const toggleFullscreen=async()=>{const root=rootRef.current as (HTMLElement&{webkitRequestFullscreen?:()=>Promise<void>|void})|null;const video=videoRef.current as (HTMLVideoElement&{webkitEnterFullscreen?:()=>void})|null;if(!root)return;const doc=document as Document&{webkitFullscreenElement?:Element;webkitExitFullscreen?:()=>void};const orientation=(screen as Screen&{orientation?:ScreenOrientation&{lock?:(v:'landscape')=>Promise<void>;unlock?:()=>void}}).orientation;try{if(document.fullscreenElement||doc.webkitFullscreenElement){if(document.exitFullscreen)await document.exitFullscreen();else doc.webkitExitFullscreen?.();orientation?.unlock?.();root.classList.remove('mnv3-fallback-full');setFull(false);return;}if(video?.webkitEnterFullscreen&&/iPhone|iPod/i.test(navigator.userAgent)){video.webkitEnterFullscreen();setFull(true);return;}const request=root.requestFullscreen||root.webkitRequestFullscreen;if(request){await request.call(root);setFull(true);try{await orientation?.lock?.('landscape');}catch{/* Browser does not permit orientation locking. */}}else{root.classList.add('mnv3-fallback-full');setFull(true);}}catch{root.classList.add('mnv3-fallback-full');setFull(true);}};
@@ -88,11 +93,11 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
    {!playing&&!loading&&!error&&<button className="mnv3-bigplay" onClick={togglePlay} aria-label="Play video">▶</button>}
   </div>
   {!reelMode&&<div className="mnv3-controls">
-   <div className="mnv3-progress"><span>{stamp(time)}</span><input aria-label="Seek video" type="range" min="0" max={duration||0} step=".1" value={Math.min(time,duration||0)} onChange={e=>seek(Number(e.target.value))}/><span>{stamp(duration)}</span></div>
+   <div className="mnv3-progress"><span>{stamp(time)}</span><input aria-label="Seek video" type="range" min="0" max={duration||0} step=".1" value={Math.min(time,duration||0)} onChange={e=>seek(Number(e.target.value))}/><span>{isLive?'LIVE':stamp(duration)}</span></div>
    <div className="mnv3-toolbar">
     <button aria-label={playing?'Pause':'Play'} title={playing?'Pause':'Play'} onClick={togglePlay}>{playing?'Ⅱ':'▶'}</button>
     <button title="Back 10 seconds" onClick={()=>seek(time-10)}>↶10</button><button title="Forward 10 seconds" onClick={()=>seek(time+10)}>10↷</button>
-    <button title={mutedState?'Unmute':'Mute'} onClick={toggleMute}>{mutedState||volume===0?'🔇':'🔊'}</button>
+    <button title={mutedState?'Unmute':'Mute'} onClick={toggleMute}>{mutedState||volume===0?'🔇':'🔊'}</button>{isLive&&<button title="Jump to the live edge" onClick={goLive}>● LIVE</button>}
     <input aria-label="Volume" className="mnv3-volume" type="range" min="0" max="1" step=".05" value={volume} onChange={e=>changeVolume(Number(e.target.value))}/>
     <div className="mnv3-spacer"/>
     {variants.length>1&&<div className="mnv3-pop"><button onClick={()=>setQualityMenu(v=>!v)}>Quality ▾</button>{qualityMenu&&<div className="mnv3-menu">{qualityOptions.map(o=><button className={o.index===variantIndex?'selected':''} key={o.index} onClick={()=>{setVariantIndex(o.index);setSourceIndex(0);setError('');setLoading(true);setQualityMenu(false);}}>{o.label}</button>)}</div>}</div>}
