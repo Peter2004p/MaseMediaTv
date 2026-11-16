@@ -14,7 +14,7 @@ const isPublicHttps = (value:string) => {
 };
 // Follow redirects manually so every destination is revalidated. Automatic redirects can
 // bypass the URL checks above if a public media host redirects to a private address.
-async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"|"HEAD"="GET"):Promise<Response> {
+async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"|"HEAD"="GET", trace?:Array<Record<string,string|number>>, attempt=""):Promise<Response> {
  let target=initialUrl;
  for(let hop=0;hop<=5;hop++){
   if(!isPublicHttps(target)) throw new Error("Blocked unsafe redirect target");
@@ -25,8 +25,21 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"
   let response:Response;
   try { response=await fetch(target,{method,headers,redirect:"manual",signal:controller.signal}); }
   finally { clearTimeout(connectTimer); }
-  if(![301,302,303,307,308].includes(response.status)) return response;
   const location=response.headers.get("location");
+  if(trace) {
+   let host="",locationHost="",locationPath="";
+   try{host=new URL(target).hostname;}catch{}
+   if(location){try{const nextUrl=new URL(location,target);locationHost=nextUrl.hostname;locationPath=nextUrl.pathname.slice(0,180);}catch{}}
+   trace.push({
+    attempt,hop,status:response.status,host,
+    contentType:(response.headers.get("content-type")||"").slice(0,100),
+    server:(response.headers.get("server")||"").slice(0,100),
+    via:(response.headers.get("via")||"").slice(0,120),
+    cfRay:(response.headers.get("cf-ray")||"").slice(0,100),
+    locationHost,locationPath
+   });
+  }
+  if(![301,302,303,307,308].includes(response.status)) return response;
   if(!location){await response.body?.cancel();throw new Error("Redirect missing location");}
   let next:string;
   try{next=new URL(location,target).toString();}catch{await response.body?.cancel();throw new Error("Invalid redirect location");}
@@ -40,7 +53,7 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"
 // while others require the legacy browser-like headers. Try a clean server-to-server
 // request first, then retry once with the compatibility headers. This keeps CORS out
 // of the upstream request and avoids making every provider accept the same policy.
-async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
+async function fetchMediaSource(url:string, headers:Headers, trace?:Array<Record<string,string|number>>):Promise<Response> {
  const cleanHeaders=new Headers(headers);
  cleanHeaders.delete("origin");
  cleanHeaders.delete("referer");
@@ -60,7 +73,7 @@ async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
  let lastError:unknown=null;
  for(let index=0;index<attempts.length;index++) {
   try {
-   const response=await fetchPublicHttps(url,attempts[index]);
+   const response=await fetchPublicHttps(url,attempts[index],"GET",trace,["clean","vlc-user-agent","vlc-plus-provider-referrer","original-browser-headers"][index]);
    const retryableStatus=response.status===401||response.status===403||response.status===429||response.status>=500;
    // A number of hosts return HTTP 200 with an anti-bot HTML page to ordinary
    // browser/server requests. VLC can still receive the actual media when its
@@ -443,6 +456,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    let firstChildHtmlTitle="";
    let nestedSegmentStatus:number|null=null;
    let sampledChildren:{status:number;type:string;host:string;extension:string;html:boolean}[]=[];
+   let firstChildRedirectTrace:Array<Record<string,string|number>>=[];
    let playlistTags:{streamInfo:number;media:number;keys:number;maps:number;byteranges:number;discontinuities:number}= {streamInfo:0,media:0,keys:0,maps:0,byteranges:0,discontinuities:0};
    const firstResources=(text:string,base:string,limit=8):string[]=>{
     const found:string[]=[];
@@ -492,7 +506,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
     for(let sampleIndex=0;sampleIndex<samples.length;sampleIndex++){
      const sampleUrl=samples[sampleIndex];
      try{
-      const child=await fetchMediaSource(sampleUrl,headersForHlsChild(headers,base));
+      const child=await fetchMediaSource(sampleUrl,headersForHlsChild(headers,base),sampleIndex===0?firstChildRedirectTrace:undefined);
       const type=child.headers.get("content-type")||"";
       const finalUrl=child.url||sampleUrl;
       let host="",extension="";
@@ -525,7 +539,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    contentType,
    status:upstream.status,
    supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range"),
-   ...(isHls?{finalHost,childHosts,childCount,playlistTags,sampledChildren,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,firstChildFinalHost,firstChildPathExtension,firstChildHtmlTitle,nestedSegmentStatus}:{})
+   ...(isHls?{finalHost,childHosts,childCount,playlistTags,sampledChildren,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,firstChildFinalHost,firstChildPathExtension,firstChildHtmlTitle,nestedSegmentStatus,firstChildRedirectTrace}:{})
   },200);
  }
  if(detectedPlaylist) {
