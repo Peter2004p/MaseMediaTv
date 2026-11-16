@@ -289,20 +289,9 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
         "UPDATE telegram_access_submissions SET ai_verdict=?,ai_reason=?,ai_reviewed_at=datetime('now') WHERE id=? AND status='approved_timeout'"
       ).bind(aiAvailable ? verdict : "review_required", reason, submissionId).run();
 
-      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews (
-        chat_id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'clear', reason TEXT NOT NULL DEFAULT '',
-        flagged_at TEXT, deadline_at TEXT, updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`).run();
-      const [previousAccess, activeWarning] = await Promise.all([
-        env.DB.prepare("SELECT youtube_ok,youtube_provisional FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number}>(),
-        env.DB.prepare("SELECT chat_id FROM telegram_access_reviews WHERE chat_id=? AND status='warning' AND deadline_at IS NOT NULL AND datetime(deadline_at)>datetime('now')").bind(chatId).first<{chat_id:string}>()
-      ]);
-      if (!activeWarning) {
-        await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=1,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
-      } else {
-        // During an existing 24-hour warning, preserve the existing grace-period state.
-        console.log("MaseNet screenshot received during active 24-hour warning:", chatId, previousAccess);
-      }
+      // Access was granted provisionally at the five-second deadline. Do not
+      // rewrite access here: an admin may have approved/rejected/flagged while
+      // the slower AI screening was running. The admin decision must win.
 
       if (adminMessageId) {
         const caption = [
