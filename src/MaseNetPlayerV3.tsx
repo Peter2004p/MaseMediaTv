@@ -33,18 +33,19 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
  useEffect(()=>{setMutedState(muted);if(videoRef.current)videoRef.current.muted=muted;},[muted]);
  useEffect(()=>{
   const video=videoRef.current;if(!video||mkv)return;
-  let alive=true,networkRetries=0,mediaRetries=0;
+  let alive=true,networkRetries=0,mediaRetries=0,stallTimer:ReturnType<typeof window.setTimeout>|null=null;
+  const clearStall=()=>{if(stallTimer!==null){window.clearTimeout(stallTimer);stallTimer=null;}};
   setLoading(true);setError('');setPlaying(false);setTime(0);setDuration(0);setHlsSubs([]);setHlsAudios([]);
   resumeApplied.current=false;
   hlsRef.current?.destroy();hlsRef.current=null;
   const fail=(message:string)=>{if(!alive)return;advanceSource(message);};
   const applyResume=()=>{if(resumeApplied.current||!Number.isFinite(video.duration)||video.duration<=0)return;resumeApplied.current=true;if(resumeAtSeconds>0&&video.duration>resumeAtSeconds+5)video.currentTime=resumeAtSeconds;};
   const onMetadata=()=>{if(!alive)return;setDuration(Number.isFinite(video.duration)?video.duration:0);applyResume();setLoading(false);setError('');};
-  const onCanPlay=()=>{if(alive){setLoading(false);setError('');applyResume();if(autoPlay&&video.paused)void video.play().catch(()=>{});}};
-  const onWaiting=()=>{if(alive&& !video.paused)setLoading(true);};
-  const onPlaying=()=>{if(alive){setLoading(false);setError('');setPlaying(true);onPlaybackStarted?.();}};
+  const onCanPlay=()=>{if(alive){clearStall();setLoading(false);setError('');applyResume();if(autoPlay&&video.paused)void video.play().catch(()=>{});}};
+  const onWaiting=()=>{if(!alive||video.paused)return;setLoading(true);if(stallTimer===null)stallTimer=window.setTimeout(()=>{stallTimer=null;if(alive&&!video.paused)fail('The stream stopped delivering video data. Trying another connection or quality…');},18000);};
+  const onPlaying=()=>{if(alive){clearStall();setLoading(false);setError('');setPlaying(true);onPlaybackStarted?.();}};
   const onPause=()=>{if(alive){setPlaying(false);onPlaybackStateChange?.(false,video.currentTime||0);}};
-  const onTime=()=>{if(!alive)return;const t=video.currentTime||0,d=video.duration||0;setTime(t);if(d>0)onProgress?.(Math.min(100,Math.round(t/d*100)));onPlaybackPosition?.(Math.floor(t));onPlaybackStateChange?.(!video.paused,t);if(Math.floor(t/10)!==lastPositionSent.current)lastPositionSent.current=Math.floor(t/10);};
+  const onTime=()=>{if(!alive)return;clearStall();const t=video.currentTime||0,d=video.duration||0;setTime(t);if(d>0)onProgress?.(Math.min(100,Math.round(t/d*100)));onPlaybackPosition?.(Math.floor(t));onPlaybackStateChange?.(!video.paused,t);if(Math.floor(t/10)!==lastPositionSent.current)lastPositionSent.current=Math.floor(t/10);};
   const onEnd=()=>{if(alive){setPlaying(false);onPlaybackEnded?.();onPlaybackPosition?.(0);}};
   const onError=()=>{if(!alive||!video.error)return;const code=video.error.code;fail('The browser could not decode or fetch this source (media error '+code+'). Trying a fallback source or another quality…');};
   video.addEventListener('loadedmetadata',onMetadata);video.addEventListener('canplay',onCanPlay);video.addEventListener('waiting',onWaiting);video.addEventListener('playing',onPlaying);video.addEventListener('pause',onPause);video.addEventListener('timeupdate',onTime);video.addEventListener('ended',onEnd);video.addEventListener('error',onError);
@@ -62,7 +63,7 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
   }else if(hlsSource&&video.canPlayType('application/vnd.apple.mpegurl')){video.src=activeSrc;video.load();}
   else if(hlsSource){fail('HLS is not supported by this browser.');}
   else{video.src=activeSrc;video.load();}
-  return()=>{alive=false;hlsRef.current?.destroy();hlsRef.current=null;video.pause();video.removeAttribute('src');video.load();video.removeEventListener('loadedmetadata',onMetadata);video.removeEventListener('canplay',onCanPlay);video.removeEventListener('waiting',onWaiting);video.removeEventListener('playing',onPlaying);video.removeEventListener('pause',onPause);video.removeEventListener('timeupdate',onTime);video.removeEventListener('ended',onEnd);video.removeEventListener('error',onError);};
+  return()=>{alive=false;clearStall();hlsRef.current?.destroy();hlsRef.current=null;video.pause();video.removeAttribute('src');video.load();video.removeEventListener('loadedmetadata',onMetadata);video.removeEventListener('canplay',onCanPlay);video.removeEventListener('waiting',onWaiting);video.removeEventListener('playing',onPlaying);video.removeEventListener('pause',onPause);video.removeEventListener('timeupdate',onTime);video.removeEventListener('ended',onEnd);video.removeEventListener('error',onError);};
  },[episode.id,url,activeSrc,hlsSource,mkv,attempt,variantIndex,sourceIndex,resumeAtSeconds,advanceSource]);
  useEffect(()=>{if(playRequest>0){const v=videoRef.current;if(v)void v.play().catch(()=>setError('Tap Play to start playback in this browser.'));}},[playRequest]);
  useEffect(()=>{const root=rootRef.current;if(!root)return;const sync=()=>setFull(!!document.fullscreenElement||(document as Document&{webkitFullscreenElement?:Element}).webkitFullscreenElement===root||root.classList.contains('mnv3-fallback-full'));document.addEventListener('fullscreenchange',sync);document.addEventListener('webkitfullscreenchange',sync as EventListener);return()=>{document.removeEventListener('fullscreenchange',sync);document.removeEventListener('webkitfullscreenchange',sync as EventListener);};},[]);
