@@ -14,7 +14,7 @@ const isPublicHttps = (value:string) => {
 };
 // Follow redirects manually so every destination is revalidated. Automatic redirects can
 // bypass the URL checks above if a public media host redirects to a private address.
-async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"|"HEAD"="GET"):Promise<Response> {
+async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"|"HEAD"="GET", trace?:Array<Record<string,string|number>>, attempt=""):Promise<Response> {
  let target=initialUrl;
  for(let hop=0;hop<=5;hop++){
   if(!isPublicHttps(target)) throw new Error("Blocked unsafe redirect target");
@@ -25,8 +25,21 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"
   let response:Response;
   try { response=await fetch(target,{method,headers,redirect:"manual",signal:controller.signal}); }
   finally { clearTimeout(connectTimer); }
-  if(![301,302,303,307,308].includes(response.status)) return response;
   const location=response.headers.get("location");
+  if(trace) {
+   let host="",locationHost="",locationPath="";
+   try{host=new URL(target).hostname;}catch{}
+   if(location){try{const nextUrl=new URL(location,target);locationHost=nextUrl.hostname;locationPath=nextUrl.pathname.slice(0,180);}catch{}}
+   trace.push({
+    attempt,hop,status:response.status,host,
+    contentType:(response.headers.get("content-type")||"").slice(0,100),
+    server:(response.headers.get("server")||"").slice(0,100),
+    via:(response.headers.get("via")||"").slice(0,120),
+    cfRay:(response.headers.get("cf-ray")||"").slice(0,100),
+    locationHost,locationPath
+   });
+  }
+  if(![301,302,303,307,308].includes(response.status)) return response;
   if(!location){await response.body?.cancel();throw new Error("Redirect missing location");}
   let next:string;
   try{next=new URL(location,target).toString();}catch{await response.body?.cancel();throw new Error("Invalid redirect location");}
@@ -40,7 +53,7 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"
 // while others require the legacy browser-like headers. Try a clean server-to-server
 // request first, then retry once with the compatibility headers. This keeps CORS out
 // of the upstream request and avoids making every provider accept the same policy.
-async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
+async function fetchMediaSource(url:string, headers:Headers, trace?:Array<Record<string,string|number>>):Promise<Response> {
  const cleanHeaders=new Headers(headers);
  cleanHeaders.delete("origin");
  cleanHeaders.delete("referer");
@@ -50,13 +63,33 @@ async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
  const vlcHeaders=new Headers(cleanHeaders);
  vlcHeaders.set("user-agent","VLC/3.0.20 LibVLC/3.0.20");
  vlcHeaders.set("accept","*/*");
- const attempts=[cleanHeaders,vlcHeaders,new Headers(headers)];
+ const vlcRefererHeaders=new Headers(vlcHeaders);
+ const originalHeaders=new Headers(headers);
+ if(originalHeaders.has("referer")) {
+  vlcRefererHeaders.set("referer",originalHeaders.get("referer")!);
+  if(originalHeaders.has("origin")) vlcRefererHeaders.set("origin",originalHeaders.get("origin")!);
+ }
+ const attempts=[cleanHeaders,vlcHeaders,vlcRefererHeaders,originalHeaders];
  let lastError:unknown=null;
  for(let index=0;index<attempts.length;index++) {
   try {
-   const response=await fetchPublicHttps(url,attempts[index]);
-   const retryable=response.status===401||response.status===403||response.status===429||response.status>=500;
-   if(!retryable||index===attempts.length-1) return response;
+   const response=await fetchPublicHttps(url,attempts[index],"GET",trace,["clean","vlc-user-agent","vlc-plus-provider-referrer","original-browser-headers"][index]);
+   const retryableStatus=response.status===401||response.status===403||response.status===429||response.status>=500;
+   // A number of hosts return HTTP 200 with an anti-bot HTML page to ordinary
+   // browser/server requests. VLC can still receive the actual media when its
+   // User-Agent is used, so an HTML 200 must be treated as a failed media attempt.
+   let htmlResponse=/text\/html|application\/xhtml\+xml/i.test(response.headers.get("content-type")||"");
+   if(!htmlResponse && response.ok && response.body) {
+    const type=response.headers.get("content-type")||"";
+    if(!type || /octet-stream|text\/plain/i.test(type)) {
+     try {
+      const prefix=await readResponsePrefix(response.clone(),2048);
+      const sample=new TextDecoder().decode(prefix).replace(/^\\uFEFF/,"").trimStart();
+      htmlResponse=/^(?:<!doctype\\s+html|<html\\b|<head\\b|<body\\b)/i.test(sample);
+     } catch {}
+    }
+   }
+   if((!retryableStatus&&!htmlResponse)||index===attempts.length-1) return response;
    await response.body?.cancel();
   } catch(error) {
    lastError=error;
@@ -69,6 +102,21 @@ async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
 // the playlist URL and expect the same authentication query parameters on relative
 // segment, variant, subtitle, and key URLs. Preserve child-specific parameters and
 // inherit only missing parameters when the child stays on the same HTTPS host.
+function headersForHlsChild(baseHeaders:Headers, sourceHint:string):Headers {
+ const headers=new Headers(baseHeaders);
+ try {
+  const source=new URL(sourceHint);
+  if(source.protocol==="https:") {
+   // Some HLS CDNs require the originating stream host as Referer/Origin.
+   // A MaseNet-site referrer can make the CDN return an HTML landing page instead
+   // of the media resource, even though the manifest itself is accessible.
+   headers.set("origin",source.origin);
+   headers.set("referer",source.toString());
+  }
+ } catch {}
+ return headers;
+}
+
 function resolveHlsResource(raw:string, base:string):string {
  const resolved=new URL(raw.trim(),base);
  const parent=new URL(base);
@@ -162,7 +210,7 @@ function proxyHlsResource(raw:string, base:string, origin:string, episodeId:stri
  // Legacy episodes can have synthesized IDs that are not persisted in D1; without this
  // hint, the playlist loads but its child segments are rejected as "Episode not found".
  const nestedEpisodeId=episodeId.length<=200?episodeId:"";
- return origin+"/api/media/proxy?episodeId="+encodeURIComponent(nestedEpisodeId)+"&source="+encodeURIComponent(sourceHint)+"&resource="+encodeURIComponent(absolute);
+ return origin+"/api/media/proxy?episodeId="+encodeURIComponent(nestedEpisodeId)+"&source="+encodeURIComponent(sourceHint)+"&resource="+encodeURIComponent(absolute)+"&referer="+encodeURIComponent(base);
 }
 
 /**
@@ -241,6 +289,7 @@ function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,
 export const onRequestGet = async ({ request, env }: { request:Request; env:Env }) => {
  const reqUrl=new URL(request.url), episodeId=reqUrl.searchParams.get("episodeId")||"", requested=reqUrl.searchParams.get("resource");
  const sourceHint=reqUrl.searchParams.get("source")||"";
+ const refererHint=reqUrl.searchParams.get("referer")||"";
  // Legacy upload IDs can embed the complete signed stream URL and exceed 200 chars.
  // When that happens, resolve the episode using the exact stored source URL instead.
  if(episodeId.length>200 && !sourceHint) return json({error:"Invalid episodeId and missing source lookup hint"},400);
@@ -309,9 +358,15 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    const child=new URL(requested);
    const sourceHost=new URL(sourceHint || allowed[0] || upstreamUrl).hostname.toLowerCase();
    const configured=(env.MEDIA_PROXY_ALLOWED_HOSTS||"").split(",").map(host=>host.trim().toLowerCase()).filter(Boolean);
-   const allowedHosts=new Set([sourceHost,...configured]);
+   const knownHlsCdnHosts=new Set(["exoidol.space"]);
+    const allowedHosts=new Set([sourceHost,...knownHlsCdnHosts,...configured]);
    if(!isPublicHttps(child.toString()) || !allowedHosts.has(child.hostname.toLowerCase()))
     return json({error:"This HLS resource host is not an approved media CDN. Add its hostname to MEDIA_PROXY_ALLOWED_HOSTS if it is a trusted CDN."},403);
+   if(refererHint) {
+    const parent=new URL(refererHint);
+    if(!isPublicHttps(parent.toString()) || !allowedHosts.has(parent.hostname.toLowerCase()))
+     return json({error:"This HLS playlist referrer is not an approved media CDN."},403);
+   }
   } catch { return json({error:"Invalid HLS resource URL"},400); }
  }
  // Signed CDN URLs commonly carry an Expires Unix timestamp. Detect an
@@ -334,12 +389,17 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  headers.set("referer",reqUrl.origin+"/");
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
- try { upstream=await fetchMediaSource(upstreamUrl,headers); } catch(error) {
+ const requestHeaders=requested?headersForHlsChild(headers,refererHint||sourceHint):headers;
+ try { upstream=await fetchMediaSource(upstreamUrl,requestHeaders); } catch(error) {
   const reason=error instanceof Error?error.message:"Connection failed";
   // Keep the host/path and signed query out of the response; expose only a safe
   // diagnostic so the player can distinguish network failure from provider HTTP errors.
   const safeReason=reason.slice(0,140);
   return json({error:"MaseNet could not connect to the external video host. "+safeReason},502);
+ }
+ if(upstream.ok && /text\/html|application\/xhtml\+xml/i.test(upstream.headers.get("content-type")||"")) {
+  await upstream.body?.cancel();
+  return json({error:"The streaming provider returned an HTML challenge page instead of video data, even after VLC-compatible retries. This source host is blocking server-side playback; another browser player cannot decode this response."},502);
  }
  if(!upstream.ok && upstream.status!==206) {
   if(upstream.status===401 || upstream.status===403) return json({error:"The streaming provider rejected this link (HTTP "+upstream.status+"). It may be expired or its signature may no longer be valid. Replace it with a fresh URL from the provider."},upstream.status);
@@ -384,12 +444,131 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   const isHls=detectedPlaylist||/mpegurl/i.test(contentType)||finalPath.endsWith(".m3u8");
   const isMp4=/video\/mp4/i.test(contentType)||/\.(mp4|m4v)$/i.test(finalPath);
   const isWebm=/video\/webm/i.test(contentType)||finalPath.endsWith(".webm");
-  await upstream.body?.cancel();
+  let finalHost="";
+  let childHosts:string[]=[];
+  let childCount=0;
+   let firstChildStatus:number|null=null;
+   let firstChildHost="";
+   let firstChildType="";
+   let firstChildHasQuery=false;
+   let firstChildFinalHost="";
+   let firstChildPathExtension="";
+   let firstChildHtmlTitle="";
+   let nestedSegmentStatus:number|null=null;
+   let sampledChildren:{status:number;type:string;host:string;extension:string;html:boolean}[]=[];
+   let firstChildRedirectTrace:Array<Record<string,string|number>>=[];
+   let firstChildRangeProbe:{range:string;status:number;type:string;contentRange:string;contentLength:string;finalHost:string;signature:string;redirectTrace:Array<Record<string,string|number>>}|null=null;
+   let firstByteRange:{length:number;offset:number}|null=null;
+   let playlistTags:{streamInfo:number;media:number;keys:number;maps:number;byteranges:number;discontinuities:number}= {streamInfo:0,media:0,keys:0,maps:0,byteranges:0,discontinuities:0};
+   const firstResources=(text:string,base:string,limit=8):string[]=>{
+    const found:string[]=[];
+    for(const line of text.split(/\r?\n/)){
+     const value=line.trim();
+     if(!value) continue;
+     if(value.startsWith("#")){
+      const tag=value.split(":")[0];
+      if(tag==="#EXT-X-STREAM-INF") playlistTags.streamInfo++;
+      else if(tag==="#EXT-X-MEDIA") playlistTags.media++;
+      else if(tag==="#EXT-X-KEY") playlistTags.keys++;
+      else if(tag==="#EXT-X-MAP") playlistTags.maps++;
+      else if(tag==="#EXT-X-BYTERANGE") playlistTags.byteranges++;
+      else if(tag==="#EXT-X-DISCONTINUITY") playlistTags.discontinuities++;
+      for(const match of value.matchAll(/URI=(["'])(.*?)\1/g)){
+       try{const resolved=resolveHlsResource(match[2],base);if(isPublicHttps(resolved)&&!found.includes(resolved))found.push(resolved);}catch{}
+      }
+      continue;
+     }
+     try{const resolved=resolveHlsResource(value,base);if(isPublicHttps(resolved)&&!found.includes(resolved))found.push(resolved);}catch{}
+     if(found.length>=limit) break;
+    }
+    return found.slice(0,limit);
+   };
+   if(isHls) {
+    finalHost=new URL(upstream.url||upstreamUrl).hostname;
+    const manifest=await upstream.text();
+    const base=upstream.url||upstreamUrl;
+    const discovered=new Set<string>();
+    for(const line of manifest.split(/\r?\n/)) {
+     const trimmed=line.trim();
+     if(!trimmed||trimmed.startsWith("#EXTM3U")) continue;
+     const uris:string[]=[];
+     if(trimmed.startsWith("#")) {
+      for(const match of trimmed.matchAll(/URI=(["'])(.*?)\1/g)) uris.push(match[2]);
+     } else uris.push(trimmed);
+     for(const raw of uris) {
+      try {
+       const parsed=new URL(resolveHlsResource(raw,base));
+       if(parsed.protocol==="https:"){childCount++;discovered.add(parsed.hostname);}
+      } catch {}
+     }
+    }
+    childHosts=Array.from(discovered).slice(0,20);
+    // Probe the first actual HLS byte range; a plain GET may return a landing page.
+    const manifestLines=manifest.split(/\r?\n/);
+    for(let i=0;i<manifestLines.length;i++){
+     const match=manifestLines[i].trim().match(/^#EXT-X-BYTERANGE:(\d+)(?:@(\d+))?/i);
+     if(match){
+      const length=Number(match[1]),offset=match[2]===undefined?0:Number(match[2]);
+      if(Number.isSafeInteger(length)&&length>0&&Number.isSafeInteger(offset)&&offset>=0){firstByteRange={length,offset};break;}
+     }
+    }
+    const samples=firstResources(manifest,base,8);
+    const first=samples[0]||"";
+    for(let sampleIndex=0;sampleIndex<samples.length;sampleIndex++){
+     const sampleUrl=samples[sampleIndex];
+     try{
+      const child=await fetchMediaSource(sampleUrl,headersForHlsChild(headers,base),sampleIndex===0?firstChildRedirectTrace:undefined);
+      const type=child.headers.get("content-type")||"";
+      const finalUrl=child.url||sampleUrl;
+      let host="",extension="";
+      try{const parsed=new URL(finalUrl);host=parsed.hostname;extension=parsed.pathname.match(/\.([a-z0-9]{1,8})$/i)?.[1]?.toLowerCase()||"";}catch{}
+      const html=/text\/html|application\/xhtml\+xml/i.test(type);
+      sampledChildren.push({status:child.status,type:type.slice(0,100),host,extension,html});
+      if(sampleIndex===0){
+       const parsed=new URL(sampleUrl);
+       firstChildHost=parsed.hostname;
+       firstChildHasQuery=parsed.search.length>0;
+       firstChildStatus=child.status;
+       firstChildType=type;
+       firstChildFinalHost=host;
+       firstChildPathExtension=extension;
+       if(html){
+        try{const prefix=await readResponsePrefix(child.clone(),8192);const markup=new TextDecoder().decode(prefix);firstChildHtmlTitle=markup.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g," ").trim().slice(0,120)||"";}catch{}
+       }
+       const childIsPlaylist=/mpegurl|text\/plain/i.test(type)||/\.m3u8(?:$|[?#])/i.test(finalUrl);
+       if(childIsPlaylist&&child.ok){
+        const childManifest=await child.text();
+        const nested=firstResources(childManifest,finalUrl,1)[0];
+        if(nested){const segmentResponse=await fetchMediaSource(nested,headersForHlsChild(headers,finalUrl));nestedSegmentStatus=segmentResponse.status;await segmentResponse.body?.cancel();}
+       } else await child.body?.cancel();
+      } else await child.body?.cancel();
+     }catch{sampledChildren.push({status:0,type:"fetch-error",host:"",extension:"",html:false});}
+    }
+    if(first&&firstByteRange){
+     const rangeEnd=firstByteRange.offset+firstByteRange.length-1;
+     const rangeHeaders=headersForHlsChild(headers,base);
+     rangeHeaders.set("range","bytes="+firstByteRange.offset+"-"+rangeEnd);
+     const rangeTrace:Array<Record<string,string|number>>=[];
+     try{
+      const ranged=await fetchMediaSource(first,rangeHeaders,rangeTrace);
+      const type=ranged.headers.get("content-type")||"";
+      const finalUrl=ranged.url||first;
+      const prefix=await readResponsePrefix(ranged.clone(),16);
+      const signature=Array.from(prefix).map(byte=>byte.toString(16).padStart(2,"0")).join(" ");
+      let finalHost="";try{finalHost=new URL(finalUrl).hostname;}catch{}
+      firstChildRangeProbe={range:"bytes="+firstByteRange.offset+"-"+rangeEnd,status:ranged.status,type:type.slice(0,100),contentRange:(ranged.headers.get("content-range")||"").slice(0,120),contentLength:(ranged.headers.get("content-length")||"").slice(0,40),finalHost,signature,redirectTrace:rangeTrace};
+      await ranged.body?.cancel();
+     }catch(error){
+      firstChildRangeProbe={range:"bytes="+firstByteRange.offset+"-"+rangeEnd,status:0,type:"fetch-error",contentRange:"",contentLength:"",finalHost:"",signature:String(error).slice(0,120),redirectTrace:rangeTrace};
+     }
+    }
+   } else await upstream.body?.cancel();
   return json({
    kind:isMkv?"mkv":isHls?"hls":isMp4?"mp4":isWebm?"webm":"unknown",
    contentType,
    status:upstream.status,
-   supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range")
+   supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range"),
+   ...(isHls?{finalHost,childHosts,childCount,playlistTags,sampledChildren,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,firstChildFinalHost,firstChildPathExtension,firstChildHtmlTitle,nestedSegmentStatus,firstChildRedirectTrace,firstByteRange,firstChildRangeProbe}:{})
   },200);
  }
  if(detectedPlaylist) {
@@ -478,7 +657,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    const rangeStart=Number(match[1]),rangeEnd=Number(match[2]);
    if(Number.isSafeInteger(rangeStart)&&Number.isSafeInteger(rangeEnd)&&rangeEnd>=rangeStart){
     outHeaders.set("content-length",String(rangeEnd-rangeStart+1));
-    const body=resumeInterruptedRange(upstream,upstream.url||upstreamUrl,headers,rangeStart,rangeEnd);
+    const body=resumeInterruptedRange(upstream,upstream.url||upstreamUrl,requestHeaders,rangeStart,rangeEnd);
     return new Response(body,{status:206,headers:outHeaders});
    }
   }
