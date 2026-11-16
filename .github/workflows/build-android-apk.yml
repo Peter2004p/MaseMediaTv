@@ -18,6 +18,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: masenet-android-apk-build
+  cancel-in-progress: true
+
 jobs:
   build-apk:
     name: Build and publish MaseNet Android installer
