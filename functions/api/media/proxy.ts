@@ -383,13 +383,37 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   const isMkv=/matroska|x-matroska/i.test(contentType)||finalPath.endsWith(".mkv");
   const isHls=detectedPlaylist||/mpegurl/i.test(contentType)||finalPath.endsWith(".m3u8");
   const isMp4=/video\/mp4/i.test(contentType)||/\.(mp4|m4v)$/i.test(finalPath);
-  const isWebm=/video\/webm/i.test(contentType)||finalPath.endsWith(".webm");
-  await upstream.body?.cancel();
+  const isWebm=/video\\/webm/i.test(contentType)||finalPath.endsWith(".webm");
+  let finalHost="";
+  let childHosts:string[]=[];
+  let childCount=0;
+  if(isHls) {
+   finalHost=new URL(upstream.url||upstreamUrl).hostname;
+   const manifest=await upstream.text();
+   const base=upstream.url||upstreamUrl;
+   const discovered=new Set<string>();
+   for(const line of manifest.split(/\\r?\\n/)) {
+    const trimmed=line.trim();
+    if(!trimmed||trimmed.startsWith("#EXTM3U")) continue;
+    const uris:string[]=[];
+    if(trimmed.startsWith("#")) {
+     for(const match of trimmed.matchAll(/URI=(["'])(.*?)\\1/g)) uris.push(match[2]);
+    } else uris.push(trimmed);
+    for(const raw of uris) {
+     try {
+      const parsed=new URL(resolveHlsResource(raw,base));
+      if(parsed.protocol==="https:"){childCount++;discovered.add(parsed.hostname);}
+     } catch {}
+    }
+   }
+   childHosts=Array.from(discovered).slice(0,20);
+  } else await upstream.body?.cancel();
   return json({
    kind:isMkv?"mkv":isHls?"hls":isMp4?"mp4":isWebm?"webm":"unknown",
    contentType,
    status:upstream.status,
-   supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range")
+   supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range"),
+   ...(isHls?{finalHost,childHosts,childCount}:{})
   },200);
  }
  if(detectedPlaylist) {
