@@ -89,9 +89,9 @@ export async function sendTelegramTitleNotifications(
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ chat_id: chatId, text: announcement, disable_web_page_preview: true })
           }).catch(() => null);
-          const fallbackData = fallback
-            ? await fallback.json().catch(() => ({})) as { ok?: boolean; description?: string }
-            : {};
+          const fallbackData = (fallback
+            ? await fallback.json().catch(() => ({}))
+            : {}) as { ok?: boolean; description?: string };
           if (fallback?.ok && fallbackData.ok) {
             stats.delivered++;
             continue;
