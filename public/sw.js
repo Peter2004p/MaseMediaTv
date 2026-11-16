@@ -1,6 +1,6 @@
 const CACHE_NAME = 'masenet-shell-v1';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/masenet-app-icon.svg', '/masemediatv-logo.svg'];
-const NEVER_CACHE = /(^|\\/)(api|media)(\\/|$)|\\.(m3u8|m3u|ts|m4s|mp4|mkv|mov|webm|mpd|vtt|srt|key)(\\?|$)/i;
+const NEVER_CACHE = /(^|\/)(api|media)(\/|$)|\.(m3u8|m3u|ts|m4s|mp4|mkv|mov|webm|mpd|vtt|srt|key)(\?|$)/i;
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
