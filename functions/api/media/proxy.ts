@@ -175,7 +175,7 @@ function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,
  let reader=initial.body?.getReader()||null;
  let sent=0,retries=0,closed=false;
  const reconnect=async()=>{
-  while(retries<3){
+  while(retries<6){
    retries++;
    const headers=new Headers(baseHeaders);
    headers.set("range","bytes="+(start+sent)+"-"+end);
@@ -183,8 +183,10 @@ function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,
    try{
     const response=await fetchMediaSource(url,headers);
     const range=response.headers.get("content-range")||"";
-    const match=range.match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i);
-    if(response.status!==206||!match||Number(match[1])!==start+sent||!response.body){
+    const match=range.match(/^bytes\\s+(\\d+)-(\\d+)\\/(\\d+|\\*)$/i);
+    const returnedStart=match?Number(match[1]):-1;
+    const returnedEnd=match?Number(match[2]):-1;
+    if(response.status!==206||!match||returnedStart!==start+sent||returnedEnd<returnedStart||returnedEnd>end||!response.body){
      await response.body?.cancel();
      continue;
     }
@@ -194,6 +196,16 @@ function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,
   }
   return false;
  };
+ const readWithTimeout=async()=>{
+  if(!reader) throw new Error("No active upstream reader");
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  try{
+   return await Promise.race([
+    reader.read(),
+    new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error("Upstream range stalled")),20000);})
+   ]);
+  } finally { if(timer) clearTimeout(timer); }
+ };
  return new ReadableStream<Uint8Array>({
   async pull(controller){
    if(closed)return;
@@ -202,7 +214,7 @@ function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,
      if(!(await reconnect())){closed=true;controller.error(new Error("External source interrupted repeatedly while resuming a byte range."));return;}
     }
     try{
-     const part=await reader!.read();
+     const part=await readWithTimeout();
      if(part.done){
       reader=null;
       if(sent>=expected){closed=true;controller.close();return;}
@@ -216,6 +228,7 @@ function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,
      if(sent>=expected){closed=true;try{await reader!.cancel();}catch{}controller.close();return;}
      return;
     }catch{
+     try{void reader?.cancel();}catch{}
      reader=null;
      if(!(await reconnect())){closed=true;controller.error(new Error("External source connection could not be resumed."));return;}
     }
