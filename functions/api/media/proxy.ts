@@ -61,8 +61,22 @@ async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
  for(let index=0;index<attempts.length;index++) {
   try {
    const response=await fetchPublicHttps(url,attempts[index]);
-   const retryable=response.status===401||response.status===403||response.status===429||response.status>=500;
-   if(!retryable||index===attempts.length-1) return response;
+   const retryableStatus=response.status===401||response.status===403||response.status===429||response.status>=500;
+   // A number of hosts return HTTP 200 with an anti-bot HTML page to ordinary
+   // browser/server requests. VLC can still receive the actual media when its
+   // User-Agent is used, so an HTML 200 must be treated as a failed media attempt.
+   let htmlResponse=/text\/html|application\/xhtml\+xml/i.test(response.headers.get("content-type")||"");
+   if(!htmlResponse && response.ok && response.body) {
+    const type=response.headers.get("content-type")||"";
+    if(!type || /octet-stream|text\/plain/i.test(type)) {
+     try {
+      const prefix=await readResponsePrefix(response.clone(),2048);
+      const sample=new TextDecoder().decode(prefix).replace(/^\\uFEFF/,"").trimStart();
+      htmlResponse=/^(?:<!doctype\\s+html|<html\\b|<head\\b|<body\\b)/i.test(sample);
+     } catch {}
+    }
+   }
+   if((!retryableStatus&&!htmlResponse)||index===attempts.length-1) return response;
    await response.body?.cancel();
   } catch(error) {
    lastError=error;
@@ -183,7 +197,7 @@ function proxyHlsResource(raw:string, base:string, origin:string, episodeId:stri
  // Legacy episodes can have synthesized IDs that are not persisted in D1; without this
  // hint, the playlist loads but its child segments are rejected as "Episode not found".
  const nestedEpisodeId=episodeId.length<=200?episodeId:"";
- return origin+"/api/media/proxy?episodeId="+encodeURIComponent(nestedEpisodeId)+"&source="+encodeURIComponent(sourceHint)+"&resource="+encodeURIComponent(absolute);
+ return origin+"/api/media/proxy?episodeId="+encodeURIComponent(nestedEpisodeId)+"&source="+encodeURIComponent(sourceHint)+"&resource="+encodeURIComponent(absolute)+"&referer="+encodeURIComponent(base);
 }
 
 /**
@@ -262,6 +276,7 @@ function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,
 export const onRequestGet = async ({ request, env }: { request:Request; env:Env }) => {
  const reqUrl=new URL(request.url), episodeId=reqUrl.searchParams.get("episodeId")||"", requested=reqUrl.searchParams.get("resource");
  const sourceHint=reqUrl.searchParams.get("source")||"";
+ const refererHint=reqUrl.searchParams.get("referer")||"";
  // Legacy upload IDs can embed the complete signed stream URL and exceed 200 chars.
  // When that happens, resolve the episode using the exact stored source URL instead.
  if(episodeId.length>200 && !sourceHint) return json({error:"Invalid episodeId and missing source lookup hint"},400);
@@ -334,6 +349,11 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
     const allowedHosts=new Set([sourceHost,...knownHlsCdnHosts,...configured]);
    if(!isPublicHttps(child.toString()) || !allowedHosts.has(child.hostname.toLowerCase()))
     return json({error:"This HLS resource host is not an approved media CDN. Add its hostname to MEDIA_PROXY_ALLOWED_HOSTS if it is a trusted CDN."},403);
+   if(refererHint) {
+    const parent=new URL(refererHint);
+    if(!isPublicHttps(parent.toString()) || !allowedHosts.has(parent.hostname.toLowerCase()))
+     return json({error:"This HLS playlist referrer is not an approved media CDN."},403);
+   }
   } catch { return json({error:"Invalid HLS resource URL"},400); }
  }
  // Signed CDN URLs commonly carry an Expires Unix timestamp. Detect an
@@ -356,7 +376,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  headers.set("referer",reqUrl.origin+"/");
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
- const requestHeaders=requested?headersForHlsChild(headers,sourceHint):headers;
+ const requestHeaders=requested?headersForHlsChild(headers,refererHint||sourceHint):headers;
  try { upstream=await fetchMediaSource(upstreamUrl,requestHeaders); } catch(error) {
   const reason=error instanceof Error?error.message:"Connection failed";
   // Keep the host/path and signed query out of the response; expose only a safe
