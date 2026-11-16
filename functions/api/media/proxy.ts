@@ -457,6 +457,8 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    let nestedSegmentStatus:number|null=null;
    let sampledChildren:{status:number;type:string;host:string;extension:string;html:boolean}[]=[];
    let firstChildRedirectTrace:Array<Record<string,string|number>>=[];
+   let firstChildRangeProbe:{range:string;status:number;type:string;contentRange:string;contentLength:string;finalHost:string;signature:string;redirectTrace:Array<Record<string,string|number>>}|null=null;
+   let firstByteRange:{length:number;offset:number}|null=null;
    let playlistTags:{streamInfo:number;media:number;keys:number;maps:number;byteranges:number;discontinuities:number}= {streamInfo:0,media:0,keys:0,maps:0,byteranges:0,discontinuities:0};
    const firstResources=(text:string,base:string,limit=8):string[]=>{
     const found:string[]=[];
@@ -501,6 +503,15 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
      }
     }
     childHosts=Array.from(discovered).slice(0,20);
+    // Probe the first actual HLS byte range; a plain GET may return a landing page.
+    const manifestLines=manifest.split(/\\r?\\n/);
+    for(let i=0;i<manifestLines.length;i++){
+     const match=manifestLines[i].trim().match(/^#EXT-X-BYTERANGE:(\\d+)(?:@(\\d+))?/i);
+     if(match){
+      const length=Number(match[1]),offset=match[2]===undefined?0:Number(match[2]);
+      if(Number.isSafeInteger(length)&&length>0&&Number.isSafeInteger(offset)&&offset>=0){firstByteRange={length,offset};break;}
+     }
+    }
     const samples=firstResources(manifest,base,8);
     const first=samples[0]||"";
     for(let sampleIndex=0;sampleIndex<samples.length;sampleIndex++){
@@ -533,13 +544,31 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
       } else await child.body?.cancel();
      }catch{sampledChildren.push({status:0,type:"fetch-error",host:"",extension:"",html:false});}
     }
+    if(first&&firstByteRange){
+     const rangeEnd=firstByteRange.offset+firstByteRange.length-1;
+     const rangeHeaders=headersForHlsChild(headers,base);
+     rangeHeaders.set("range","bytes="+firstByteRange.offset+"-"+rangeEnd);
+     const rangeTrace:Array<Record<string,string|number>>=[];
+     try{
+      const ranged=await fetchMediaSource(first,rangeHeaders,rangeTrace);
+      const type=ranged.headers.get("content-type")||"";
+      const finalUrl=ranged.url||first;
+      const prefix=await readResponsePrefix(ranged.clone(),16);
+      const signature=Array.from(prefix).map(byte=>byte.toString(16).padStart(2,"0")).join(" ");
+      let finalHost="";try{finalHost=new URL(finalUrl).hostname;}catch{}
+      firstChildRangeProbe={range:"bytes="+firstByteRange.offset+"-"+rangeEnd,status:ranged.status,type:type.slice(0,100),contentRange:(ranged.headers.get("content-range")||"").slice(0,120),contentLength:(ranged.headers.get("content-length")||"").slice(0,40),finalHost,signature,redirectTrace:rangeTrace};
+      await ranged.body?.cancel();
+     }catch(error){
+      firstChildRangeProbe={range:"bytes="+firstByteRange.offset+"-"+rangeEnd,status:0,type:"fetch-error",contentRange:"",contentLength:"",finalHost:"",signature:String(error).slice(0,120),redirectTrace:rangeTrace};
+     }
+    }
    } else await upstream.body?.cancel();
   return json({
    kind:isMkv?"mkv":isHls?"hls":isMp4?"mp4":isWebm?"webm":"unknown",
    contentType,
    status:upstream.status,
    supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range"),
-   ...(isHls?{finalHost,childHosts,childCount,playlistTags,sampledChildren,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,firstChildFinalHost,firstChildPathExtension,firstChildHtmlTitle,nestedSegmentStatus,firstChildRedirectTrace}:{})
+   ...(isHls?{finalHost,childHosts,childCount,playlistTags,sampledChildren,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,firstChildFinalHost,firstChildPathExtension,firstChildHtmlTitle,nestedSegmentStatus,firstChildRedirectTrace,firstByteRange,firstChildRangeProbe}:{})
   },200);
  }
  if(detectedPlaylist) {
