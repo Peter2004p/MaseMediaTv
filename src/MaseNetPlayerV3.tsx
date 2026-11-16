@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import MaseNetVlcPlayer from './MaseNetVlcPlayer';
+import MaseNetSpecialHlsPlayer from './MaseNetSpecialHlsPlayer';
 
 type Quality='480p'|'720p'|'1080p';
 type Track={label?:string;url:string;path?:string;lang?:string;mimeType?:string};
@@ -21,6 +22,7 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
  const selected=variants[Math.min(variantIndex,Math.max(0,variants.length-1))]||variants[0];
  const url=selected?.streamUrl||episode.streamUrl||'',mime=selected?.mimeType||episode.mimeType||'';
  const mkv=isMkv(url,mime),hlsSource=isHls(url,mime),dashSource=isDash(url,mime);
+ const specialHls=hlsSource&&(()=>{try{return new URL(url).hostname.toLowerCase()==='stream.vidbasic.top';}catch{return false;}})();
  const proxy=useMemo(()=>'/api/media/proxy?episodeId='+encodeURIComponent(episode.id)+'&source='+encodeURIComponent(url),[episode.id,url]);
  const sources=useMemo(()=>hlsSource?[proxy,url]:[url,proxy],[hlsSource,proxy,url]);
  const activeSrc=sources[Math.min(sourceIndex,sources.length-1)]||url;
@@ -85,6 +87,7 @@ export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,o
  const changeSpeed=(n:number)=>{setSpeed(n);if(videoRef.current)videoRef.current.playbackRate=n;};
  const qualityOptions=variants.map((v,i)=>({label:v.quality,index:i}));
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(!rootRef.current||!rootRef.current.contains(document.activeElement))return;if(['INPUT','SELECT','TEXTAREA'].includes((document.activeElement as HTMLElement)?.tagName))return;if(e.key===' '){e.preventDefault();togglePlay();}if(e.key==='ArrowLeft')seek((videoRef.current?.currentTime||0)-10);if(e.key==='ArrowRight')seek((videoRef.current?.currentTime||0)+10);if(e.key.toLowerCase()==='m')toggleMute();if(e.key.toLowerCase()==='f')void toggleFullscreen();};rootRef.current?.addEventListener('keydown',onKey);return()=>rootRef.current?.removeEventListener('keydown',onKey);});
+ if(specialHls)return <MaseNetSpecialHlsPlayer key={episode.id+url} src={proxy} title={episode.title} onProgress={onProgress} onPlaybackPosition={onPlaybackPosition} onPlaybackStarted={onPlaybackStarted} onPlaybackEnded={onPlaybackEnded} onPlaybackStateChange={onPlaybackStateChange} resumeAtSeconds={resumeAtSeconds} autoPlay={autoPlay} playRequest={playRequest}/>;
  if(mkv)return <MaseNetVlcPlayer key={episode.id+url} src={proxy} fallbackSrc={url} alternateSources={variants.filter(v=>v.streamUrl!==url).map(v=>({src:'/api/media/proxy?episodeId='+encodeURIComponent(episode.id)+'&source='+encodeURIComponent(v.streamUrl),fallbackSrc:v.streamUrl}))} title={episode.title} onProgress={onProgress} onPlaybackPosition={onPlaybackPosition} onPlaybackStarted={onPlaybackStarted} onPlaybackEnded={onPlaybackEnded} onPlaybackStateChange={onPlaybackStateChange} resumeAtSeconds={resumeAtSeconds} autoPlay={autoPlay}/>;
  return <section ref={rootRef} tabIndex={0} className={'mnv3'+(reelMode?' mnv3-reel':'')} aria-label="MaseNet video player">
   <div className="mnv3-screen"><video ref={videoRef} playsInline preload="metadata" muted={mutedState} onClick={togglePlay}>{externalTracks.map((t,i)=><track key={t.url+i} kind="subtitles" src={t.url} srcLang={t.lang||'en'} label={t.label||t.lang||'Subtitle '+(i+1)}/>)}</video>
