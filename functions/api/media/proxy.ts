@@ -384,6 +384,10 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   const safeReason=reason.slice(0,140);
   return json({error:"MaseNet could not connect to the external video host. "+safeReason},502);
  }
+ if(upstream.ok && /text\\/html|application\\/xhtml\\+xml/i.test(upstream.headers.get("content-type")||"")) {
+  await upstream.body?.cancel();
+  return json({error:"The streaming provider returned an HTML challenge page instead of video data, even after VLC-compatible retries. This source host is blocking server-side playback; another browser player cannot decode this response."},502);
+ }
  if(!upstream.ok && upstream.status!==206) {
   if(upstream.status===401 || upstream.status===403) return json({error:"The streaming provider rejected this link (HTTP "+upstream.status+"). It may be expired or its signature may no longer be valid. Replace it with a fresh URL from the provider."},upstream.status);
   if(upstream.status===404 || upstream.status===410) return json({error:"The streaming provider says this video or signed link is no longer available (HTTP "+upstream.status+"). Replace it with a fresh URL."},410);
@@ -488,7 +492,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
     for(let sampleIndex=0;sampleIndex<samples.length;sampleIndex++){
      const sampleUrl=samples[sampleIndex];
      try{
-      const child=await fetchMediaSource(sampleUrl,headersForHlsChild(headers,sourceHint));
+      const child=await fetchMediaSource(sampleUrl,headersForHlsChild(headers,base));
       const type=child.headers.get("content-type")||"";
       const finalUrl=child.url||sampleUrl;
       let host="",extension="";
@@ -510,7 +514,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
        if(childIsPlaylist&&child.ok){
         const childManifest=await child.text();
         const nested=firstResources(childManifest,finalUrl,1)[0];
-        if(nested){const segmentResponse=await fetchMediaSource(nested,headersForHlsChild(headers,sourceHint));nestedSegmentStatus=segmentResponse.status;await segmentResponse.body?.cancel();}
+        if(nested){const segmentResponse=await fetchMediaSource(nested,headersForHlsChild(headers,finalUrl));nestedSegmentStatus=segmentResponse.status;await segmentResponse.body?.cancel();}
        } else await child.body?.cancel();
       } else await child.body?.cancel();
      }catch{sampledChildren.push({status:0,type:"fetch-error",host:"",extension:"",html:false});}
