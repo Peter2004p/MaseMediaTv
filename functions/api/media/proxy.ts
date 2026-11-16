@@ -18,7 +18,13 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"
  let target=initialUrl;
  for(let hop=0;hop<=5;hop++){
   if(!isPublicHttps(target)) throw new Error("Blocked unsafe redirect target");
-  const response=await fetch(target,{method,headers,redirect:"manual"});
+  const controller=new AbortController();
+  // Bound only the connection/response-header wait. Clear the timer as soon as
+  // headers arrive so long-running media bodies are never cut off mid-stream.
+  const connectTimer=setTimeout(()=>controller.abort(),20000);
+  let response:Response;
+  try { response=await fetch(target,{method,headers,redirect:"manual",signal:controller.signal}); }
+  finally { clearTimeout(connectTimer); }
   if(![301,302,303,307,308].includes(response.status)) return response;
   const location=response.headers.get("location");
   if(!location){await response.body?.cancel();throw new Error("Redirect missing location");}
@@ -30,6 +36,35 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"
  }
  throw new Error("Too many redirects");
 }
+// External media hosts vary: some reject a synthetic MaseNet Origin/Referer,
+// while others require the legacy browser-like headers. Try a clean server-to-server
+// request first, then retry once with the compatibility headers. This keeps CORS out
+// of the upstream request and avoids making every provider accept the same policy.
+async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
+ const cleanHeaders=new Headers(headers);
+ cleanHeaders.delete("origin");
+ cleanHeaders.delete("referer");
+ // VLC can successfully open some signed media URLs that reject a browser-like
+ // request. Try a VLC-compatible identity as a bounded fallback, without exposing
+ // the signed URL or forwarding browser Origin/Referer values to the provider.
+ const vlcHeaders=new Headers(cleanHeaders);
+ vlcHeaders.set("user-agent","VLC/3.0.20 LibVLC/3.0.20");
+ vlcHeaders.set("accept","*/*");
+ const attempts=[cleanHeaders,vlcHeaders,new Headers(headers)];
+ let lastError:unknown=null;
+ for(let index=0;index<attempts.length;index++) {
+  try {
+   const response=await fetchPublicHttps(url,attempts[index]);
+   const retryable=response.status===401||response.status===403||response.status===429||response.status>=500;
+   if(!retryable||index===attempts.length-1) return response;
+   await response.body?.cancel();
+  } catch(error) {
+   lastError=error;
+  }
+ }
+ throw lastError instanceof Error?lastError:new Error("External media host could not be reached");
+}
+
 // Resolve HLS child resources against the final playlist URL. Some CDNs sign
 // the playlist URL and expect the same authentication query parameters on relative
 // segment, variant, subtitle, and key URLs. Preserve child-specific parameters and
@@ -129,6 +164,80 @@ function proxyHlsResource(raw:string, base:string, origin:string, episodeId:stri
  const nestedEpisodeId=episodeId.length<=200?episodeId:"";
  return origin+"/api/media/proxy?episodeId="+encodeURIComponent(nestedEpisodeId)+"&source="+encodeURIComponent(sourceHint)+"&resource="+encodeURIComponent(absolute);
 }
+
+/**
+ * Recover an interrupted byte-range response without restarting the movie.
+ * The browser still receives one continuous 206 response; the Worker resumes
+ * the missing suffix from the external host using another Range request.
+ */
+function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,start:number,end:number):ReadableStream<Uint8Array> {
+ const expected=end-start+1;
+ let reader=initial.body?.getReader()||null;
+ let sent=0,retries=0,closed=false;
+ const reconnect=async()=>{
+  while(retries<6){
+   retries++;
+   const headers=new Headers(baseHeaders);
+   headers.set("range","bytes="+(start+sent)+"-"+end);
+   headers.delete("if-range");
+   try{
+    const response=await fetchMediaSource(url,headers);
+    const range=response.headers.get("content-range")||"";
+    const match=range.match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i);
+    const returnedStart=match?Number(match[1]):-1;
+    const returnedEnd=match?Number(match[2]):-1;
+    if(response.status!==206||!match||returnedStart!==start+sent||returnedEnd<returnedStart||returnedEnd>end||!response.body){
+     await response.body?.cancel();
+     continue;
+    }
+    reader=response.body.getReader();
+    return true;
+   }catch{}
+  }
+  return false;
+ };
+ const readWithTimeout=async()=>{
+  if(!reader) throw new Error("No active upstream reader");
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  try{
+   return await Promise.race([
+    reader.read(),
+    new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error("Upstream range stalled")),20000);})
+   ]);
+  } finally { if(timer) clearTimeout(timer); }
+ };
+ return new ReadableStream<Uint8Array>({
+  async pull(controller){
+   if(closed)return;
+   for(;;){
+    if(!reader){
+     if(!(await reconnect())){closed=true;controller.error(new Error("External source interrupted repeatedly while resuming a byte range."));return;}
+    }
+    try{
+     const part=await readWithTimeout();
+     if(part.done){
+      reader=null;
+      if(sent>=expected){closed=true;controller.close();return;}
+      if(!(await reconnect())){closed=true;controller.error(new Error("External source ended the byte range before all bytes arrived."));return;}
+      continue;
+     }
+     const remaining=expected-sent;
+     if(remaining<=0){closed=true;controller.close();return;}
+     const chunk=part.value.length>remaining?part.value.subarray(0,remaining):part.value;
+     if(chunk.length){sent+=chunk.length;controller.enqueue(chunk);}
+     if(sent>=expected){closed=true;try{await reader!.cancel();}catch{}controller.close();return;}
+     return;
+    }catch{
+     try{void reader?.cancel();}catch{}
+     reader=null;
+     if(!(await reconnect())){closed=true;controller.error(new Error("External source connection could not be resumed."));return;}
+    }
+   }
+  },
+  async cancel(){closed=true;try{await reader?.cancel();}catch{}}
+ });
+}
+
 export const onRequestGet = async ({ request, env }: { request:Request; env:Env }) => {
  const reqUrl=new URL(request.url), episodeId=reqUrl.searchParams.get("episodeId")||"", requested=reqUrl.searchParams.get("resource");
  const sourceHint=reqUrl.searchParams.get("source")||"";
@@ -136,19 +245,55 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  // When that happens, resolve the episode using the exact stored source URL instead.
  if(episodeId.length>200 && !sourceHint) return json({error:"Invalid episodeId and missing source lookup hint"},400);
  if(!episodeId && !sourceHint) return json({error:"Missing episodeId and source lookup hint"},400);
- const rows=await env.DB.prepare("SELECT metadata_json FROM titles").all<{metadata_json:string}>();
+ // Resolve only the title row that contains this episode. The previous implementation
+ // loaded and parsed every title's full metadata JSON on every byte-range request.
+ // MKV players issue many range requests, so that repeated whole-library scan made
+ // startup increasingly slow and could overload the shared proxy path.
+ let matchedRow:{metadata_json:string}|null=null;
+ try {
+  matchedRow=await env.DB.prepare(`
+   SELECT metadata_json
+   FROM titles
+   WHERE EXISTS (
+    SELECT 1
+    FROM json_each(
+     CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
+     '$.episodes'
+    ) AS episode_entry
+    WHERE
+     (? <> '' AND json_extract(episode_entry.value,'$.id') = ?)
+     OR
+     (? <> '' AND (
+      json_extract(episode_entry.value,'$.streamUrl') = ?
+      OR EXISTS (
+       SELECT 1
+       FROM json_each(
+        CASE
+         WHEN json_valid(json_extract(episode_entry.value,'$.qualities'))
+         THEN json_extract(episode_entry.value,'$.qualities')
+         ELSE '[]'
+        END
+       ) AS quality_entry
+       WHERE json_extract(quality_entry.value,'$.streamUrl') = ?
+      )
+     ))
+   )
+   LIMIT 1
+  `).bind(episodeId,episodeId,sourceHint,sourceHint,sourceHint).first<{metadata_json:string}>();
+ } catch {
+  return json({error:"MaseNet could not look up this episode in its library. Please retry."},503);
+ }
  let episode:EpisodeLike|null=null;
- for(const row of rows.results||[]) {
+ if(matchedRow) {
   try {
-   const title=JSON.parse(row.metadata_json);
+   const title=JSON.parse(matchedRow.metadata_json);
    const episodes=Array.isArray(title.episodes)?title.episodes as EpisodeLike[]:[];
-   // Some legacy public episodes have no stable ID. Resolve them only by an exact
-   // stream URL already stored in the library; never accept an arbitrary source URL.
+   // Keep the final equality check in application code; never accept an arbitrary source URL.
    const found=episodeId && episodeId.length<=200 ? episodes.find((e:EpisodeLike)=>String(e.id)===episodeId) : undefined;
    const bySource=sourceHint
     ? episodes.find((e:EpisodeLike)=>[e.streamUrl,...(e.qualities||[]).map(q=>q.streamUrl)].some((url)=>typeof url==="string" && url===sourceHint))
     : undefined;
-   if(found||bySource){episode=found||bySource||null;break;}
+   episode=found||bySource||null;
   } catch {}
  }
  if(!episode) return json({error:"Episode not found in the Cloudflare library. Check the stored episode ID and source URL."},404);
@@ -189,7 +334,13 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  headers.set("referer",reqUrl.origin+"/");
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
- try { upstream=await fetchPublicHttps(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
+ try { upstream=await fetchMediaSource(upstreamUrl,headers); } catch(error) {
+  const reason=error instanceof Error?error.message:"Connection failed";
+  // Keep the host/path and signed query out of the response; expose only a safe
+  // diagnostic so the player can distinguish network failure from provider HTTP errors.
+  const safeReason=reason.slice(0,140);
+  return json({error:"MaseNet could not connect to the external video host. "+safeReason},502);
+ }
  if(!upstream.ok && upstream.status!==206) {
   if(upstream.status===401 || upstream.status===403) return json({error:"The streaming provider rejected this link (HTTP "+upstream.status+"). It may be expired or its signature may no longer be valid. Replace it with a fresh URL from the provider."},upstream.status);
   if(upstream.status===404 || upstream.status===410) return json({error:"The streaming provider says this video or signed link is no longer available (HTTP "+upstream.status+"). Replace it with a fresh URL."},410);
@@ -320,6 +471,18 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   outHeaders.set("content-disposition", 'attachment; filename="MaseNet-video.'+extension+'"');
  }
  outHeaders.set("cache-control","no-store"); outHeaders.set("access-control-allow-origin","*"); outHeaders.set("access-control-expose-headers","content-length,content-range,accept-ranges,last-modified,etag"); outHeaders.set("accept-ranges",upstream.headers.get("accept-ranges")||"bytes"); outHeaders.set("x-content-type-options","nosniff");
+ if(upstream.status===206 && rangeHeader){
+  const range=outHeaders.get("content-range")||"";
+  const match=range.match(/^bytes\s+(\d+)-(\d+)\/(\d+)$/i);
+  if(match){
+   const rangeStart=Number(match[1]),rangeEnd=Number(match[2]);
+   if(Number.isSafeInteger(rangeStart)&&Number.isSafeInteger(rangeEnd)&&rangeEnd>=rangeStart){
+    outHeaders.set("content-length",String(rangeEnd-rangeStart+1));
+    const body=resumeInterruptedRange(upstream,upstream.url||upstreamUrl,headers,rangeStart,rangeEnd);
+    return new Response(body,{status:206,headers:outHeaders});
+   }
+  }
+ }
  return new Response(upstream.body,{status:upstream.status,headers:outHeaders});
 };
 

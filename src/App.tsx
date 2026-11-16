@@ -2,7 +2,7 @@ import './welcome.css';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api, auth, image } from './cloudflare-client';
 import { ProfileManager, WatchPartyPage } from './AccountFeatures';
-const Player = lazy(() => import('./FlootPlayer'));
+const Player = lazy(() => import('./MaseNetPlayerV3'));
 const PlayerLoading = () => <div role="status" aria-live="polite" style={{ minHeight: 180, display: "grid", placeItems: "center", borderRadius: 16, background: "#08090d", color: "#e8c77a", fontSize: 14 }}>Loading video player…</div>;
 import { House, Clapperboard, Search, UserRound, SlidersHorizontal, Play, Download, Plus, X, Send, ShieldCheck, Check, ArrowLeft, Upload, Link2, Bot, Trash2, ChevronRight, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Subtitles, RotateCcw, RotateCw, ImagePlus, LogOut, Save, Eye, EyeOff, Film, LayoutDashboard, Paperclip, Palette, Mic, Copy, ExternalLink, RefreshCw, Youtube, Facebook, Music2, Share2, MessageCircle, Sparkles, Bell, Bookmark, CheckCheck } from 'lucide-react';
 
