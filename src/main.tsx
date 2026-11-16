@@ -1,6 +1,7 @@
 import { Component, StrictMode, type ErrorInfo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import PWAInstallPrompt from './PWAInstallPrompt';
 import './index.css';
 import './title-page.css';
 import './premium-ui.css';
@@ -40,5 +41,19 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
 
 const root = document.getElementById('root');
 if (root) {
-  createRoot(root).render(<StrictMode><AppErrorBoundary><App /></AppErrorBoundary></StrictMode>);
+  createRoot(root).render(
+    <StrictMode>
+      <AppErrorBoundary><App /></AppErrorBoundary>
+      <PWAInstallPrompt />
+    </StrictMode>
+  );
+}
+
+const telegramApp = (window as Window & { Telegram?: { WebApp?: { initData?: string; platform?: string } } }).Telegram?.WebApp;
+if ('serviceWorker' in navigator && !telegramApp?.initData && (!telegramApp?.platform || telegramApp.platform === 'unknown')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(error => {
+      console.warn('MaseNet offline app shell could not be registered:', error);
+    });
+  }, { once: true });
 }
