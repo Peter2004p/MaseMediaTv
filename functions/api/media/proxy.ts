@@ -383,7 +383,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   const isMkv=/matroska|x-matroska/i.test(contentType)||finalPath.endsWith(".mkv");
   const isHls=detectedPlaylist||/mpegurl/i.test(contentType)||finalPath.endsWith(".m3u8");
   const isMp4=/video\/mp4/i.test(contentType)||/\.(mp4|m4v)$/i.test(finalPath);
-  const isWebm=/video\\/webm/i.test(contentType)||finalPath.endsWith(".webm");
+  const isWebm=/video\/webm/i.test(contentType)||finalPath.endsWith(".webm");
   let finalHost="";
   let childHosts:string[]=[];
   let childCount=0;
@@ -392,12 +392,12 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
    const manifest=await upstream.text();
    const base=upstream.url||upstreamUrl;
    const discovered=new Set<string>();
-   for(const line of manifest.split(/\\r?\\n/)) {
+   for(const line of manifest.split(/\r?\n/)) {
     const trimmed=line.trim();
     if(!trimmed||trimmed.startsWith("#EXTM3U")) continue;
     const uris:string[]=[];
     if(trimmed.startsWith("#")) {
-     for(const match of trimmed.matchAll(/URI=(["'])(.*?)\\1/g)) uris.push(match[2]);
+     for(const match of trimmed.matchAll(/URI=(["'])(.*?)\1/g)) uris.push(match[2]);
     } else uris.push(trimmed);
     for(const raw of uris) {
      try {
