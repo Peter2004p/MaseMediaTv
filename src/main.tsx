@@ -41,6 +41,24 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
   }
 }
 
+// Native builds use the bundled web app so the shell can open without a network connection.
+if (Capacitor.isNativePlatform()) {
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const raw = input instanceof Request ? input.url : String(input);
+    let parsed: URL;
+    try { parsed = new URL(raw, window.location.href); } catch { return nativeFetch(input, init); }
+    if (parsed.pathname.startsWith('/api/')) {
+      parsed.protocol = 'https:';
+      parsed.host = 'masetv-cloudflare-migration.pages.dev';
+      const target = parsed.toString();
+      if (input instanceof Request) return nativeFetch(new Request(target, input), { ...init, credentials: 'include' });
+      return nativeFetch(target, { ...init, credentials: 'include' });
+    }
+    return nativeFetch(input, init);
+  }) as typeof window.fetch;
+}
+
 const root = document.getElementById('root');
 if (root) {
   createRoot(root).render(
