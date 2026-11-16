@@ -18,7 +18,13 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"
  let target=initialUrl;
  for(let hop=0;hop<=5;hop++){
   if(!isPublicHttps(target)) throw new Error("Blocked unsafe redirect target");
-  const response=await fetch(target,{method,headers,redirect:"manual"});
+  const controller=new AbortController();
+  // Bound only the connection/response-header wait. Clear the timer as soon as
+  // headers arrive so long-running media bodies are never cut off mid-stream.
+  const connectTimer=setTimeout(()=>controller.abort(),20000);
+  let response:Response;
+  try { response=await fetch(target,{method,headers,redirect:"manual",signal:controller.signal}); }
+  finally { clearTimeout(connectTimer); }
   if(![301,302,303,307,308].includes(response.status)) return response;
   const location=response.headers.get("location");
   if(!location){await response.body?.cancel();throw new Error("Redirect missing location");}
