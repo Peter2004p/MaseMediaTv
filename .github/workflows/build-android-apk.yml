@@ -10,6 +10,7 @@ on:
       - src/**
       - functions/api/auth/**
       - public/masenet-app-icon.svg
+      - public/sw.js
       - scripts/prepare-android-native.py
       - .github/workflows/build-android-apk.yml
   workflow_dispatch:
