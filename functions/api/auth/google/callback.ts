@@ -8,6 +8,19 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   const match = request.headers.get("Cookie")?.match(/(?:^|;\s*)masetv_oauth_state=([^;]+)/);
   if (!code || !state || !match || decodeURIComponent(match[1]) !== state) return json({ error: "Sign-in state expired. Please try again." }, 400);
   const redirectUri = url.origin + "/api/auth/google/callback";
+  const nativeRequested = request.headers.get("Cookie")?.split(";").some(item => item.trim() === "masetv_oauth_native=1") === true;
+  const completeNativeSignIn = async (sessionToken: string, cookieName: "masetv_session" | "masetv_user_session", maxAge: number) => {
+    const codeBytes = new Uint8Array(32);
+    crypto.getRandomValues(codeBytes);
+    const code = [...codeBytes].map(x => x.toString(16).padStart(2, "0")).join("");
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS native_auth_codes (code_hash TEXT PRIMARY KEY, session_token TEXT NOT NULL, cookie_name TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
+    await env.DB.prepare("INSERT INTO native_auth_codes (code_hash,session_token,cookie_name,expires_at) VALUES (?,?,?,datetime('now','+2 minutes'))").bind(await sha256(code), sessionToken, cookieName).run();
+    const headers = new Headers({ Location: "tv.masemedia.masenet://auth?code=" + code });
+    headers.append("Set-Cookie", "masetv_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google; Max-Age=0");
+    headers.append("Set-Cookie", "masetv_oauth_native=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google/callback; Max-Age=0");
+    return new Response(null, { status: 302, headers });
+  };
+
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: redirectUri, grant_type: "authorization_code" }) });
   if (!tokenRes.ok) return json({ error: "Google sign-in could not be completed." }, 401);
   const tokenData = await tokenRes.json() as { access_token?: string };
@@ -28,9 +41,11 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
     if (!admin) return json({ error: "Admin session could not be created." }, 500);
     const session = randomHex();
     await env.DB.prepare("INSERT INTO admin_sessions (id_hash,admin_id,expires_at) VALUES (?,?,datetime('now','+7 days'))").bind(await sha256(session),admin.id).run();
+    if (nativeRequested) return completeNativeSignIn(session, "masetv_session", 604800);
     const headers = new Headers({ Location: url.origin + "/#/home" });
     headers.append("Set-Cookie","masetv_session="+session+"; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800");
     headers.append("Set-Cookie","masetv_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google; Max-Age=0");
+    headers.append("Set-Cookie","masetv_oauth_native=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google/callback; Max-Age=0");
     return new Response(null,{status:302,headers});
   }
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS site_users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL DEFAULT '', picture TEXT NOT NULL DEFAULT '', provider TEXT NOT NULL DEFAULT 'google', created_at TEXT NOT NULL DEFAULT (datetime('now')), last_login_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
@@ -41,8 +56,10 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   if (!user) return json({error:"Your MaseNet account could not be created."},500);
   const session=randomHex();
   await env.DB.prepare("INSERT INTO site_user_sessions (id_hash,user_id,expires_at) VALUES (?,?,datetime('now','+30 days'))").bind(await sha256(session),user.id).run();
+  if (nativeRequested) return completeNativeSignIn(session, "masetv_user_session", 2592000);
   const headers = new Headers({ Location: url.origin + "/#/home" });
   headers.append("Set-Cookie","masetv_user_session="+session+"; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000");
   headers.append("Set-Cookie","masetv_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google; Max-Age=0");
+  headers.append("Set-Cookie","masetv_oauth_native=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google/callback; Max-Age=0");
   return new Response(null,{status:302,headers});
 };
