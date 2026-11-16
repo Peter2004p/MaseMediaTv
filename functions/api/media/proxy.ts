@@ -388,33 +388,67 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
   let finalHost="";
   let childHosts:string[]=[];
   let childCount=0;
-  if(isHls) {
-   finalHost=new URL(upstream.url||upstreamUrl).hostname;
-   const manifest=await upstream.text();
-   const base=upstream.url||upstreamUrl;
-   const discovered=new Set<string>();
-   for(const line of manifest.split(/\r?\n/)) {
-    const trimmed=line.trim();
-    if(!trimmed||trimmed.startsWith("#EXTM3U")) continue;
-    const uris:string[]=[];
-    if(trimmed.startsWith("#")) {
-     for(const match of trimmed.matchAll(/URI=(["'])(.*?)\1/g)) uris.push(match[2]);
-    } else uris.push(trimmed);
-    for(const raw of uris) {
-     try {
-      const parsed=new URL(resolveHlsResource(raw,base));
-      if(parsed.protocol==="https:"){childCount++;discovered.add(parsed.hostname);}
-     } catch {}
+   let firstChildStatus:number|null=null;
+   let firstChildHost="";
+   let firstChildType="";
+   let firstChildHasQuery=false;
+   let nestedSegmentStatus:number|null=null;
+   const firstResource=(text:string,base:string):string=>{
+    for(const line of text.split(/\r?\n/)){
+     const value=line.trim();
+     if(!value||value.startsWith("#")) continue;
+     try{return resolveHlsResource(value,base);}catch{}
     }
-   }
-   childHosts=Array.from(discovered).slice(0,20);
-  } else await upstream.body?.cancel();
+    return "";
+   };
+   if(isHls) {
+    finalHost=new URL(upstream.url||upstreamUrl).hostname;
+    const manifest=await upstream.text();
+    const base=upstream.url||upstreamUrl;
+    const discovered=new Set<string>();
+    for(const line of manifest.split(/\r?\n/)) {
+     const trimmed=line.trim();
+     if(!trimmed||trimmed.startsWith("#EXTM3U")) continue;
+     const uris:string[]=[];
+     if(trimmed.startsWith("#")) {
+      for(const match of trimmed.matchAll(/URI=(["'])(.*?)\1/g)) uris.push(match[2]);
+     } else uris.push(trimmed);
+     for(const raw of uris) {
+      try {
+       const parsed=new URL(resolveHlsResource(raw,base));
+       if(parsed.protocol==="https:"){childCount++;discovered.add(parsed.hostname);}
+      } catch {}
+     }
+    }
+    childHosts=Array.from(discovered).slice(0,20);
+    const first=firstResource(manifest,base);
+    if(first&&isPublicHttps(first)){
+     try{
+      const childUrl=new URL(first);
+      firstChildHost=childUrl.hostname;
+      firstChildHasQuery=Array.from(childUrl.searchParams.keys()).length>0;
+      const child=await fetchMediaSource(first,headers);
+      firstChildStatus=child.status;
+      firstChildType=child.headers.get("content-type")||"";
+      const childIsPlaylist=/mpegurl|text\/plain/i.test(firstChildType)||/\.m3u8(?:$|[?#])/i.test(first);
+      if(childIsPlaylist&&child.ok){
+       const childManifest=await child.text();
+       const segment=firstResource(childManifest,child.url||first);
+       if(segment&&isPublicHttps(segment)){
+        const segmentResponse=await fetchMediaSource(segment,headers);
+        nestedSegmentStatus=segmentResponse.status;
+        await segmentResponse.body?.cancel();
+       }
+      }else await child.body?.cancel();
+     }catch{firstChildStatus=0;}
+    }
+   } else await upstream.body?.cancel();
   return json({
    kind:isMkv?"mkv":isHls?"hls":isMp4?"mp4":isWebm?"webm":"unknown",
    contentType,
    status:upstream.status,
    supportsRanges:upstream.status===206||/bytes/i.test(upstream.headers.get("accept-ranges")||"")||!!upstream.headers.get("content-range"),
-   ...(isHls?{finalHost,childHosts,childCount}:{})
+   ...(isHls?{finalHost,childHosts,childCount,firstChildHost,firstChildStatus,firstChildType,firstChildHasQuery,nestedSegmentStatus}:{})
   },200);
  }
  if(detectedPlaylist) {
