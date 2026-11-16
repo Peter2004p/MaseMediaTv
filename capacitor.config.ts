@@ -4,8 +4,13 @@ const config: CapacitorConfig = {
   appId: 'tv.masemedia.masenet',
   appName: 'MaseNet',
   webDir: 'dist',
+  server: {
+    // Keep the native shell on the existing same-origin Cloudflare site; the service worker caches the app shell for offline opening.
+    url: 'https://masetv-cloudflare-migration.pages.dev',
+    cleartext: false,
+    allowNavigation: ['masetv-cloudflare-migration.pages.dev'],
+  },
   android: { allowMixedContent: false },
-  plugins: { CapacitorHttp: { enabled: true } },
 };
 
 export default config;
