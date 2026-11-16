@@ -46,5 +46,8 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   target.searchParams.set("client_id", env.GOOGLE_CLIENT_ID); target.searchParams.set("redirect_uri", redirectUri);
   target.searchParams.set("response_type", "code"); target.searchParams.set("scope", "openid email profile");
   target.searchParams.set("state", state); target.searchParams.set("prompt", "select_account");
-  return new Response(null, { status: 302, headers: { "Location": target.toString(), "Set-Cookie": "masetv_oauth_state=" + state + "; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google; Max-Age=600" } });
+  const headers = new Headers({ Location: target.toString() });
+  headers.append("Set-Cookie", "masetv_oauth_state=" + state + "; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google; Max-Age=600");
+  if (url.searchParams.get("native") === "1") headers.append("Set-Cookie", "masetv_oauth_native=1; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google/callback; Max-Age=600");
+  return new Response(null, { status: 302, headers });
 };
