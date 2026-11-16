@@ -862,10 +862,42 @@ function EpisodeRadar({title}:{title:Title}){
   }catch{setNotice('Could not save your follow preference on this device.');}
  };
  const enable=async()=>{if(typeof Notification==='undefined'){setPermission('unsupported');return}try{setPermission(await Notification.requestPermission())}catch{setPermission('denied')}};
- return <section className="maseEpisodeRadar" aria-label="New Episode Radar">
-  <div className="maseFeatureHeading"><div><span className="iqKicker">TITLE UPDATES</span><h2>New Episode Radar</h2><p>{title.type==='Drama'?'Follow this drama to spot new episode additions when the library updates.':'Follow this movie to keep it on your MaseNet title radar.'}</p></div><div className="maseRadarActions"><button type="button" onClick={toggle}>{followed?'Following ✓':'+ Follow title'}</button>{title.type==='Drama'&&<button type="button" onClick={()=>void enable()} disabled={permission==='granted'||permission==='unsupported'}>{permission==='granted'?'Alerts enabled':permission==='denied'?'Alerts blocked':permission==='unsupported'?'Alerts unavailable':'Enable alerts'}</button>}</div></div>
-  <div className="maseFeatureEmpty">{title.type==='Drama'?title.episodes.length+' episodes currently available.': 'This is a standalone movie; episode alerts are only available for drama series.'}</div>
-  {notice&&<p className="maseRadarNotice" role="status">{notice}</p>}
+ return <section className="maseEpisodeRadar radarGlass" aria-label="New Episode Radar">
+  <style>{`
+   .radarGlass{position:relative;isolation:isolate;overflow:hidden;padding:clamp(16px,2.4vw,24px)!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:24px!important;background:linear-gradient(135deg,rgba(255,255,255,.105),rgba(255,255,255,.035) 48%,rgba(255,255,255,.065))!important;box-shadow:0 18px 48px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.13)!important;backdrop-filter:blur(24px) saturate(155%);-webkit-backdrop-filter:blur(24px) saturate(155%)}
+   .radarGlass:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 5% 0%,rgba(255,255,255,.14),transparent 42%),linear-gradient(115deg,transparent 35%,rgba(255,255,255,.035),transparent 72%)}
+   .radarGlass .radarTop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+   .radarGlass .radarEyebrow{display:inline-flex;align-items:center;gap:7px;color:#f1a6c5;font-size:10px;font-weight:850;letter-spacing:.2em;text-transform:uppercase}
+   .radarGlass .radarEyebrow:before{content:"";width:6px;height:6px;border-radius:50%;background:#f1a6c5;box-shadow:0 0 12px rgba(241,166,197,.8)}
+   .radarGlass h2{margin:9px 0 7px;font-size:clamp(22px,3vw,30px);font-weight:720;letter-spacing:-.045em;line-height:1.08;color:var(--text,#f6f4f8)}
+   .radarGlass .radarDescription{max-width:54ch;margin:0;color:var(--muted,#c0bac8);font-size:13px;line-height:1.6}
+   .radarGlass .radarCount{flex:0 0 auto;display:grid;place-items:center;min-width:66px;min-height:66px;padding:9px;border:1px solid rgba(255,255,255,.17);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.045));box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 8px 22px rgba(0,0,0,.12);text-align:center}
+   .radarGlass .radarCount b{font-size:22px;line-height:1;font-weight:750;letter-spacing:-.05em;color:var(--text,#fff)}
+   .radarGlass .radarCount small{margin-top:4px;color:var(--muted,#c7c0cc);font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+   .radarGlass .radarDivider{height:1px;margin:17px 0 13px;background:linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.035),transparent)}
+   .radarGlass .radarControls{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+   .radarGlass .radarButton{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:43px;padding:0 17px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:linear-gradient(145deg,rgba(255,255,255,.19),rgba(255,255,255,.07));box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 7px 18px rgba(0,0,0,.16);color:var(--text,#fff);font-size:12px;font-weight:700;letter-spacing:-.01em;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:transform .18s ease,border-color .18s ease,background .18s ease}
+   .radarGlass .radarButton:active{transform:scale(.97)}
+   .radarGlass .radarButton.primary{border-color:rgba(255,255,255,.34);background:linear-gradient(135deg,rgba(246,190,215,.32),rgba(255,255,255,.13));}
+   .radarGlass .radarButton.enabled{border-color:rgba(107,226,174,.38);background:linear-gradient(135deg,rgba(65,195,139,.2),rgba(255,255,255,.07))}
+   .radarGlass .radarButton:disabled{opacity:.58;cursor:not-allowed}
+   .radarGlass .radarStatus{display:flex;align-items:flex-start;gap:9px;margin:13px 0 0;padding:11px 13px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.055);color:var(--muted,#c7c0cc);font-size:11px;line-height:1.5}
+   .radarGlass .radarStatus:before{content:"";flex:0 0 7px;width:7px;height:7px;margin-top:4px;border-radius:50%;background:#a7e8cb;box-shadow:0 0 10px rgba(167,232,203,.6)}
+   .radarGlass .radarNotice{margin:12px 0 0;padding:11px 13px;border:1px solid rgba(167,232,203,.25);border-radius:14px;background:rgba(72,174,130,.1);color:#b9f1d7;font-size:11px;line-height:1.5}
+   @media(max-width:560px){.radarGlass{padding:15px!important;border-radius:19px!important}.radarGlass .radarTop{gap:10px}.radarGlass h2{font-size:22px}.radarGlass .radarDescription{font-size:11px;max-width:34ch}.radarGlass .radarCount{min-width:56px;min-height:56px;border-radius:16px}.radarGlass .radarCount b{font-size:19px}.radarGlass .radarControls{display:grid;grid-template-columns:1fr 1fr}.radarGlass .radarButton{width:100%;min-height:42px;padding:0 10px;font-size:11px}}
+   @media(prefers-reduced-motion:reduce){.radarGlass .radarButton{transition:none}}
+  `}</style>
+  <div className="radarTop">
+   <div><span className="radarEyebrow">Title updates</span><h2>New Episode Radar</h2><p className="radarDescription">{title.type==='Drama'?'Follow this drama and keep track when new episodes are added to the MaseNet library.':'Keep this movie on your MaseNet title radar.'}</p></div>
+   {title.type==='Drama'&&<div className="radarCount" aria-label={title.episodes.length+' episodes available'}><b>{title.episodes.length}</b><small>Episodes</small></div>}
+  </div>
+  <div className="radarDivider"/>
+  <div className="radarControls">
+   <button className={'radarButton primary '+(followed?'enabled':'')} type="button" onClick={toggle}><span aria-hidden="true">{followed?'✓':'＋'}</span>{followed?'Following':'Follow title'}</button>
+   {title.type==='Drama'&&<button className={'radarButton '+(permission==='granted'?'enabled':'')} type="button" onClick={()=>void enable()} disabled={permission==='granted'||permission==='unsupported'}><span aria-hidden="true">{permission==='granted'?'✓':'◉'}</span>{permission==='granted'?'Alerts enabled':permission==='denied'?'Alerts blocked':permission==='unsupported'?'Alerts unavailable':'Enable alerts'}</button>}
+  </div>
+  <div className="radarStatus">{title.type==='Drama'?title.episodes.length+' episodes currently available. Follow this title to see updates when the library changes.':'This is a standalone movie. Episode alerts are available for drama series.'}</div>
+  {notice&&<p className="radarNotice" role="status">{notice}</p>}
  </section>;
 }
 
