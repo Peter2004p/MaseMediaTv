@@ -7,6 +7,10 @@ on:
     paths:
       - package.json
       - capacitor.config.ts
+      - src/**
+      - functions/api/auth/**
+      - public/masemediatv-logo.svg
+      - scripts/prepare-android-native.py
       - .github/workflows/build-android-apk.yml
   workflow_dispatch:
 
@@ -43,6 +47,21 @@ jobs:
 
       - name: Generate the Android wrapper
         run: npx cap add android
+
+      - name: Generate launcher icons from the official MaseMediaTv logo
+        run: |
+          mkdir -p assets
+          node --input-type=module <<'NODE'
+          import sharp from 'sharp';
+          await sharp('public/masemediatv-logo.svg')
+            .resize(1024, 1024, { fit: 'contain', background: '#05050b' })
+            .png()
+            .toFile('assets/icon.png');
+          NODE
+          npx capacitor-assets generate --android
+
+      - name: Configure Android app link and navigation
+        run: python3 scripts/prepare-android-native.py
 
       - name: Prepare Capacitor Android assets directory
         run: mkdir -p android/app/src/main/assets
