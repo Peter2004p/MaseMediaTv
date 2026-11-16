@@ -426,7 +426,7 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
      try{
       const childUrl=new URL(first);
       firstChildHost=childUrl.hostname;
-      firstChildHasQuery=Array.from(childUrl.searchParams.keys()).length>0;
+      firstChildHasQuery=childUrl.search.length>0;
       const child=await fetchMediaSource(first,headers);
       firstChildStatus=child.status;
       firstChildType=child.headers.get("content-type")||"";
