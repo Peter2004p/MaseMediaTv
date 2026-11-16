@@ -30,6 +30,35 @@ async function fetchPublicHttps(initialUrl:string, headers:Headers, method:"GET"
  }
  throw new Error("Too many redirects");
 }
+// External media hosts vary: some reject a synthetic MaseNet Origin/Referer,
+// while others require the legacy browser-like headers. Try a clean server-to-server
+// request first, then retry once with the compatibility headers. This keeps CORS out
+// of the upstream request and avoids making every provider accept the same policy.
+async function fetchMediaSource(url:string, headers:Headers):Promise<Response> {
+ const cleanHeaders=new Headers(headers);
+ cleanHeaders.delete("origin");
+ cleanHeaders.delete("referer");
+ // VLC can successfully open some signed media URLs that reject a browser-like
+ // request. Try a VLC-compatible identity as a bounded fallback, without exposing
+ // the signed URL or forwarding browser Origin/Referer values to the provider.
+ const vlcHeaders=new Headers(cleanHeaders);
+ vlcHeaders.set("user-agent","VLC/3.0.20 LibVLC/3.0.20");
+ vlcHeaders.set("accept","*/*");
+ const attempts=[cleanHeaders,vlcHeaders,new Headers(headers)];
+ let lastError:unknown=null;
+ for(let index=0;index<attempts.length;index++) {
+  try {
+   const response=await fetchPublicHttps(url,attempts[index]);
+   const retryable=response.status===401||response.status===403||response.status===429||response.status>=500;
+   if(!retryable||index===attempts.length-1) return response;
+   await response.body?.cancel();
+  } catch(error) {
+   lastError=error;
+  }
+ }
+ throw lastError instanceof Error?lastError:new Error("External media host could not be reached");
+}
+
 // Resolve HLS child resources against the final playlist URL. Some CDNs sign
 // the playlist URL and expect the same authentication query parameters on relative
 // segment, variant, subtitle, and key URLs. Preserve child-specific parameters and
@@ -136,19 +165,55 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  // When that happens, resolve the episode using the exact stored source URL instead.
  if(episodeId.length>200 && !sourceHint) return json({error:"Invalid episodeId and missing source lookup hint"},400);
  if(!episodeId && !sourceHint) return json({error:"Missing episodeId and source lookup hint"},400);
- const rows=await env.DB.prepare("SELECT metadata_json FROM titles").all<{metadata_json:string}>();
+ // Resolve only the title row that contains this episode. The previous implementation
+ // loaded and parsed every title's full metadata JSON on every byte-range request.
+ // MKV players issue many range requests, so that repeated whole-library scan made
+ // startup increasingly slow and could overload the shared proxy path.
+ let matchedRow:{metadata_json:string}|null=null;
+ try {
+  matchedRow=await env.DB.prepare(`
+   SELECT metadata_json
+   FROM titles
+   WHERE EXISTS (
+    SELECT 1
+    FROM json_each(
+     CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
+     '$.episodes'
+    ) AS episode_entry
+    WHERE
+     (? <> '' AND json_extract(episode_entry.value,'$.id') = ?)
+     OR
+     (? <> '' AND (
+      json_extract(episode_entry.value,'$.streamUrl') = ?
+      OR EXISTS (
+       SELECT 1
+       FROM json_each(
+        CASE
+         WHEN json_valid(json_extract(episode_entry.value,'$.qualities'))
+         THEN json_extract(episode_entry.value,'$.qualities')
+         ELSE '[]'
+        END
+       ) AS quality_entry
+       WHERE json_extract(quality_entry.value,'$.streamUrl') = ?
+      )
+     ))
+   )
+   LIMIT 1
+  `).bind(episodeId,episodeId,sourceHint,sourceHint,sourceHint).first<{metadata_json:string}>();
+ } catch {
+  return json({error:"MaseNet could not look up this episode in its library. Please retry."},503);
+ }
  let episode:EpisodeLike|null=null;
- for(const row of rows.results||[]) {
+ if(matchedRow) {
   try {
-   const title=JSON.parse(row.metadata_json);
+   const title=JSON.parse(matchedRow.metadata_json);
    const episodes=Array.isArray(title.episodes)?title.episodes as EpisodeLike[]:[];
-   // Some legacy public episodes have no stable ID. Resolve them only by an exact
-   // stream URL already stored in the library; never accept an arbitrary source URL.
+   // Keep the final equality check in application code; never accept an arbitrary source URL.
    const found=episodeId && episodeId.length<=200 ? episodes.find((e:EpisodeLike)=>String(e.id)===episodeId) : undefined;
    const bySource=sourceHint
     ? episodes.find((e:EpisodeLike)=>[e.streamUrl,...(e.qualities||[]).map(q=>q.streamUrl)].some((url)=>typeof url==="string" && url===sourceHint))
     : undefined;
-   if(found||bySource){episode=found||bySource||null;break;}
+   episode=found||bySource||null;
   } catch {}
  }
  if(!episode) return json({error:"Episode not found in the Cloudflare library. Check the stored episode ID and source URL."},404);
@@ -189,7 +254,13 @@ export const onRequestGet = async ({ request, env }: { request:Request; env:Env 
  headers.set("referer",reqUrl.origin+"/");
  for(const key of ["range","if-range"]) { const value=request.headers.get(key); if(value) headers.set(key,value); }
  let upstream:Response;
- try { upstream=await fetchPublicHttps(upstreamUrl,headers); } catch { return json({error:"The video source could not be reached safely. Check the media URL and its redirects."},502); }
+ try { upstream=await fetchMediaSource(upstreamUrl,headers); } catch(error) {
+  const reason=error instanceof Error?error.message:"Connection failed";
+  // Keep the host/path and signed query out of the response; expose only a safe
+  // diagnostic so the player can distinguish network failure from provider HTTP errors.
+  const safeReason=reason.slice(0,140);
+  return json({error:"MaseNet could not connect to the external video host. "+safeReason},502);
+ }
  if(!upstream.ok && upstream.status!==206) {
   if(upstream.status===401 || upstream.status===403) return json({error:"The streaming provider rejected this link (HTTP "+upstream.status+"). It may be expired or its signature may no longer be valid. Replace it with a fresh URL from the provider."},upstream.status);
   if(upstream.status===404 || upstream.status===410) return json({error:"The streaming provider says this video or signed link is no longer available (HTTP "+upstream.status+"). Replace it with a fresh URL."},410);

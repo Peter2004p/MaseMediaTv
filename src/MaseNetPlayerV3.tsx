@@ -1,0 +1,106 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Hls from 'hls.js';
+import MaseNetVlcPlayer from './MaseNetVlcPlayer';
+
+type Quality='480p'|'720p'|'1080p';
+type Track={label?:string;url:string;path?:string;lang?:string;mimeType?:string};
+type Variant={quality:Quality;streamUrl:string;mimeType?:string;subtitleTracks?:Track[]};
+type Episode={id:string;title:string;quality:Quality;streamUrl:string;mimeType?:string;subtitleTracks?:Track[];qualities?:Variant[]};
+type Props={episode:Episode;onProgress?:(n:number)=>void;onPlaybackPosition?:(n:number)=>void;onPlaybackStarted?:()=>void;onPlaybackEnded?:()=>void;onPlaybackStateChange?:(playing:boolean,time:number)=>void;profileId?:string;playRequest?:number;resumeAtSeconds?:number;autoPlay?:boolean;muted?:boolean;reelMode?:boolean};
+type HlsTrack={name?:string;lang?:string;url?:string};
+const stamp=(n:number)=>Number.isFinite(n)?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'0:00';
+const isMkv=(url:string,mime='')=>/\.mkv(?:$|[?#])/i.test(url)||/matroska|x-matroska/i.test(mime);
+const isHls=(url:string,mime='')=>/\.m3u8(?:$|[?#])/i.test(url)||/mpegurl/i.test(mime);
+
+export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,onPlaybackStarted,onPlaybackEnded,onPlaybackStateChange,resumeAtSeconds=0,autoPlay=false,muted=false,reelMode=false,playRequest=0}:Props){
+ const videoRef=useRef<HTMLVideoElement>(null),rootRef=useRef<HTMLElement>(null),hlsRef=useRef<Hls|null>(null);
+ const resumeApplied=useRef(false),lastPositionSent=useRef(-1);
+ const variants=useMemo(()=>{const list=episode.qualities?.length?[...episode.qualities]:[{quality:episode.quality,streamUrl:episode.streamUrl,mimeType:episode.mimeType,subtitleTracks:episode.subtitleTracks}];return list.filter((v,i)=>v.streamUrl&&list.findIndex(x=>x.quality===v.quality)===i);},[episode]);
+ const [variantIndex,setVariantIndex]=useState(0),[sourceIndex,setSourceIndex]=useState(0),[attempt,setAttempt]=useState(0);
+ const selected=variants[Math.min(variantIndex,Math.max(0,variants.length-1))]||variants[0];
+ const url=selected?.streamUrl||episode.streamUrl||'',mime=selected?.mimeType||episode.mimeType||'';
+ const mkv=isMkv(url,mime),hlsSource=isHls(url,mime);
+ const proxy=useMemo(()=>'/api/media/proxy?episodeId='+encodeURIComponent(episode.id)+'&source='+encodeURIComponent(url),[episode.id,url]);
+ const sources=useMemo(()=>hlsSource?[proxy,url]:[url,proxy],[hlsSource,proxy,url]);
+ const activeSrc=sources[Math.min(sourceIndex,sources.length-1)]||url;
+ const externalTracks=(selected?.subtitleTracks||episode.subtitleTracks||[]).filter(t=>/\.vtt(?:$|[?#])/i.test(t.url||t.path||'')).map(t=>({...t,url:t.url||t.path||''}));
+ const [loading,setLoading]=useState(true),[error,setError]=useState(''),[playing,setPlaying]=useState(false),[time,setTime]=useState(0),[duration,setDuration]=useState(0);
+ const [volume,setVolume]=useState(1),[mutedState,setMutedState]=useState(muted),[speed,setSpeed]=useState(1),[qualityMenu,setQualityMenu]=useState(false),[subtitleMenu,setSubtitleMenu]=useState(false),[audioMenu,setAudioMenu]=useState(false),[settingsMenu,setSettingsMenu]=useState(false);
+ const [hlsSubs,setHlsSubs]=useState<HlsTrack[]>([]),[hlsAudios,setHlsAudios]=useState<HlsTrack[]>([]);
+ const [full,setFull]=useState(false);
+ const advanceSource=useCallback((message:string)=>{setError(message);setLoading(false);if(sourceIndex+1<sources.length){setSourceIndex(n=>n+1);setLoading(true);return;}if(variantIndex+1<variants.length){setVariantIndex(n=>n+1);setSourceIndex(0);setLoading(true);return;}setError(message||'This source could not be played. It may be offline, expired, blocked by its host, or encoded with a browser-unsupported codec.');},[sourceIndex,sources.length,variantIndex,variants.length]);
+ useEffect(()=>{setVariantIndex(0);setSourceIndex(0);setAttempt(0);resumeApplied.current=false;lastPositionSent.current=-1;setError('');setTime(0);setDuration(0);},[episode.id]);
+ useEffect(()=>{setMutedState(muted);if(videoRef.current)videoRef.current.muted=muted;},[muted]);
+ useEffect(()=>{
+  const video=videoRef.current;if(!video||mkv)return;
+  let alive=true,networkRetries=0,mediaRetries=0;
+  setLoading(true);setError('');setPlaying(false);setTime(0);setDuration(0);setHlsSubs([]);setHlsAudios([]);
+  resumeApplied.current=false;
+  hlsRef.current?.destroy();hlsRef.current=null;
+  const fail=(message:string)=>{if(!alive)return;advanceSource(message);};
+  const applyResume=()=>{if(resumeApplied.current||!Number.isFinite(video.duration)||video.duration<=0)return;resumeApplied.current=true;if(resumeAtSeconds>0&&video.duration>resumeAtSeconds+5)video.currentTime=resumeAtSeconds;};
+  const onMetadata=()=>{if(!alive)return;setDuration(Number.isFinite(video.duration)?video.duration:0);applyResume();setLoading(false);setError('');};
+  const onCanPlay=()=>{if(alive){setLoading(false);setError('');applyResume();if(autoPlay&&video.paused)void video.play().catch(()=>{});}};
+  const onWaiting=()=>{if(alive&& !video.paused)setLoading(true);};
+  const onPlaying=()=>{if(alive){setLoading(false);setError('');setPlaying(true);onPlaybackStarted?.();}};
+  const onPause=()=>{if(alive){setPlaying(false);onPlaybackStateChange?.(false,video.currentTime||0);}};
+  const onTime=()=>{if(!alive)return;const t=video.currentTime||0,d=video.duration||0;setTime(t);if(d>0)onProgress?.(Math.min(100,Math.round(t/d*100)));onPlaybackPosition?.(Math.floor(t));onPlaybackStateChange?.(!video.paused,t);if(Math.floor(t/10)!==lastPositionSent.current)lastPositionSent.current=Math.floor(t/10);};
+  const onEnd=()=>{if(alive){setPlaying(false);onPlaybackEnded?.();onPlaybackPosition?.(0);}};
+  const onError=()=>{if(!alive||!video.error)return;const code=video.error.code;fail('The browser could not decode or fetch this source (media error '+code+'). Trying a fallback source or another quality…');};
+  video.addEventListener('loadedmetadata',onMetadata);video.addEventListener('canplay',onCanPlay);video.addEventListener('waiting',onWaiting);video.addEventListener('playing',onPlaying);video.addEventListener('pause',onPause);video.addEventListener('timeupdate',onTime);video.addEventListener('ended',onEnd);video.addEventListener('error',onError);
+  if(hlsSource&&Hls.isSupported()){
+   const engine=new Hls({enableWorker:true,lowLatencyMode:false,backBufferLength:45,maxBufferLength:30,maxMaxBufferLength:60,manifestLoadingTimeOut:20000,levelLoadingTimeOut:20000,fragLoadingTimeOut:30000,manifestLoadingMaxRetry:2,levelLoadingMaxRetry:3,fragLoadingMaxRetry:3});
+   hlsRef.current=engine;engine.loadSource(activeSrc);engine.attachMedia(video);
+   const syncTracks=()=>{setHlsSubs(engine.subtitleTracks.map(t=>({name:t.name,lang:t.lang,url:t.url})));setHlsAudios(engine.audioTracks.map(t=>({name:t.name,lang:t.lang})));};
+   engine.on(Hls.Events.MANIFEST_PARSED,()=>{if(!alive)return;setLoading(false);setError('');syncTracks();});
+   engine.on(Hls.Events.SUBTITLE_TRACKS_UPDATED,syncTracks);engine.on(Hls.Events.AUDIO_TRACKS_UPDATED,syncTracks);
+   engine.on(Hls.Events.ERROR,(_event,data)=>{if(!alive||!data.fatal)return;
+    if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&networkRetries<2){networkRetries++;setError('Reconnecting to the stream ('+networkRetries+'/2)…');window.setTimeout(()=>{if(alive)engine.startLoad();},networkRetries*1200);return;}
+    if(data.type===Hls.ErrorTypes.MEDIA_ERROR&&mediaRetries<1){mediaRetries++;setError('Recovering the video decoder…');engine.recoverMediaError();return;}
+    fail('The HLS stream failed after automatic recovery. Trying another source or quality…');
+   });
+  }else if(hlsSource&&video.canPlayType('application/vnd.apple.mpegurl')){video.src=activeSrc;video.load();}
+  else if(hlsSource){fail('HLS is not supported by this browser.');}
+  else{video.src=activeSrc;video.load();}
+  return()=>{alive=false;hlsRef.current?.destroy();hlsRef.current=null;video.pause();video.removeAttribute('src');video.load();video.removeEventListener('loadedmetadata',onMetadata);video.removeEventListener('canplay',onCanPlay);video.removeEventListener('waiting',onWaiting);video.removeEventListener('playing',onPlaying);video.removeEventListener('pause',onPause);video.removeEventListener('timeupdate',onTime);video.removeEventListener('ended',onEnd);video.removeEventListener('error',onError);};
+ },[episode.id,url,activeSrc,hlsSource,mkv,attempt,variantIndex,sourceIndex,resumeAtSeconds,advanceSource]);
+ useEffect(()=>{if(playRequest>0){const v=videoRef.current;if(v)void v.play().catch(()=>setError('Tap Play to start playback in this browser.'));}},[playRequest]);
+ useEffect(()=>{const root=rootRef.current;if(!root)return;const sync=()=>setFull(!!document.fullscreenElement||(document as Document&{webkitFullscreenElement?:Element}).webkitFullscreenElement===root||root.classList.contains('mnv3-fallback-full'));document.addEventListener('fullscreenchange',sync);document.addEventListener('webkitfullscreenchange',sync as EventListener);return()=>{document.removeEventListener('fullscreenchange',sync);document.removeEventListener('webkitfullscreenchange',sync as EventListener);};},[]);
+ const retry=()=>{setError('');setVariantIndex(0);setSourceIndex(0);setAttempt(n=>n+1);setLoading(true);};
+ const togglePlay=()=>{const v=videoRef.current;if(!v)return;if(v.paused)void v.play().catch(()=>setError('Playback was blocked. Tap Play once more to start the video.'));else v.pause();};
+ const seek=(seconds:number)=>{const v=videoRef.current;if(v&&Number.isFinite(v.duration))v.currentTime=Math.max(0,Math.min(v.duration,seconds));};
+ const changeVolume=(n:number)=>{setVolume(n);setMutedState(n===0);if(videoRef.current){videoRef.current.volume=n;videoRef.current.muted=n===0;}};
+ const toggleMute=()=>{const next=!mutedState;setMutedState(next);if(videoRef.current)videoRef.current.muted=next;};
+ const toggleFullscreen=async()=>{const root=rootRef.current as (HTMLElement&{webkitRequestFullscreen?:()=>Promise<void>|void})|null;const video=videoRef.current as (HTMLVideoElement&{webkitEnterFullscreen?:()=>void})|null;if(!root)return;const doc=document as Document&{webkitFullscreenElement?:Element;webkitExitFullscreen?:()=>void};const orientation=(screen as Screen&{orientation?:ScreenOrientation&{lock?:(v:'landscape')=>Promise<void>;unlock?:()=>void}}).orientation;try{if(document.fullscreenElement||doc.webkitFullscreenElement){if(document.exitFullscreen)await document.exitFullscreen();else doc.webkitExitFullscreen?.();orientation?.unlock?.();root.classList.remove('mnv3-fallback-full');setFull(false);return;}if(video?.webkitEnterFullscreen&&/iPhone|iPod/i.test(navigator.userAgent)){video.webkitEnterFullscreen();setFull(true);return;}const request=root.requestFullscreen||root.webkitRequestFullscreen;if(request){await request.call(root);setFull(true);try{await orientation?.lock?.('landscape');}catch{/* Browser does not permit orientation locking. */}}else{root.classList.add('mnv3-fallback-full');setFull(true);}}catch{root.classList.add('mnv3-fallback-full');setFull(true);}};
+ const togglePip=async()=>{const v=videoRef.current as (HTMLVideoElement&{requestPictureInPicture?:()=>Promise<PictureInPictureWindow>})|null;if(!v?.requestPictureInPicture)return;try{if(document.pictureInPictureElement)await document.exitPictureInPicture();else await v.requestPictureInPicture();}catch{setError('Picture-in-picture is not available in this browser or Telegram WebView.');}};
+ const chooseSubtitle=(index:number)=>{const engine=hlsRef.current;const v=videoRef.current;if(index<0){if(engine){engine.subtitleDisplay=false;engine.subtitleTrack=-1;}if(v)Array.from(v.textTracks).forEach(t=>t.mode='disabled');}else if(index<hlsSubs.length&&engine){engine.subtitleDisplay=true;engine.subtitleTrack=index;}else if(v){if(engine){engine.subtitleDisplay=false;engine.subtitleTrack=-1;}const externalIndex=index-hlsSubs.length;Array.from(v.textTracks).forEach((t,i)=>t.mode=i===externalIndex?'showing':'disabled');}setSubtitleMenu(false);};
+ const chooseAudio=(index:number)=>{const engine=hlsRef.current;if(engine)engine.audioTrack=index;setAudioMenu(false);};
+ const changeSpeed=(n:number)=>{setSpeed(n);if(videoRef.current)videoRef.current.playbackRate=n;};
+ const qualityOptions=variants.map((v,i)=>({label:v.quality,index:i}));
+ useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(!rootRef.current||!rootRef.current.contains(document.activeElement))return;if(['INPUT','SELECT','TEXTAREA'].includes((document.activeElement as HTMLElement)?.tagName))return;if(e.key===' '){e.preventDefault();togglePlay();}if(e.key==='ArrowLeft')seek((videoRef.current?.currentTime||0)-10);if(e.key==='ArrowRight')seek((videoRef.current?.currentTime||0)+10);if(e.key.toLowerCase()==='m')toggleMute();if(e.key.toLowerCase()==='f')void toggleFullscreen();};rootRef.current?.addEventListener('keydown',onKey);return()=>rootRef.current?.removeEventListener('keydown',onKey);});
+ if(mkv)return <MaseNetVlcPlayer key={episode.id+url} src={proxy} fallbackSrc={url} alternateSources={variants.filter(v=>v.streamUrl!==url).map(v=>({src:'/api/media/proxy?episodeId='+encodeURIComponent(episode.id)+'&source='+encodeURIComponent(v.streamUrl),fallbackSrc:v.streamUrl}))} title={episode.title} onProgress={onProgress} onPlaybackPosition={onPlaybackPosition} onPlaybackStarted={onPlaybackStarted} onPlaybackEnded={onPlaybackEnded} onPlaybackStateChange={onPlaybackStateChange} resumeAtSeconds={resumeAtSeconds} autoPlay={autoPlay}/>;
+ return <section ref={rootRef} tabIndex={0} className={'mnv3'+(reelMode?' mnv3-reel':'')} aria-label="MaseNet video player">
+  <div className="mnv3-screen"><video ref={videoRef} playsInline preload="metadata" muted={mutedState} onClick={togglePlay}>{externalTracks.map((t,i)=><track key={t.url+i} kind="subtitles" src={t.url} srcLang={t.lang||'en'} label={t.label||t.lang||'Subtitle '+(i+1)}/>)}</video>
+   {loading&&<div className="mnv3-overlay" role="status"><span className="mnv3-spinner"/>Preparing playback…</div>}
+   {error&&<div className="mnv3-overlay mnv3-error" role="alert"><b>Playback needs attention</b><span>{error}</span><button onClick={retry}>Retry playback</button></div>}
+   {!playing&&!loading&&!error&&<button className="mnv3-bigplay" onClick={togglePlay} aria-label="Play video">▶</button>}
+  </div>
+  {!reelMode&&<div className="mnv3-controls">
+   <div className="mnv3-progress"><span>{stamp(time)}</span><input aria-label="Seek video" type="range" min="0" max={duration||0} step=".1" value={Math.min(time,duration||0)} onChange={e=>seek(Number(e.target.value))}/><span>{stamp(duration)}</span></div>
+   <div className="mnv3-toolbar">
+    <button aria-label={playing?'Pause':'Play'} title={playing?'Pause':'Play'} onClick={togglePlay}>{playing?'Ⅱ':'▶'}</button>
+    <button title="Back 10 seconds" onClick={()=>seek(time-10)}>↶10</button><button title="Forward 10 seconds" onClick={()=>seek(time+10)}>10↷</button>
+    <button title={mutedState?'Unmute':'Mute'} onClick={toggleMute}>{mutedState||volume===0?'🔇':'🔊'}</button>
+    <input aria-label="Volume" className="mnv3-volume" type="range" min="0" max="1" step=".05" value={volume} onChange={e=>changeVolume(Number(e.target.value))}/>
+    <div className="mnv3-spacer"/>
+    {variants.length>1&&<div className="mnv3-pop"><button onClick={()=>setQualityMenu(v=>!v)}>Quality ▾</button>{qualityMenu&&<div className="mnv3-menu">{qualityOptions.map(o=><button className={o.index===variantIndex?'selected':''} key={o.index} onClick={()=>{setVariantIndex(o.index);setSourceIndex(0);setError('');setLoading(true);setQualityMenu(false);}}>{o.label}</button>)}</div>}</div>}
+    <div className="mnv3-pop"><button onClick={()=>setSubtitleMenu(v=>!v)}>CC ▾</button>{subtitleMenu&&<div className="mnv3-menu"><b>Subtitles</b><button onClick={()=>chooseSubtitle(-1)}>Off</button>{hlsSubs.map((t,i)=><button key={'h'+i} onClick={()=>chooseSubtitle(i)}>{t.name||t.lang||'Subtitle '+(i+1)} · HLS</button>)}{externalTracks.map((t,i)=><button key={'e'+i} onClick={()=>chooseSubtitle(hlsSubs.length+i)}>{t.label||t.lang||'Subtitle '+(i+1)}</button>)}{!hlsSubs.length&&!externalTracks.length&&<small>No external subtitle tracks were supplied for this episode.</small>}</div>}</div>
+    <div className="mnv3-pop"><button onClick={()=>setAudioMenu(v=>!v)}>Audio ▾</button>{audioMenu&&<div className="mnv3-menu"><b>Audio tracks</b>{hlsAudios.map((t,i)=><button key={i} onClick={()=>chooseAudio(i)}>{t.name||t.lang||'Audio '+(i+1)}</button>)}{!hlsAudios.length&&<small>Audio-track selection is not exposed by this source/browser.</small>}</div>}</div>
+    <div className="mnv3-pop"><button onClick={()=>setSettingsMenu(v=>!v)}>⚙</button>{settingsMenu&&<div className="mnv3-menu"><b>Playback speed</b>{[.5,.75,1,1.25,1.5,2].map(n=><button className={speed===n?'selected':''} key={n} onClick={()=>{changeSpeed(n);setSettingsMenu(false);}}>{n}×</button>)}</div>}</div>
+    {'pictureInPictureEnabled' in document&&<button title="Picture in picture" onClick={()=>void togglePip()}>▣</button>}
+    <button title={full?'Exit fullscreen':'Fullscreen / landscape'} onClick={()=>void toggleFullscreen()}>{full?'⛶':'⛶'}</button>
+   </div>
+  </div>}
+  <style>{`.mnv3{width:100%;position:relative;overflow:visible;border:1px solid #ffffff20;border-radius:17px;background:#050609;color:#fff;outline:none}.mnv3-screen{position:relative;width:100%;aspect-ratio:16/9;min-height:190px;background:#000;overflow:hidden;border-radius:16px 16px 0 0;display:grid;place-items:center}.mnv3-screen video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}.mnv3-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:20px;text-align:center;background:#050609d9;font-size:13px;z-index:3}.mnv3-error span{max-width:540px;line-height:1.5;color:#f0c8c2}.mnv3 button{min-height:38px;padding:8px 11px;border:1px solid #ffffff24;border-radius:9px;background:#ffffff0d;color:#fff;font-size:12px;font-weight:650;cursor:pointer;touch-action:manipulation}.mnv3 button:active{transform:scale(.97)}.mnv3-error button,.mnv3-bigplay{background:#e4c47a;color:#18140b;border:0;font-weight:800}.mnv3-bigplay{position:absolute;z-index:2;width:68px;height:68px;border-radius:50%;font-size:22px}.mnv3-spinner{width:22px;height:22px;border:2px solid #ffffff35;border-top-color:#e4c47a;border-radius:50%;animation:mnv3spin .8s linear infinite}@keyframes mnv3spin{to{transform:rotate(360deg)}}.mnv3-controls{position:relative;z-index:4;padding:10px 12px 12px;background:linear-gradient(#171a22,#090a0e);border-radius:0 0 16px 16px}.mnv3-progress{display:flex;align-items:center;gap:9px;font-size:11px;color:#c9cbd2;font-variant-numeric:tabular-nums}.mnv3-progress input{flex:1;min-width:0;accent-color:#e4c47a}.mnv3-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}.mnv3-toolbar button{white-space:nowrap}.mnv3-volume{width:82px;accent-color:#e4c47a}.mnv3-spacer{flex:1}.mnv3-pop{position:relative}.mnv3-menu{position:absolute;z-index:20;right:0;bottom:calc(100% + 8px);min-width:170px;max-width:min(260px,80vw);max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:5px;padding:10px;border:1px solid #ffffff25;border-radius:12px;background:#10131b;box-shadow:0 12px 32px #000b}.mnv3-menu b{font-size:12px;padding:4px}.mnv3-menu button{text-align:left}.mnv3-menu button.selected{border-color:#e4c47a;color:#f0d48e;background:#e4c47a18}.mnv3-menu small{padding:8px;color:#c4c7d0;font-size:11px;line-height:1.4}.mnv3:fullscreen,.mnv3:-webkit-full-screen,.mnv3.mnv3-fallback-full{position:fixed;inset:0;z-index:2147483647;width:100vw;height:100vh;height:100dvh;max-width:none;border:0;border-radius:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;background:#000}.mnv3:fullscreen .mnv3-screen,.mnv3:-webkit-full-screen .mnv3-screen,.mnv3.mnv3-fallback-full .mnv3-screen{flex:1;min-height:0;aspect-ratio:auto;border-radius:0}.mnv3:fullscreen .mnv3-controls,.mnv3:-webkit-full-screen .mnv3-controls,.mnv3.mnv3-fallback-full .mnv3-controls{flex:none;padding:12px max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}.mnv3-reel .mnv3-screen{min-height:0;max-height:38dvh;border-radius:0}.mnv3-reel .mnv3-controls{display:none}@media(max-width:560px){.mnv3{border-radius:13px}.mnv3-screen{min-height:175px}.mnv3-controls{padding:8px}.mnv3-toolbar{gap:4px}.mnv3-toolbar button{min-height:36px;padding:7px 8px;font-size:11px}.mnv3-volume{width:62px}.mnv3-spacer{display:none}.mnv3-progress{gap:6px}}`}</style>
+ </section>;
+}
