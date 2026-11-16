@@ -186,8 +186,19 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
       ).bind(submissionId).first<{status:string}>();
       if (!current || current.status !== "pending") return;
 
+      // The five-second deadline is the access decision. Grant provisional access
+      // immediately, without ever marking the YouTube subscription as genuinely verified.
+      // AI screening below is advisory only; the admin can still approve, reject or flag.
+      const timeoutGrant = await env.DB.prepare(
+        "UPDATE telegram_access_submissions SET status='approved_timeout',reviewed_at=datetime('now') WHERE id=? AND status='pending'"
+      ).bind(submissionId).run();
+      if (!Number(timeoutGrant.meta?.changes || 0)) return;
+      await env.DB.prepare(
+        "UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=1,updated_at=datetime('now') WHERE chat_id=?"
+      ).bind(chatId).run();
+
       let verdict: "likely_match" | "mismatch" | "unclear" = "unclear";
-      let reason = "AI could not confidently assess the screenshot; manual admin review is required.";
+      let reason = "AI could not confidently assess the screenshot; admin review is still required.";
       let aiAvailable = false;
       const screeningInstructions = [
         "You are a cautious visual screening assistant for a YouTube subscription screenshot.",
@@ -267,32 +278,19 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
         console.error("MaseNet automatic screenshot screening unavailable: configure a working OPENAI_API_KEY or GEMINI_API_KEY.");
       }
 
-      const provisional = aiAvailable && String(verdict) === "likely_match";
-      const finalStatus = provisional ? "approved_timeout" : "ai_review_required";
-      const aiLabel = provisional
-        ? "AI SCREENING: LIKELY VISUAL MATCH — PROVISIONAL ACCESS ONLY"
-        : "AI SCREENING: MANUAL REVIEW REQUIRED — NO AUTOMATIC VERIFICATION";
-      const changed = await env.DB.prepare(
-        "UPDATE telegram_access_submissions SET status=?,reviewed_at=datetime('now'),ai_verdict=?,ai_reason=?,ai_reviewed_at=datetime('now') WHERE id=? AND status='pending'"
-      ).bind(finalStatus, provisional ? "likely_match_provisional" : aiAvailable ? verdict : "review_required", reason, submissionId).run();
-      if (!Number(changed.meta?.changes || 0)) return;
+      // Timeout access is provisional regardless of AI certainty or provider uptime.
+      // The AI result is recorded for the admin; it never changes youtube_ok or revokes
+      // the five-second provisional grant by itself.
+      const aiLabel = aiAvailable
+        ? "AI SCREENING: " + String(verdict).toUpperCase() + " — PROVISIONAL ACCESS ONLY; ADMIN REVIEW REQUIRED"
+        : "AI SCREENING UNAVAILABLE — PROVISIONAL ACCESS ONLY; ADMIN REVIEW REQUIRED";
+      await env.DB.prepare(
+        "UPDATE telegram_access_submissions SET ai_verdict=?,ai_reason=?,ai_reviewed_at=datetime('now') WHERE id=? AND status='approved_timeout'"
+      ).bind(aiAvailable ? verdict : "review_required", reason, submissionId).run();
 
-      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews (
-        chat_id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'clear', reason TEXT NOT NULL DEFAULT '',
-        flagged_at TEXT, deadline_at TEXT, updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`).run();
-      const [previousAccess, activeWarning] = await Promise.all([
-        env.DB.prepare("SELECT youtube_ok,youtube_provisional FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number}>(),
-        env.DB.prepare("SELECT chat_id FROM telegram_access_reviews WHERE chat_id=? AND status='warning' AND deadline_at IS NOT NULL AND datetime(deadline_at)>datetime('now')").bind(chatId).first<{chat_id:string}>()
-      ]);
-      if (provisional) {
-        await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=1,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
-      } else if (!activeWarning) {
-        await env.DB.prepare("UPDATE telegram_access_verification SET youtube_ok=0,youtube_provisional=0,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
-      } else {
-        // During an existing 24-hour warning, leave the current grace-period access unchanged.
-        console.log("MaseNet AI screenshot requires manual review during active 24-hour grace period:", chatId, previousAccess);
-      }
+      // Access was granted provisionally at the five-second deadline. Do not
+      // rewrite access here: an admin may have approved/rejected/flagged while
+      // the slower AI screening was running. The admin decision must win.
 
       if (adminMessageId) {
         const caption = [
@@ -324,9 +322,9 @@ export const onRequestPost = async ({ request, env, waitUntil }: { request: Requ
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: provisional
-            ? "🟡 Our AI found that your screenshot appears to show the correct MaseMedia TV YouTube channel in a subscribed state. Provisional MaseNet access is available. IMPORTANT: this is only a visual screening result, not genuine YouTube verification. The admin can still review your screenshot and may require re-verification."
-            : "🕒 Our AI could not confidently confirm the required channel and subscribed state from your screenshot. No automatic verification was granted. The admin can still review it; if needed, submit a clear, genuine screenshot showing @masemedia_tv and the Subscribed state."
+          text: aiAvailable && String(verdict) === "likely_match"
+            ? "🟡 AI visual screening suggests the screenshot may show the correct MaseMedia TV channel and a subscribed state. Provisional MaseNet access is available after the five-second timeout. IMPORTANT: this is not genuine YouTube verification. The admin can still review your screenshot and may require re-verification."
+            : "🟡 Provisional MaseNet access was granted after the five-second timeout, but AI could not confidently confirm the required channel and subscribed state. This is NOT genuine YouTube verification. The admin must review your screenshot and may require a genuine replacement."
         })
       }).catch(error => console.error("MaseNet user AI screening notice failed:", String(error)));
     } catch (error) {
