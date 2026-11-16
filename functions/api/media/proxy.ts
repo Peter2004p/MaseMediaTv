@@ -183,7 +183,7 @@ function resumeInterruptedRange(initial:Response,url:string,baseHeaders:Headers,
    try{
     const response=await fetchMediaSource(url,headers);
     const range=response.headers.get("content-range")||"";
-    const match=range.match(/^bytes\\s+(\\d+)-(\\d+)\\/(\\d+|\\*)$/i);
+    const match=range.match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i);
     const returnedStart=match?Number(match[1]):-1;
     const returnedEnd=match?Number(match[2]):-1;
     if(response.status!==206||!match||returnedStart!==start+sent||returnedEnd<returnedStart||returnedEnd>end||!response.body){
