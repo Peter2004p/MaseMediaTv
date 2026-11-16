@@ -5,7 +5,7 @@ import { App } from '@capacitor/app';
 
 type ApiResult<T=any> = { data:T };
 async function request<T=any>(method:string,path:string,body?:unknown,params?:Record<string,string>):Promise<ApiResult<T>> {
-  const url=new URL(path,'https://masetv-cloudflare-migration.pages.dev');
+  const url=new URL(path,window.location.origin);
   if(params) for(const [k,v] of Object.entries(params)) url.searchParams.set(k,v);
   const headers:Record<string,string>={};
   if(body!==undefined)headers["Content-Type"]="application/json";
@@ -59,7 +59,7 @@ export const auth={
      if(nativeAuthResolver)throw new Error('A Google sign-in attempt is already open.');
      const result=new Promise<any>((resolve,reject)=>{nativeAuthResolver=resolve;nativeAuthRejecter=reject});
      try{
-       await Browser.open({url:new URL('/api/auth/google?native=1','https://masetv-cloudflare-migration.pages.dev').toString(),presentationStyle:'popover'});
+       await Browser.open({url:new URL('/api/auth/google?native=1',window.location.origin).toString(),presentationStyle:'popover'});
      }catch(error){
        nativeAuthResolver=null;nativeAuthRejecter=null;
        throw error instanceof Error?error:new Error('Could not open secure Google sign-in.');
