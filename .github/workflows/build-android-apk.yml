@@ -45,6 +45,9 @@ jobs:
       - name: Install project and Capacitor dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Build the offline-capable web app bundle
+        run: npm run build
+
       - name: Generate the Android wrapper
         run: npx cap add android
 
