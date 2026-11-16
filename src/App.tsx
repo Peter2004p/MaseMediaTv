@@ -646,6 +646,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
  const [saved,setSaved]=useState<SavedVideo[]>(()=>nativeDownloads.list());
  const [playing,setPlaying]=useState<SavedVideo|null>(null);
  const native=Capacitor.isNativePlatform()&&nativeDownloads.isAvailable();
+ useEffect(()=>{if(native)void import('./MaseNetPlayerV3').catch(()=>{});},[native]);
  const items=useMemo(()=>titles.flatMap(title=>title.episodes.flatMap(episode=>{
   const variants=episode.qualities?.length?episode.qualities:[{quality:episode.quality,streamUrl:episode.streamUrl,streamPath:episode.streamPath,downloadUrl:episode.downloadUrl,downloadPath:episode.downloadPath,mimeType:episode.mimeType}];
   return variants.filter(v=>Boolean(v.downloadUrl||v.downloadPath||v.streamUrl||v.streamPath)).map((variant,index)=>({key:title.id+'-'+episode.id+'-'+variant.quality+'-'+index,title,episode,variant}));
