@@ -26,9 +26,24 @@ async function saveHlsOffline(input: {
   const resources = new Map<string, string>();
   let completed = 0, total = 0, totalBytes = 0;
   const fetchPlaylist = async (url: string) => {
-    const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
-    if (!response.ok) throw new Error('The HLS playlist could not be read (HTTP ' + response.status + '). The stream may have expired.');
-    return { text: await response.text(), url: response.url || url };
+    // Fetch playlist text with Capacitor's native downloader rather than browser
+    // fetch: external HLS hosts often block WebView CORS, while native HTTP can
+    // retrieve the playlist and segments directly without routing them through
+    // the website proxy or its CDN-host allowlist.
+    const tempPath = folder + '/playlist-' + String(Date.now()) + '-' + String(resources.size) + '.txt';
+    const target = await Filesystem.getUri({ directory: Directory.Data, path: tempPath });
+    try {
+      await FileTransfer.downloadFile({ url, path: target.uri });
+      const result = await Filesystem.readFile({ directory: Directory.Data, path: tempPath, encoding: Encoding.UTF8 });
+      const text = typeof result.data === 'string' ? result.data : '';
+      if (!text.trim().startsWith('#EXTM3U')) throw new Error('The video host did not return a valid HLS playlist. The link may have expired or may require a fresh URL.');
+      return { text, url };
+    } catch (error) {
+      if (error instanceof Error && /valid HLS playlist/.test(error.message)) throw error;
+      throw new Error('MaseNet could not download the HLS playlist from its video host. The link may be expired or the host may block downloads.');
+    } finally {
+      try { await Filesystem.deleteFile({ directory: Directory.Data, path: tempPath }); } catch {}
+    }
   };
   const downloadResource = async (url: string, kind: string) => {
     const existing = resources.get(url);
