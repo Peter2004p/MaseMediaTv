@@ -146,7 +146,7 @@ async function saveHlsOffline(input: {
       if (match) {
         const resourceUrl = resolveResource(match[3], current.url);
         const kind = match[1].toUpperCase() === 'KEY' ? 'key' : 'init';
-        const rangeSpec = /(?:^|,)BYTERANGE="(\d+)(?:@(\d+))?"/i.exec(match[2]);
+        const rangeSpec = /(?:^|,)BYTERANGE="(\d+)(?:@(\d+))?"/i.exec(match[2] + match[4]);
         let byteRange: { start: number; end: number } | undefined;
         if (rangeSpec) {
           const start = rangeSpec[2] === undefined ? previousRangeEnd.get(resourceUrl) ?? 0 : Number(rangeSpec[2]);
