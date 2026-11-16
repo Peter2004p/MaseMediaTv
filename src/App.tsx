@@ -676,7 +676,9 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
    const isHls=kind==='hls'||/\.m3u8(?:$|[?#])/i.test(sourceUrl)||/mpegurl/i.test(mimeType);
    if(isHls){
     if(!streamUrl)throw new Error('MaseNet needs the episode streaming URL to save this HLS video offline.');
-    sourceUrl=window.location.origin+'/api/media/proxy?episodeId='+encodeURIComponent(item.episode.id)+'&source='+encodeURIComponent(streamUrl);
+    // Use the Android native HTTP stack for the playlist and every CDN segment.
+    // This avoids WebView CORS and proxy child-host allowlist failures.
+    sourceUrl=streamUrl;
     mimeType='application/vnd.apple.mpegurl';
    }else if(streamUrl){
     // Route direct files through the same trusted proxy used by playback. This
