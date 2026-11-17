@@ -938,8 +938,8 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
     }
    }catch{}
    if(Capacitor.isNativePlatform()){
-    // Match the Google sign-in flow: open the provider/download response in
-    // an Android browser Custom Tab. Closing the browser returns to MaseNet.
+    // Launch the device's default external browser. The app stays installed
+    // underneath; users return with Android Back or the app switcher.
     const opened=await AppLauncher.openUrl({url:browserUrl});
     if(!opened.completed)throw new Error('Android could not open the download in your browser. Check that a browser is installed.');
     setDownloadMessage('Your browser opened the video download. When the download starts or finishes, use Android Back or switch back to MaseNet to continue.');
