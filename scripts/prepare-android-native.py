@@ -174,8 +174,8 @@ public class MaseExternalBrowserPlugin extends Plugin {
 
     public final class ExternalBrowserBridge {
         @JavascriptInterface
-        public void open(String rawUrl) {
-            openInBrowser(rawUrl, false);
+        public void open(String rawUrl, boolean returnToApp) {
+            openInBrowser(rawUrl, returnToApp);
         }
     }
 }
