@@ -108,8 +108,9 @@ public class MaseExternalBrowserPlugin extends Plugin {
         "window.__maseVlcSource='';" +
         "function rememberMedia(raw){" +
         "try{var u=new URL(String(raw),location.href);var candidate=u.href;" +
-        "if(u.searchParams.has('source'))candidate=u.searchParams.get('source');" +
-        "if(/\\.(m3u8|mp4|mkv|webm|mov|avi|mpd|ts)(?:$|[?#])/i.test(candidate)||/media\\/proxy/i.test(u.pathname)){window.__maseVlcSource=candidate;}" +
+        "var isProxy=/media\\/proxy/i.test(u.pathname);" +
+        "if(u.searchParams.has('source')&&!isProxy)candidate=u.searchParams.get('source');" +
+        "if(/\\.(m3u8|mp4|mkv|webm|mov|avi|mpd|ts)(?:$|[?#])/i.test(candidate)||isProxy){window.__maseVlcSource=isProxy?u.href:candidate;}" +
         "}catch(e){}}" +
         "var originalFetch=window.fetch;" +
         "window.fetch=function(input,init){try{rememberMedia(typeof input==='string'?input:input.url);}catch(e){}return originalFetch.apply(this,arguments);};" +
