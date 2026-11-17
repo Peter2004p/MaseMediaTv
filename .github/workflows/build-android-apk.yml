@@ -69,14 +69,24 @@ jobs:
           const match = svg.match(/data:image\/jpeg;base64,([A-Za-z0-9+/=]+)/);
           if (!match) throw new Error('The supplied MaseNet artwork is missing from the icon source.');
           const original = Buffer.from(match[1], 'base64');
-          const mark = await sharp(original)
-            .extract({ left: 0, top: 0, width: 128, height: 60 })
-            .resize(680, 319, { fit: 'fill' })
+          const source = sharp(original);
+          const metadata = await source.metadata();
+          if (!metadata.width || !metadata.height || metadata.width < 2 || metadata.height < 2) {
+            throw new Error('The supplied MaseNet logo image has invalid dimensions.');
+          }
+          // The supplied image contains two neon marks across its top edge.
+          // Use the complete left-hand MaseNet mark, not a tiny 128x60 corner
+          // that made the launcher artwork look like a blank square.
+          const cropWidth = Math.floor(metadata.width / 2);
+          const cropHeight = Math.min(Math.floor(metadata.height / 3), Math.floor(metadata.width / 2));
+          const mark = await source
+            .extract({ left: 0, top: 0, width: cropWidth, height: cropHeight })
+            .resize(820, 410, { fit: 'fill' })
             .png()
             .toBuffer();
           const png = await sharp({
-            create: { width: 1024, height: 1024, channels: 4, background: '#05050b' }
-          }).composite([{ input: mark, left: 172, top: 352 }]).png().toBuffer();
+            create: { width: 1024, height: 1024, channels: 4, background: '#090b18' }
+          }).composite([{ input: mark, left: 102, top: 307 }]).png().toBuffer();
           const stats = await sharp(png).stats();
           if (stats.channels.every(channel => channel.stdev < 2)) {
             throw new Error('The generated MaseNet icon is blank; refusing to build a blank launcher icon.');
@@ -118,6 +128,14 @@ jobs:
 
       - name: Synchronize native Android project
         run: npx cap sync android
+
+      # Keep the debug signing key stable between GitHub-hosted builds so
+      # users can install future APKs over the existing app without losing data.
+      - name: Restore persistent Android debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: masenet-android-debug-keystore-v1
 
       - name: Build debug APK
         working-directory: android
