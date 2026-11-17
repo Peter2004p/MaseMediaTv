@@ -8,7 +8,7 @@ if not manifest.exists():
 
 xml = manifest.read_text(encoding="utf-8")
 if "android.permission.REQUEST_INSTALL_PACKAGES" not in xml:
-    xml = xml.replace("<application", '<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\\n    <application', 1)
+    xml = xml.replace("<application", '<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <application', 1)
 intent_filter = """
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -135,7 +135,7 @@ public class MaseExternalBrowserPlugin extends Plugin {
         // prevents website visitors from seeing the prompt outside the APK.
         "function checkMaseUpdate(){" +
         "try{if(!window.MaseNetUpdater||window.__maseUpdateCheckBusy)return;window.__maseUpdateCheckBusy=true;" +
-        "fetch('https://raw.githubusercontent.com/Peter2004p/MaseMediaTv/masenet-android-apk/public/app-version.json?'+Date.now(),{cache:'no-store'})" +
+        "fetch('https://raw.githubusercontent.com/Peter2004p/MaseMediaTv/masenet-in-app-updates/public/app-version.json?'+Date.now(),{cache:'no-store'})" +
         ".then(function(r){if(!r.ok)throw new Error('manifest');return r.json();})" +
         ".then(function(info){window.__maseUpdateCheckBusy=false;var current=Number(window.MaseNetUpdater.getVersionCode()||0);var latest=Number(info.versionCode||0);" +
         "if(!latest||latest<=current||!info.apkUrl||document.getElementById('maseUpdateDialog'))return;" +
