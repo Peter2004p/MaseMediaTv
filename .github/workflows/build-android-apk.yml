@@ -50,27 +50,53 @@ jobs:
       - name: Install project and Capacitor dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Build the offline-capable web app bundle
+      - name: Build the MaseNet web app bundle
         run: npm run build
 
       - name: Generate the Android wrapper
         run: npx cap add android
 
-      - name: Generate launcher icons from the MaseNet app icon
+      - name: Generate and verify MaseNet launcher icons
         run: |
           mkdir -p assets
           node --input-type=module <<'NODE'
           import sharp from 'sharp';
-          await sharp('public/masenet-app-icon.svg')
-            // Flatten transparent corner pixels before generating Android's
-            // adaptive launcher layers. A transparent source was being
-            // rendered against the launcher default and appeared white/blank.
-            .flatten({ background: '#0b0821' })
-            .resize(1024, 1024, { fit: 'contain', background: '#0b0821' })
-            .png()
-            .toFile('assets/icon.png');
+          const icon = sharp('public/masenet-app-icon.svg')
+            .flatten({ background: '#05050b' })
+            .resize(1024, 1024, { fit: 'contain', background: '#05050b' });
+          const stats = await icon.stats();
+          if (stats.channels.every(channel => channel.stdev < 2)) {
+            throw new Error('The MaseNet icon source appears blank; refusing to build a blank launcher icon.');
+          }
+          await icon.png().toFile('assets/icon.png');
+          console.log('MaseNet source icon verified; pixel variation:', stats.channels.map(channel => channel.stdev.toFixed(1)).join(', '));
           NODE
           npx capacitor-assets generate --android
+          node --input-type=module <<'NODE'
+          import sharp from 'sharp';
+          import { readdir } from 'node:fs/promises';
+          import { join } from 'node:path';
+          async function walk(dir) {
+            const out = [];
+            for (const item of await readdir(dir, { withFileTypes: true })) {
+              const path = join(dir, item.name);
+              if (item.isDirectory()) out.push(...await walk(path));
+              else if (/ic_launcher.*\.png$/i.test(item.name)) out.push(path);
+            }
+            return out;
+          }
+          const files = await walk('android/app/src/main/res');
+          const foreground = files.filter(path => /foreground/i.test(path));
+          if (!files.length || !foreground.length) throw new Error('Android launcher foreground icon resources were not generated.');
+          for (const path of foreground) {
+            const info = await sharp(path).metadata();
+            const stats = await sharp(path).stats();
+            if (!info.width || !info.height || stats.channels.every(channel => channel.stdev < 2)) {
+              throw new Error('Generated launcher foreground icon is blank or invalid: ' + path);
+            }
+          }
+          console.log('Verified Android launcher icon resources:', files.join(', '));
+          NODE
 
       - name: Configure Android app link and navigation
         run: python3 scripts/prepare-android-native.py
