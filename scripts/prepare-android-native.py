@@ -99,7 +99,7 @@ public class MaseExternalBrowserPlugin extends Plugin {
         "}" +
         "return originalOpen.apply(window,arguments);" +
         "};" +
-        "})();"
+        "})();";
 
     @Override
     public void load() {
