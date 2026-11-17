@@ -86,7 +86,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   if (String(current.streamUrl || "") !== expectedOldUrl)
     return json({ error: "The saved streaming URL changed since this repair started. Refresh before retrying.", conflict: true }, 409);
 
-  const next = { ...current, streamUrl: replacement.toString() };
+  const next: Episode = { ...current, streamUrl: replacement.toString() };
   if (String(current.downloadUrl || "") === expectedOldUrl) next.downloadUrl = replacement.toString();
   if (Array.isArray(current.qualities)) {
     next.qualities = (current.qualities as Episode[]).map(quality => ({
