@@ -6,6 +6,36 @@ type Episode = { title?: string; season?: number | string; episode?: number | st
 type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; year?: number | string; description?: string; episodes?: Episode[] };
 
 const normalize = (value: unknown) => String(value ?? "").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+// Parse metadata from a forwarded, short-lived external Streamlink. The URL is
+// retained for admin reference only; it is not treated as a permanent catalogue URL.
+const parseForwardedStreamLink = (raw: string) => {
+  let parsed: URL;
+  try { parsed = new URL(raw); } catch { return null; }
+  if (parsed.protocol !== "https:") return null;
+  const filename = decodeURIComponent(parsed.pathname.split("/").pop() || "").replace(/\+/g, " ").trim();
+  if (!/\.(?:mkv|mp4|m4v|webm|m3u8|mpd)$/i.test(filename)) return null;
+  const se = filename.match(/\bS(\d{1,2})E(\d{1,3})\b/i);
+  if (!se) return null;
+  const markerIndex = se.index ?? -1;
+  const before = filename.slice(0, markerIndex).replace(/^.*?[-_]/, "").replace(/^[\s@._-]+|[\s._-]+$/g, "");
+  const after = filename.slice(markerIndex + se[0].length).replace(/^[\s@._-]+|[\s._-]+$/g, "");
+  const titleSource = after || before;
+  const year = filename.match(/\b(19\d{2}|20\d{2})\b/)?.[1] || "";
+  const quality = filename.match(/\b(2160p|1440p|1080p|720p|576p|480p|360p)\b/i)?.[1]?.toLowerCase() || "Unknown";
+  const codec = filename.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1]?.toLowerCase() || "Unknown";
+  const title = titleSource
+    .replace(/\b(19\d{2}|20\d{2})\b/g, " ")
+    .replace(/\b(2160p|1440p|1080p|720p|576p|480p|360p|x265|h265|hevc|x264|h264|av1)\b/ig, " ")
+    .replace(/\.(?:mkv|mp4|m4v|webm|m3u8|mpd)$/i, "")
+    .replace(/[+_.-]+/g, " ").replace(/\s+/g, " ").trim();
+  return {
+    url: raw, filename, title: title || "Unknown title",
+    season: Number(se[1]), episode: Number(se[2]), year,
+    quality, codec, format: filename.split(".").pop()?.toLowerCase() || "unknown",
+    host: parsed.hostname
+  };
+};
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
   new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(label + " timed out after " + ms + "ms")), ms);
@@ -152,11 +182,32 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       const savedId = String(chatId) + ":" + String(forwarded.message_id || Date.now());
       await env.DB.prepare("INSERT OR REPLACE INTO telegram_owner_library (id,title,content,urls_json,source,saved_at) VALUES (?,?,?,?,?,datetime('now'))")
         .bind(savedId,title,savedText,JSON.stringify(urls),String(source).slice(0,100)).run();
+      const streamLink = urls.map(parseForwardedStreamLink).find(Boolean) || null;
+      let confirmation = "✅ Saved to your private MaseNet reference library. I’ll include it when users search for this title or its details.";
+      if (streamLink) {
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_forwarded_stream_links (
+          id TEXT PRIMARY KEY, stream_url TEXT NOT NULL, filename TEXT NOT NULL,
+          title TEXT NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL,
+          year TEXT, quality TEXT NOT NULL, codec TEXT NOT NULL, format TEXT NOT NULL,
+          host TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'KDLAirBot',
+          forwarded_at TEXT NOT NULL DEFAULT (datetime('now')),
+          expires_at TEXT NOT NULL
+        )`).run();
+        const linkId = savedId + ":stream";
+        await env.DB.prepare("INSERT OR REPLACE INTO telegram_forwarded_stream_links (id,stream_url,filename,title,season,episode,year,quality,codec,format,host,source,forwarded_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,datetime('now'),datetime('now','+5 minutes'))")
+          .bind(linkId,streamLink.url,streamLink.filename,streamLink.title,streamLink.season,streamLink.episode,streamLink.year,streamLink.quality,streamLink.codec,streamLink.format,streamLink.host,String(source).slice(0,100)).run();
+        confirmation = "✅ Streamlink received and analysed.\\n\\n🎬 Title: " + streamLink.title +
+          (streamLink.year ? " (" + streamLink.year + ")" : "") +
+          "\\n📺 Season: " + streamLink.season + "\\n🎞 Episode: " + streamLink.episode +
+          "\\n✨ Quality: " + streamLink.quality + "\\n🧩 Codec: " + streamLink.codec +
+          "\\n📁 Format: " + streamLink.format.toUpperCase() +
+          "\\n\\n⏳ This generated link may expire in about five minutes. It has been saved as a private admin reference, not a permanent public catalogue link.";
+      }
       await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
         method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({chat_id:chatId,text:"✅ Saved to your private MaseNet reference library. I’ll include it when users search for this title or its details."})
+        body:JSON.stringify({chat_id:chatId,text:confirmation,disable_web_page_preview:true})
       });
-      return json({ok:true,ownerReferenceSaved:true});
+      return json({ok:true,ownerReferenceSaved:true,streamLinkParsed:!!streamLink});
     } catch(error) {
       console.error("MaseNet owner reference save failed:",error instanceof Error?error.message:String(error));
       return json({ok:false,error:"Could not save the forwarded reference."},500);
