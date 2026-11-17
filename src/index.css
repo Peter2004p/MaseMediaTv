@@ -4322,3 +4322,23 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
 @media(prefers-reduced-motion:reduce){.iqHome .iqCategoryPills>button{transition:none!important}}
 
 
+
+/* MaseNet Android app download centre */
+.maseAppPromo{display:flex;align-items:center;gap:13px;margin:15px 0 18px;padding:14px 16px;border:1px solid rgba(111,231,178,.3);border-radius:19px;background:linear-gradient(110deg,rgba(30,180,117,.15),rgba(255,255,255,.045) 65%,rgba(113,171,255,.09));box-shadow:0 12px 32px rgba(0,0,0,.13),inset 0 1px 0 rgba(255,255,255,.08);color:var(--text,#f4f4f5);text-decoration:none;transition:transform .2s ease,border-color .2s ease}
+.maseAppPromo:active{transform:scale(.985)}
+.maseAppPromoIcon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#a9f5d1,#48cf9b);color:#052417;box-shadow:0 5px 18px rgba(72,207,155,.22)}
+.maseAppPromoCopy{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.maseAppPromoCopy b{font-size:13px;letter-spacing:-.02em}
+.maseAppPromoCopy small{color:var(--muted,#aab0c0);font-size:10px;line-height:1.45}
+.maseAppPromoAction{display:flex;align-items:center;gap:3px;flex:none;color:#79e8b8;font-size:11px;font-weight:850;white-space:nowrap}
+.maseAppDownloadHero{position:relative;overflow:hidden;margin:18px 0;padding:clamp(20px,4vw,34px);border:1px solid rgba(112,229,179,.24);border-radius:25px;background:radial-gradient(90% 90% at 100% 0%,rgba(54,190,140,.16),transparent 70%),linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.02));box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.maseAppDownloadBrand{display:flex;align-items:center;gap:12px}.maseAppDownloadBrand img{width:54px;height:54px;object-fit:contain;border-radius:15px}.maseAppDownloadBrand div{display:grid;gap:4px}.maseAppDownloadBrand b{font-size:19px}.maseAppDownloadBrand small{font-size:9px;letter-spacing:.13em;color:var(--muted,#aab0c0)}
+.maseAppDownloadHero h2{margin:25px 0 9px;font-size:clamp(25px,5vw,38px);letter-spacing:-.045em;line-height:1.08}.maseAppDownloadHero>p{max-width:580px;margin:0 0 20px;color:var(--muted,#aab0c0);font-size:13px;line-height:1.65}
+.maseAppDownloadButton{display:flex;align-items:center;justify-content:center;gap:10px;max-width:420px;min-height:55px;padding:0 18px;border-radius:16px;background:linear-gradient(110deg,#a9f5d1,#51d59f);box-shadow:0 9px 28px rgba(72,207,155,.2),inset 0 1px 0 rgba(255,255,255,.7);color:#062719;text-decoration:none;font-size:14px;font-weight:900}
+.maseAppDownloadMeta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:13px 0 8px;color:var(--muted,#aab0c0);font-size:10px}.maseAppDownloadMeta i{width:3px;height:3px;border-radius:50%;background:currentColor}
+.maseAppReleaseLink{display:inline-block;margin-top:9px;color:#8bdcbb;font-size:11px;text-decoration:underline;text-underline-offset:3px}
+.maseAppInstallGuide{margin:20px 0;padding:20px;border:1px solid var(--line,rgba(255,255,255,.12));border-radius:20px;background:var(--surface,rgba(255,255,255,.035))}
+.maseAppInstallGuide h2{margin:7px 0 15px;font-size:21px}.maseAppInstallGuide ol{display:grid;gap:15px;margin:0;padding-left:22px}.maseAppInstallGuide li{padding-left:3px}.maseAppInstallGuide li b,.maseAppInstallGuide li span{display:block}.maseAppInstallGuide li b{font-size:12px}.maseAppInstallGuide li span{margin-top:4px;color:var(--muted,#aab0c0);font-size:11px;line-height:1.55}
+.maseAppSafetyNote{margin:16px 0;padding:15px 16px;border:1px solid rgba(255,185,90,.24);border-radius:16px;background:rgba(255,175,70,.055)}.maseAppSafetyNote b{font-size:12px;color:#ffd18b}.maseAppSafetyNote p{margin:6px 0 0;color:var(--muted,#aab0c0);font-size:11px;line-height:1.6}
+@media(max-width:520px){.maseAppPromo{gap:9px;padding:11px;border-radius:16px}.maseAppPromoIcon{flex-basis:37px;width:37px;height:37px}.maseAppPromoCopy b{font-size:11px}.maseAppPromoCopy small{font-size:9px}.maseAppPromoAction{font-size:10px}.maseAppDownloadHero{padding:19px;border-radius:20px}.maseAppDownloadButton{min-height:52px;font-size:12px}.maseAppDownloadMeta{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.maseAppPromo{transition:none}}
