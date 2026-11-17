@@ -183,4 +183,317 @@ public class MaseExternalBrowserPlugin extends Plugin {
 plugin_path = main_activity.parent / "MaseExternalBrowserPlugin.java"
 plugin_path.write_text(plugin, encoding="utf-8")
 
-print("Configured Google sign-in deep link and installed a native external-browser bridge for the live website.")
+
+# Install the native VLC engine and a dedicated fullscreen playback activity.
+# This stays inside the Android wrapper; the public website and Telegram app
+# are not changed. The existing web player remains available as a fallback.
+app_gradle = Path("android/app/build.gradle")
+gradle_text = app_gradle.read_text(encoding="utf-8")
+if "org.videolan.android:libvlc-all" not in gradle_text:
+    gradle_text = re.sub(
+        r"dependencies\s*\{",
+        "dependencies {\n    implementation 'org.videolan.android:libvlc-all:3.7.7'",
+        gradle_text,
+        count=1,
+    )
+    app_gradle.write_text(gradle_text, encoding="utf-8")
+
+# Declare the native VLC activity.
+if "MaseVlcActivity" not in xml:
+    activity_decl = """
+        <activity
+            android:name=".MaseVlcActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+"""
+    xml = xml.replace("</application>", activity_decl + "\n    </application>")
+    manifest.write_text(xml, encoding="utf-8")
+
+vlc_activity = r'''package __PACKAGE__;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.pm.ActivityInfo;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.Gravity;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import org.videolan.libvlc.LibVLC;
+import org.videolan.libvlc.Media;
+import org.videolan.libvlc.MediaPlayer;
+import org.videolan.libvlc.interfaces.IVLCVout;
+import org.videolan.libvlc.util.VLCVideoLayout;
+
+import java.util.ArrayList;
+import java.util.Locale;
+
+public class MaseVlcActivity extends Activity {
+    public static final String EXTRA_URL = "mase_vlc_url";
+    public static final String EXTRA_TITLE = "mase_vlc_title";
+    public static final String EXTRA_UA = "mase_vlc_ua";
+    public static final String EXTRA_REFERER = "mase_vlc_referer";
+    public static final String EXTRA_COOKIE = "mase_vlc_cookie";
+
+    private LibVLC libVLC;
+    private MediaPlayer player;
+    private VLCVideoLayout videoLayout;
+    private LinearLayout controls;
+    private SeekBar seek;
+    private TextView clock;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean seeking = false;
+    private boolean controlsVisible = true;
+    private final Runnable ticker = new Runnable() {
+        @Override public void run() {
+            if (player != null && player.isPlaying() && !seeking) {
+                long time = Math.max(0, player.getTime());
+                long length = Math.max(0, player.getLength());
+                if (length > 0) seek.setMax((int)Math.min(Integer.MAX_VALUE, length));
+                seek.setProgress((int)Math.min(Integer.MAX_VALUE, time));
+                clock.setText(stamp(time) + " / " + stamp(length));
+            }
+            handler.postDelayed(this, 500);
+        }
+    };
+
+    @Override protected void onCreate(Bundle state) {
+        super.onCreate(state);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        );
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+
+        String url = getIntent().getStringExtra(EXTRA_URL);
+        String title = getIntent().getStringExtra(EXTRA_TITLE);
+        if (url == null || !(url.startsWith("https://") || url.startsWith("http://") || url.startsWith("file://"))) {
+            Toast.makeText(this, "Invalid video address.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.BLACK);
+        videoLayout = new VLCVideoLayout(this);
+        root.addView(videoLayout, new FrameLayout.LayoutParams(-1, -1));
+
+        controls = new LinearLayout(this);
+        controls.setOrientation(LinearLayout.VERTICAL);
+        controls.setPadding(18, 12, 18, 16);
+        controls.setBackgroundColor(0xCC080B10);
+        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
+        root.addView(controls, cp);
+
+        TextView heading = new TextView(this);
+        heading.setText(title == null || title.trim().isEmpty() ? "MaseNet VLC Player" : title);
+        heading.setTextColor(Color.WHITE);
+        heading.setTextSize(16);
+        controls.addView(heading);
+
+        seek = new SeekBar(this);
+        controls.addView(seek, new LinearLayout.LayoutParams(-1, -2));
+        clock = new TextView(this);
+        clock.setTextColor(Color.WHITE);
+        clock.setText("00:00 / 00:00");
+        controls.addView(clock);
+
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER);
+        controls.addView(row);
+        addButton(row, "−10s", v -> jump(-10000));
+        addButton(row, "Play / Pause", v -> togglePlayback());
+        addButton(row, "+10s", v -> jump(10000));
+        addButton(row, "Audio", v -> chooseTrack(true));
+        addButton(row, "Subtitles", v -> chooseTrack(false));
+        addButton(row, "Speed", v -> chooseSpeed());
+        addButton(row, "Fit", v -> cycleScale());
+        addButton(row, "Close", v -> finish());
+
+        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onStartTrackingTouch(SeekBar bar) { seeking = true; }
+            @Override public void onStopTrackingTouch(SeekBar bar) {
+                if (player != null) player.setTime(bar.getProgress());
+                seeking = false;
+            }
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {}
+        });
+        root.setOnClickListener(v -> toggleControls());
+        setContentView(root);
+
+        try {
+            ArrayList<String> options = new ArrayList<>();
+            options.add("--audio-time-stretch");
+            options.add("--network-caching=1800");
+            options.add("--live-caching=1800");
+            options.add("--file-caching=500");
+            options.add("--avcodec-hw=any");
+            libVLC = new LibVLC(this, options);
+            player = new MediaPlayer(libVLC);
+            player.attachViews(videoLayout, null, true, false);
+
+            Media media = new Media(libVLC, Uri.parse(url));
+            String ua = getIntent().getStringExtra(EXTRA_UA);
+            String referer = getIntent().getStringExtra(EXTRA_REFERER);
+            String cookie = getIntent().getStringExtra(EXTRA_COOKIE);
+            if (ua != null && !ua.isEmpty()) media.addOption(":http-user-agent=" + ua);
+            if (referer != null && !referer.isEmpty()) media.addOption(":http-referrer=" + referer);
+            if (cookie != null && !cookie.isEmpty()) media.addOption(":http-cookie=" + cookie);
+            media.addOption(":network-caching=1800");
+            player.setMedia(media);
+            media.release();
+            player.play();
+            handler.post(ticker);
+        } catch (Exception error) {
+            Toast.makeText(this, "VLC could not start: " + error.getMessage(), Toast.LENGTH_LONG).show();
+            finish();
+        }
+    }
+
+    private interface Click { void run(View view); }
+    private void addButton(LinearLayout row, String label, Click action) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setTextSize(11);
+        b.setTextColor(Color.WHITE);
+        b.setOnClickListener(v -> action.run(v));
+        row.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
+    }
+    private void togglePlayback() {
+        if (player == null) return;
+        if (player.isPlaying()) player.pause(); else player.play();
+    }
+    private void jump(long delta) {
+        if (player == null) return;
+        player.setTime(Math.max(0, Math.min(player.getLength(), player.getTime() + delta)));
+    }
+    private void chooseTrack(boolean audio) {
+        if (player == null) return;
+        MediaPlayer.TrackDescription[] tracks = audio ? player.getAudioTracks() : player.getSpuTracks();
+        if (tracks == null || tracks.length == 0) {
+            Toast.makeText(this, audio ? "No alternate audio tracks." : "No embedded subtitle tracks.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] labels = new String[tracks.length];
+        int selected = audio ? player.getAudioTrack() : player.getSpuTrack();
+        int checked = -1;
+        for (int i = 0; i < tracks.length; i++) {
+            labels[i] = tracks[i].name == null ? (audio ? "Audio " : "Subtitle ") + (i + 1) : tracks[i].name;
+            if (tracks[i].id == selected) checked = i;
+        }
+        if (!audio) {
+            String[] withOff = new String[labels.length + 1];
+            withOff[0] = "Off";
+            System.arraycopy(labels, 0, withOff, 1, labels.length);
+            new AlertDialog.Builder(this).setTitle("Subtitle track").setSingleChoiceItems(withOff, checked < 0 ? 0 : checked + 1, (d, which) -> {
+                player.setSpuTrack(which == 0 ? -1 : tracks[which - 1].id); d.dismiss();
+            }).setNegativeButton("Cancel", null).show();
+        } else {
+            new AlertDialog.Builder(this).setTitle("Audio track").setSingleChoiceItems(labels, checked, (d, which) -> {
+                player.setAudioTrack(tracks[which].id); d.dismiss();
+            }).setNegativeButton("Cancel", null).show();
+        }
+    }
+    private void chooseSpeed() {
+        String[] values = {"0.5×", "0.75×", "1×", "1.25×", "1.5×", "2×"};
+        float[] rates = {.5f, .75f, 1f, 1.25f, 1.5f, 2f};
+        new AlertDialog.Builder(this).setTitle("Playback speed").setItems(values, (d, which) -> player.setRate(rates[which])).show();
+    }
+    private void cycleScale() {
+        if (player == null) return;
+        MediaPlayer.ScaleType[] values = MediaPlayer.ScaleType.values();
+        MediaPlayer.ScaleType current = player.getVideoScale();
+        int next = 0;
+        for (int i = 0; i < values.length; i++) if (values[i] == current) next = (i + 1) % values.length;
+        player.setVideoScale(values[next]);
+        Toast.makeText(this, values[next].name().replace("SURFACE_", ""), Toast.LENGTH_SHORT).show();
+    }
+    private void toggleControls() {
+        controlsVisible = !controlsVisible;
+        controls.setVisibility(controlsVisible ? View.VISIBLE : View.GONE);
+    }
+    private String stamp(long ms) {
+        long sec = Math.max(0, ms / 1000);
+        return String.format(Locale.US, "%02d:%02d", sec / 60, sec % 60);
+    }
+    @Override protected void onPause() { super.onPause(); if (player != null) player.pause(); }
+    @Override protected void onDestroy() {
+        handler.removeCallbacks(ticker);
+        if (player != null) {
+            player.stop();
+            player.detachViews();
+            player.release();
+            player = null;
+        }
+        if (libVLC != null) { libVLC.release(); libVLC = null; }
+        super.onDestroy();
+    }
+}
+'''.replace("__PACKAGE__", package_name)
+(main_activity.parent / "MaseVlcActivity.java").write_text(vlc_activity, encoding="utf-8")
+
+# Add a small native bridge. The website player stays in place; a native VLC
+# action can be launched from an injected "Open in MaseNet VLC" control.
+bridge = r'''package __PACKAGE__;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.webkit.JavascriptInterface;
+import android.webkit.CookieManager;
+import android.webkit.WebView;
+
+public final class MaseNativeVlcBridge {
+    private final Activity activity;
+    private final WebView webView;
+    public MaseNativeVlcBridge(Activity activity, WebView webView) {
+        this.activity = activity;
+        this.webView = webView;
+    }
+    @JavascriptInterface
+    public void open(String url, String title, String userAgent, String referer) {
+        if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
+        String cookies = CookieManager.getInstance().getCookie(url);
+        activity.runOnUiThread(() -> {
+            Intent intent = new Intent(activity, MaseVlcActivity.class);
+            intent.putExtra(MaseVlcActivity.EXTRA_URL, url);
+            intent.putExtra(MaseVlcActivity.EXTRA_TITLE, title);
+            intent.putExtra(MaseVlcActivity.EXTRA_UA, userAgent);
+            intent.putExtra(MaseVlcActivity.EXTRA_REFERER, referer);
+            intent.putExtra(MaseVlcActivity.EXTRA_COOKIE, cookies);
+            activity.startActivity(intent);
+        });
+    }
+}
+'''.replace("__PACKAGE__", package_name)
+(main_activity.parent / "MaseNativeVlcBridge.java").write_text(bridge, encoding="utf-8")
+
+# Add the native launch button for ordinary HTML video elements (MP4/HLS).
+# The custom canvas MKV renderer remains the existing fallback until the web
+# player can hand its source URL to this bridge through a supported call site.
+main_text = main_activity.read_text(encoding="utf-8")
+main_text = main_text.replace(
+    'registerPlugin(MaseExternalBrowserPlugin.class);',
+    'registerPlugin(MaseExternalBrowserPlugin.class);'
+)
+main_text = main_text.replace(
+    'super.onCreate(savedInstanceState);',
+    'super.onCreate(savedInstanceState);\n        getBridge().getWebView().addJavascriptInterface(new MaseNativeVlcBridge(this, getBridge().getWebView()), "MaseNativeVLC");'
+)
+main_activity.write_text(main_text, encoding="utf-8")
+
+print("Installed LibVLC 3.7.7, native fullscreen playback activity, audio/subtitle track selection, and JS bridge.")
+
+print("Configured Google sign-in, browser downloads, and native LibVLC playback bridge.")
