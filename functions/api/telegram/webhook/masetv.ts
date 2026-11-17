@@ -180,9 +180,15 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         saved_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`).run();
       const savedId = String(chatId) + ":" + String(forwarded.message_id || Date.now());
-      await env.DB.prepare("INSERT OR REPLACE INTO telegram_owner_library (id,title,content,urls_json,source,saved_at) VALUES (?,?,?,?,?,datetime('now'))")
-        .bind(savedId,title,savedText,JSON.stringify(urls),String(source).slice(0,100)).run();
       const streamLink = urls.map(parseForwardedStreamLink).find(Boolean) || null;
+      // Short-lived generated stream URLs stay out of the general searchable owner
+      // reference library, where they could otherwise be shown to ordinary users.
+      const publicReferenceText = streamLink
+        ? savedText.replace(/https?:\\/\\/[^\\s<>]+/g, "[short-lived stream link]")
+        : savedText;
+      const publicReferenceUrls = streamLink ? urls.filter(url => !parseForwardedStreamLink(url)) : urls;
+      await env.DB.prepare("INSERT OR REPLACE INTO telegram_owner_library (id,title,content,urls_json,source,saved_at) VALUES (?,?,?,?,?,datetime('now'))")
+        .bind(savedId,title,publicReferenceText,JSON.stringify(publicReferenceUrls),String(source).slice(0,100)).run();
       let confirmation = "✅ Saved to your private MaseNet reference library. I’ll include it when users search for this title or its details.";
       if (streamLink) {
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_forwarded_stream_links (
