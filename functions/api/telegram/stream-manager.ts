@@ -1,10 +1,12 @@
 import { json } from "../auth/_shared";
+import { sendTelegramTitleNotifications } from "../_telegram-notifications";
 
 interface Env {
   DB: D1Database;
   MASE_STREAM_BOT_TOKEN?: string;
   MASE_STREAM_BOT_WEBHOOK_SECRET?: string;
   ADMIN_TELEGRAM_CHAT_ID?: string;
+  TELEGRAM_BOT_TOKEN?: string;
 }
 type TelegramMessage = {
   chat?: { id?: number | string; type?: string };
@@ -57,6 +59,13 @@ const parseStream = (raw: string): ParsedStream | null => {
 const extractUrl = (message: TelegramMessage) => {
   const text = String(message.text || message.caption || "");
   return text.match(/https:\/\/[^\s<>]+/i)?.[0]?.replace(/[),.]+$/, "") || "";
+};
+const inferCodec = (streamUrl: unknown): string => {
+  if (typeof streamUrl !== "string" || !streamUrl) return "unknown";
+  try {
+    const filename = decodeURIComponent(new URL(streamUrl).pathname.split("/").pop() || "").replace(/\+/g, " ");
+    return filename.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1]?.toLowerCase() || "unknown";
+  } catch { return "unknown"; }
 };
 const findMatches = async (env: Env, parsed: ParsedStream) => {
   const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind='drama'")
@@ -113,8 +122,9 @@ const applyPending = async (env: Env, pendingId: string) => {
   } else {
     const episode = { ...episodes[episodeIndex] };
     const variants = Array.isArray(episode.qualities) ? episode.qualities as Record<string, unknown>[] : [];
+    const existingRootCodec = String(episode.codec || inferCodec(episode.streamUrl)).toLowerCase();
     const rootMatches = String(episode.quality || "").toLowerCase() === pending.quality.toLowerCase()
-      && String(episode.codec || "unknown").toLowerCase() === pending.codec.toLowerCase();
+      && existingRootCodec === pending.codec.toLowerCase();
     const variantIndex = variants.findIndex(v => String(v.quality || "").toLowerCase() === pending.quality.toLowerCase()
       && String(v.codec || "unknown").toLowerCase() === pending.codec.toLowerCase());
     if (rootMatches) {
@@ -135,6 +145,21 @@ const applyPending = async (env: Env, pendingId: string) => {
   }
   await env.DB.prepare("UPDATE stream_manager_pending SET status='applied',processed_at=datetime('now') WHERE id=? AND status='applying'")
     .bind(pendingId).run();
+  if (!row) {
+    await sendTelegramTitleNotifications(env, {
+      id: String(metadata.id || ""), name: pending.title, type: "Drama",
+      year: pending.year, description: String(metadata.description || ""),
+      posterUrl: String(metadata.posterUrl || "")
+    }, true, []).catch(error => console.error("Stream Manager new-title notification failed:", error));
+  } else if (episodeIndex < 0) {
+    await sendTelegramTitleNotifications(env, {
+      id: row.id, name: pending.title, type: "Drama",
+      year: String(metadata.year || pending.year || ""),
+      description: String(metadata.description || ""),
+      posterUrl: String(metadata.posterUrl || "")
+    }, false, [{ season: pending.season, episode: pending.episode, title: "Episode " + pending.episode }])
+      .catch(error => console.error("Stream Manager episode notification failed:", error));
+  }
   return { ok: true, message: action + ".\nTitle: " + pending.title + "\nS" + String(pending.season).padStart(2,"0") + "E" + String(pending.episode).padStart(2,"0") + " · " + pending.quality + " · " + pending.codec };
   } catch (error) {
     // Release the claim after a failed write; applying the same URL again is idempotent.
