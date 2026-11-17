@@ -66,7 +66,7 @@ jobs:
           // previous SVG wrapper silently dropped its embedded <image>, which
           // is why Android received a plain dark square.
           const svg = await readFile('public/masenet-app-icon.svg', 'utf8');
-          const match = svg.match(/data:image\\/jpeg;base64,([A-Za-z0-9+/=]+)/);
+          const match = svg.match(/data:image\/jpeg;base64,([A-Za-z0-9+/=]+)/);
           if (!match) throw new Error('The supplied MaseNet artwork is missing from the icon source.');
           const original = Buffer.from(match[1], 'base64');
           const mark = await sharp(original)
