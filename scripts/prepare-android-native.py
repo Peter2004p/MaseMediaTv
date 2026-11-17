@@ -76,7 +76,7 @@ public class MaseExternalBrowserPlugin extends Plugin {
         "var name=(target||'_blank').toLowerCase();" +
         "if(name!=='_self'&&url&&window.MaseNetExternalBrowser){" +
         "var resolved=new URL(String(url),window.location.href);" +
-        "if(resolved.protocol==='https:'||resolved.protocol==='http:){" +
+        "if(resolved.protocol==='https:'||resolved.protocol==='http:'){" +
         "window.MaseNetExternalBrowser.open(resolved.href);return null;" +
         "}" +
         "}" +
@@ -89,7 +89,7 @@ public class MaseExternalBrowserPlugin extends Plugin {
         "if(!anchor||!window.MaseNetExternalBrowser)return;" +
         "try{" +
         "var resolved=new URL(anchor.href,window.location.href);" +
-        "if(resolved.protocol==='https:'||resolved.protocol==='http:){" +
+        "if(resolved.protocol==='https:'||resolved.protocol==='http:'){" +
         "event.preventDefault();event.stopImmediatePropagation();" +
         "window.MaseNetExternalBrowser.open(resolved.href);" +
         "}" +
