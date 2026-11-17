@@ -13,7 +13,9 @@ const parseForwardedStreamLink = (raw: string) => {
   let parsed: URL;
   try { parsed = new URL(raw); } catch { return null; }
   if (parsed.protocol !== "https:") return null;
-  const filename = decodeURIComponent(parsed.pathname.split("/").pop() || "").replace(/\+/g, " ").trim();
+  let filename = parsed.pathname.split("/").pop() || "";
+  try { filename = decodeURIComponent(filename); } catch { return null; }
+  filename = filename.replace(/\+/g, " ").trim();
   if (!/\.(?:mkv|mp4|m4v|webm|m3u8|mpd)$/i.test(filename)) return null;
   const se = filename.match(/\bS(\d{1,2})E(\d{1,3})\b/i);
   if (!se) return null;
@@ -197,17 +199,19 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
           year TEXT, quality TEXT NOT NULL, codec TEXT NOT NULL, format TEXT NOT NULL,
           host TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'KDLAirBot',
           forwarded_at TEXT NOT NULL DEFAULT (datetime('now')),
-          expires_at TEXT NOT NULL
+          message_expires_at TEXT NOT NULL
         )`).run();
         const linkId = savedId + ":stream";
-        await env.DB.prepare("INSERT OR REPLACE INTO telegram_forwarded_stream_links (id,stream_url,filename,title,season,episode,year,quality,codec,format,host,source,forwarded_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,datetime('now'),datetime('now','+5 minutes'))")
+        // KDLAirBot's Telegram MESSAGE is auto-deleted after five minutes.
+        // That is not evidence that the generated video URL itself expires.
+        await env.DB.prepare("INSERT OR REPLACE INTO telegram_forwarded_stream_links (id,stream_url,filename,title,season,episode,year,quality,codec,format,host,source,forwarded_at,message_expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,datetime('now'),datetime('now','+5 minutes'))")
           .bind(linkId,streamLink.url,streamLink.filename,streamLink.title,streamLink.season,streamLink.episode,streamLink.year,streamLink.quality,streamLink.codec,streamLink.format,streamLink.host,String(source).slice(0,100)).run();
         confirmation = "✅ Streamlink received and analysed.\n\n🎬 Title: " + streamLink.title +
           (streamLink.year ? " (" + streamLink.year + ")" : "") +
           "\n📺 Season: " + streamLink.season + "\n🎞 Episode: " + streamLink.episode +
           "\n✨ Quality: " + streamLink.quality + "\n🧩 Codec: " + streamLink.codec +
           "\n📁 Format: " + streamLink.format.toUpperCase() +
-          "\n\n⏳ This generated link may expire in about five minutes. It has been saved as a private admin reference, not a permanent public catalogue link.";
+          "\n\n⏳ KDLAirBot's message may disappear after five minutes. The link itself is retained; its actual validity must be checked separately before playback or catalogue use.";
       }
       await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
         method:"POST",headers:{"content-type":"application/json"},
