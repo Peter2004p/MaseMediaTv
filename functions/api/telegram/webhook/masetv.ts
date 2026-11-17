@@ -196,12 +196,12 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         const linkId = savedId + ":stream";
         await env.DB.prepare("INSERT OR REPLACE INTO telegram_forwarded_stream_links (id,stream_url,filename,title,season,episode,year,quality,codec,format,host,source,forwarded_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,datetime('now'),datetime('now','+5 minutes'))")
           .bind(linkId,streamLink.url,streamLink.filename,streamLink.title,streamLink.season,streamLink.episode,streamLink.year,streamLink.quality,streamLink.codec,streamLink.format,streamLink.host,String(source).slice(0,100)).run();
-        confirmation = "✅ Streamlink received and analysed.\\n\\n🎬 Title: " + streamLink.title +
+        confirmation = "✅ Streamlink received and analysed.\n\n🎬 Title: " + streamLink.title +
           (streamLink.year ? " (" + streamLink.year + ")" : "") +
-          "\\n📺 Season: " + streamLink.season + "\\n🎞 Episode: " + streamLink.episode +
-          "\\n✨ Quality: " + streamLink.quality + "\\n🧩 Codec: " + streamLink.codec +
-          "\\n📁 Format: " + streamLink.format.toUpperCase() +
-          "\\n\\n⏳ This generated link may expire in about five minutes. It has been saved as a private admin reference, not a permanent public catalogue link.";
+          "\n📺 Season: " + streamLink.season + "\n🎞 Episode: " + streamLink.episode +
+          "\n✨ Quality: " + streamLink.quality + "\n🧩 Codec: " + streamLink.codec +
+          "\n📁 Format: " + streamLink.format.toUpperCase() +
+          "\n\n⏳ This generated link may expire in about five minutes. It has been saved as a private admin reference, not a permanent public catalogue link.";
       }
       await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
         method:"POST",headers:{"content-type":"application/json"},
@@ -288,8 +288,8 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({
       chat_id:chatId,
       text:allVerified
-        ? "🎬 Welcome back to MaseNet!\\n\\n"+(youtubeOk?"✅ YouTube subscription manually verified":"🟡 YouTube screenshot received — provisional access only; admin review is still required")+"\\n✅ MaseMediaTv joined\\n✅ MoonDramaC joined\\n\\nOpen MaseNet below. You do not need to submit another screenshot while this review is pending."
-        : "🎬 Welcome to MaseNet!\\n\\nComplete only the remaining checks to unlock the bot and Mini App:\\n\\n"+(!youtubeEligible?"1️⃣ Subscribe to our YouTube channel, then upload the screenshot directly. No caption or added text is needed.\\n":"")+( !membership.masemedia?"2️⃣ Join our main Telegram channel.\\n":"")+( !membership.moondramac?"3️⃣ Join our second Telegram channel.\\n":"")+"\\nYouTube: "+(youtubeOk?"✅ Manually verified":youtubeProvisional?"🟡 Provisional — admin review pending":"❌ Not submitted")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n🔒 Complete the remaining checks, then send /verify.",
+        ? "🎬 Welcome back to MaseNet!\n\n"+(youtubeOk?"✅ YouTube subscription manually verified":"🟡 YouTube screenshot received — provisional access only; admin review is still required")+"\n✅ MaseMediaTv joined\n✅ MoonDramaC joined\n\nOpen MaseNet below. You do not need to submit another screenshot while this review is pending."
+        : "🎬 Welcome to MaseNet!\n\nComplete only the remaining checks to unlock the bot and Mini App:\n\n"+(!youtubeEligible?"1️⃣ Subscribe to our YouTube channel, then upload the screenshot directly. No caption or added text is needed.\n":"")+( !membership.masemedia?"2️⃣ Join our main Telegram channel.\n":"")+( !membership.moondramac?"3️⃣ Join our second Telegram channel.\n":"")+"\nYouTube: "+(youtubeOk?"✅ Manually verified":youtubeProvisional?"🟡 Provisional — admin review pending":"❌ Not submitted")+"\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\n\n🔒 Complete the remaining checks, then send /verify.",
       reply_markup:verificationKeyboard(youtubeEligible,membership)
     })});
     return sent.ok ? json({ok:true,verificationRequired:!allVerified,membership,youtubeVerified:youtubeOk}) : json({ok:false,error:"Telegram could not deliver the verification instructions."},502);
@@ -481,11 +481,11 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         try {
           const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
             method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(8000),
-            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: messages[0].content + "\\n\\nUser: " + prompt.slice(0, 3000) }] }], generationConfig: { maxOutputTokens: 700, thinkingConfig: { thinkingLevel: "low" } } })
+            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: messages[0].content + "\n\nUser: " + prompt.slice(0, 3000) }] }], generationConfig: { maxOutputTokens: 700, thinkingConfig: { thinkingLevel: "low" } } })
           });
           if (!geminiResponse.ok) throw new Error("Gemini chat HTTP " + geminiResponse.status + ": " + (await geminiResponse.text()).slice(0, 400));
           const geminiData = await geminiResponse.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-          const geminiAnswer = geminiData.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\\n").trim();
+          const geminiAnswer = geminiData.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\n").trim();
           if (geminiAnswer) answer = geminiAnswer;
           else throw new Error("Gemini returned an empty response.");
         } catch (error) {
@@ -641,12 +641,12 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       }
     } catch(error) { console.error("MaseNet owner reference search failed:",error instanceof Error?error.message:String(error)); }
     const uniquePosts = [...new Map(channelMatches.map(post=>[post.url,post])).values()].slice(0,5);
-    const channelReply = uniquePosts.length ? "\\n\\nI found matching posts in our official Telegram channels. Open the original post or launch the Mini App:" : "";
+    const channelReply = uniquePosts.length ? "\n\nI found matching posts in our official Telegram channels. Open the original post or launch the Mini App:" : "";
     const appButton = miniAppUrl.startsWith("https://") ? [{text:"🎬 Open MaseNet Mini App",web_app:{url:miniAppUrl}}] : [];
     const postButtons = uniquePosts.map(post => [{ text: "🔗 " + (post.title || post.channel + " post").replace(/\s+/g," ").slice(0,48), url: post.url }]);
     const ownerButtons = ownerMatches.flatMap(item=>item.urls.slice(0,2).map(url=>[{text:"📎 "+item.title.slice(0,42),url}]));
     searchReplyMarkup = {inline_keyboard:[...appButton.map(row=>[row]),...postButtons,...ownerButtons].slice(0,8)};
-    const ownerSummary = ownerMatches.length ? "\\n\\n📌 Saved by MaseNet admin:\\n" + ownerMatches.slice(0,3).map(item=>"• "+item.title+(item.urls.length?" — "+item.urls.length+" saved link(s)":"")).join("\\n") : "";
+    const ownerSummary = ownerMatches.length ? "\n\n📌 Saved by MaseNet admin:\n" + ownerMatches.slice(0,3).map(item=>"• "+item.title+(item.urls.length?" — "+item.urls.length+" saved link(s)":"")).join("\n") : "";
     if (combined.length || channelMatches.length || ownerMatches.length) {
       const baseReply = combined.length
         ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n")
