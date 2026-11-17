@@ -68,6 +68,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class MaseExternalBrowserPlugin extends Plugin {
     private static final String PATCH_SCRIPT =
         "(function(){" +
+        "try{localStorage.removeItem('masenet-native-video-downloads-v1')}catch(e){}" +
         "if(window.__maseNetExternalBrowserPatched)return;" +
         "window.__maseNetExternalBrowserPatched=true;" +
         "var originalOpen=window.open;" +
@@ -99,6 +100,8 @@ public class MaseExternalBrowserPlugin extends Plugin {
 
     @Override
     public void load() {
+        // Remove private in-app video files left by the retired offline library.
+        deleteDirectory(new java.io.File(getContext().getFilesDir(), "masenet-downloads"));
         getBridge().getWebView().addJavascriptInterface(new ExternalBrowserBridge(), "MaseNetExternalBrowser");
         getBridge().addWebViewListener(new WebViewListener() {
             @Override
@@ -106,6 +109,17 @@ public class MaseExternalBrowserPlugin extends Plugin {
                 webView.evaluateJavascript(PATCH_SCRIPT, null);
             }
         });
+    }
+
+    private void deleteDirectory(java.io.File file) {
+        if (file == null || !file.exists()) return;
+        if (file.isDirectory()) {
+            java.io.File[] children = file.listFiles();
+            if (children != null) {
+                for (java.io.File child : children) deleteDirectory(child);
+            }
+        }
+        file.delete();
     }
 
     public final class ExternalBrowserBridge {
