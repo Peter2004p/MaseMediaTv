@@ -71,12 +71,12 @@ jobs:
           const original = Buffer.from(match[1], 'base64');
           const mark = await sharp(original)
             .extract({ left: 0, top: 0, width: 128, height: 60 })
-            .resize(850, 398, { fit: 'fill' })
+            .resize(680, 319, { fit: 'fill' })
             .png()
             .toBuffer();
           const png = await sharp({
             create: { width: 1024, height: 1024, channels: 4, background: '#05050b' }
-          }).composite([{ input: mark, left: 87, top: 313 }]).png().toBuffer();
+          }).composite([{ input: mark, left: 172, top: 352 }]).png().toBuffer();
           const stats = await sharp(png).stats();
           if (stats.channels.every(channel => channel.stdev < 2)) {
             throw new Error('The generated MaseNet icon is blank; refusing to build a blank launcher icon.');
