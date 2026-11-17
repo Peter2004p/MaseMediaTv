@@ -4342,3 +4342,13 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
 .maseAppSafetyNote{margin:16px 0;padding:15px 16px;border:1px solid rgba(255,185,90,.24);border-radius:16px;background:rgba(255,175,70,.055)}.maseAppSafetyNote b{font-size:12px;color:#ffd18b}.maseAppSafetyNote p{margin:6px 0 0;color:var(--muted,#aab0c0);font-size:11px;line-height:1.6}
 @media(max-width:520px){.maseAppPromo{gap:9px;padding:11px;border-radius:16px}.maseAppPromoIcon{flex-basis:37px;width:37px;height:37px}.maseAppPromoCopy b{font-size:11px}.maseAppPromoCopy small{font-size:9px}.maseAppPromoAction{font-size:10px}.maseAppDownloadHero{padding:19px;border-radius:20px}.maseAppDownloadButton{min-height:52px;font-size:12px}.maseAppDownloadMeta{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.maseAppPromo{transition:none}}
+
+
+/* Website-only Android download placements: hero lead-in, homepage footer, and left-side shortcut. */
+.maseAppPromo--top{margin:0 0 18px}
+.maseAppPromo--bottom{margin:34px 0 10px}
+.maseAppFloat{position:fixed;left:14px;top:50%;z-index:35;display:flex;align-items:center;justify-content:center;gap:8px;min-height:58px;padding:10px 13px;border:1px solid rgba(183,246,218,.34);border-radius:18px;background:linear-gradient(145deg,rgba(16,42,36,.96),rgba(12,22,32,.96));box-shadow:0 12px 32px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.13);color:#b8f4d7;text-decoration:none;font-size:10px;font-weight:850;line-height:1.15;transform:translateY(-50%);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.maseAppFloat svg{flex:0 0 auto;width:20px;height:20px}
+.maseAppFloat:hover{transform:translateY(-50%) translateX(3px);border-color:rgba(183,246,218,.65);box-shadow:0 15px 38px rgba(0,0,0,.4),0 0 22px rgba(72,207,155,.13)}
+@media(max-width:680px){.maseAppPromo--top{margin:0 0 13px}.maseAppPromo--bottom{margin:25px 0 8px}.maseAppFloat{left:8px;min-height:50px;padding:9px 10px;border-radius:15px;gap:6px;font-size:9px}.maseAppFloat svg{width:18px;height:18px}}
+@media(prefers-reduced-motion:reduce){.maseAppFloat{transition:none}}
