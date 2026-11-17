@@ -87,7 +87,7 @@ public class MaseExternalBrowserPlugin extends Plugin {
         "function openExternal(url){" +
         "try{var resolved=new URL(String(url),window.location.href);" +
         "if((resolved.protocol==='https:'||resolved.protocol==='http:')&&window.MaseNetExternalBrowser){" +
-        "window.MaseNetExternalBrowser.open(resolved.href);return true;" +
+        "window.MaseNetExternalBrowser.open(resolved.href,false);return true;" +
         "}}catch(e){}return false;" +
         "}" +
         "window.open=function(url,target,features){" +
@@ -116,7 +116,7 @@ public class MaseExternalBrowserPlugin extends Plugin {
         webView.setDownloadListener(new DownloadListener() {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
-                openInBrowser(url);
+                openInBrowser(url, true);
             }
         });
         getBridge().addWebViewListener(new WebViewListener() {
@@ -138,7 +138,7 @@ public class MaseExternalBrowserPlugin extends Plugin {
         file.delete();
     }
 
-    private void openInBrowser(String rawUrl) {
+    private void openInBrowser(String rawUrl, boolean returnToApp) {
         try {
             Uri uri = Uri.parse(rawUrl);
             String scheme = uri.getScheme();
@@ -150,16 +150,19 @@ public class MaseExternalBrowserPlugin extends Plugin {
                     Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                     intent.addCategory(Intent.CATEGORY_BROWSABLE);
                     activity.startActivity(intent);
-                    // Give Chrome time to accept the attachment before returning
-                    // the user to the still-running MaseNet activity.
-                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                        try {
-                            Intent returnToApp = new Intent(activity, activity.getClass());
-                            returnToApp.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                            activity.startActivity(returnToApp);
-                            Toast.makeText(activity, "Download handed to your browser. Continue using MaseNet.", Toast.LENGTH_SHORT).show();
-                        } catch (Exception ignored) {}
-                    }, 2200);
+                    // Return to MaseNet only after opening a direct attachment.
+                    // For a MaseNet episode page, keep the browser visible so the
+                    // user can review the page and tap its website download control.
+                    if (returnToApp) {
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                            try {
+                                Intent bringBack = new Intent(activity, activity.getClass());
+                                bringBack.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                activity.startActivity(bringBack);
+                                Toast.makeText(activity, "Download handed to your browser. Continue using MaseNet.", Toast.LENGTH_SHORT).show();
+                            } catch (Exception ignored) {}
+                        }, 2200);
+                    }
                 } catch (ActivityNotFoundException error) {
                     Toast.makeText(activity, "No browser app is available to open this download.", Toast.LENGTH_LONG).show();
                 }
@@ -172,7 +175,7 @@ public class MaseExternalBrowserPlugin extends Plugin {
     public final class ExternalBrowserBridge {
         @JavascriptInterface
         public void open(String rawUrl) {
-            openInBrowser(rawUrl);
+            openInBrowser(rawUrl, false);
         }
     }
 }
