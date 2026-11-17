@@ -919,16 +919,23 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
    if(/\.m3u8(?:$|[?#])/i.test(url)||(!hasDedicatedDownload&&/mpegurl/i.test(mimeType))){
     throw new Error('This episode only has an HLS streaming playlist. Add a direct MP4, MKV, or other video-file download URL to enable browser downloading.');
    }
-   // Always send the user to MaseNet's own website download endpoint.
-   // The website streams the stored download URL as an attachment; Android's
-   // external browser saves it into the phone's normal Downloads folder.
+   // First route through the MaseNet website. The existing website proxy can
+   // attach a download only when the dedicated file shares the stream host;
+   // otherwise open the episode page so the user can use its website download
+   // controls without exposing a third-party URL directly from the app.
    if(!streamUrl)throw new Error('This episode has no registered MaseNet stream source. Please ask the admin to refresh its video link.');
-   const proxy=new URL('/api/media/proxy',window.location.origin);
-   proxy.searchParams.set('episodeId',episode.id);
-   proxy.searchParams.set('source',streamUrl);
-   if(url!==streamUrl)proxy.searchParams.set('resource',url);
-   proxy.searchParams.set('download','1');
-   const browserUrl=proxy.toString();
+   let browserUrl:string;
+   const target=new URL(url), stream=new URL(streamUrl);
+   if(target.protocol==='https:'&&stream.protocol==='https:'&&target.hostname===stream.hostname){
+    const proxy=new URL('/api/media/proxy',window.location.origin);
+    proxy.searchParams.set('episodeId',episode.id);
+    proxy.searchParams.set('source',streamUrl);
+    if(url!==streamUrl)proxy.searchParams.set('resource',url);
+    proxy.searchParams.set('download','1');
+    browserUrl=proxy.toString();
+   }else{
+    browserUrl=window.location.origin+'/#/title/'+encodeURIComponent(title.id);
+   }
    if(Capacitor.isNativePlatform()){
     // Launch the device's default external browser. The app stays installed
     // underneath; users return with Android Back or the app switcher.
