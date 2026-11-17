@@ -658,39 +658,34 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
    const streamUrl=String(item.variant.streamUrl||item.episode.streamUrl||'').trim();
    const downloadUrl=String(item.variant.downloadUrl||'').trim();
    const path=String(item.variant.downloadPath||item.variant.streamPath||item.episode.downloadPath||item.episode.streamPath||'').trim();
+
+   // An explicit download URL is authoritative. Some episodes stream through
+   // MKV/HLS but expose a separate MP4 download URL. Never let the streaming
+   // probe override that direct MP4 download.
    let sourceUrl=downloadUrl||streamUrl;
    if(!sourceUrl&&path){
     const response=await api.get('/api/media/url',{path});
     sourceUrl=String(response.data?.url||'');
    }
    if(!/^https:\/\//i.test(sourceUrl))throw new Error('MaseNet could not get a secure video link for this episode. Ask the admin to refresh its streaming URL.');
+
    let mimeType=String(item.variant.mimeType||item.episode.mimeType||'');
    let kind='';
-   // Ask MaseNet's own media proxy to identify extensionless links before choosing
-   // a download method. Otherwise an HLS playlist can be saved as a tiny .mp4 file.
-   if(streamUrl){
-    const probe=await api.get('/api/media/proxy',{episodeId:item.episode.id,source:streamUrl,probe:'1'});
+   // Probe the actual URL we intend to save, not the separate playback URL.
+   // This is important when a MKV/HLS stream has an MP4 download counterpart.
+   try{
+    const probe=await api.get('/api/media/proxy',{episodeId:item.episode.id,source:sourceUrl,probe:'1'});
     kind=String(probe.data?.kind||'').toLowerCase();
     if(probe.data?.contentType) mimeType=String(probe.data.contentType);
+   }catch{
+    // A direct file URL can still be downloaded when the optional probe fails.
    }
    const isHls=kind==='hls'||/\.m3u8(?:$|[?#])/i.test(sourceUrl)||/mpegurl/i.test(mimeType);
    if(isHls){
-    if(!streamUrl)throw new Error('MaseNet needs the episode streaming URL to save this HLS video offline.');
-    // Use the Android native HTTP stack for the playlist and every CDN segment.
-    // This avoids WebView CORS and proxy child-host allowlist failures.
-    sourceUrl=streamUrl;
+    if(!streamUrl&&!downloadUrl)throw new Error('MaseNet needs a valid streaming URL to save this HLS video offline.');
+    sourceUrl=downloadUrl||streamUrl;
     mimeType='application/vnd.apple.mpegurl';
-   }else if(downloadUrl){
-    // Native Android downloads do not inherit the WebView's cookies. Prefer the
-    // explicit source download URL and fetch it directly with the native HTTP
-    // stack; routing through the same-origin proxy can silently fail in-app.
-    sourceUrl=downloadUrl;
-   }else if(streamUrl){
-    // FileTransfer runs natively, so browser CORS rules do not apply. Use the
-    // original media URL instead of wrapping it in a cookie-dependent proxy.
-    sourceUrl=streamUrl;
    }
-   if(!/^https:\/\//i.test(sourceUrl))throw new Error('This episode has no valid secure download URL.');
    const result=await nativeDownloads.save({
     url:sourceUrl,title:item.title.name,titleType:item.title.type,episodeTitle:item.episode.title||'Episode',
     season:Number(item.episode.season||1),episode:Number(item.episode.episode||1),quality:item.variant.quality,
