@@ -64,7 +64,9 @@ const findMatches = async (env: Env, parsed: ParsedStream) => {
   return (rows.results || []).filter(row => normalize(row.name) === normalize(parsed.title));
 };
 const applyPending = async (env: Env, pendingId: string) => {
-  const pending = await env.DB.prepare("SELECT * FROM stream_manager_pending WHERE id=? AND status='pending'")
+  // Atomically claim the approval so two fast Telegram taps cannot both write it.
+  const pending = await env.DB.prepare("UPDATE stream_manager_pending SET status='applying' WHERE id=? AND status='pending' RETURNING id,stream_url,title,year,season,episode,quality,codec,format,host")
+    .bind(pendingId)
     .first<{ id: string; stream_url: string; title: string; year: string; season: number; episode: number; quality: string; codec: string; format: string; host: string }>();
   if (!pending) return { ok: false, message: "This item was already processed or has expired." };
   const matches = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind='drama'")
@@ -75,13 +77,15 @@ const applyPending = async (env: Env, pendingId: string) => {
   if (row) {
     try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
   } else if (matching.length > 1) {
+    await env.DB.prepare("UPDATE stream_manager_pending SET status='needs_review',processed_at=datetime('now') WHERE id=? AND status='applying'")
+      .bind(pendingId).run();
     return { ok: false, message: "More than one matching drama title exists. Resolve the duplicate titles in the Admin Library first." };
   }
   const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Record<string, unknown>[] : [];
   const episodeIndex = episodes.findIndex(ep => Number(ep.season || 1) === pending.season && Number(ep.episode || 0) === pending.episode);
   const streamVariant = {
     quality: pending.quality, codec: pending.codec, streamUrl: pending.stream_url,
-    mimeType: pending.format === "m3u8" ? "application/vnd.apple.mpegurl" : pending.format === "mpd" ? "application/dash+xml" : "video/" + pending.format
+    mimeType: pending.format === "mkv" ? "video/x-matroska" : pending.format === "m4v" ? "video/x-m4v" : pending.format === "webm" ? "video/webm" : "video/mp4"
   };
   let action: string;
   if (!row) {
@@ -128,7 +132,7 @@ const applyPending = async (env: Env, pendingId: string) => {
     await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?")
       .bind(JSON.stringify(metadata), row.id).run();
   }
-  await env.DB.prepare("UPDATE stream_manager_pending SET status='applied',processed_at=datetime('now') WHERE id=?")
+  await env.DB.prepare("UPDATE stream_manager_pending SET status='applied',processed_at=datetime('now') WHERE id=? AND status='applying'")
     .bind(pendingId).run();
   return { ok: true, message: action + ".\nTitle: " + pending.title + "\nS" + String(pending.season).padStart(2,"0") + "E" + String(pending.episode).padStart(2,"0") + " · " + pending.quality + " · " + pending.codec };
 };
