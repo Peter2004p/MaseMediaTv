@@ -10,7 +10,6 @@ on:
       - src/**
       - functions/api/auth/**
       - public/masenet-app-icon.svg
-      - public/masenet-app-icon.png
       - public/sw.js
       - scripts/prepare-android-native.py
       - .github/workflows/build-android-apk.yml
@@ -62,7 +61,7 @@ jobs:
           mkdir -p assets
           node --input-type=module <<'NODE'
           import sharp from 'sharp';
-          await sharp('public/masenet-app-icon.png')
+          await sharp('public/masenet-app-icon.svg')
             .resize(1024, 1024, { fit: 'contain', background: '#05050b' })
             .png()
             .toFile('assets/icon.png');
