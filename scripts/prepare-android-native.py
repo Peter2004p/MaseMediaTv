@@ -232,6 +232,31 @@ if "org.videolan.android:libvlc-all" not in gradle_text:
     )
     app_gradle.write_text(gradle_text, encoding="utf-8")
 
+# Keep the universal APK focused on Android phone CPU architectures. Bundling
+# x86/x86_64 VLC binaries adds substantial size but does not help ordinary
+# ARM phones. Retain both 64-bit and 32-bit ARM for broad handset compatibility.
+gradle_text = app_gradle.read_text(encoding="utf-8")
+if "abiFilters 'arm64-v8a', 'armeabi-v7a'" not in gradle_text:
+    match = re.search(r"\\bdefaultConfig\\s*\\{", gradle_text)
+    if not match:
+        raise SystemExit("Could not find Android defaultConfig block for ABI filtering.")
+    open_brace = gradle_text.find("{", match.start())
+    depth = 0
+    close_brace = -1
+    for index in range(open_brace, len(gradle_text)):
+        if gradle_text[index] == "{":
+            depth += 1
+        elif gradle_text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                close_brace = index
+                break
+    if close_brace < 0:
+        raise SystemExit("Android defaultConfig block is not balanced.")
+    abi_config = "\\n        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }\\n"
+    gradle_text = gradle_text[:close_brace] + abi_config + gradle_text[close_brace:]
+    app_gradle.write_text(gradle_text, encoding="utf-8")
+
 # Declare the native VLC activity.
 if "MaseVlcActivity" not in xml:
     activity_decl = """
