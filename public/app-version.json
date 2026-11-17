@@ -1,0 +1,6 @@
+{
+  "versionCode": 2,
+  "versionName": "1.0.1",
+  "apkUrl": "https://github.com/Peter2004p/MaseMediaTv/releases/download/masenet-android-latest/app-debug.apk",
+  "releaseNotes": "First release with in-app update notifications. Includes native VLC playback improvements and app refinements."
+}
