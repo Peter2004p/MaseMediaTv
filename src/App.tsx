@@ -658,7 +658,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
    const streamUrl=String(item.variant.streamUrl||item.episode.streamUrl||'').trim();
    const downloadUrl=String(item.variant.downloadUrl||'').trim();
    const path=String(item.variant.downloadPath||item.variant.streamPath||item.episode.downloadPath||item.episode.streamPath||'').trim();
-   let sourceUrl=streamUrl||downloadUrl;
+   let sourceUrl=downloadUrl||streamUrl;
    if(!sourceUrl&&path){
     const response=await api.get('/api/media/url',{path});
     sourceUrl=String(response.data?.url||'');
@@ -680,12 +680,15 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
     // This avoids WebView CORS and proxy child-host allowlist failures.
     sourceUrl=streamUrl;
     mimeType='application/vnd.apple.mpegurl';
-   }else if(streamUrl){
-    // Route direct files through the same trusted proxy used by playback. This
-    // avoids provider hotlink/CORS failures in Android's native file downloader.
-    sourceUrl=window.location.origin+'/api/media/proxy?episodeId='+encodeURIComponent(item.episode.id)+'&source='+encodeURIComponent(streamUrl)+'&download=1';
    }else if(downloadUrl){
+    // Native Android downloads do not inherit the WebView's cookies. Prefer the
+    // explicit source download URL and fetch it directly with the native HTTP
+    // stack; routing through the same-origin proxy can silently fail in-app.
     sourceUrl=downloadUrl;
+   }else if(streamUrl){
+    // FileTransfer runs natively, so browser CORS rules do not apply. Use the
+    // original media URL instead of wrapping it in a cookie-dependent proxy.
+    sourceUrl=streamUrl;
    }
    if(!/^https:\/\//i.test(sourceUrl))throw new Error('This episode has no valid secure download URL.');
    const result=await nativeDownloads.save({
