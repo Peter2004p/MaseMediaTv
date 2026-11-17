@@ -2,40 +2,27 @@
 
 This bot is separate from @MaseTv_Bot. It is restricted to the configured admin Telegram account and proposes catalogue changes for explicit approval.
 
-## Cloudflare Pages environments
+## Production deployment
 
-The Pages project uses separate D1 databases:
+The Stream Manager uses the existing production MaseNet D1 database and the existing Cloudflare Pages Production environment. It does not use a separate Preview database.
 
-- **Production:** the existing live MaseNet catalogue database. Do not change this binding during preview setup.
-- **Preview:** the isolated `masetv-mkv-preview-db` database. The Preview `DB` binding must point to this database, never the Production database.
-
-The Preview database is isolated and may not contain the full MaseNet schema or catalogue data. Initialise only the schema required for the test, and use test records. Never copy live catalogue data into it just to test this bot.
-
-Preview deployments are currently disabled. Do not enable them until the Preview secrets and isolated database binding have been checked.
-
-## Required Pages secrets
-
-Configure these values separately in the **Preview** environment:
+Production already contains the required secret names:
 
 - `MASE_STREAM_BOT_TOKEN`: token for @MaseNetStreamManagerBot.
-- `MASE_STREAM_BOT_WEBHOOK_SECRET`: the dedicated random webhook secret for this bot.
+- `MASE_STREAM_BOT_WEBHOOK_SECRET`: the dedicated webhook secret for this bot.
 - `ADMIN_TELEGRAM_CHAT_ID`: the existing numeric admin Telegram user/chat ID.
 
-The secret values are not readable back from Cloudflare after saving. Copy them from your secure password/secret manager; do not paste them into GitHub or chat. The Production environment already has its own variables; do not overwrite or rotate them for preview testing.
+The values are masked by Cloudflare and must never be copied into GitHub or chat. Do not rotate these secrets as part of deployment. The Production `DB` binding must remain the existing live MaseNet D1 database.
 
-The Pages Functions binding must be named `DB` and point to the isolated Preview D1 database.
+## Register the production webhook
 
-## Register the preview webhook
+After the code is merged and the Production deployment is successful, register the bot webhook to:
 
-Only after a preview deployment is available and its environment has been verified, register the bot webhook against that preview hostname:
+`https://masetv-cloudflare-migration.pages.dev/api/telegram/stream-manager`
 
-```bash
-curl -X POST "https://api.telegram.org/bot<MASE_STREAM_BOT_TOKEN>/setWebhook" \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://<PREVIEW_HOST>/api/telegram/stream-manager","secret_token":"<MASE_STREAM_BOT_WEBHOOK_SECRET>","allowed_updates":["message","callback_query"]}'
-```
+Use the dedicated Stream Manager bot token and webhook secret, not the credentials for @MaseTv_Bot. Telegram supports setting a webhook with the `secret_token` field; the endpoint validates the matching `X-Telegram-Bot-Api-Secret-Token` header. Do not put the token or secret in GitHub, screenshots, or chat.
 
-Replace placeholders locally; never commit a bot token or webhook secret. The webhook secret must be 1–256 characters using Telegram's supported characters. Do not point the bot at Production until the feature is reviewed and separately approved for release.
+Do not change the webhook for @MaseTv_Bot. The new bot must remain independent.
 
 ## Current workflow
 
