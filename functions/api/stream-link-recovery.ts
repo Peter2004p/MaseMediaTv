@@ -98,12 +98,16 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   episodes[index] = next;
   metadata.episodes = episodes;
 
-  const update = await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=? AND metadata_json=?")
-    .bind(JSON.stringify(metadata), row.id, row.metadata_json).run();
-  if (!update.meta?.changes) return json({ error: "The episode changed during repair. No URL was replaced; refresh and try again.", conflict: true }, 409);
-
-  await env.DB.prepare("INSERT INTO stream_link_recovery_log (id,title_id,title_name,episode_id,old_url,new_url,verification_status,admin_email) VALUES (?,?,?,?,?,?,?,?)")
-    .bind(crypto.randomUUID(), row.id, row.name, episodeId, expectedOldUrl, replacement.toString(), verified.status, gate.admin.email).run();
+  const updatedMetadata = JSON.stringify(metadata);
+  const auditId = crypto.randomUUID();
+  const batch = await env.DB.batch([
+    env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=? AND metadata_json=?")
+      .bind(updatedMetadata, row.id, row.metadata_json),
+    env.DB.prepare("INSERT INTO stream_link_recovery_log (id,title_id,title_name,episode_id,old_url,new_url,verification_status,admin_email) SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM titles WHERE id=? AND metadata_json=?)")
+      .bind(auditId, row.id, row.name, episodeId, expectedOldUrl, replacement.toString(), verified.status, gate.admin.email, row.id, updatedMetadata)
+  ]);
+  if (!batch[0]?.meta?.changes || !batch[1]?.meta?.changes)
+    return json({ error: "The episode changed during repair. No URL was replaced; refresh and try again.", conflict: true }, 409);
 
   return json({ ok: true, title: row.name, episodeId, oldUrl: expectedOldUrl, newUrl: replacement.toString(),
     verification: verified, downloadUrlUpdated: String(current.downloadUrl || "") === expectedOldUrl,
