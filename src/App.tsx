@@ -3,7 +3,7 @@ import './welcome.css';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api, auth, image } from './cloudflare-client';
 import { Capacitor } from '@capacitor/core';
-import { AppLauncher } from '@capacitor/app-launcher';
+
 import { ProfileManager, WatchPartyPage } from './AccountFeatures';
 const Player = lazy(() => import('./MaseNetPlayerV3'));
 const PlayerLoading = () => <div role="status" aria-live="polite" style={{ minHeight: 180, display: "grid", placeItems: "center", borderRadius: 16, background: "#08090d", color: "#e8c77a", fontSize: 14 }}>Loading video player…</div>;
@@ -941,9 +941,10 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
    if(Capacitor.isNativePlatform()){
     // Launch the device's default external browser. The app stays installed
     // underneath; users return with Android Back or the app switcher.
-    const opened=await AppLauncher.openUrl({url:browserUrl});
-    if(!opened.completed)throw new Error('Android could not open the download in your browser. Check that a browser is installed.');
-    setDownloadMessage('Your browser opened the video download. When the download starts or finishes, use Android Back or switch back to MaseNet to continue.');
+    const nativeBrowser=(window as any).MaseNetExternalBrowser;
+    if(typeof nativeBrowser?.open==='function')nativeBrowser.open(browserUrl);
+    else window.open(browserUrl,'_blank','noopener,noreferrer');
+    setDownloadMessage('Your device browser opened the video download. When it finishes, use Android Back or switch back to MaseNet to continue.');
    }else{
     window.location.assign(browserUrl);
    }
