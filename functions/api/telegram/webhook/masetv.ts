@@ -184,7 +184,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       // Short-lived generated stream URLs stay out of the general searchable owner
       // reference library, where they could otherwise be shown to ordinary users.
       const publicReferenceText = streamLink
-        ? savedText.replace(/https?:\\/\\/[^\\s<>]+/g, "[short-lived stream link]")
+        ? savedText.replace(/https?:\/\/[^\s<>]+/g, "[short-lived stream link]")
         : savedText;
       const publicReferenceUrls = streamLink ? urls.filter(url => !parseForwardedStreamLink(url)) : urls;
       await env.DB.prepare("INSERT OR REPLACE INTO telegram_owner_library (id,title,content,urls_json,source,saved_at) VALUES (?,?,?,?,?,datetime('now'))")
