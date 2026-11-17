@@ -519,6 +519,6 @@ main_text = main_text.replace(
 )
 main_activity.write_text(main_text, encoding="utf-8")
 
-print("Installed LibVLC 3.7.7, native fullscreen playback activity, audio/subtitle track selection, and JS bridge.")
+print("Installed LibVLC 3.7.7 native player, audio/subtitle selection, browser download bridge, and profile safe-area patch.")
 
 print("Configured Google sign-in, browser downloads, and native LibVLC playback bridge.")
