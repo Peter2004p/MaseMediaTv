@@ -93,7 +93,10 @@ public class MaseExternalBrowserPlugin extends Plugin {
         "if(downloadIntent&&String(target||'_blank').toLowerCase()!=='_self'){" +
         "var initial=String(url||'about:blank');" +
         "if(initial==='about:blank'||initial===''){" +
-        "return {closed:false,focus:function(){},close:function(){},location:{set href(value){downloadIntent=false;openExternal(value);},get href(){return 'about:blank';}}};" +
+        "var fakeLocation={set href(value){downloadIntent=false;openExternal(value);},get href(){return 'about:blank';}};" +
+        "var fakeWindow={closed:false,focus:function(){},close:function(){},location:fakeLocation};" +
+        "Object.defineProperty(fakeWindow,'location',{get:function(){return fakeLocation;},set:function(value){downloadIntent=false;openExternal(value);}});" +
+        "return fakeWindow;" +
         "}" +
         "if(openExternal(initial)){downloadIntent=false;return {closed:false,focus:function(){},close:function(){},location:{href:initial}};}" +
         "}" +
