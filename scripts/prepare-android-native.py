@@ -217,8 +217,8 @@ plugin_path.write_text(plugin, encoding="utf-8")
 variables_gradle = Path("android/variables.gradle")
 if variables_gradle.exists():
     variables_text = variables_gradle.read_text(encoding="utf-8")
-    variables_text = re.sub(r"(compileSdkVersion\\s*=\\s*)\\d+", r"\\g<1>36", variables_text)
-    variables_text = re.sub(r"(targetSdkVersion\\s*=\\s*)\\d+", r"\\g<1>36", variables_text)
+    variables_text = re.sub(r"(compileSdkVersion\s*=\s*)\d+", r"\g<1>36", variables_text)
+    variables_text = re.sub(r"(targetSdkVersion\s*=\s*)\d+", r"\g<1>36", variables_text)
     variables_gradle.write_text(variables_text, encoding="utf-8")
 
 app_gradle = Path("android/app/build.gradle")
