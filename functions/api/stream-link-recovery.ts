@@ -98,13 +98,6 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   episodes[index] = next;
   metadata.episodes = episodes;
 
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS stream_link_recovery_log (
-    id TEXT PRIMARY KEY, title_id TEXT NOT NULL, title_name TEXT NOT NULL,
-    episode_id TEXT NOT NULL, old_url TEXT NOT NULL, new_url TEXT NOT NULL,
-    verification_status INTEGER NOT NULL, admin_email TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )`).run();
-
   const update = await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=? AND metadata_json=?")
     .bind(JSON.stringify(metadata), row.id, row.metadata_json).run();
   if (!update.meta?.changes) return json({ error: "The episode changed during repair. No URL was replaced; refresh and try again.", conflict: true }, 409);
