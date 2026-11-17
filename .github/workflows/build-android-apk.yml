@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - masenet-android-apk
+      - masenet-in-app-updates
     paths:
       - package.json
       - capacitor.config.ts
@@ -12,6 +13,7 @@ on:
       - public/masenet-app-icon.svg
       - public/masenet-app-icon.png
       - public/sw.js
+      - public/app-version.json
       - scripts/prepare-android-native.py
       - .github/workflows/build-android-apk.yml
   workflow_dispatch:
