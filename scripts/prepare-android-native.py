@@ -76,27 +76,30 @@ public class MaseExternalBrowserPlugin extends Plugin {
         "document.addEventListener('click',function(event){" +
         "var node=event.target;" +
         "var button=node&&node.closest?node.closest('button'):null;" +
-        "var label=button?String(button.innerText||button.textContent||'').toLowerCase():'';" +
-        "if(label.indexOf('download episode')!==-1){" +
+        "if(!button)return;" +
+        "var label=String(button.innerText||button.textContent||'').trim().toLowerCase();" +
+        "if(button.classList.contains('maseDownloadAction')||label==='download'||label.indexOf('download episode')!==-1){" +
         "downloadIntent=true;" +
-        "window.setTimeout(function(){downloadIntent=false;},1500);" +
+        "window.setTimeout(function(){downloadIntent=false;},5000);" +
         "}" +
         "},true);" +
-        "window.open=function(url,target,features){" +
-        "try{" +
-        "var name=(target||'_blank').toLowerCase();" +
-        "var resolved=new URL(String(url),window.location.href);" +
-        "var path=resolved.pathname.toLowerCase();" +
-        "var isFile=/\\.(mkv|mp4|m4v|webm|mov)$/.test(path);" +
-        "var isDownload=downloadIntent||resolved.searchParams.get('download')==='1'||isFile||/\\/download\\/?$/.test(path);" +
-        "if(name!=='_self'&&url&&isDownload&&window.MaseNetExternalBrowser&&" +
-        "(resolved.protocol==='https:'||resolved.protocol==='http:')){" +
-        "downloadIntent=false;window.MaseNetExternalBrowser.open(resolved.href);return null;" +
+        "function openExternal(url){" +
+        "try{var resolved=new URL(String(url),window.location.href);" +
+        "if((resolved.protocol==='https:'||resolved.protocol==='http:')&&window.MaseNetExternalBrowser){" +
+        "window.MaseNetExternalBrowser.open(resolved.href);return true;" +
+        "}}catch(e){}return false;" +
         "}" +
-        "}catch(e){}" +
+        "window.open=function(url,target,features){" +
+        "if(downloadIntent&&String(target||'_blank').toLowerCase()!=='_self'){" +
+        "var initial=String(url||'about:blank');" +
+        "if(initial==='about:blank'||initial===''){" +
+        "return {closed:false,focus:function(){},close:function(){},location:{set href(value){downloadIntent=false;openExternal(value);},get href(){return 'about:blank';}}};" +
+        "}" +
+        "if(openExternal(initial)){downloadIntent=false;return {closed:false,focus:function(){},close:function(){},location:{href:initial}};}" +
+        "}" +
         "return originalOpen.apply(window,arguments);" +
         "};" +
-        "})();";
+        "})();"
 
     @Override
     public void load() {
