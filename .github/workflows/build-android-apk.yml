@@ -62,31 +62,11 @@ jobs:
           node --input-type=module <<'NODE'
           import sharp from 'sharp';
           import { readFile, writeFile } from 'node:fs/promises';
-          // Read the original uploaded JPEG bytes directly. Rasterizing the
-          // previous SVG wrapper silently dropped its embedded <image>, which
-          // is why Android received a plain dark square.
-          const svg = await readFile('public/masenet-app-icon.svg', 'utf8');
-          const match = svg.match(/data:image\/jpeg;base64,([A-Za-z0-9+/=]+)/);
-          if (!match) throw new Error('The supplied MaseNet artwork is missing from the icon source.');
-          const original = Buffer.from(match[1], 'base64');
-          const source = sharp(original);
-          const metadata = await source.metadata();
-          if (!metadata.width || !metadata.height || metadata.width < 2 || metadata.height < 2) {
-            throw new Error('The supplied MaseNet logo image has invalid dimensions.');
-          }
-          // The supplied image contains two neon marks across its top edge.
-          // Use the complete left-hand MaseNet mark, not a tiny 128x60 corner
-          // that made the launcher artwork look like a blank square.
-          const cropWidth = Math.floor(metadata.width / 2);
-          const cropHeight = Math.floor(metadata.height / 4);
-          const mark = await source
-            .extract({ left: 0, top: 0, width: cropWidth, height: cropHeight })
-            .resize(820, 410, { fit: 'fill' })
-            .png()
-            .toBuffer();
-          const png = await sharp({
-            create: { width: 1024, height: 1024, channels: 4, background: '#090b18' }
-          }).composite([{ input: mark, left: 102, top: 307 }]).png().toBuffer();
+          // Rasterize the complete 3D MaseNet SVG emblem. Never crop the
+          // symbol: the entire glossy play mark and its dark violet field are
+          // the launcher artwork.
+          const svg = await readFile('public/masenet-app-icon.svg');
+          const png = await sharp(svg, { density: 144 }).resize(1024, 1024, { fit: 'fill' }).png().toBuffer();
           const stats = await sharp(png).stats();
           if (stats.channels.every(channel => channel.stdev < 2)) {
             throw new Error('The generated MaseNet icon is blank; refusing to build a blank launcher icon.');
