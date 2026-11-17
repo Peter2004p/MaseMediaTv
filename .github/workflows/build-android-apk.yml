@@ -137,6 +137,22 @@ jobs:
           path: ~/.android/debug.keystore
           key: masenet-android-debug-keystore-v1
 
+      - name: Ensure persistent Android debug signing key exists
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -noprompt -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          test -s "$HOME/.android/debug.keystore"
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew --no-daemon assembleDebug
