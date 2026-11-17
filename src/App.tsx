@@ -900,28 +900,50 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
   if(downloadBusy)return;
   setDownloadBusy(true);setDownloadMessage('');
   try{
-   let url=String(episode.downloadUrl||'').trim();
-   const downloadPath=String(episode.downloadPath||'').trim();
+   const qualityVariant=episode.qualities?.find(item=>item.quality===episode.quality);
+   const streamUrl=String(qualityVariant?.streamUrl||episode.streamUrl||'').trim();
+   let url=String(qualityVariant?.downloadUrl||episode.downloadUrl||'').trim();
+   const downloadPath=String(qualityVariant?.downloadPath||episode.downloadPath||'').trim();
    if(!url&&downloadPath){
     const response=await api.get('/api/media/url',{path:downloadPath});
     url=String(response.data?.url||'');
    }
-   if(!url)url=String(episode.streamUrl||'').trim();
+   if(!url)url=streamUrl;
    if(!url&&episode.streamPath){
     const response=await api.get('/api/media/url',{path:episode.streamPath});
     url=String(response.data?.url||'');
    }
    if(!/^https:\/\//i.test(url))throw new Error('No direct download link is available for this episode. Ask the admin to add or refresh its download URL.');
+   const mimeType=String(qualityVariant?.mimeType||episode.mimeType||'').toLowerCase();
+   if(/\.m3u8(?:$|[?#])/i.test(url)||/mpegurl/i.test(mimeType)){
+    throw new Error('This episode only has an HLS streaming playlist. Add a direct MP4, MKV, or other video-file download URL to enable browser downloading.');
+   }
+   let browserUrl=url;
+   // The existing MaseNet media proxy can stream a known video file to the
+   // browser with Content-Disposition: attachment. It does not save the file
+   // on MaseNet; Android's browser writes it to the user's Downloads folder.
+   // For a separate download URL, use the proxy only when it shares the
+   // episode's stored streaming host (the proxy validates that relationship).
+   try{
+    const target=new URL(url);
+    const stream=streamUrl?new URL(streamUrl):null;
+    const isVideoFile=/\.(mkv|mp4|m4v|webm|mov)$/i.test(target.pathname);
+    if(stream&&isVideoFile&&target.protocol==='https:'&&stream.protocol==='https:'&&target.hostname===stream.hostname){
+     const proxy=new URL('/api/media/proxy',window.location.origin);
+     proxy.searchParams.set('episodeId',episode.id);
+     proxy.searchParams.set('source',streamUrl);
+     if(url!==streamUrl)proxy.searchParams.set('resource',url);
+     proxy.searchParams.set('download','1');
+     browserUrl=proxy.toString();
+    }
+   }catch{}
    if(Capacitor.isNativePlatform()){
-    // Match the Google sign-in flow: open the provider URL in an Android
-    // browser Custom Tab. The browser owns the download and saves it to the
-    // device's normal Downloads location; closing the tab returns to MaseNet.
-    await Browser.open({url,presentationStyle:'popover'});
-    setDownloadMessage('The browser opened your download link. Let the download start, then close the browser to return to MaseNet.');
+    // Match the Google sign-in flow: open the provider/download response in
+    // an Android browser Custom Tab. Closing the browser returns to MaseNet.
+    await Browser.open({url:browserUrl,presentationStyle:'popover'});
+    setDownloadMessage('Your browser opened the video download. Check the browser download notification, then close the browser to return to MaseNet.');
    }else{
-    // On the website, navigate to the actual provider URL. Browser Back returns
-    // the visitor to the title page after the browser handles the file.
-    window.location.assign(url);
+    window.location.assign(browserUrl);
    }
   }catch(error){
    setDownloadMessage(error instanceof Error?error.message:'Could not open this download in your browser.');
