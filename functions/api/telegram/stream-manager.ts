@@ -1,0 +1,201 @@
+import { json } from "../auth/_shared";
+
+interface Env {
+  DB: D1Database;
+  MASE_STREAM_BOT_TOKEN?: string;
+  MASE_STREAM_BOT_WEBHOOK_SECRET?: string;
+  ADMIN_TELEGRAM_CHAT_ID?: string;
+}
+type TelegramMessage = {
+  chat?: { id?: number | string; type?: string };
+  from?: { id?: number | string };
+  text?: string;
+  caption?: string;
+};
+type ParsedStream = {
+  url: string; filename: string; title: string; year: string;
+  season: number; episode: number; quality: string; codec: string; format: string; host: string;
+};
+const normalize = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase()
+  .replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const telegram = async (env: Env, method: string, payload: Record<string, unknown>) => {
+  const token = String(env.MASE_STREAM_BOT_TOKEN || "").trim();
+  if (!token) throw new Error("Stream Manager bot token is not configured.");
+  const response = await fetch("https://api.telegram.org/bot" + token + "/" + method, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload)
+  });
+  const result = await response.json().catch(() => ({})) as { ok?: boolean; description?: string };
+  if (!response.ok || !result.ok) throw new Error(result.description || "Telegram API request failed.");
+  return result;
+};
+const parseStream = (raw: string): ParsedStream | null => {
+  let url: URL;
+  try { url = new URL(raw); } catch { return null; }
+  if (url.protocol !== "https:") return null;
+  let filename = url.pathname.split("/").pop() || "";
+  try { filename = decodeURIComponent(filename); } catch { return null; }
+  filename = filename.replace(/\+/g, " ").trim();
+  if (!/\.(?:mkv|mp4|m4v|webm)$/i.test(filename)) return null;
+  const se = filename.match(/\bS(\d{1,2})E(\d{1,3})\b/i);
+  if (!se) return null;
+  const after = filename.slice((se.index || 0) + se[0].length).replace(/^[\s@._-]+|[\s._-]+$/g, "");
+  const title = after
+    .replace(/\b(19\d{2}|20\d{2})\b/g, " ")
+    .replace(/\b(2160p|1440p|1080p|720p|576p|480p|360p|x265|h265|hevc|x264|h264|av1)\b/ig, " ")
+    .replace(/\.(?:mkv|mp4|m4v|webm)$/i, "")
+    .replace(/[+_.-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!title) return null;
+  return {
+    url: raw, filename, title,
+    year: filename.match(/\b(19\d{2}|20\d{2})\b/)?.[1] || "",
+    season: Number(se[1]), episode: Number(se[2]),
+    quality: filename.match(/\b(2160p|1440p|1080p|720p|576p|480p|360p)\b/i)?.[1]?.toLowerCase() || "Unknown",
+    codec: filename.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1]?.toLowerCase() || "Unknown",
+    format: filename.split(".").pop()?.toLowerCase() || "unknown", host: url.hostname
+  };
+};
+const extractUrl = (message: TelegramMessage) => {
+  const text = String(message.text || message.caption || "");
+  return text.match(/https:\/\/[^\s<>]+/i)?.[0]?.replace(/[),.]+$/, "") || "";
+};
+const findMatches = async (env: Env, parsed: ParsedStream) => {
+  const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind='drama'")
+    .all<{ id: string; name: string; kind: string; metadata_json: string }>();
+  return (rows.results || []).filter(row => normalize(row.name) === normalize(parsed.title));
+};
+const applyPending = async (env: Env, pendingId: string) => {
+  const pending = await env.DB.prepare("SELECT * FROM stream_manager_pending WHERE id=? AND status='pending'")
+    .first<{ id: string; stream_url: string; title: string; year: string; season: number; episode: number; quality: string; codec: string; format: string; host: string }>();
+  if (!pending) return { ok: false, message: "This item was already processed or has expired." };
+  const matches = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind='drama'")
+    .all<{ id: string; name: string; kind: string; metadata_json: string }>();
+  const matching = (matches.results || []).filter(row => normalize(row.name) === normalize(pending.title));
+  let row = matching.length === 1 ? matching[0] : null;
+  let metadata: Record<string, unknown> = {};
+  if (row) {
+    try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string, unknown>; } catch {}
+  } else if (matching.length > 1) {
+    return { ok: false, message: "More than one matching drama title exists. Resolve the duplicate titles in the Admin Library first." };
+  }
+  const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Record<string, unknown>[] : [];
+  const episodeIndex = episodes.findIndex(ep => Number(ep.season || 1) === pending.season && Number(ep.episode || 0) === pending.episode);
+  const streamVariant = {
+    quality: pending.quality, codec: pending.codec, streamUrl: pending.stream_url,
+    mimeType: pending.format === "m3u8" ? "application/vnd.apple.mpegurl" : pending.format === "mpd" ? "application/dash+xml" : "video/" + pending.format
+  };
+  let action: string;
+  if (!row) {
+    const id = crypto.randomUUID();
+    metadata = {
+      id, name: pending.title, type: "Drama", year: pending.year,
+      quality: pending.quality, episodes: [{
+        id: crypto.randomUUID(), season: pending.season, episode: pending.episode,
+        title: "Episode " + pending.episode, ...streamVariant, qualities: []
+      }]
+    };
+    await env.DB.prepare("INSERT INTO titles (id,name,kind,metadata_json) VALUES (?,?,?,?)")
+      .bind(id, pending.title, "drama", JSON.stringify(metadata)).run();
+    action = "Created a new drama and added its first episode";
+  } else if (episodeIndex < 0) {
+    episodes.push({
+      id: crypto.randomUUID(), season: pending.season, episode: pending.episode,
+      title: "Episode " + pending.episode, ...streamVariant, qualities: []
+    });
+    metadata.episodes = episodes;
+    await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?")
+      .bind(JSON.stringify(metadata), row.id).run();
+    action = "Added a new episode to the existing drama";
+  } else {
+    const episode = { ...episodes[episodeIndex] };
+    const variants = Array.isArray(episode.qualities) ? episode.qualities as Record<string, unknown>[] : [];
+    const rootMatches = String(episode.quality || "").toLowerCase() === pending.quality.toLowerCase()
+      && String(episode.codec || "unknown").toLowerCase() === pending.codec.toLowerCase();
+    const variantIndex = variants.findIndex(v => String(v.quality || "").toLowerCase() === pending.quality.toLowerCase()
+      && String(v.codec || "unknown").toLowerCase() === pending.codec.toLowerCase());
+    if (rootMatches) {
+      episodes[episodeIndex] = { ...episode, ...streamVariant };
+      action = "Replaced the existing episode stream for the same quality and codec";
+    } else if (variantIndex >= 0) {
+      variants[variantIndex] = { ...variants[variantIndex], ...streamVariant };
+      episodes[episodeIndex] = { ...episode, qualities: variants };
+      action = "Replaced the matching quality and codec version";
+    } else {
+      variants.push(streamVariant);
+      episodes[episodeIndex] = { ...episode, qualities: variants };
+      action = "Added another quality/codec version to the existing episode";
+    }
+    metadata.episodes = episodes;
+    await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?")
+      .bind(JSON.stringify(metadata), row.id).run();
+  }
+  await env.DB.prepare("UPDATE stream_manager_pending SET status='applied',processed_at=datetime('now') WHERE id=?")
+    .bind(pendingId).run();
+  return { ok: true, message: action + ".\nTitle: " + pending.title + "\nS" + String(pending.season).padStart(2,"0") + "E" + String(pending.episode).padStart(2,"0") + " · " + pending.quality + " · " + pending.codec };
+};
+
+export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const token = String(env.MASE_STREAM_BOT_TOKEN || "").trim();
+  const secret = String(env.MASE_STREAM_BOT_WEBHOOK_SECRET || "").trim();
+  const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
+  if (!token || !secret || !adminId) return json({ ok: false, error: "Stream Manager bot secrets or admin ID are not configured." }, 503);
+  if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== secret) return json({ ok: false }, 401);
+  const update = await request.json().catch(() => ({})) as {
+    message?: TelegramMessage;
+    callback_query?: { id: string; data?: string; from?: { id?: number | string }; message?: { chat?: { id?: number | string } } };
+  };
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS stream_manager_pending (
+    id TEXT PRIMARY KEY, stream_url TEXT NOT NULL, filename TEXT NOT NULL, title TEXT NOT NULL,
+    year TEXT NOT NULL DEFAULT '', season INTEGER NOT NULL, episode INTEGER NOT NULL,
+    quality TEXT NOT NULL, codec TEXT NOT NULL, format TEXT NOT NULL, host TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', received_at TEXT NOT NULL DEFAULT(datetime('now')),
+    processed_at TEXT
+  )`).run();
+  if (update.callback_query) {
+    const cb = update.callback_query;
+    if (String(cb.from?.id || "") !== adminId) {
+      await telegram(env, "answerCallbackQuery", { callback_query_id: cb.id, text: "Not authorised.", show_alert: true }).catch(() => undefined);
+      return json({ ok: true });
+    }
+    const match = String(cb.data || "").match(/^(apply|ignore):([0-9a-f-]{36})$/i);
+    if (!match) return json({ ok: true });
+    await telegram(env, "answerCallbackQuery", { callback_query_id: cb.id, text: match[1] === "apply" ? "Applying catalogue update…" : "Submission dismissed." }).catch(() => undefined);
+    if (match[1] === "ignore") {
+      await env.DB.prepare("UPDATE stream_manager_pending SET status='ignored',processed_at=datetime('now') WHERE id=? AND status='pending'").bind(match[2]).run();
+      return json({ ok: true });
+    }
+    const result = await applyPending(env, match[2]);
+    const chatId = cb.message?.chat?.id;
+    if (chatId) await telegram(env, "sendMessage", { chat_id: chatId, text: result.message });
+    return json({ ok: true, applied: result.ok });
+  }
+  const message = update.message;
+  if (!message || String(message.chat?.type || "") !== "private" || String(message.from?.id || "") !== adminId || String(message.chat?.id || "") !== adminId) {
+    return json({ ok: true, ignored: true });
+  }
+  const incoming = String(message.text || message.caption || "").trim();
+  if (/^\/(start|help)(?:\s|$)/i.test(incoming)) {
+    await telegram(env, "sendMessage", { chat_id: adminId, text: "MaseNet Stream Manager is ready. Forward a generated KDLAirBot Streamlink URL here. I will identify the title, episode, quality and codec, then ask before changing the catalogue." });
+    return json({ ok: true });
+  }
+  const rawUrl = extractUrl(message);
+  const parsed = rawUrl ? parseStream(rawUrl) : null;
+  if (!parsed) {
+    await telegram(env, "sendMessage", { chat_id: adminId, text: "I couldn't identify a supported episode Streamlink. Forward the generated HTTPS video URL with an S01E01-style filename (MKV, MP4, M4V or WEBM)." });
+    return json({ ok: true, parsed: false });
+  }
+  const matches = await findMatches(env, parsed);
+  const id = crypto.randomUUID();
+  await env.DB.prepare(`INSERT INTO stream_manager_pending
+    (id,stream_url,filename,title,year,season,episode,quality,codec,format,host)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(id, parsed.url, parsed.filename, parsed.title, parsed.year, parsed.season, parsed.episode, parsed.quality, parsed.codec, parsed.format, parsed.host).run();
+  const classification = matches.length > 1 ? "⚠️ Multiple matching drama titles — manual cleanup needed"
+    : matches.length === 1 ? "🔎 Existing drama found — episode/version will be checked when applied"
+    : "🆕 No matching drama found — applying will create a new drama entry";
+  const text = "🎬 STREAMLINK RECEIVED\n\nTitle: " + parsed.title + (parsed.year ? " (" + parsed.year + ")" : "")
+    + "\nSeason: " + parsed.season + "\nEpisode: " + parsed.episode + "\nQuality: " + parsed.quality
+    + "\nCodec: " + parsed.codec + "\nFormat: " + parsed.format.toUpperCase() + "\nHost: " + parsed.host
+    + "\n\n" + classification + "\n\nThe forwarded Telegram message may disappear after five minutes; that does not mean the video URL expires. I have stored this submission privately. Confirm before I change the catalogue.";
+  await telegram(env, "sendMessage", { chat_id: adminId, text, disable_web_page_preview: true,
+    reply_markup: { inline_keyboard: [[{ text: "✅ Apply catalogue change", callback_data: "apply:" + id }, { text: "✖ Ignore", callback_data: "ignore:" + id }]] } });
+  return json({ ok: true, parsed: true, pendingId: id });
+};
