@@ -1,7 +1,6 @@
 import { Component, StrictMode, type ErrorInfo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Capacitor } from '@capacitor/core';
-import { Directory, Filesystem } from '@capacitor/filesystem';
 import { App as CapacitorApp } from '@capacitor/app';
 import App from './App';
 import PWAInstallPrompt from './PWAInstallPrompt';
@@ -52,20 +51,6 @@ if (root) {
   );
 }
 
-
-// Remove private files and metadata created by the retired in-app offline video
-// library. Files already downloaded to Android's public Downloads folder remain
-// ordinary user files and are not touched.
-if (Capacitor.isNativePlatform()) {
-  void (async () => {
-    try {
-      await Filesystem.rmdir({ directory: Directory.Data, path: 'masenet-downloads', recursive: true });
-    } catch {}
-    try {
-      localStorage.removeItem('masenet-native-video-downloads-v1');
-    } catch {}
-  })();
-}
 
 // Native Android Back navigates the in-app history first; it exits only from the home screen.
 if (Capacitor.isNativePlatform()) {
