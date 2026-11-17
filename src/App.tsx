@@ -940,7 +940,7 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
     // Launch the device's default external browser. The app stays installed
     // underneath; users return with Android Back or the app switcher.
     const nativeBrowser=(window as any).MaseNetExternalBrowser;
-    if(typeof nativeBrowser?.open==='function')nativeBrowser.open(browserUrl);
+    if(typeof nativeBrowser?.open==='function')nativeBrowser.open(browserUrl,directFileDownload);
     else window.open(browserUrl,'_blank','noopener,noreferrer');
     setDownloadMessage('MaseNet website opened the download. Your browser saves the file to the phone; return to MaseNet whenever you are ready.');
    }else{
