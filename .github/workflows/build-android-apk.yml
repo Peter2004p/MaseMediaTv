@@ -78,7 +78,7 @@ jobs:
           // Use the complete left-hand MaseNet mark, not a tiny 128x60 corner
           // that made the launcher artwork look like a blank square.
           const cropWidth = Math.floor(metadata.width / 2);
-          const cropHeight = Math.min(Math.floor(metadata.height / 3), Math.floor(metadata.width / 2));
+          const cropHeight = Math.floor(metadata.height / 4);
           const mark = await source
             .extract({ left: 0, top: 0, width: cropWidth, height: cropHeight })
             .resize(820, 410, { fit: 'fill' })
