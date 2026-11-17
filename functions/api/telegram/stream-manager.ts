@@ -69,6 +69,7 @@ const applyPending = async (env: Env, pendingId: string) => {
     .bind(pendingId)
     .first<{ id: string; stream_url: string; title: string; year: string; season: number; episode: number; quality: string; codec: string; format: string; host: string }>();
   if (!pending) return { ok: false, message: "This item was already processed or has expired." };
+  try {
   const matches = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind='drama'")
     .all<{ id: string; name: string; kind: string; metadata_json: string }>();
   const matching = (matches.results || []).filter(row => normalize(row.name) === normalize(pending.title));
@@ -135,6 +136,12 @@ const applyPending = async (env: Env, pendingId: string) => {
   await env.DB.prepare("UPDATE stream_manager_pending SET status='applied',processed_at=datetime('now') WHERE id=? AND status='applying'")
     .bind(pendingId).run();
   return { ok: true, message: action + ".\nTitle: " + pending.title + "\nS" + String(pending.season).padStart(2,"0") + "E" + String(pending.episode).padStart(2,"0") + " · " + pending.quality + " · " + pending.codec };
+  } catch (error) {
+    // Release the claim after a failed write; applying the same URL again is idempotent.
+    await env.DB.prepare("UPDATE stream_manager_pending SET status='pending' WHERE id=? AND status='applying'")
+      .bind(pendingId).run().catch(() => undefined);
+    throw error;
+  }
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
