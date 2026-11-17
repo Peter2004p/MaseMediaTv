@@ -4347,8 +4347,14 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
 /* Website-only Android download placements: hero lead-in, homepage footer, and left-side shortcut. */
 .maseAppPromo--top{margin:0 0 18px}
 .maseAppPromo--bottom{margin:34px 0 10px}
-.maseAppFloat{position:fixed;left:14px;top:50%;z-index:35;display:flex;align-items:center;justify-content:center;gap:8px;min-height:58px;padding:10px 13px;border:1px solid rgba(183,246,218,.34);border-radius:18px;background:linear-gradient(145deg,rgba(16,42,36,.96),rgba(12,22,32,.96));box-shadow:0 12px 32px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.13);color:#b8f4d7;text-decoration:none;font-size:10px;font-weight:850;line-height:1.15;transform:translateY(-50%);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
-.maseAppFloat svg{flex:0 0 auto;width:20px;height:20px}
-.maseAppFloat:hover{transform:translateY(-50%) translateX(3px);border-color:rgba(183,246,218,.65);box-shadow:0 15px 38px rgba(0,0,0,.4),0 0 22px rgba(72,207,155,.13)}
-@media(max-width:680px){.maseAppPromo--top{margin:0 0 13px}.maseAppPromo--bottom{margin:25px 0 8px}.maseAppFloat{left:8px;min-height:50px;padding:9px 10px;border-radius:15px;gap:6px;font-size:9px}.maseAppFloat svg{width:18px;height:18px}}
+.maseAppFloat{position:fixed;left:16px;top:50%;z-index:45;display:grid;place-items:center;width:58px;height:58px;min-height:58px;padding:0;border:1px solid rgba(183,246,218,.42);border-radius:50%;background:linear-gradient(145deg,rgba(16,42,36,.96),rgba(12,22,32,.96));box-shadow:0 12px 32px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.16),0 0 22px rgba(72,207,155,.12);color:#b8f4d7;text-decoration:none;transform:translateY(-50%);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.maseAppFloat svg{width:24px;height:24px;filter:drop-shadow(0 2px 5px rgba(72,207,155,.25))}
+.maseAppFloat:hover{transform:translateY(-50%) scale(1.06);border-color:rgba(183,246,218,.75);box-shadow:0 15px 38px rgba(0,0,0,.4),0 0 25px rgba(72,207,155,.2)}
+.maseHeroSocials{position:relative;z-index:4;display:flex;align-items:center;gap:9px;margin-top:16px}
+.maseHeroSocials>span,.maseHeroSocials>a{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:rgba(8,13,22,.62);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 5px 14px rgba(0,0,0,.2);color:#f7f8fc;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.maseHeroSocials>span svg,.maseHeroSocials>a svg{width:17px;height:17px}
+.maseHeroSocials>span:last-of-type svg{width:17px;height:17px}
+.maseHeroSocials>a{border-color:rgba(125,232,184,.48);background:linear-gradient(145deg,rgba(38,128,91,.8),rgba(12,38,32,.9));color:#b8f4d7;text-decoration:none}
+@media(max-width:680px){.maseAppFloat{left:9px;width:52px;height:52px;min-height:52px}.maseAppFloat svg{width:22px;height:22px}.maseHeroSocials{gap:8px;margin-top:13px}.maseHeroSocials>span,.maseHeroSocials>a{width:32px;height:32px;flex-basis:32px}}
+@media(prefers-reduced-motion:reduce){.maseAppFloat{transition:none}}
 @media(prefers-reduced-motion:reduce){.maseAppFloat{transition:none}}
