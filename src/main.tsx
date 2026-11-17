@@ -41,12 +41,14 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
   }
 }
 
+if (Capacitor.isNativePlatform()) document.documentElement.dataset.masenetNative = 'true';
+
 const root = document.getElementById('root');
 if (root) {
   createRoot(root).render(
     <StrictMode>
       <AppErrorBoundary><App /></AppErrorBoundary>
-      <PWAInstallPrompt />
+      {!Capacitor.isNativePlatform() && <PWAInstallPrompt />}
     </StrictMode>
   );
 }
