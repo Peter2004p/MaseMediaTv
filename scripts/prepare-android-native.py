@@ -213,6 +213,14 @@ plugin_path.write_text(plugin, encoding="utf-8")
 # Install the native VLC engine and a dedicated fullscreen playback activity.
 # This stays inside the Android wrapper; the public website and Telegram app
 # are not changed. The existing web player remains available as a fallback.
+# libVLC 3.7.7 declares Android API 36 as its minimum compile SDK.
+variables_gradle = Path("android/variables.gradle")
+if variables_gradle.exists():
+    variables_text = variables_gradle.read_text(encoding="utf-8")
+    variables_text = re.sub(r"(compileSdkVersion\\s*=\\s*)\\d+", r"\\g<1>36", variables_text)
+    variables_text = re.sub(r"(targetSdkVersion\\s*=\\s*)\\d+", r"\\g<1>36", variables_text)
+    variables_gradle.write_text(variables_text, encoding="utf-8")
+
 app_gradle = Path("android/app/build.gradle")
 gradle_text = app_gradle.read_text(encoding="utf-8")
 if "org.videolan.android:libvlc-all" not in gradle_text:
