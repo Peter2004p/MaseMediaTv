@@ -602,8 +602,9 @@ main_text = main_text.replace(
 )
 main_text = main_text.replace(
     'super.onCreate(savedInstanceState);',
-    'super.onCreate(savedInstanceState);\n        getBridge().getWebView().addJavascriptInterface(new MaseNativeVlcBridge(this, getBridge().getWebView()), "MaseNativeVLC");
-        getBridge().getWebView().addJavascriptInterface(new MaseNetUpdaterBridge(this), "MaseNetUpdater");'
+    """super.onCreate(savedInstanceState);
+        getBridge().getWebView().addJavascriptInterface(new MaseNativeVlcBridge(this, getBridge().getWebView()), "MaseNativeVLC");
+        getBridge().getWebView().addJavascriptInterface(new MaseNetUpdaterBridge(this), "MaseNetUpdater");"""
 )
 main_activity.write_text(main_text, encoding="utf-8")
 
