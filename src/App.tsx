@@ -3,7 +3,7 @@ import './welcome.css';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api, auth, image } from './cloudflare-client';
 import { Capacitor } from '@capacitor/core';
-import { nativeDownloads, type SavedVideo } from './native-downloads';
+import { Browser } from '@capacitor/browser';
 import { ProfileManager, WatchPartyPage } from './AccountFeatures';
 const Player = lazy(() => import('./MaseNetPlayerV3'));
 const PlayerLoading = () => <div role="status" aria-live="polite" style={{ minHeight: 180, display: "grid", placeItems: "center", borderRadius: 16, background: "#08090d", color: "#e8c77a", fontSize: 14 }}>Loading video player…</div>;
@@ -86,7 +86,7 @@ export default function App(){
  const welcomePages=[
   {eyebrow:'WELCOME TO THE MASENET ECOSYSTEM',title:'One entertainment world. Three ways to explore.',description:'Discover MaseNet on the website, inside the Telegram Mini App, and through the MaseNet Telegram bot — with a consistent experience across screens.',icon:'✦',tag:'WEBSITE · MINI APP · BOT'},
   {eyebrow:'THE MASENET LIBRARY',title:'Search movies and dramas with ease.',description:'Explore the catalogue, find a specific title or episode, and discover movies, C-dramas, K-dramas, anime and more from one organised library.',icon:'⌕',tag:'SMART SEARCH · MOVIES · DRAMAS'},
-  {eyebrow:'THE MASENET PLAYER',title:'A more complete way to watch.',description:'A mobile-friendly viewing experience with supported video formats, playback controls, available subtitle tracks, and download options.',icon:'▶',tag:'PLAYER · SUBTITLES · DOWNLOADS'},
+  {eyebrow:'THE MASENET PLAYER',title:'A more complete way to watch.',description:'A mobile-friendly viewing experience with supported video formats, playback controls, available subtitle tracks, and browser-based downloads.',icon:'▶',tag:'PLAYER · SUBTITLES · DOWNLOADS'},
   {eyebrow:'YOUR SUPER AI ASSISTANT',title:'Ask MaseNet AI what you want to watch.',description:'Chat with the website assistant for help finding titles and navigating MaseNet. The Telegram bot is designed to bring AI conversation and title search into Telegram too.',icon:'✧',tag:'WEBSITE AI · TELEGRAM BOT AI'},
   {eyebrow:'TELEGRAM MINI APP & BOT',title:'Take MaseNet with you inside Telegram.',description:'Open the Mini App to browse the entertainment experience, or chat with the bot to search for movie and drama names, ask questions, and get relevant Telegram results.',icon:'➤',tag:'OPEN MINI APP · CHAT · SEARCH'},
   {eyebrow:'MASENET AI MANAGER',title:'A connected experience, managed with care.',description:'Admin tools bring AI instructions and appearance controls together. The wider AI Manager vision is to connect library knowledge, bot behaviour, announcements and monitoring as those integrations are completed.',icon:'◈',tag:'AI CONTROLS · LIQUID GLASS · ONE ECOSYSTEM'}
@@ -304,7 +304,7 @@ export default function App(){
    
   </div>
  </main>
- const content=route==='#/watch-party'?<WatchPartyPage titles={titles} profileId={activeProfileId} displayName={viewer?.name||'MaseNet viewer'} go={go}/>:route==='#/history'?<HistoryPage titles={titles} progress={progress} completed={completed} setProgress={setProgress} setCompleted={setCompleted} go={go}/>:route==='#/downloads'?<DownloadsPage titles={titles} go={go}/>:route==='#/notifications'?<NotificationsPage items={notificationItems} readIds={readNotificationIds} setReadIds={updateNotificationReads} go={go}/>:route==='#/my-list'?<WatchlistPage titles={myList} setSaved={setSaved} go={go}/>:route.startsWith('#/title/')?(selected?(selected.episodes?.length?<Detail title={selected} go={go} profileId={activeProfileId} progress={progress} setProgress={setProgress} positions={positions} setPositions={setPositions} lastEpisodes={lastEpisodes} setLastEpisodes={setLastEpisodes} completed={completed} setCompleted={setCompleted} saved={saved} setSaved={setSaved}/>:<main className="page detail"><button className="back" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Library</button><section className="detailHero"><Poster title={selected}/><div><small className="eyebrow">{selected.type} · {selected.year}</small><h1>{selected.name}</h1><p>{selected.description||'No description has been added yet.'}</p><div className="chips"><span>{selected.quality}</span><span>{selected.type==='Drama'?'Drama library':'Movie library'}</span></div></div></section><section className="emptyState"><h2>No playable episodes yet</h2><p>This title is in your library, but it has no episode/video URL saved. An admin can add the episode links in the dashboard.</p></section></main>):<main className="page detail"><section className="emptyState"><h2>{titlesLoaded?'Title not found':'Loading video…'}</h2><p>{titlesLoaded?'This title could not be matched to the catalog. Return to the library and open it again.':'MaseNet is loading the title and its playback details.'}</p><button className="secondary" onClick={()=>go('#/home')}><ArrowLeft size={14}/> Back to library</button></section></main>):route==='#/youtube'?<YouTubeChannelPage go={go} viewer={viewer} activeProfileId={activeProfileId}/>:route==='#/admin' && !canAdmin?<Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} saved={saved} setSaved={setSaved} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} catalogError={catalogError} broadcasts={broadcasts} requestMissingTitle={requestMissingTitle}/>:(route==='#/admin-statistics'||route==='#/admin') && canAdmin?<Admin isOwner={isAdmin} restricted={isBulkAdmin} titles={titles} titlesLoaded={titlesLoaded} onCreate={createTitle} onUpdate={updateTitle} onDelete={deleteTitle} onEpisodeUpdate={updateEpisode} onEpisodeDelete={deleteEpisode} tab={isBulkAdmin?'bulkUrl':route==='#/admin-statistics'?'statistics':adminTab} setTab={setAdminTab} rows={homepageRows} setRows={setHomepageRows} saveRows={saveRows} broadcasts={broadcasts} setBroadcasts={setBroadcasts} heroSettings={heroSettings} setHeroSettings={setHeroSettings} telegramStatus={telegramStatus} setTelegramStatus={setTelegramStatus}/>:<><Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} saved={saved} setSaved={setSaved} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} broadcasts={broadcasts} catalogError={catalogError} requestMissingTitle={requestMissingTitle}/></>;
+ const content=route==='#/watch-party'?<WatchPartyPage titles={titles} profileId={activeProfileId} displayName={viewer?.name||'MaseNet viewer'} go={go}/>:route==='#/history'?<HistoryPage titles={titles} progress={progress} completed={completed} setProgress={setProgress} setCompleted={setCompleted} go={go}/>:route==='#/notifications'?<NotificationsPage items={notificationItems} readIds={readNotificationIds} setReadIds={updateNotificationReads} go={go}/>:route==='#/my-list'?<WatchlistPage titles={myList} setSaved={setSaved} go={go}/>:route.startsWith('#/title/')?(selected?(selected.episodes?.length?<Detail title={selected} go={go} profileId={activeProfileId} progress={progress} setProgress={setProgress} positions={positions} setPositions={setPositions} lastEpisodes={lastEpisodes} setLastEpisodes={setLastEpisodes} completed={completed} setCompleted={setCompleted} saved={saved} setSaved={setSaved}/>:<main className="page detail"><button className="back" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Library</button><section className="detailHero"><Poster title={selected}/><div><small className="eyebrow">{selected.type} · {selected.year}</small><h1>{selected.name}</h1><p>{selected.description||'No description has been added yet.'}</p><div className="chips"><span>{selected.quality}</span><span>{selected.type==='Drama'?'Drama library':'Movie library'}</span></div></div></section><section className="emptyState"><h2>No playable episodes yet</h2><p>This title is in your library, but it has no episode/video URL saved. An admin can add the episode links in the dashboard.</p></section></main>):<main className="page detail"><section className="emptyState"><h2>{titlesLoaded?'Title not found':'Loading video…'}</h2><p>{titlesLoaded?'This title could not be matched to the catalog. Return to the library and open it again.':'MaseNet is loading the title and its playback details.'}</p><button className="secondary" onClick={()=>go('#/home')}><ArrowLeft size={14}/> Back to library</button></section></main>):route==='#/youtube'?<YouTubeChannelPage go={go} viewer={viewer} activeProfileId={activeProfileId}/>:route==='#/admin' && !canAdmin?<Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} saved={saved} setSaved={setSaved} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} catalogError={catalogError} broadcasts={broadcasts} requestMissingTitle={requestMissingTitle}/>:(route==='#/admin-statistics'||route==='#/admin') && canAdmin?<Admin isOwner={isAdmin} restricted={isBulkAdmin} titles={titles} titlesLoaded={titlesLoaded} onCreate={createTitle} onUpdate={updateTitle} onDelete={deleteTitle} onEpisodeUpdate={updateEpisode} onEpisodeDelete={deleteEpisode} tab={isBulkAdmin?'bulkUrl':route==='#/admin-statistics'?'statistics':adminTab} setTab={setAdminTab} rows={homepageRows} setRows={setHomepageRows} saveRows={saveRows} broadcasts={broadcasts} setBroadcasts={setBroadcasts} heroSettings={heroSettings} setHeroSettings={setHeroSettings} telegramStatus={telegramStatus} setTelegramStatus={setTelegramStatus}/>:<><Home titles={filtered} all={titles} featured={featured} heroSettings={heroSettings} movies={movies} dramas={dramas} continueWatching={continueWatching} myList={myList} saved={saved} setSaved={setSaved} rows={homepageRows} go={go} query={query} setQuery={setQuery} searchOpen={searchOpen} experienceMode={experienceMode} broadcasts={broadcasts} catalogError={catalogError} requestMissingTitle={requestMissingTitle}/></>;
 
  return <div className={`app${inTelegramMiniApp?' telegram-mini-app':''} ios27-universal theme-${theme} experience-${experienceMode} motion-${motionProfile} density-${uiDensity} glass-${glassIntensity}${reduceMotion?' reduce-motion':''}${navAutoHidden?' nav-auto-hidden':''}${panel?' nav-overlay-open':''}`}>
   {inTelegramMiniApp&&telegramGate&&<div className="mnv2-overlay" role="dialog" aria-modal="true" aria-label="MaseNet Telegram verification">
@@ -639,91 +639,6 @@ function HistoryPage({titles,progress,completed,setProgress,setCompleted,go}:{ti
  </main>;
 }
 
-function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
- const [busyId,setBusyId]=useState('');
- const [progress,setProgress]=useState(0);
- const [message,setMessage]=useState('');
- const [saved,setSaved]=useState<SavedVideo[]>(()=>nativeDownloads.list());
- const [playing,setPlaying]=useState<SavedVideo|null>(null);
- const native=Capacitor.isNativePlatform()&&nativeDownloads.isAvailable();
- useEffect(()=>{if(native)void import('./MaseNetPlayerV3').catch(()=>{});},[native]);
- const items=useMemo(()=>titles.flatMap(title=>title.episodes.flatMap(episode=>{
-  const variants=episode.qualities?.length?episode.qualities:[{quality:episode.quality,streamUrl:episode.streamUrl,streamPath:episode.streamPath,downloadUrl:episode.downloadUrl,downloadPath:episode.downloadPath,mimeType:episode.mimeType}];
-  return variants.filter(v=>Boolean(v.downloadUrl||v.downloadPath||v.streamUrl||v.streamPath)).map((variant,index)=>({key:title.id+'-'+episode.id+'-'+variant.quality+'-'+index,title,episode,variant}));
- })),[titles]);
- const startDownload=async(item:typeof items[number])=>{
-  if(busyId)return;
-  setBusyId(item.key);setProgress(0);setMessage('');
-  try{
-   const streamUrl=String(item.variant.streamUrl||item.episode.streamUrl||'').trim();
-   // Download links can be stored either on a quality variant or on the
-   // episode itself. Preserve the episode-level fallback when qualities exist.
-   const downloadUrl=String(item.variant.downloadUrl||item.episode.downloadUrl||'').trim();
-   const downloadPath=String(item.variant.downloadPath||item.episode.downloadPath||'').trim();
-   const streamPath=String(item.variant.streamPath||item.episode.streamPath||'').trim();
-
-   // Prefer a dedicated download URL/path over the playback stream. A provider
-   // may expose MP4 downloads separately from an MKV or HLS playback URL.
-   let sourceUrl=downloadUrl;
-   if(!sourceUrl&&downloadPath){
-    const response=await api.get('/api/media/url',{path:downloadPath});
-    sourceUrl=String(response.data?.url||'');
-   }
-   if(!sourceUrl)sourceUrl=streamUrl;
-   if(!sourceUrl&&streamPath){
-    const response=await api.get('/api/media/url',{path:streamPath});
-    sourceUrl=String(response.data?.url||'');
-   }
-   if(!/^https:\/\//i.test(sourceUrl))throw new Error('MaseNet could not get a secure video link for this episode. Ask the admin to refresh its streaming URL.');
-
-   let mimeType=String(item.variant.mimeType||item.episode.mimeType||'');
-   let kind='';
-   // Probe the actual URL we intend to save, not the separate playback URL.
-   // This is important when a MKV/HLS stream has an MP4 download counterpart.
-   try{
-    const probe=await api.get('/api/media/proxy',{episodeId:item.episode.id,source:sourceUrl,probe:'1'});
-    kind=String(probe.data?.kind||'').toLowerCase();
-    if(probe.data?.contentType) mimeType=String(probe.data.contentType);
-   }catch{
-    // A direct file URL can still be downloaded when the optional probe fails.
-   }
-   const isHls=kind==='hls'||/\.m3u8(?:$|[?#])/i.test(sourceUrl)||/mpegurl/i.test(mimeType);
-   if(isHls){
-    if(!streamUrl&&!downloadUrl)throw new Error('MaseNet needs a valid streaming URL to save this HLS video offline.');
-    sourceUrl=downloadUrl||streamUrl;
-    mimeType='application/vnd.apple.mpegurl';
-   }
-   const result=await nativeDownloads.save({
-    url:sourceUrl,title:item.title.name,titleType:item.title.type,episodeTitle:item.episode.title||'Episode',
-    season:Number(item.episode.season||1),episode:Number(item.episode.episode||1),quality:item.variant.quality,
-    mimeType,episodeId:item.episode.id,
-    onProgress:setProgress
-   });
-   setSaved(nativeDownloads.list());
-   setMessage(result.title+' was saved on this phone and is ready for offline playback.');
-  }catch(error){
-   setMessage(error instanceof Error?error.message:'Could not save this video. Check the source and try again.');
-  }finally{setBusyId('');setProgress(0)}
- };
- const remove=async(item:SavedVideo)=>{
-  try{await nativeDownloads.remove(item.id);setSaved(nativeDownloads.list());if(playing?.id===item.id)setPlaying(null);setMessage('Download deleted from this phone.')}
-  catch(error){setMessage(error instanceof Error?error.message:'Could not delete this download.')}
- };
- const bytes=(value:number)=>value<1024*1024?(value/1024).toFixed(0)+' KB':(value/1024/1024).toFixed(1)+' MB';
- if(!native)return <main className="page maseUtilityPage"><header className="maseUtilityHead"><div><span className="iqKicker">MASENET ANDROID APP</span><h1>Offline Downloads</h1><p>Offline video downloads are available only in the installed MaseNet Android app.</p></div></header><section className="emptyState"><Download size={34}/><h2>Open the Android app</h2><p>This feature is intentionally unavailable on the website and Telegram Mini App.</p></section><button className="secondary maseBackButton" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Back to MaseNet</button></main>;
- return <main className="page maseUtilityPage">
-  <header className="maseUtilityHead"><div><span className="iqKicker">ON THIS PHONE · OFFLINE READY</span><h1>My Downloads</h1><p>Videos are stored in MaseNet's private app storage. They do not use MaseNet server storage.</p></div><span className="maseUtilityCount">{saved.length} saved</span></header>
-  {message&&<p className="downloadFeedback" role="status">{message}</p>}
-  {playing&&<section className="offlinePlayerPanel"><div className="adminSectionHead"><div><b>Playing offline</b><small>{playing.title} · {playing.quality}</small></div><button className="secondary" onClick={()=>setPlaying(null)}>Close player</button></div><Player episode={{id:playing.id,title:playing.title+' · '+playing.episodeTitle,quality:playing.quality as Quality,streamUrl:nativeDownloads.playableUrl(playing),mimeType:playing.mimeType}} autoPlay/></section>}
-  <section className="downloadInfo"><Download size={19}/><span><b>Downloads stay on this device</b><small>They remain available after closing MaseNet. Deleting a download frees the phone storage it used. Keep enough free space before starting a large video.</small></span></section>
-  <section className="adminSectionHead"><div><h2>Saved videos</h2><p>Tap Play to watch without an internet connection.</p></div></section>
-  {saved.length?<section className="maseDownloadList">{saved.map(item=><article className="maseDownloadItem" key={item.id}><div className="maseDownloadPoster"><div className="poster smallPoster"><b>▶</b><small>OFFLINE</small></div></div><div className="maseDownloadCopy"><b>{item.title}</b><small>{item.titleType==='Drama'?'Season '+item.season+' · Episode '+item.episode+' · ':''}{item.episodeTitle} · {item.quality}</small><span>{bytes(item.size)} · Saved {new Date(item.savedAt).toLocaleDateString()}</span></div><div className="maseDownloadActions"><button className="primary" onClick={()=>setPlaying(item)}><Play size={14}/> Play</button><button className="secondary danger" onClick={()=>void remove(item)}><Trash2 size={14}/> Delete</button></div></article>)}</section>:<section className="emptyState"><Download size={34}/><h2>No videos saved yet</h2><p>Choose a direct video file or a completed HLS VOD stream. Live HLS playlists and some advanced encrypted or byte-range layouts may not be downloadable.</p></section>}
-  <section className="adminSectionHead" style={{marginTop:26}}><div><h2>Available videos</h2><p>Direct MP4, M4V, WebM, MOV and MKV files, plus supported completed HLS VOD streams, can be saved on this phone.</p></div><span className="maseUtilityCount">{items.length} sources</span></section>
-  {items.length?<section className="maseDownloadList">{items.map(item=><article className="maseDownloadItem" key={item.key}><button className="maseDownloadPoster" onClick={()=>go('#/title/'+encodeURIComponent(item.title.id))}><Poster title={item.title} small/></button><div className="maseDownloadCopy"><b>{item.title.name}</b><small>{item.title.type==='Drama'?'Season '+item.episode.season+' · Episode '+item.episode.episode+' · ':''}{item.episode.title} · {item.variant.quality}</small><span>Save to this phone</span></div><button className="primary maseDownloadAction" disabled={Boolean(busyId)} onClick={()=>void startDownload(item)}>{busyId===item.key?'Downloading '+progress+'%':<><Download size={15}/> Download</>}</button></article>)}</section>:null}
-  <button className="secondary maseBackButton" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Back to MaseNet</button>
-  <style>{".downloadInfo{display:flex;gap:13px;align-items:flex-start;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.045);margin:18px 0 22px}.downloadInfo>svg{flex:none;color:#62e9ad}.downloadInfo span,.maseDownloadCopy{display:flex;flex-direction:column;gap:5px;min-width:0}.downloadInfo small,.maseDownloadCopy small{color:var(--muted,#aab0c0);line-height:1.5}.maseDownloadList{display:grid;gap:10px}.maseDownloadItem{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:13px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}.maseDownloadPoster{width:62px;height:82px;overflow:hidden;border:0;border-radius:9px;background:transparent;padding:0}.maseDownloadPoster .poster{width:100%;height:100%}.maseDownloadCopy>b{overflow-wrap:anywhere}.maseDownloadCopy>span{font-size:10px;color:#70e9b2}.maseDownloadAction{white-space:nowrap}.maseDownloadActions{display:flex;gap:6px;flex-wrap:wrap}.offlinePlayerPanel{margin:18px 0;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.04)}@media(max-width:560px){.maseDownloadItem{grid-template-columns:52px minmax(0,1fr);gap:10px}.maseDownloadPoster{width:52px;height:72px}.maseDownloadAction,.maseDownloadActions{grid-column:2;justify-self:start}.maseDownloadCopy small{font-size:10px}}"}</style>
- </main>;
-}
 
 function WatchlistPage({titles,setSaved,go}:{titles:Title[];setSaved:(ids:string[])=>void;go:(r:string)=>void}){
  return <main className="page maseUtilityPage"><header className="maseUtilityHead"><div><span className="iqKicker">YOUR PERSONAL LIBRARY</span><h1>My Watchlist</h1><p>Saved movies and dramas, available on this device.</p></div><span className="maseUtilityCount">{titles.length} saved</span></header>{titles.length?<section className="maseWatchlistGrid">{titles.map(title=><article className="maseWatchlistCard" key={title.id}><button className="maseWatchlistPoster" onClick={()=>go('#/title/'+encodeURIComponent(title.id))} aria-label={'Open '+title.name}><Poster title={title}/></button><div className="maseWatchlistCopy"><b>{title.name}</b><small>{title.type} · {title.year||'Year unavailable'} · {title.episodes.length} {title.episodes.length===1?'entry':'episodes'}</small><div><button className="primary" onClick={()=>go('#/title/'+encodeURIComponent(title.id))}><Play size={14}/> Open</button><button className="secondary" onClick={()=>setSaved(titles.filter(t=>t.id!==title.id).map(t=>t.id))}>Remove</button></div></div></article>)}</section>:<section className="emptyState"><div style={{fontSize:30}}>🔖</div><h2>Your watchlist is empty</h2><p>Save a movie or drama with the My List button and it will appear here.</p><button className="primary" onClick={()=>go('#/home')}>Explore library</button></section>}<button className="secondary" onClick={()=>go('#/history')}>View watch history</button><button className="secondary maseBackButton" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Back to MaseNet</button></main>;
@@ -986,22 +901,33 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
   setDownloadBusy(true);setDownloadMessage('');
   try{
    let url=String(episode.downloadUrl||'').trim();
-   const path=String(episode.downloadPath||'').trim();
-   if(!url&&path){const response=await api.get('/api/media/url',{path});url=String(response.data?.url||'');}
-   if(!url)url=String(episode.streamUrl||'').trim();
-   if(!url&&episode.streamPath){const response=await api.get('/api/media/url',{path:episode.streamPath});url=String(response.data?.url||'');}
-   if(!/^https:\/\//i.test(url))throw new Error('No valid download link is available for this episode. Ask the admin to refresh its source.');
-   if(Capacitor.isNativePlatform()&&nativeDownloads.isAvailable()){
-    let mimeType=String(episode.mimeType||'');
-    try{const probe=await api.get('/api/media/proxy',{episodeId:episode.id,source:url,probe:'1'});mimeType=String(probe.data?.contentType||mimeType)}catch{}
-    await nativeDownloads.save({url,title:title.name,titleType:title.type,episodeTitle:episode.title||'Episode',season:Number(episode.season||1),episode:Number(episode.episode||1),quality:episode.quality,mimeType,episodeId:episode.id});
-    setDownloadMessage('Download saved on this phone. Open My Downloads to play it offline.');
-   }else{
-    window.open(url,'_blank','noopener,noreferrer');
-    setDownloadMessage('Opened the download link in your browser.');
+   const downloadPath=String(episode.downloadPath||'').trim();
+   if(!url&&downloadPath){
+    const response=await api.get('/api/media/url',{path:downloadPath});
+    url=String(response.data?.url||'');
    }
-  }catch(error){setDownloadMessage(error instanceof Error?error.message:'Could not start this download.')}
-  finally{setDownloadBusy(false)}
+   if(!url)url=String(episode.streamUrl||'').trim();
+   if(!url&&episode.streamPath){
+    const response=await api.get('/api/media/url',{path:episode.streamPath});
+    url=String(response.data?.url||'');
+   }
+   if(!/^https:\/\//i.test(url))throw new Error('No direct download link is available for this episode. Ask the admin to add or refresh its download URL.');
+   if(Capacitor.isNativePlatform()){
+    // Match the Google sign-in flow: open the provider URL in an Android
+    // browser Custom Tab. The browser owns the download and saves it to the
+    // device's normal Downloads location; closing the tab returns to MaseNet.
+    await Browser.open({url,presentationStyle:'popover'});
+    setDownloadMessage('The browser opened your download link. Let the download start, then close the browser to return to MaseNet.');
+   }else{
+    // On the website, navigate to the actual provider URL. Browser Back returns
+    // the visitor to the title page after the browser handles the file.
+    window.location.assign(url);
+   }
+  }catch(error){
+   setDownloadMessage(error instanceof Error?error.message:'Could not open this download in your browser.');
+  }finally{
+   setDownloadBusy(false);
+  }
  };
  const next=title.episodes.find(e=>e.season>episode.season||(e.season===episode.season&&e.episode>episode.episode));
  nextEpisodeRef.current=next||null;
