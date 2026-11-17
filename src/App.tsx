@@ -915,7 +915,8 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
    }
    if(!/^https:\/\//i.test(url))throw new Error('No direct download link is available for this episode. Ask the admin to add or refresh its download URL.');
    const mimeType=String(qualityVariant?.mimeType||episode.mimeType||'').toLowerCase();
-   if(/\.m3u8(?:$|[?#])/i.test(url)||/mpegurl/i.test(mimeType)){
+   const hasDedicatedDownload=Boolean(qualityVariant?.downloadUrl||episode.downloadUrl||downloadPath);
+   if(/\.m3u8(?:$|[?#])/i.test(url)||(!hasDedicatedDownload&&/mpegurl/i.test(mimeType))){
     throw new Error('This episode only has an HLS streaming playlist. Add a direct MP4, MKV, or other video-file download URL to enable browser downloading.');
    }
    let browserUrl=url;
