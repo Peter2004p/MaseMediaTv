@@ -68,6 +68,13 @@ public class MaseDownloadManagerPlugin extends Plugin {
             request.setTitle(filename);
             request.setDescription("Saving video for offline playback in MaseNet");
             request.setMimeType(mime);
+            // Browser downloads often succeed because the request carries the
+            // site's Referer, WebView User-Agent and any provider session cookies.
+            // Android DownloadManager is a separate client, so copy those headers.
+            request.addRequestHeader("Referer", "https://masetv-cloudflare-migration.pages.dev/");
+            request.addRequestHeader("User-Agent", android.webkit.WebSettings.getDefaultUserAgent(getContext()));
+            String cookies = android.webkit.CookieManager.getInstance().getCookie(url);
+            if (cookies != null && !cookies.isEmpty()) request.addRequestHeader("Cookie", cookies);
             request.setAllowedOverMetered(true);
             request.setAllowedOverRoaming(false);
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
