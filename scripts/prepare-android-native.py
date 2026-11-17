@@ -137,9 +137,21 @@ public class MaseExternalBrowserPlugin extends Plugin {
                 if (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme)) return;
                 getActivity().runOnUiThread(() -> {
                     try {
+                        android.app.Activity activity = getActivity();
                         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                         intent.addCategory(Intent.CATEGORY_BROWSABLE);
-                        getActivity().startActivity(intent);
+                        activity.startActivity(intent);
+                        // Let the browser receive the attachment request, then bring the
+                        // existing MaseNet activity back to the foreground. Chrome's
+                        // Download Manager continues the file transfer in the background.
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                            try {
+                                Intent returnToApp = new Intent(activity, activity.getClass());
+                                returnToApp.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                activity.startActivity(returnToApp);
+                                Toast.makeText(activity, "Download opened in your browser. Continue using MaseNet.", Toast.LENGTH_SHORT).show();
+                            } catch (Exception ignored) {}
+                        }, 1200);
                     } catch (ActivityNotFoundException error) {
                         Toast.makeText(getActivity(), "No browser app is available to open this download.", Toast.LENGTH_LONG).show();
                     }
