@@ -3,7 +3,7 @@ import './welcome.css';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api, auth, image } from './cloudflare-client';
 import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
+import { AppLauncher } from '@capacitor/app-launcher';
 import { ProfileManager, WatchPartyPage } from './AccountFeatures';
 const Player = lazy(() => import('./MaseNetPlayerV3'));
 const PlayerLoading = () => <div role="status" aria-live="polite" style={{ minHeight: 180, display: "grid", placeItems: "center", borderRadius: 16, background: "#08090d", color: "#e8c77a", fontSize: 14 }}>Loading video player…</div>;
@@ -940,8 +940,9 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
    if(Capacitor.isNativePlatform()){
     // Match the Google sign-in flow: open the provider/download response in
     // an Android browser Custom Tab. Closing the browser returns to MaseNet.
-    await Browser.open({url:browserUrl,presentationStyle:'popover'});
-    setDownloadMessage('Your browser opened the video download. Check the browser download notification, then close the browser to return to MaseNet.');
+    const opened=await AppLauncher.openUrl({url:browserUrl});
+    if(!opened.completed)throw new Error('Android could not open the download in your browser. Check that a browser is installed.');
+    setDownloadMessage('Your browser opened the video download. When the download starts or finishes, use Android Back or switch back to MaseNet to continue.');
    }else{
     window.location.assign(browserUrl);
    }
