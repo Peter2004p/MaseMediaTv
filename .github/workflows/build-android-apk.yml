@@ -62,7 +62,11 @@ jobs:
           node --input-type=module <<'NODE'
           import sharp from 'sharp';
           await sharp('public/masenet-app-icon.svg')
-            .resize(1024, 1024, { fit: 'contain', background: '#05050b' })
+            // Flatten transparent corner pixels before generating Android's
+            // adaptive launcher layers. A transparent source was being
+            // rendered against the launcher default and appeared white/blank.
+            .flatten({ background: '#0b0821' })
+            .resize(1024, 1024, { fit: 'contain', background: '#0b0821' })
             .png()
             .toFile('assets/icon.png');
           NODE
