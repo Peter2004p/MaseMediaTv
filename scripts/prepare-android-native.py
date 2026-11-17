@@ -284,7 +284,7 @@ if "abiFilters 'arm64-v8a', 'armeabi-v7a'" not in gradle_text:
 # Increase the Android package version for the first in-app update release.
 # Future releases must increment versionCode monotonically.
 gradle_text = app_gradle.read_text(encoding="utf-8")
-match = re.search(r"\\bdefaultConfig\\s*\\{", gradle_text)
+match = re.search(r"\bdefaultConfig\s*\{", gradle_text)
 if not match:
     raise SystemExit("Could not find defaultConfig to set app version.")
 open_brace = gradle_text.find("{", match.start())
@@ -301,12 +301,12 @@ for index in range(open_brace, len(gradle_text)):
 if close_brace < 0:
     raise SystemExit("Android defaultConfig block is not balanced.")
 config = gradle_text[open_brace + 1:close_brace]
-config = re.sub(r"versionCode\\s+\\d+", "versionCode 2", config)
-config = re.sub(r'versionName\\s+"[^"]+"', 'versionName "1.0.1"', config)
+config = re.sub(r"versionCode\s+\d+", "versionCode 2", config)
+config = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.0.1"', config)
 if "versionCode" not in config:
-    config += "\\n        versionCode 2"
+    config += "\n        versionCode 2"
 if "versionName" not in config:
-    config += '\\n        versionName "1.0.1"'
+    config += '\n        versionName "1.0.1"'
 gradle_text = gradle_text[:open_brace + 1] + config + gradle_text[close_brace:]
 app_gradle.write_text(gradle_text, encoding="utf-8")
 
