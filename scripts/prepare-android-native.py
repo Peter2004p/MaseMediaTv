@@ -58,6 +58,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
+import android.webkit.DownloadListener;
 import android.widget.Toast;
 
 import com.getcapacitor.Plugin;
@@ -108,11 +109,20 @@ public class MaseExternalBrowserPlugin extends Plugin {
     public void load() {
         // Remove private in-app video files left by the retired offline library.
         new Thread(() -> deleteDirectory(new java.io.File(getContext().getFilesDir(), "masenet-downloads")), "MaseNetOfflineCleanup").start();
+        WebView webView = getBridge().getWebView();
         getBridge().getWebView().addJavascriptInterface(new ExternalBrowserBridge(), "MaseNetExternalBrowser");
+        // Android WebView does not download attachment responses by itself. Hand
+        // every website-initiated file download to the user's normal browser.
+        webView.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
+                openInBrowser(url);
+            }
+        });
         getBridge().addWebViewListener(new WebViewListener() {
             @Override
-            public void onPageLoaded(WebView webView) {
-                webView.evaluateJavascript(PATCH_SCRIPT, null);
+            public void onPageLoaded(WebView loadedWebView) {
+                loadedWebView.evaluateJavascript(PATCH_SCRIPT, null);
             }
         });
     }
@@ -128,37 +138,41 @@ public class MaseExternalBrowserPlugin extends Plugin {
         file.delete();
     }
 
+    private void openInBrowser(String rawUrl) {
+        try {
+            Uri uri = Uri.parse(rawUrl);
+            String scheme = uri.getScheme();
+            if (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme)) return;
+            android.app.Activity activity = getActivity();
+            if (activity == null) return;
+            activity.runOnUiThread(() -> {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                    activity.startActivity(intent);
+                    // Give Chrome time to accept the attachment before returning
+                    // the user to the still-running MaseNet activity.
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        try {
+                            Intent returnToApp = new Intent(activity, activity.getClass());
+                            returnToApp.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            activity.startActivity(returnToApp);
+                            Toast.makeText(activity, "Download handed to your browser. Continue using MaseNet.", Toast.LENGTH_SHORT).show();
+                        } catch (Exception ignored) {}
+                    }, 2200);
+                } catch (ActivityNotFoundException error) {
+                    Toast.makeText(activity, "No browser app is available to open this download.", Toast.LENGTH_LONG).show();
+                }
+            });
+        } catch (Exception ignored) {
+            // Ignore malformed or non-web URLs.
+        }
+    }
+
     public final class ExternalBrowserBridge {
         @JavascriptInterface
         public void open(String rawUrl) {
-            try {
-                Uri uri = Uri.parse(rawUrl);
-                String scheme = uri.getScheme();
-                if (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme)) return;
-                getActivity().runOnUiThread(() -> {
-                    try {
-                        android.app.Activity activity = getActivity();
-                        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                        intent.addCategory(Intent.CATEGORY_BROWSABLE);
-                        activity.startActivity(intent);
-                        // Let the browser receive the attachment request, then bring the
-                        // existing MaseNet activity back to the foreground. Chrome's
-                        // Download Manager continues the file transfer in the background.
-                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                            try {
-                                Intent returnToApp = new Intent(activity, activity.getClass());
-                                returnToApp.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                                activity.startActivity(returnToApp);
-                                Toast.makeText(activity, "Download opened in your browser. Continue using MaseNet.", Toast.LENGTH_SHORT).show();
-                            } catch (Exception ignored) {}
-                        }, 1200);
-                    } catch (ActivityNotFoundException error) {
-                        Toast.makeText(getActivity(), "No browser app is available to open this download.", Toast.LENGTH_LONG).show();
-                    }
-                });
-            } catch (Exception ignored) {
-                // Ignore malformed or non-web URLs.
-            }
+            openInBrowser(rawUrl);
         }
     }
 }
