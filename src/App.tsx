@@ -919,32 +919,23 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
    if(/\.m3u8(?:$|[?#])/i.test(url)||(!hasDedicatedDownload&&/mpegurl/i.test(mimeType))){
     throw new Error('This episode only has an HLS streaming playlist. Add a direct MP4, MKV, or other video-file download URL to enable browser downloading.');
    }
-   let browserUrl=url;
-   // The existing MaseNet media proxy can stream a known video file to the
-   // browser with Content-Disposition: attachment. It does not save the file
-   // on MaseNet; Android's browser writes it to the user's Downloads folder.
-   // For a separate download URL, use the proxy only when it shares the
-   // episode's stored streaming host (the proxy validates that relationship).
-   try{
-    const target=new URL(url);
-    const stream=streamUrl?new URL(streamUrl):null;
-    const isVideoFile=/\.(mkv|mp4|m4v|webm|mov)$/i.test(target.pathname);
-    if(stream&&isVideoFile&&target.protocol==='https:'&&stream.protocol==='https:'&&target.hostname===stream.hostname){
-     const proxy=new URL('/api/media/proxy',window.location.origin);
-     proxy.searchParams.set('episodeId',episode.id);
-     proxy.searchParams.set('source',streamUrl);
-     if(url!==streamUrl)proxy.searchParams.set('resource',url);
-     proxy.searchParams.set('download','1');
-     browserUrl=proxy.toString();
-    }
-   }catch{}
+   // Always send the user to MaseNet's own website download endpoint.
+   // The website streams the stored download URL as an attachment; Android's
+   // external browser saves it into the phone's normal Downloads folder.
+   if(!streamUrl)throw new Error('This episode has no registered MaseNet stream source. Please ask the admin to refresh its video link.');
+   const proxy=new URL('/api/media/proxy',window.location.origin);
+   proxy.searchParams.set('episodeId',episode.id);
+   proxy.searchParams.set('source',streamUrl);
+   if(url!==streamUrl)proxy.searchParams.set('resource',url);
+   proxy.searchParams.set('download','1');
+   const browserUrl=proxy.toString();
    if(Capacitor.isNativePlatform()){
     // Launch the device's default external browser. The app stays installed
     // underneath; users return with Android Back or the app switcher.
     const nativeBrowser=(window as any).MaseNetExternalBrowser;
     if(typeof nativeBrowser?.open==='function')nativeBrowser.open(browserUrl);
     else window.open(browserUrl,'_blank','noopener,noreferrer');
-    setDownloadMessage('Your device browser opened the video download. When it finishes, use Android Back or switch back to MaseNet to continue.');
+    setDownloadMessage('MaseNet website opened the download. Your browser saves the file to the phone; return to MaseNet whenever you are ready.');
    }else{
     window.location.assign(browserUrl);
    }
