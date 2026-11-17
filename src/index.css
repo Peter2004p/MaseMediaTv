@@ -3037,7 +3037,8 @@ html.masenet-low-performance .app .ttEpisodesDrawer{backdrop-filter:none;-webkit
 .profilePro .profileProSignOut svg{opacity:1}
 .profilePro button:focus-visible,.profilePro a:focus-visible{outline:2px solid #79f2b3;outline-offset:3px}
 @media(max-width:520px){
- .side:has(.profilePro){width:min(446px,calc(100% - 16px));max-height:calc(100dvh - 16px);margin:8px auto 0;padding:15px;border-radius:22px}
+ /* Android edge-to-edge WebView: keep profile below the OS status bar. */
+ .side:has(.profilePro){width:min(446px,calc(100% - 16px));max-height:calc(100dvh - max(54px,calc(env(safe-area-inset-top,0px) + 18px)) - env(safe-area-inset-bottom,0px));margin:max(42px,calc(env(safe-area-inset-top,0px) + 8px)) auto 0;padding:15px;border-radius:22px}
  .side:has(.profilePro) .sideHead{top:-15px;margin:-15px -15px 0;padding:15px 15px 12px}
  .profilePro{padding-top:16px}
  .profileProIdentity{padding-bottom:18px}
