@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { FileTransfer } from '@capacitor/file-transfer';
 
@@ -7,6 +7,16 @@ export type SavedVideo = {
   season: number; episode: number; quality: string; path: string;
   uri: string; size: number; savedAt: number; mimeType: string;
 };
+
+type AndroidDownloadStatus = { status: 'running'|'paused'|'completed'|'failed'; reason?: number; downloadedBytes: number; totalBytes: number; uri?: string|null };
+type AndroidDownloadBridge = {
+  enqueue(options: { url: string; filename: string; mimeType: string }): Promise<{ downloadId: number }>;
+  status(options: { downloadId: number }): Promise<AndroidDownloadStatus>;
+  remove(options: { downloadId: number }): Promise<void>;
+};
+const AndroidDownloadManager = registerPlugin<AndroidDownloadBridge>('MaseDownloadManager');
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 const STORAGE_KEY = 'masenet-native-video-downloads-v1';
 const read = (): SavedVideo[] => {
   try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(value) ? value : []; }
@@ -211,34 +221,64 @@ export const nativeDownloads = {
     const id = safe(input.title) + '-' + safe(String(input.season || 0) + '-' + String(input.episode || 0)) + '-' + safe(input.quality) + '-' + Date.now();
     const path = 'masenet-downloads/' + id + '.' + extension;
     await Filesystem.mkdir({ directory: Directory.Data, path: 'masenet-downloads', recursive: true });
-    const target = await Filesystem.getUri({ directory: Directory.Data, path });
-    const listener = await FileTransfer.addListener('progress', event => {
-      if (event.url !== url || !event.contentLength) return;
-      input.onProgress?.(Math.max(0, Math.min(99, Math.round(event.bytes / event.contentLength * 100))));
-    });
+    const mimeType = input.mimeType || (extension === 'webm' ? 'video/webm' : extension === 'mkv' ? 'video/x-matroska' : extension === 'mov' ? 'video/quicktime' : 'video/mp4');
+    // Prefer Android DownloadManager for normal video files. It downloads outside
+    // the WebView, follows redirects, survives app minimization and shows the
+    // familiar Android download notification. FileTransfer remains a fallback.
     try {
-      await FileTransfer.downloadFile({ url, path: target.uri, progress: true });
-      const stat = await Filesystem.stat({ directory: Directory.Data, path });
-      const uri = (await Filesystem.getUri({ directory: Directory.Data, path })).uri;
+      const task = await AndroidDownloadManager.enqueue({ url, filename: id + '.' + extension, mimeType });
+      let finalStatus: AndroidDownloadStatus | null = null;
+      for (let attempt = 0; attempt < 1800; attempt++) {
+        const status = await AndroidDownloadManager.status({ downloadId: task.downloadId });
+        input.onProgress?.(status.totalBytes > 0 ? Math.min(99, Math.floor(status.downloadedBytes / status.totalBytes * 100)) : 0);
+        if (status.status === 'completed') { finalStatus = status; break; }
+        if (status.status === 'failed') {
+          throw new Error('Android could not download this video (download error ' + String(status.reason || 'unknown') + '). The host may block downloads or require a browser session.');
+        }
+        await wait(1000);
+      }
+      if (!finalStatus?.uri) {
+        await AndroidDownloadManager.remove({ downloadId: task.downloadId });
+        throw new Error('The Android download took too long and was stopped. Try a smaller quality or a different source.');
+      }
       const item: SavedVideo = {
         id, title: input.title, titleType: input.titleType, episodeTitle: input.episodeTitle,
         season: input.season, episode: input.episode, quality: input.quality,
-        path, uri, size: Number(stat.size || 0), savedAt: Date.now(), mimeType: input.mimeType || (extension === 'webm' ? 'video/webm' : extension === 'mkv' ? 'video/x-matroska' : extension === 'mov' ? 'video/quicktime' : 'video/mp4')
+        path: 'android-dm:' + task.downloadId, uri: finalStatus.uri,
+        size: Number(finalStatus.totalBytes || finalStatus.downloadedBytes || 0),
+        savedAt: Date.now(), mimeType
       };
       write([item, ...read().filter(existing => existing.id !== id)]);
       input.onProgress?.(100);
       return item;
-    } catch (error) {
-      try { await Filesystem.deleteFile({ directory: Directory.Data, path }); } catch {}
-      throw error;
-    } finally {
-      await listener.remove();
+    } catch (nativeError) {
+      // A failed DownloadManager request gets one in-app native FileTransfer retry.
+      const target = await Filesystem.getUri({ directory: Directory.Data, path });
+      try {
+        await FileTransfer.downloadFile({ url, path: target.uri, progress: true });
+        const stat = await Filesystem.stat({ directory: Directory.Data, path });
+        const uri = (await Filesystem.getUri({ directory: Directory.Data, path })).uri;
+        const item: SavedVideo = {
+          id, title: input.title, titleType: input.titleType, episodeTitle: input.episodeTitle,
+          season: input.season, episode: input.episode, quality: input.quality,
+          path, uri, size: Number(stat.size || 0), savedAt: Date.now(), mimeType
+        };
+        write([item, ...read().filter(existing => existing.id !== id)]);
+        input.onProgress?.(100);
+        return item;
+      } catch (fallbackError) {
+        try { await Filesystem.deleteFile({ directory: Directory.Data, path }); } catch {}
+        throw new Error(nativeError instanceof Error ? nativeError.message : (fallbackError instanceof Error ? fallbackError.message : 'Android could not save this video.'));
+      }
     }
   },
   async remove(id: string) {
     const item = read().find(entry => entry.id === id);
     if (!item) return;
-    if (item.mimeType === 'application/vnd.apple.mpegurl') {
+    if (item.path.startsWith('android-dm:')) {
+      const downloadId = Number(item.path.slice('android-dm:'.length));
+      if (Number.isFinite(downloadId)) await AndroidDownloadManager.remove({ downloadId });
+    } else if (item.mimeType === 'application/vnd.apple.mpegurl') {
       await Filesystem.rmdir({ directory: Directory.Data, path: item.path.slice(0, item.path.lastIndexOf('/')), recursive: true });
     } else {
       await Filesystem.deleteFile({ directory: Directory.Data, path: item.path });
