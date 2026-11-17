@@ -6,6 +6,38 @@ type Episode = { title?: string; season?: number | string; episode?: number | st
 type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; year?: number | string; description?: string; episodes?: Episode[] };
 
 const normalize = (value: unknown) => String(value ?? "").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+// Parse metadata from a forwarded, short-lived external Streamlink. The URL is
+// retained for admin reference only; it is not treated as a permanent catalogue URL.
+const parseForwardedStreamLink = (raw: string) => {
+  let parsed: URL;
+  try { parsed = new URL(raw); } catch { return null; }
+  if (parsed.protocol !== "https:") return null;
+  let filename = parsed.pathname.split("/").pop() || "";
+  try { filename = decodeURIComponent(filename); } catch { return null; }
+  filename = filename.replace(/\+/g, " ").trim();
+  if (!/\.(?:mkv|mp4|m4v|webm|m3u8|mpd)$/i.test(filename)) return null;
+  const se = filename.match(/\bS(\d{1,2})E(\d{1,3})\b/i);
+  if (!se) return null;
+  const markerIndex = se.index ?? -1;
+  const before = filename.slice(0, markerIndex).replace(/^.*?[-_]/, "").replace(/^[\s@._-]+|[\s._-]+$/g, "");
+  const after = filename.slice(markerIndex + se[0].length).replace(/^[\s@._-]+|[\s._-]+$/g, "");
+  const titleSource = after || before;
+  const year = filename.match(/\b(19\d{2}|20\d{2})\b/)?.[1] || "";
+  const quality = filename.match(/\b(2160p|1440p|1080p|720p|576p|480p|360p)\b/i)?.[1]?.toLowerCase() || "Unknown";
+  const codec = filename.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1]?.toLowerCase() || "Unknown";
+  const title = titleSource
+    .replace(/\b(19\d{2}|20\d{2})\b/g, " ")
+    .replace(/\b(2160p|1440p|1080p|720p|576p|480p|360p|x265|h265|hevc|x264|h264|av1)\b/ig, " ")
+    .replace(/\.(?:mkv|mp4|m4v|webm|m3u8|mpd)$/i, "")
+    .replace(/[+_.-]+/g, " ").replace(/\s+/g, " ").trim();
+  return {
+    url: raw, filename, title: title || "Unknown title",
+    season: Number(se[1]), episode: Number(se[2]), year,
+    quality, codec, format: filename.split(".").pop()?.toLowerCase() || "unknown",
+    host: parsed.hostname
+  };
+};
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
   new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(label + " timed out after " + ms + "ms")), ms);
@@ -150,13 +182,42 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         saved_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`).run();
       const savedId = String(chatId) + ":" + String(forwarded.message_id || Date.now());
+      const streamLink = urls.map(parseForwardedStreamLink).find(Boolean) || null;
+      // Short-lived generated stream URLs stay out of the general searchable owner
+      // reference library, where they could otherwise be shown to ordinary users.
+      const publicReferenceText = streamLink
+        ? savedText.replace(/https?:\/\/[^\s<>]+/g, "[short-lived stream link]")
+        : savedText;
+      const publicReferenceUrls = streamLink ? urls.filter(url => !parseForwardedStreamLink(url)) : urls;
       await env.DB.prepare("INSERT OR REPLACE INTO telegram_owner_library (id,title,content,urls_json,source,saved_at) VALUES (?,?,?,?,?,datetime('now'))")
-        .bind(savedId,title,savedText,JSON.stringify(urls),String(source).slice(0,100)).run();
+        .bind(savedId,title,publicReferenceText,JSON.stringify(publicReferenceUrls),String(source).slice(0,100)).run();
+      let confirmation = "✅ Saved to your private MaseNet reference library. I’ll include it when users search for this title or its details.";
+      if (streamLink) {
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_forwarded_stream_links (
+          id TEXT PRIMARY KEY, stream_url TEXT NOT NULL, filename TEXT NOT NULL,
+          title TEXT NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL,
+          year TEXT, quality TEXT NOT NULL, codec TEXT NOT NULL, format TEXT NOT NULL,
+          host TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'KDLAirBot',
+          forwarded_at TEXT NOT NULL DEFAULT (datetime('now')),
+          message_expires_at TEXT NOT NULL
+        )`).run();
+        const linkId = savedId + ":stream";
+        // KDLAirBot's Telegram MESSAGE is auto-deleted after five minutes.
+        // That is not evidence that the generated video URL itself expires.
+        await env.DB.prepare("INSERT OR REPLACE INTO telegram_forwarded_stream_links (id,stream_url,filename,title,season,episode,year,quality,codec,format,host,source,forwarded_at,message_expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,datetime('now'),datetime('now','+5 minutes'))")
+          .bind(linkId,streamLink.url,streamLink.filename,streamLink.title,streamLink.season,streamLink.episode,streamLink.year,streamLink.quality,streamLink.codec,streamLink.format,streamLink.host,String(source).slice(0,100)).run();
+        confirmation = "✅ Streamlink received and analysed.\n\n🎬 Title: " + streamLink.title +
+          (streamLink.year ? " (" + streamLink.year + ")" : "") +
+          "\n📺 Season: " + streamLink.season + "\n🎞 Episode: " + streamLink.episode +
+          "\n✨ Quality: " + streamLink.quality + "\n🧩 Codec: " + streamLink.codec +
+          "\n📁 Format: " + streamLink.format.toUpperCase() +
+          "\n\n⏳ KDLAirBot's message may disappear after five minutes. The link itself is retained; its actual validity must be checked separately before playback or catalogue use.";
+      }
       await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
         method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({chat_id:chatId,text:"✅ Saved to your private MaseNet reference library. I’ll include it when users search for this title or its details."})
+        body:JSON.stringify({chat_id:chatId,text:confirmation,disable_web_page_preview:true})
       });
-      return json({ok:true,ownerReferenceSaved:true});
+      return json({ok:true,ownerReferenceSaved:true,streamLinkParsed:!!streamLink});
     } catch(error) {
       console.error("MaseNet owner reference save failed:",error instanceof Error?error.message:String(error));
       return json({ok:false,error:"Could not save the forwarded reference."},500);
@@ -237,8 +298,8 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({
       chat_id:chatId,
       text:allVerified
-        ? "🎬 Welcome back to MaseNet!\\n\\n"+(youtubeOk?"✅ YouTube subscription manually verified":"🟡 YouTube screenshot received — provisional access only; admin review is still required")+"\\n✅ MaseMediaTv joined\\n✅ MoonDramaC joined\\n\\nOpen MaseNet below. You do not need to submit another screenshot while this review is pending."
-        : "🎬 Welcome to MaseNet!\\n\\nComplete only the remaining checks to unlock the bot and Mini App:\\n\\n"+(!youtubeEligible?"1️⃣ Subscribe to our YouTube channel, then upload the screenshot directly. No caption or added text is needed.\\n":"")+( !membership.masemedia?"2️⃣ Join our main Telegram channel.\\n":"")+( !membership.moondramac?"3️⃣ Join our second Telegram channel.\\n":"")+"\\nYouTube: "+(youtubeOk?"✅ Manually verified":youtubeProvisional?"🟡 Provisional — admin review pending":"❌ Not submitted")+"\\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\\n\\n🔒 Complete the remaining checks, then send /verify.",
+        ? "🎬 Welcome back to MaseNet!\n\n"+(youtubeOk?"✅ YouTube subscription manually verified":"🟡 YouTube screenshot received — provisional access only; admin review is still required")+"\n✅ MaseMediaTv joined\n✅ MoonDramaC joined\n\nOpen MaseNet below. You do not need to submit another screenshot while this review is pending."
+        : "🎬 Welcome to MaseNet!\n\nComplete only the remaining checks to unlock the bot and Mini App:\n\n"+(!youtubeEligible?"1️⃣ Subscribe to our YouTube channel, then upload the screenshot directly. No caption or added text is needed.\n":"")+( !membership.masemedia?"2️⃣ Join our main Telegram channel.\n":"")+( !membership.moondramac?"3️⃣ Join our second Telegram channel.\n":"")+"\nYouTube: "+(youtubeOk?"✅ Manually verified":youtubeProvisional?"🟡 Provisional — admin review pending":"❌ Not submitted")+"\nMaseMediaTv: "+(membership.masemedia?"✅ Joined":"❌ Not joined")+"\nMoonDramaC: "+(membership.moondramac?"✅ Joined":"❌ Not joined")+"\n\n🔒 Complete the remaining checks, then send /verify.",
       reply_markup:verificationKeyboard(youtubeEligible,membership)
     })});
     return sent.ok ? json({ok:true,verificationRequired:!allVerified,membership,youtubeVerified:youtubeOk}) : json({ok:false,error:"Telegram could not deliver the verification instructions."},502);
@@ -430,11 +491,11 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         try {
           const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
             method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(8000),
-            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: messages[0].content + "\\n\\nUser: " + prompt.slice(0, 3000) }] }], generationConfig: { maxOutputTokens: 700, thinkingConfig: { thinkingLevel: "low" } } })
+            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: messages[0].content + "\n\nUser: " + prompt.slice(0, 3000) }] }], generationConfig: { maxOutputTokens: 700, thinkingConfig: { thinkingLevel: "low" } } })
           });
           if (!geminiResponse.ok) throw new Error("Gemini chat HTTP " + geminiResponse.status + ": " + (await geminiResponse.text()).slice(0, 400));
           const geminiData = await geminiResponse.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-          const geminiAnswer = geminiData.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\\n").trim();
+          const geminiAnswer = geminiData.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\n").trim();
           if (geminiAnswer) answer = geminiAnswer;
           else throw new Error("Gemini returned an empty response.");
         } catch (error) {
@@ -590,12 +651,12 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       }
     } catch(error) { console.error("MaseNet owner reference search failed:",error instanceof Error?error.message:String(error)); }
     const uniquePosts = [...new Map(channelMatches.map(post=>[post.url,post])).values()].slice(0,5);
-    const channelReply = uniquePosts.length ? "\\n\\nI found matching posts in our official Telegram channels. Open the original post or launch the Mini App:" : "";
+    const channelReply = uniquePosts.length ? "\n\nI found matching posts in our official Telegram channels. Open the original post or launch the Mini App:" : "";
     const appButton = miniAppUrl.startsWith("https://") ? [{text:"🎬 Open MaseNet Mini App",web_app:{url:miniAppUrl}}] : [];
     const postButtons = uniquePosts.map(post => [{ text: "🔗 " + (post.title || post.channel + " post").replace(/\s+/g," ").slice(0,48), url: post.url }]);
     const ownerButtons = ownerMatches.flatMap(item=>item.urls.slice(0,2).map(url=>[{text:"📎 "+item.title.slice(0,42),url}]));
     searchReplyMarkup = {inline_keyboard:[...appButton.map(row=>[row]),...postButtons,...ownerButtons].slice(0,8)};
-    const ownerSummary = ownerMatches.length ? "\\n\\n📌 Saved by MaseNet admin:\\n" + ownerMatches.slice(0,3).map(item=>"• "+item.title+(item.urls.length?" — "+item.urls.length+" saved link(s)":"")).join("\\n") : "";
+    const ownerSummary = ownerMatches.length ? "\n\n📌 Saved by MaseNet admin:\n" + ownerMatches.slice(0,3).map(item=>"• "+item.title+(item.urls.length?" — "+item.urls.length+" saved link(s)":"")).join("\n") : "";
     if (combined.length || channelMatches.length || ownerMatches.length) {
       const baseReply = combined.length
         ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n")
