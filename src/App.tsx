@@ -656,15 +656,22 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
   setBusyId(item.key);setProgress(0);setMessage('');
   try{
    const streamUrl=String(item.variant.streamUrl||item.episode.streamUrl||'').trim();
-   const downloadUrl=String(item.variant.downloadUrl||'').trim();
-   const path=String(item.variant.downloadPath||item.variant.streamPath||item.episode.downloadPath||item.episode.streamPath||'').trim();
+   // Download links can be stored either on a quality variant or on the
+   // episode itself. Preserve the episode-level fallback when qualities exist.
+   const downloadUrl=String(item.variant.downloadUrl||item.episode.downloadUrl||'').trim();
+   const downloadPath=String(item.variant.downloadPath||item.episode.downloadPath||'').trim();
+   const streamPath=String(item.variant.streamPath||item.episode.streamPath||'').trim();
 
-   // An explicit download URL is authoritative. Some episodes stream through
-   // MKV/HLS but expose a separate MP4 download URL. Never let the streaming
-   // probe override that direct MP4 download.
-   let sourceUrl=downloadUrl||streamUrl;
-   if(!sourceUrl&&path){
-    const response=await api.get('/api/media/url',{path});
+   // Prefer a dedicated download URL/path over the playback stream. A provider
+   // may expose MP4 downloads separately from an MKV or HLS playback URL.
+   let sourceUrl=downloadUrl;
+   if(!sourceUrl&&downloadPath){
+    const response=await api.get('/api/media/url',{path:downloadPath});
+    sourceUrl=String(response.data?.url||'');
+   }
+   if(!sourceUrl)sourceUrl=streamUrl;
+   if(!sourceUrl&&streamPath){
+    const response=await api.get('/api/media/url',{path:streamPath});
     sourceUrl=String(response.data?.url||'');
    }
    if(!/^https:\/\//i.test(sourceUrl))throw new Error('MaseNet could not get a secure video link for this episode. Ask the admin to refresh its streaming URL.');
