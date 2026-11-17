@@ -72,31 +72,31 @@ public class MaseExternalBrowserPlugin extends Plugin {
         "if(window.__maseNetExternalBrowserPatched)return;" +
         "window.__maseNetExternalBrowserPatched=true;" +
         "var originalOpen=window.open;" +
+        "var downloadIntent=false;" +
+        "document.addEventListener('click',function(event){" +
+        "var node=event.target;" +
+        "var button=node&&node.closest?node.closest('button'):null;" +
+        "var label=button?String(button.innerText||button.textContent||'').toLowerCase():'';" +
+        "if(label.indexOf('download episode')!==-1){" +
+        "downloadIntent=true;" +
+        "window.setTimeout(function(){downloadIntent=false;},1500);" +
+        "}" +
+        "},true);" +
         "window.open=function(url,target,features){" +
         "try{" +
         "var name=(target||'_blank').toLowerCase();" +
-        "if(name!=='_self'&&url&&window.MaseNetExternalBrowser){" +
         "var resolved=new URL(String(url),window.location.href);" +
-        "if(resolved.protocol==='https:'||resolved.protocol==='http:'){" +
-        "window.MaseNetExternalBrowser.open(resolved.href);return null;" +
-        "}" +
+        "var path=resolved.pathname.toLowerCase();" +
+        "var isFile=/\\.(mkv|mp4|m4v|webm|mov)$/.test(path);" +
+        "var isDownload=downloadIntent||resolved.searchParams.get('download')==='1'||isFile||/\\/download\\/?$/.test(path);" +
+        "if(name!=='_self'&&url&&isDownload&&window.MaseNetExternalBrowser&&" +
+        "(resolved.protocol==='https:'||resolved.protocol==='http:')){" +
+        "downloadIntent=false;window.MaseNetExternalBrowser.open(resolved.href);return null;" +
         "}" +
         "}catch(e){}" +
         "return originalOpen.apply(window,arguments);" +
         "};" +
-        "document.addEventListener('click',function(event){" +
-        "var node=event.target;" +
-        "var anchor=node&&node.closest?node.closest('a[target=\\\"_blank\\\"]'):null;" +
-        "if(!anchor||!window.MaseNetExternalBrowser)return;" +
-        "try{" +
-        "var resolved=new URL(anchor.href,window.location.href);" +
-        "if(resolved.protocol==='https:'||resolved.protocol==='http:'){" +
-        "event.preventDefault();event.stopImmediatePropagation();" +
-        "window.MaseNetExternalBrowser.open(resolved.href);" +
-        "}" +
-        "}catch(e){}" +
-        "},true);" +
-        "})();";
+        "})();"
 
     @Override
     public void load() {
