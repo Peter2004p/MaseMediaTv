@@ -101,7 +101,7 @@ public class MaseExternalBrowserPlugin extends Plugin {
     @Override
     public void load() {
         // Remove private in-app video files left by the retired offline library.
-        deleteDirectory(new java.io.File(getContext().getFilesDir(), "masenet-downloads"));
+        new Thread(() -> deleteDirectory(new java.io.File(getContext().getFilesDir(), "masenet-downloads")), "MaseNetOfflineCleanup").start();
         getBridge().getWebView().addJavascriptInterface(new ExternalBrowserBridge(), "MaseNetExternalBrowser");
         getBridge().addWebViewListener(new WebViewListener() {
             @Override
