@@ -103,6 +103,31 @@ public class MaseExternalBrowserPlugin extends Plugin {
         "}" +
         "return originalOpen.apply(window,arguments);" +
         "};" +
+        // Capture the actual media request URL from both native video elements
+        // and the existing canvas-based MKV player, without replacing either.
+        "window.__maseVlcSource='';" +
+        "function rememberMedia(raw){" +
+        "try{var u=new URL(String(raw),location.href);var candidate=u.href;" +
+        "if(u.searchParams.has('source'))candidate=u.searchParams.get('source');" +
+        "if(/\\.(m3u8|mp4|mkv|webm|mov|avi|mpd|ts)(?:$|[?#])/i.test(candidate)||/media\\/proxy/i.test(u.pathname)){window.__maseVlcSource=candidate;}" +
+        "}catch(e){}}" +
+        "var originalFetch=window.fetch;" +
+        "window.fetch=function(input,init){try{rememberMedia(typeof input==='string'?input:input.url);}catch(e){}return originalFetch.apply(this,arguments);};" +
+        "var NativeXhr=window.XMLHttpRequest;" +
+        "window.XMLHttpRequest=function(){var x=new NativeXhr();var o=x.open;x.open=function(method,url){rememberMedia(url);return o.apply(this,arguments);};return x;};" +
+        "function addVlcButton(container,video){" +
+        "if(!container||container.querySelector('.maseNativeVlcButton'))return;" +
+        "var b=document.createElement('button');b.className='maseNativeVlcButton';b.type='button';b.textContent='Open in MaseNet VLC';" +
+        "b.style.cssText='position:absolute;z-index:99999;top:12px;right:12px;background:#10251d;color:#7fffc0;border:1px solid #36d99a;border-radius:22px;padding:10px 14px;font:600 12px sans-serif;box-shadow:0 4px 18px #0009;';" +
+        "b.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();var src=(video&&(video.currentSrc||video.src))||window.__maseVlcSource;if(src&&window.MaseNativeVLC){window.MaseNativeVLC.open(src,document.title,navigator.userAgent,location.origin+'/');}else{b.textContent='Native source not detected';}});" +
+        "var st=getComputedStyle(container);if(st.position==='static')container.style.position='relative';container.appendChild(b);" +
+        "}" +
+        "function scanVlcTargets(){" +
+        "document.querySelectorAll('video').forEach(function(v){var p=v.parentElement;if(p)addVlcButton(p,v);});" +
+        "document.querySelectorAll('.mnvlcScreen canvas').forEach(function(c){var p=c.parentElement;if(p)addVlcButton(p,null);});" +
+        "}" +
+        "new MutationObserver(scanVlcTargets).observe(document.documentElement,{childList:true,subtree:true});" +
+        "scanVlcTargets();" +
         "})();";
 
     @Override
