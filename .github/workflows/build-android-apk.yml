@@ -10,6 +10,7 @@ on:
       - src/**
       - functions/api/auth/**
       - public/masenet-app-icon.svg
+      - public/masenet-app-icon.png
       - public/sw.js
       - scripts/prepare-android-native.py
       - .github/workflows/build-android-apk.yml
@@ -62,11 +63,10 @@ jobs:
           node --input-type=module <<'NODE'
           import sharp from 'sharp';
           import { readFile, writeFile } from 'node:fs/promises';
-          // Rasterize the complete 3D MaseNet SVG emblem. Never crop the
-          // symbol: the entire glossy play mark and its dark violet field are
-          // the launcher artwork.
-          const svg = await readFile('public/masenet-app-icon.svg');
-          const png = await sharp(svg, { density: 144 }).resize(1024, 1024, { fit: 'fill' }).png().toBuffer();
+          // Use the exact 3D PNG artwork supplied for the Android launcher.
+          // Contain preserves the full artwork without stretching or cropping.
+          const source = await readFile('public/masenet-app-icon.png');
+          const png = await sharp(source).resize(1024, 1024, { fit: 'contain' }).png().toBuffer();
           const stats = await sharp(png).stats();
           if (stats.channels.every(channel => channel.stdev < 2)) {
             throw new Error('The generated MaseNet icon is blank; refusing to build a blank launcher icon.');
