@@ -10,7 +10,7 @@ export type SavedVideo = {
 
 type AndroidDownloadStatus = { status: 'running'|'paused'|'completed'|'failed'; reason?: number; downloadedBytes: number; totalBytes: number; uri?: string|null };
 type AndroidDownloadBridge = {
-  enqueue(options: { url: string; filename: string; mimeType: string }): Promise<{ downloadId: number }>;
+  enqueue(options: { url: string; filename: string; mimeType: string; headers?: Record<string,string> }): Promise<{ downloadId: number }>;
   status(options: { downloadId: number }): Promise<AndroidDownloadStatus>;
   remove(options: { downloadId: number }): Promise<void>;
 };
@@ -226,7 +226,13 @@ export const nativeDownloads = {
     // the WebView, follows redirects, survives app minimization and shows the
     // familiar Android download notification. FileTransfer remains a fallback.
     try {
-      const task = await AndroidDownloadManager.enqueue({ url, filename: id + '.' + extension, mimeType });
+      const task = await AndroidDownloadManager.enqueue({
+        url, filename: id + '.' + extension, mimeType,
+        headers: {
+          Referer: 'https://masetv-cloudflare-migration.pages.dev/',
+          'User-Agent': navigator.userAgent || 'MaseNet Android'
+        }
+      });
       let finalStatus: AndroidDownloadStatus | null = null;
       for (let attempt = 0; attempt < 1800; attempt++) {
         const status = await AndroidDownloadManager.status({ downloadId: task.downloadId });
@@ -255,7 +261,10 @@ export const nativeDownloads = {
       // A failed DownloadManager request gets one in-app native FileTransfer retry.
       const target = await Filesystem.getUri({ directory: Directory.Data, path });
       try {
-        await FileTransfer.downloadFile({ url, path: target.uri, progress: true });
+        await FileTransfer.downloadFile({
+          url, path: target.uri, progress: true,
+          headers: { Referer: 'https://masetv-cloudflare-migration.pages.dev/', 'User-Agent': navigator.userAgent || 'MaseNet Android' }
+        });
         const stat = await Filesystem.stat({ directory: Directory.Data, path });
         const uri = (await Filesystem.getUri({ directory: Directory.Data, path })).uri;
         const item: SavedVideo = {
