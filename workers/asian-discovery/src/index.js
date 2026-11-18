@@ -29,7 +29,8 @@ async function save(env,item){
  const exists=await env.DB.prepare("SELECT id FROM asian_discovery_items WHERE source=? AND source_id=?").bind(item.source,item.sourceId).first();if(exists)return"seen";
  const video=item.rights.ok&&item.videoUrl?await testVideo(item.videoUrl):null;
  const duration=Number(item.durationSeconds||0);
- const hasAttribution=Boolean(item.creator||item.meta?.artist||item.meta?.credit);\n const status=!item.rights.ok||!video||duration<1200||(item.rights.credit&&!hasAttribution)?"needs_review":"eligible";
+ const hasAttribution=Boolean(item.creator||item.meta?.artist||item.meta?.credit);
+ const status=!item.rights.ok||!video||duration<1200||(item.rights.credit&&!hasAttribution)?"needs_review":"eligible";
  const rowId=uid();
  await env.DB.prepare(`INSERT OR IGNORE INTO asian_discovery_items
  (id,source,source_id,canonical_url,title,year,language,country,licence_name,licence_url,attribution,video_url,mime_type,poster_url,status,metadata_json)
