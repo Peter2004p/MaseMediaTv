@@ -28,12 +28,12 @@ Do not change the webhook for @MaseTv_Bot. The new bot must remain independent.
 
 1. Admin forwards a generated HTTPS stream URL to the new bot.
 2. Bot parses movie or drama title/year/season/episode/quality/codec/format metadata and stores a private processing record. Standalone movies use the existing movie title record with one playable Full Movie entry.
-3. Bot looks for an exact normalized title match.
+3. Bot matches the normalized title and, when both records include a release year, keeps different years separate. Multiple remaining matches are held for review.
 4. The bot immediately processes the forwarded link without an Apply/Ignore confirmation.
 5. Automatic processing creates a new movie/drama title, adds a missing drama episode, replaces a matching quality+codec stream, or adds another quality/codec variant.
 6. If quality or codec cannot be identified reliably, the bot does not overwrite an existing stream; it adds a separate version instead. Ambiguous duplicate title matches are held for manual review.
 
-The five-minute notice from KDLAirBot is treated as the lifetime of its Telegram message only. It does not mean the video URL expires. The bot must preserve the URL and test reachability separately where possible.
+Telegram webhook update IDs are recorded once so Telegram retry deliveries cannot publish the same forwarded message twice. The five-minute notice from KDLAirBot is treated as the lifetime of its Telegram message only. It does not mean the video URL expires. The bot must preserve the URL and test reachability separately where possible.
 
 ## Current implementation limits
 
