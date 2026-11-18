@@ -110,10 +110,10 @@ async function collectFreshLink(client, peer, item) {
     const seasonOpened = await clickMatching(client, peer, state.messages, /^season$/i, "Season");
     if (!seasonOpened) throw new Error("Season selector unavailable.");
     state = await waitFor(client, peer,
-      message => buttonList(message).some(x => new RegExp(`(?:^|\b)${seasonText}(?:\b|$)|^\\s*${item.season}\\s*$`, "i").test(x.text)),
+      message => buttonList(message).some(x => new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i").test(x.text)),
       `${seasonText} option`);
     const seasonChosen = await clickMatching(client, peer, state.messages,
-      new RegExp(`(?:^|\b)${seasonText}(?:\b|$)|^\\s*${item.season}\\s*$`, "i"), "season option");
+      new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i"), "season option");
     if (!seasonChosen) throw new Error(`KDL Air did not offer ${seasonText}.`);
   }
 
