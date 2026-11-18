@@ -27,18 +27,18 @@ Do not change the webhook for @MaseTv_Bot. The new bot must remain independent.
 ## Current workflow
 
 1. Admin forwards a generated HTTPS stream URL to the new bot.
-2. Bot parses available title/year/season/episode/quality/codec/format metadata and stores a private pending record.
+2. Bot parses movie or drama title/year/season/episode/quality/codec/format metadata and stores a private pending record. Standalone movies use the existing movie title record with one playable Full Movie entry.
 3. Bot looks for an exact normalized title match.
 4. Admin explicitly presses Apply or Ignore.
-5. Apply should create a new title/episode, add a missing episode, replace a matching quality+codec stream, or add another quality/codec variant.
+5. Apply creates a new movie/drama title, adds a missing drama episode, adds or replaces a movie stream, replaces a matching quality+codec stream, or adds another quality/codec variant.
 6. A pending submission must be claimed atomically so repeated or concurrent callback taps cannot apply it twice.
 
 The five-minute notice from KDLAirBot is treated as the lifetime of its Telegram message only. It does not mean the video URL expires. The bot must preserve the URL and test reachability separately where possible.
 
 ## Current implementation limits
 
-- The current parser supports episode-style filenames containing SxxExxx and MKV/MP4/M4V/WEBM. Standalone movie filename support is not yet implemented.
+- The parser supports standalone movie filenames and drama episode filenames containing SxxExxx, with MKV/MP4/M4V/WEBM formats. Movie filenames should include a recognisable title; year, resolution and common codec/release tags are stripped from the detected title.
 - It does not press buttons in KDLAirBot, request new links from KDLAirBot, or download video files.
-- It does not yet create new-episode announcements. Poster/description can be completed in the MaseNet Admin Library.
+- New movie/drama titles and new drama episodes use the existing MaseNet Telegram announcement helper. Stream replacements and additional quality/codec variants do not send duplicate new-title/episode announcements. Poster and description can be completed later in the MaseNet Admin Library.
 - URL reachability is not guaranteed by parsing. A protected or expiring provider URL may reject HEAD/Range checks; no universal reachability guarantee should be shown.
-- Keep the bot in Preview until matching, replacement, concurrency, and catalogue-preservation tests pass.
+- Do not merge or release changes until movie parsing, duplicate matching, movie stream replacement, drama episode handling, notification behavior, concurrency, and catalogue-preservation checks pass.
