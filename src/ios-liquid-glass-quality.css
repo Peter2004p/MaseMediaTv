@@ -1,0 +1,156 @@
+/* Compact iOS 27-inspired Liquid Glass treatment for video quality controls.
+   Visual-only: quality selection and playback logic remain unchanged. */
+.mnv3-qualitybar{
+  position:relative;
+  isolation:isolate;
+  display:grid;
+  gap:9px;
+  margin:9px 0 0;
+  padding:10px;
+  overflow:hidden;
+  border:1px solid rgba(226,239,255,.16);
+  border-radius:17px;
+  background:
+    radial-gradient(125% 145% at 0% 0%,rgba(191,222,255,.11),transparent 53%),
+    linear-gradient(145deg,rgba(36,47,65,.66),rgba(12,17,27,.72));
+  box-shadow:0 8px 22px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.12);
+  -webkit-backdrop-filter:blur(22px) saturate(165%);
+  backdrop-filter:blur(22px) saturate(165%);
+  color:#f5f8ff;
+}
+.mnv3-qualitybar:before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:0 0 auto;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);
+  pointer-events:none;
+}
+.mnv3-qualityheading{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.mnv3-qualityheading b{color:#f7f9ff;font-size:12px;font-weight:750;letter-spacing:-.02em}
+.mnv3-qualityheading small,.mnv3-qualitybar>small{color:rgba(221,231,247,.66);font-size:10px;line-height:1.35}
+.mnv3-qualitychoices{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,100px),1fr));
+  gap:7px;
+}
+.mnv3-qualitychoices button,
+.mnv3 .mnv3-qualitychoices button{
+  position:relative;
+  display:flex;
+  min-width:0;
+  min-height:56px;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:3px;
+  padding:7px 9px;
+  overflow:hidden;
+  text-align:left;
+  border:1px solid rgba(224,237,255,.15);
+  border-radius:13px;
+  background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(255,255,255,.03) 65%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 3px 9px rgba(0,0,0,.11);
+  color:#f5f8ff;
+  -webkit-backdrop-filter:blur(15px) saturate(155%);
+  backdrop-filter:blur(15px) saturate(155%);
+  transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.mnv3-qualitychoices button:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:linear-gradient(115deg,rgba(255,255,255,.11),transparent 44%);
+  opacity:.55;
+  pointer-events:none;
+}
+.mnv3-qualitychoices button:hover{
+  transform:translateY(-1px);
+  border-color:rgba(220,238,255,.34);
+  background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.055));
+}
+.mnv3-qualitychoices button:active{transform:scale(.98)}
+.mnv3-qualitychoices button.selected,
+.mnv3 .mnv3-qualitychoices button.selected{
+  border:1px solid rgba(177,220,255,.82);
+  background:radial-gradient(120% 120% at 0% 0%,rgba(214,239,255,.25),transparent 65%),linear-gradient(145deg,rgba(107,165,224,.31),rgba(49,91,145,.21));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 0 0 1px rgba(145,198,255,.1),0 5px 14px rgba(42,103,174,.15);
+}
+.mnv3-qualityresolution{
+  position:relative;z-index:1;color:#fff;font-size:15px;font-weight:850;
+  letter-spacing:-.03em;line-height:1;text-shadow:0 1px 7px rgba(0,0,0,.18)
+}
+.mnv3-qualitydescription{
+  position:relative;z-index:1;color:rgba(224,234,249,.7);
+  font-size:9px;font-weight:550;line-height:1.2
+}
+.mnv3-qualitycheck{
+  position:relative;z-index:1;display:inline-flex;align-items:center;gap:3px;
+  color:#d9efff;font-size:9px;font-weight:800;letter-spacing:.01em
+}
+.mnv3-qualitycodec{
+  position:relative;z-index:1;color:rgba(211,225,245,.56);
+  font-size:8px;font-weight:750;letter-spacing:.07em;text-transform:uppercase
+}
+.mnv3-qualitychoices button:focus-visible{outline:2px solid #c8e8ff;outline-offset:2px}
+@media(max-width:560px){
+  .mnv3-qualitybar{gap:8px;padding:9px;border-radius:15px}
+  .mnv3-qualityheading b{font-size:11px}
+  .mnv3-qualitychoices{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .mnv3-qualitychoices button,.mnv3 .mnv3-qualitychoices button{
+    min-height:49px;padding:6px 7px;border-radius:11px;gap:3px
+  }
+  .mnv3-qualityresolution{font-size:14px}
+  .mnv3-qualitydescription{font-size:8px}
+}
+@media(max-width:350px){
+  .mnv3-qualitychoices{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){.mnv3-qualitychoices button{transition:none}}
+
+
+/* Second compact pass: keep quality choices small and scan-friendly on phones. */
+@media(max-width:560px){
+  .mnv3-qualitybar{gap:6px;padding:7px;margin-top:7px;border-radius:12px}
+  .mnv3-qualityheading{gap:5px}
+  .mnv3-qualityheading b{font-size:10px}
+  .mnv3-qualityheading small,.mnv3-qualitybar>small{font-size:8px}
+  .mnv3-qualitychoices{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  .mnv3-qualitychoices button,.mnv3 .mnv3-qualitychoices button{
+    min-height:39px;height:39px;padding:4px 5px;border-radius:9px;gap:2px
+  }
+  .mnv3-qualityresolution{font-size:12px;letter-spacing:-.025em}
+  .mnv3-qualitydescription{font-size:7px;line-height:1.05}
+  .mnv3-qualitycheck{font-size:7px;gap:2px}
+  .mnv3-qualitycodec{font-size:6px}
+}
+@media(max-width:360px){
+  .mnv3-qualitychoices{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .mnv3-qualitychoices button,.mnv3 .mnv3-qualitychoices button{min-height:37px;height:37px;padding:3px 4px}
+}
+
+
+/* Final phone-size override: compact, single-line quality chips. */
+@media(max-width:560px){
+  .mnv3-qualitychoices button,
+  .mnv3 .mnv3-qualitychoices button{
+    min-height:23px!important;
+    height:23px!important;
+    padding:1px 3px!important;
+    gap:1px!important;
+    border-radius:6px!important;
+    justify-content:center!important;
+    align-items:center!important;
+    flex-direction:row!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12)!important;
+  }
+  .mnv3-qualityresolution{font-size:9px!important;line-height:1!important;letter-spacing:0!important}
+  .mnv3-qualitydescription{display:none!important}
+  .mnv3-qualitycheck{font-size:0!important;line-height:1!important}
+  .mnv3-qualitycheck:after{content:"✓";font-size:8px!important}
+  .mnv3-qualitycodec{font-size:6px!important}
+}
