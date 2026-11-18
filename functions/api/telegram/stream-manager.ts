@@ -114,7 +114,7 @@ const applyPending = async (env: Env, pendingId: string) => {
     if (!row) {
       const id = crypto.randomUUID();
       const firstEpisode = {
-        id: crypto.randomUUID(), season: 1, episode: 1,
+        id: crypto.randomUUID(), season: isMovie ? 1 : pending.season, episode: isMovie ? 1 : pending.episode,
         title: isMovie ? "Full Movie" : "Episode " + pending.episode,
         ...streamVariant, qualities: []
       };
@@ -241,7 +241,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
   const incoming = String(message.text || message.caption || "").trim();
   if (/^\/(start|help)(?:\s|$)/i.test(incoming)) {
-    await telegram(env, "sendMessage", { chat_id: adminId, text: "MaseNet Stream Manager is ready. Forward a generated movie or drama Streamlink URL here. I will identify the title, year, episode (when applicable), quality and codec, then ask before changing the catalogue." });
+    await telegram(env, "sendMessage", { chat_id: adminId, text: "MaseNet Stream Manager is ready. Forward a movie or drama Streamlink URL and I will automatically publish it. New titles and episodes are announced; matching quality/codec links are replaced, while different versions are added." });
     return json({ ok: true });
   }
   const rawUrl = extractUrl(message);
@@ -255,18 +255,18 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   await env.DB.prepare(`INSERT INTO stream_manager_pending
     (id,stream_url,filename,title,year,season,episode,quality,codec,format,host)
     VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(id, parsed.url, parsed.filename, parsed.title, parsed.year, parsed.season, parsed.episode, parsed.quality, parsed.codec, parsed.format, parsed.host).run();
-  const label = parsed.kind === "movie" ? "movie" : "drama";
-  const classification = matches.length > 1 ? "⚠️ Multiple matching " + label + " titles — manual cleanup needed"
-    : matches.length === 1 ? "🔎 Existing " + label + " found — stream/version will be checked when applied"
-    : "🆕 No matching " + label + " found — applying will create a new " + label + " entry";
   const detail = parsed.kind === "movie"
-    ? "Type: Movie"
-    : "Type: Drama\nSeason: " + parsed.season + "\nEpisode: " + parsed.episode;
-  const text = "🎬 STREAMLINK RECEIVED\n\nTitle: " + parsed.title + (parsed.year ? " (" + parsed.year + ")" : "")
-    + "\n" + detail + "\nQuality: " + parsed.quality
-    + "\nCodec: " + parsed.codec + "\nFormat: " + parsed.format.toUpperCase() + "\nHost: " + parsed.host
-    + "\n\n" + classification + "\n\nThe forwarded Telegram message may disappear after five minutes; that does not mean the video URL expires. I have stored this submission privately. Confirm before I change the catalogue.";
-  await telegram(env, "sendMessage", { chat_id: adminId, text, disable_web_page_preview: true,
-    reply_markup: { inline_keyboard: [[{ text: "✅ Apply catalogue change", callback_data: "apply:" + id }, { text: "✖ Ignore", callback_data: "ignore:" + id }]] } });
-  return json({ ok: true, parsed: true, pendingId: id });
+    ? "🎞 Movie"
+    : "📺 Drama · S" + String(parsed.season).padStart(2, "0") + "E" + String(parsed.episode).padStart(2, "0");
+  const result = await applyPending(env, id);
+  const text = result.ok
+    ? "✅ AUTOMATICALLY PUBLISHED\n\n" + result.message
+      + "\n\nQuality: " + parsed.quality + " · " + parsed.codec
+      + "\nFormat: " + parsed.format.toUpperCase()
+      + "\nHost: " + parsed.host
+    : "⚠️ AUTOMATIC PUBLISHING NEEDS ATTENTION\n\n" + parsed.title
+      + "\n" + detail + "\n" + result.message
+      + "\n\nNo catalogue change was made. Please check this title in the Admin Library.";
+  await telegram(env, "sendMessage", { chat_id: adminId, text, disable_web_page_preview: true });
+  return json({ ok: true, parsed: true, automaticallyApplied: result.ok, pendingId: id });
 };
