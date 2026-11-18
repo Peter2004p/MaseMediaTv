@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import MaseNetVlcPlayer from './MaseNetVlcPlayer';
 
-type Quality='480p'|'720p'|'1080p';
+type Quality='360p'|'480p'|'540p'|'720p'|'1080p'|'1440p'|'2160p';
 type Track={label?:string;url:string;path?:string;lang?:string;mimeType?:string};
 type Variant={quality:Quality;streamUrl:string;mimeType?:string;subtitleTracks?:Track[]};
 type Episode={id:string;title:string;quality:Quality;streamUrl:string;mimeType?:string;subtitleTracks?:Track[];qualities?:Variant[]};
