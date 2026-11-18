@@ -132,3 +132,25 @@
   .mnv3-qualitychoices{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
   .mnv3-qualitychoices button,.mnv3 .mnv3-qualitychoices button{min-height:37px;height:37px;padding:3px 4px}
 }
+
+
+/* Final phone-size override: compact, single-line quality chips. */
+@media(max-width:560px){
+  .mnv3-qualitychoices button,
+  .mnv3 .mnv3-qualitychoices button{
+    min-height:23px!important;
+    height:23px!important;
+    padding:1px 3px!important;
+    gap:1px!important;
+    border-radius:6px!important;
+    justify-content:center!important;
+    align-items:center!important;
+    flex-direction:row!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12)!important;
+  }
+  .mnv3-qualityresolution{font-size:9px!important;line-height:1!important;letter-spacing:0!important}
+  .mnv3-qualitydescription{display:none!important}
+  .mnv3-qualitycheck{font-size:0!important;line-height:1!important}
+  .mnv3-qualitycheck:after{content:"✓";font-size:8px!important}
+  .mnv3-qualitycodec{font-size:6px!important}
+}
