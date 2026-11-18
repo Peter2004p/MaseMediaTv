@@ -56,7 +56,7 @@ const streamEntries = (row: TitleRow, metadata: Record<string, unknown>) => {
       entries.push({
         titleId: row.id, title: row.name, kind: row.kind, episodeId, episodeIndex,
         season, episode: episodeNumber, quality: String(variant.quality || "Unknown"),
-        codec: String(variant.codec || "Unknown"), streamUrl: streamUrl.toString(),
+        codec: String(variant.codec || "Unknown"), streamUrl: String(variant.streamUrl),
         variantIndex: root ? -1 : variantIndex, isPrimary: root
       });
     };
@@ -87,11 +87,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (body.action === "replace") {
     const titleId = String(body.titleId || "");
     const episodeId = String(body.episodeId || "");
-    const oldUrl = safeHttpsUrl(body.oldUrl);
+    const oldUrlRaw = String(body.oldUrl || "");
+    const oldUrl = safeHttpsUrl(oldUrlRaw);
     const newUrl = safeHttpsUrl(body.newUrl);
     const quality = String(body.quality || "Unknown").trim().toLowerCase();
     const codec = String(body.codec || "Unknown").trim().toLowerCase();
-    if (!titleId || !episodeId || !oldUrl || !newUrl || oldUrl.toString() === newUrl.toString()) {
+    if (!titleId || !episodeId || !oldUrl || !newUrl || oldUrlRaw === newUrl.toString()) {
       return json({ ok: false, error: "A title, episode, current URL and different replacement HTTPS URL are required." }, 400);
     }
 
@@ -112,13 +113,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     let changed = false;
     const currentQuality = String(episode.quality || "Unknown").trim().toLowerCase();
     const currentCodec = String(episode.codec || "Unknown").trim().toLowerCase();
-    if (String(episode.streamUrl || "") === oldUrl.toString() && currentQuality === quality && currentCodec === codec) {
+    if (String(episode.streamUrl || "") === oldUrlRaw && currentQuality === quality && currentCodec === codec) {
       episode.streamUrl = newUrl.toString();
       changed = true;
     } else {
       const variants = Array.isArray(episode.qualities) ? episode.qualities as Episode[] : [];
       const variant = variants.find(item =>
-        String(item.streamUrl || "") === oldUrl.toString() &&
+        String(item.streamUrl || "") === oldUrlRaw &&
         String(item.quality || "Unknown").trim().toLowerCase() === quality &&
         String(item.codec || "Unknown").trim().toLowerCase() === codec
       );
@@ -141,7 +142,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       VALUES (?,?,?,?,?,?,?,?,?,'telegram-user-session')`)
       .bind(crypto.randomUUID(), row.id, episodeId, Number(episode.season) || 1,
         Number(episode.episode) || 1, String(body.quality || "Unknown"),
-        String(body.codec || "Unknown"), oldUrl.toString(), newUrl.toString()).run();
+        String(body.codec || "Unknown"), oldUrlRaw, newUrl.toString()).run();
 
     return json({ ok: true, replaced: true, title: row.name, episodeId,
       season: Number(episode.season) || 1, episode: Number(episode.episode) || 1,
