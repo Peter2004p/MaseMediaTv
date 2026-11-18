@@ -149,10 +149,15 @@ const applyPending = async (env: Env, pendingId: string) => {
         const episode = { ...episodes[episodeIndex] };
         const variants = Array.isArray(episode.qualities) ? episode.qualities as Record<string, unknown>[] : [];
         const existingRootCodec = String(episode.codec || inferCodec(episode.streamUrl)).toLowerCase();
-        const rootMatches = String(episode.quality || "").toLowerCase() === pending.quality.toLowerCase()
-          && existingRootCodec === pending.codec.toLowerCase();
-        const variantIndex = variants.findIndex(v => String(v.quality || "").toLowerCase() === pending.quality.toLowerCase()
-          && String(v.codec || inferCodec(v.streamUrl)).toLowerCase() === pending.codec.toLowerCase());
+        const metadataKnown = pending.quality.toLowerCase() !== "unknown" && pending.codec.toLowerCase() !== "unknown";
+        const rootMatches = metadataKnown
+          && String(episode.quality || "").toLowerCase() === pending.quality.toLowerCase()
+          && existingRootCodec !== "unknown" && existingRootCodec === pending.codec.toLowerCase();
+        const variantIndex = metadataKnown ? variants.findIndex(v => {
+          const variantCodec = String(v.codec || inferCodec(v.streamUrl)).toLowerCase();
+          return String(v.quality || "").toLowerCase() === pending.quality.toLowerCase()
+            && variantCodec !== "unknown" && variantCodec === pending.codec.toLowerCase();
+        }) : -1;
         if (rootMatches) {
           episodes[episodeIndex] = { ...episode, ...streamVariant };
           action = "Replaced the existing " + (isMovie ? "movie" : "episode") + " stream for the same quality and codec";
