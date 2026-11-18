@@ -57,7 +57,7 @@ Do not point the workflow at production until staging tests pass and the owner e
 
 ## Known limitations / safety
 
-- KDL Air's username is not visible in the supplied screenshot; the exact username must be configured.
+- The owner confirmed the source bot username as `@KDLAirBot`; the workflow secret should contain `KDLAirBot` without the `@`.
 - The bot's current button labels and callback behaviour can change. If the exact quality, season, episode, or Generate Streamlink button cannot be identified, the runner stops for that item and leaves the old URL untouched.
 - A replacement is blocked if the generated filename does not identify the same quality and codec. If KDL Air does not expose codec-specific choices, this strict check may leave a link unreplaced rather than silently substituting a different encode.
 - Some hosts deliberately return 403 to automated checks. 403 is inconclusive and is not treated as expiry.
