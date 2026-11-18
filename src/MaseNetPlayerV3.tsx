@@ -14,7 +14,7 @@ function DataSaverBar({enabled,onToggle,notice}:DataSaverBarProps){return <div s
 const stamp=(n:number)=>Number.isFinite(n)?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'0:00';
 const isMkv=(url:string,mime='')=>/\.mkv(?:$|[?#])/i.test(url)||/matroska|x-matroska/i.test(mime);
 const isHls=(url:string,mime='')=>/\.m3u8(?:$|[?#])/i.test(url)||/mpegurl/i.test(mime);
-const streamCodec=(url:string,codec?:string)=>{const explicit=String(codec||'').trim().toLowerCase();if(explicit&&explicit!=='unknown')return explicit;try{const name=decodeURIComponent(new URL(url,window.location.origin).pathname.split('/').pop()||'').replace(/\\+/g,' ');return name.match(/\\b(x265|h265|hevc|x264|h264|av1)\\b/i)?.[1]?.toLowerCase()||'unknown';}catch{return 'unknown';}};
+const streamCodec=(url:string,codec?:string)=>{const explicit=String(codec||'').trim().toLowerCase();if(explicit&&explicit!=='unknown')return explicit;try{const name=decodeURIComponent(new URL(url,window.location.origin).pathname.split('/').pop()||'').replace(/\+/g,' ');return name.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1]?.toLowerCase()||'unknown';}catch{return 'unknown';}};
 
 export default function MaseNetPlayerV3({episode,onProgress,onPlaybackPosition,onPlaybackStarted,onPlaybackEnded,onPlaybackStateChange,resumeAtSeconds=0,autoPlay=false,muted=false,reelMode=false,playRequest=0}:Props){
  const videoRef=useRef<HTMLVideoElement>(null),rootRef=useRef<HTMLElement>(null),hlsRef=useRef<Hls|null>(null);
