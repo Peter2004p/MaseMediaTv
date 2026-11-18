@@ -111,3 +111,24 @@
   .mnv3-qualitychoices{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(prefers-reduced-motion:reduce){.mnv3-qualitychoices button{transition:none}}
+
+
+/* Second compact pass: keep quality choices small and scan-friendly on phones. */
+@media(max-width:560px){
+  .mnv3-qualitybar{gap:6px;padding:7px;margin-top:7px;border-radius:12px}
+  .mnv3-qualityheading{gap:5px}
+  .mnv3-qualityheading b{font-size:10px}
+  .mnv3-qualityheading small,.mnv3-qualitybar>small{font-size:8px}
+  .mnv3-qualitychoices{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  .mnv3-qualitychoices button,.mnv3 .mnv3-qualitychoices button{
+    min-height:39px;height:39px;padding:4px 5px;border-radius:9px;gap:2px
+  }
+  .mnv3-qualityresolution{font-size:12px;letter-spacing:-.025em}
+  .mnv3-qualitydescription{font-size:7px;line-height:1.05}
+  .mnv3-qualitycheck{font-size:7px;gap:2px}
+  .mnv3-qualitycodec{font-size:6px}
+}
+@media(max-width:360px){
+  .mnv3-qualitychoices{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .mnv3-qualitychoices button,.mnv3 .mnv3-qualitychoices button{min-height:37px;height:37px;padding:3px 4px}
+}
