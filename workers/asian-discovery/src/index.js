@@ -5,6 +5,7 @@ const langMap = [
   ["hindi","Hindi","India"],["bengali","Bengali","Bangladesh"],["tamil","Tamil","India"],["urdu","Urdu","Pakistan"]
 ];
 const uid=()=>crypto.randomUUID();
+const durationSeconds=v=>{if(typeof v==="number")return v;const s=str(v);if(!s)return 0;const parts=s.split(":").map(Number);if(parts.some(n=>!Number.isFinite(n)))return 0;if(parts.length===3)return parts[0]*3600+parts[1]*60+parts[2];if(parts.length===2)return parts[0]*60+parts[1];return Number(s)||0;};
 const str=v=>typeof v==="string"?v.trim():"";
 const inferLang=v=>{const s=(Array.isArray(v)?v.join(" "):String(v||"")).toLowerCase();const m=langMap.find(x=>s.includes(x[0]));return m?{language:m[1],country:m[2]}:{language:"",country:""};};
 function licence(name,url,terms){
@@ -21,7 +22,7 @@ async function testVideo(url){
 async function save(env,item){
  const exists=await env.DB.prepare("SELECT id FROM asian_discovery_items WHERE source=? AND source_id=?").bind(item.source,item.sourceId).first();if(exists)return"seen";
  const video=item.rights.ok&&item.videoUrl?await testVideo(item.videoUrl):null;
- const status=!item.rights.ok||!video?"needs_review":"eligible";
+ const duration=Number(item.durationSeconds||0);\n const status=!item.rights.ok||!video||duration<1200?"needs_review":"eligible";
  const rowId=uid();
  await env.DB.prepare(`INSERT OR IGNORE INTO asian_discovery_items
  (id,source,source_id,canonical_url,title,year,language,country,licence_name,licence_url,attribution,video_url,mime_type,poster_url,status,metadata_json)
@@ -41,7 +42,7 @@ async function save(env,item){
 }
 async function archive(env){
  const q='mediatype:movies AND (language:Korean OR language:Chinese OR language:Japanese OR language:Thai OR language:Vietnamese OR language:Indonesian OR language:Hindi OR language:Bengali OR language:Tamil)';
- const p=new URLSearchParams({q,rows:"15",page:"1",output:"json"});["identifier","title","year","language","creator","description"].forEach(x=>p.append("fl[]",x));
+ const p=new URLSearchParams({q,rows:"6",page:"1",output:"json"});["identifier","title","year","language","creator","description"].forEach(x=>p.append("fl[]",x));
  const r=await fetch("https://archive.org/advancedsearch.php?"+p,{signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error("Internet Archive search "+r.status);
  const data=await r.json();let found=0,published=0,review=0;
  for(const doc of data.response?.docs||[]){
@@ -51,21 +52,21 @@ async function archive(env){
   const lang=inferLang(meta.language||doc.language),files=(payload.files||[]).filter(f=>str(f.name).toLowerCase().endsWith(".mp4")&&Number(f.size||0)>250000);
   const file=files.sort((a,b)=>Number(a.size||0)-Number(b.size||0))[0],fileName=file?str(file.name):"";
   const videoUrl=fileName?"https://archive.org/download/"+encodeURIComponent(identifier)+"/"+fileName.split("/").map(encodeURIComponent).join("/"):"";
-  const result=await save(env,{source:"internet_archive",sourceName:"Internet Archive",sourceId:identifier,canonicalUrl:"https://archive.org/details/"+identifier,title:str(meta.title||doc.title)||identifier,year:Number(String(meta.year||doc.year||"").match(/\d{4}/)?.[0])||null,language:lang.language,country:lang.country,creator:str(meta.creator||doc.creator),description:str(meta.description||doc.description),poster:"https://archive.org/services/img/"+encodeURIComponent(identifier),rights:right,videoUrl,sourceCredit:"Internet Archive "+identifier,meta:{creator:str(meta.creator||doc.creator)}});
+  const result=await save(env,{source:"internet_archive",sourceName:"Internet Archive",sourceId:identifier,canonicalUrl:"https://archive.org/details/"+identifier,title:str(meta.title||doc.title)||identifier,year:Number(String(meta.year||doc.year||"").match(/\d{4}/)?.[0])||null,language:lang.language,country:lang.country,creator:str(meta.creator||doc.creator),description:str(meta.description||doc.description),durationSeconds:durationSeconds(meta.runtime||meta.duration),poster:"https://archive.org/services/img/"+encodeURIComponent(identifier),rights:right,videoUrl,sourceCredit:"Internet Archive "+identifier,meta:{creator:str(meta.creator||doc.creator)}});
   if(result!=="seen"){found++;if(result==="published")published++;if(result==="review")review++;}
  }
  return{found,published,review};
 }
 async function commons(env){
- const terms=["Korean film","Japanese film","Chinese film","Thai film","Vietnamese film","Asian independent film"];let found=0,published=0,review=0;
+ const terms=["Korean film","Japanese film","Chinese film","Thai film","Vietnamese film"];let found=0,published=0,review=0;
  for(const term of terms){
-  const p=new URLSearchParams({action:"query",format:"json",generator:"search",gsrsearch:'filetype:video "'+term+'"',gsrnamespace:"6",gsrlimit:"6",prop:"imageinfo",iiprop:"url|mime|extmetadata"});
+  const p=new URLSearchParams({action:"query",format:"json",generator:"search",gsrsearch:'filetype:video "'+term+'"',gsrnamespace:"6",gsrlimit:"2",prop:"imageinfo",iiprop:"url|mime|extmetadata"});
   const r=await fetch("https://commons.wikimedia.org/w/api.php?"+p,{headers:{"user-agent":"MaseNet-Asian-Discovery/1.0"},signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error("Wikimedia Commons "+r.status);
   const data=await r.json();
   for(const page of Object.values(data.query?.pages||{})){
    const info=page.imageinfo?.[0];if(!info)continue;const e=info.extmetadata||{},get=k=>str(e[k]?.value),right=licence(get("LicenseShortName"),get("LicenseUrl"),get("UsageTerms"));
    const title=page.title.replace(/^File:/,"").replace(/\.[^.]+$/,""),lang=inferLang(term);
-   const result=await save(env,{source:"wikimedia_commons",sourceName:"Wikimedia Commons",sourceId:String(page.pageid),canonicalUrl:"https://commons.wikimedia.org/wiki/"+page.title.replace(/ /g,"_"),title,language:lang.language,country:lang.country,creator:get("Artist"),description:get("ImageDescription"),rights:right,videoUrl:info.url,poster:"",sourceCredit:"Wikimedia Commons",meta:{artist:get("Artist"),credit:get("Credit")}});
+   const result=await save(env,{source:"wikimedia_commons",sourceName:"Wikimedia Commons",sourceId:String(page.pageid),canonicalUrl:"https://commons.wikimedia.org/wiki/"+page.title.replace(/ /g,"_"),title,language:lang.language,country:lang.country,creator:get("Artist"),description:get("ImageDescription"),durationSeconds:durationSeconds(get("Duration")),rights:right,videoUrl:info.url,poster:"",sourceCredit:"Wikimedia Commons",meta:{artist:get("Artist"),credit:get("Credit")}});
    if(result!=="seen"){found++;if(result==="published")published++;if(result==="review")review++;}
   }
  }
