@@ -44,6 +44,8 @@ The script asks for your phone number, the Telegram login code, and (if enabled)
 
 ## Staging and activation
 
+The Pages project's Preview D1 binding is isolated to the existing `masenet-asian-discovery-preview` database; production continues using its own D1 binding. The additive recovery-history migration has been applied to that Preview database only.
+
 1. Apply migration `0004_streamlink_recovery.sql` to the isolated preview D1 database only.
 2. Configure `STREAMLINK_RECOVERY_SECRET` as a Cloudflare Pages preview secret.
 3. Add the GitHub Actions secrets above.
