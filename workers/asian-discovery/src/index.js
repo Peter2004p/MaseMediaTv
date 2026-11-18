@@ -9,12 +9,18 @@ const durationSeconds=v=>{if(typeof v==="number")return v;const s=str(v);if(!s)r
 const str=v=>typeof v==="string"?v.trim():"";
 const inferLang=v=>{const s=(Array.isArray(v)?v.join(" "):String(v||"")).toLowerCase();const m=langMap.find(x=>s.includes(x[0]));return m?{language:m[1],country:m[2]}:{language:"",country:""};};
 function licence(name,url,terms){
- const s=(str(name)+" "+str(url)+" "+str(terms)).toLowerCase();
- if(/non.?commercial|by-nc|no commercial|no.?derivatives|by-nd/.test(s))return{ok:false,name:str(name),url:str(url),credit:"",reason:"NC/ND or restricted licence"};
- if(/cc0|public.?domain|creativecommons.org\/publicdomain\/(zero|mark)/.test(s))return{ok:true,name:str(name)||"Public Domain / CC0",url:str(url),credit:"",reason:"Public Domain / CC0 declaration"};
- if(/cc\s*by.?sa|cc-by-sa|creativecommons.org\/licenses\/by-sa\//.test(s))return{ok:true,name:str(name)||"CC BY-SA",url:str(url),credit:"Attribution required; ShareAlike terms apply",reason:"CC BY-SA"};
- if(/cc\s*by\b|cc-by|creativecommons.org\/licenses\/by\//.test(s))return{ok:true,name:str(name)||"CC BY",url:str(url),credit:"Attribution required",reason:"CC BY"};
- return{ok:false,name:str(name),url:str(url),credit:"",reason:"No clear reusable licence"};
+ const label=str(name),rawUrl=str(url),extra=str(terms);
+ let parsed;
+ try{parsed=new URL(rawUrl);}catch{return{ok:false,name:label,url:rawUrl,credit:"",reason:"No canonical Creative Commons licence URL"};}
+ if(parsed.protocol!=="https:"||parsed.hostname!=="creativecommons.org")return{ok:false,name:label,url:rawUrl,credit:"",reason:"Licence URL is not an official HTTPS Creative Commons URL"};
+ const path=parsed.pathname.toLowerCase().replace(/\\/$/,"");
+ if(/^\\/licenses\\/(by|by-sa)\\/(2\\.0|3\\.0|4\\.0)$/.test(path)){
+  const type=path.includes("by-sa")?"CC BY-SA":"CC BY";
+  if(/non.?commercial|no.?derivatives/i.test(label+" "+extra))return{ok:false,name:label,url:rawUrl,credit:"",reason:"Conflicting restricted-rights statement"};
+  return{ok:true,name:label||type,url:rawUrl,credit:type==="CC BY-SA"?"Attribution required; ShareAlike terms apply":"Attribution required",reason:type+" official licence URL"};
+ }
+ if(/^\\/publicdomain\\/(zero|mark)\\/1\\.0$/.test(path))return{ok:true,name:label||"Public Domain / CC0",url:rawUrl,credit:"",reason:"Official Creative Commons public-domain URL"};
+ return{ok:false,name:label,url:rawUrl,credit:"",reason:"Licence version or terms not in the auto-publish allowlist"};
 }
 async function testVideo(url){
  try{const r=await fetch(url,{method:"HEAD",redirect:"follow",signal:AbortSignal.timeout(9000)});if(!r.ok)return null;const mime=(r.headers.get("content-type")||"").split(";")[0].toLowerCase();if(!["video/mp4","video/webm","video/ogg"].includes(mime))return null;const size=Number(r.headers.get("content-length")||0);if(size&&size<250000)return null;return{url,mime};}catch{return null;}
@@ -23,7 +29,7 @@ async function save(env,item){
  const exists=await env.DB.prepare("SELECT id FROM asian_discovery_items WHERE source=? AND source_id=?").bind(item.source,item.sourceId).first();if(exists)return"seen";
  const video=item.rights.ok&&item.videoUrl?await testVideo(item.videoUrl):null;
  const duration=Number(item.durationSeconds||0);
- const status=!item.rights.ok||!video||duration<1200?"needs_review":"eligible";
+ const hasAttribution=Boolean(item.creator||item.meta?.artist||item.meta?.credit);\n const status=!item.rights.ok||!video||duration<1200||(item.rights.credit&&!hasAttribution)?"needs_review":"eligible";
  const rowId=uid();
  await env.DB.prepare(`INSERT OR IGNORE INTO asian_discovery_items
  (id,source,source_id,canonical_url,title,year,language,country,licence_name,licence_url,attribution,video_url,mime_type,poster_url,status,metadata_json)
@@ -49,7 +55,7 @@ async function archive(env){
  for(const doc of data.response?.docs||[]){
   const identifier=str(doc.identifier);if(!identifier)continue;
   const m=await fetch("https://archive.org/metadata/"+encodeURIComponent(identifier),{signal:AbortSignal.timeout(12000)});if(!m.ok)continue;
-  const payload=await m.json(),meta=payload.metadata||{},right=licence(meta.licenseurl||meta.license,meta.licenseurl,meta.rights);
+  const payload=await m.json(),meta=payload.metadata||{},right=licence(meta.license,meta.licenseurl,meta.rights);
   const lang=inferLang(meta.language||doc.language),files=(payload.files||[]).filter(f=>str(f.name).toLowerCase().endsWith(".mp4")&&Number(f.size||0)>250000);
   const file=files.sort((a,b)=>Number(a.size||0)-Number(b.size||0))[0],fileName=file?str(file.name):"";
   const videoUrl=fileName?"https://archive.org/download/"+encodeURIComponent(identifier)+"/"+fileName.split("/").map(encodeURIComponent).join("/"):"";
