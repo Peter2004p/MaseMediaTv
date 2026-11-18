@@ -13,13 +13,13 @@ function licence(name,url,terms){
  let parsed;
  try{parsed=new URL(rawUrl);}catch{return{ok:false,name:label,url:rawUrl,credit:"",reason:"No canonical Creative Commons licence URL"};}
  if(parsed.protocol!=="https:"||parsed.hostname!=="creativecommons.org")return{ok:false,name:label,url:rawUrl,credit:"",reason:"Licence URL is not an official HTTPS Creative Commons URL"};
- const path=parsed.pathname.toLowerCase().replace(/\\/$/,"");
- if(/^\\/licenses\\/(by|by-sa)\\/(2\\.0|3\\.0|4\\.0)$/.test(path)){
+ const path=parsed.pathname.toLowerCase().replace(/\/$/,"");
+ if(/^\/licenses\/(by|by-sa)\/(2\.0|3\.0|4\.0)$/.test(path)){
   const type=path.includes("by-sa")?"CC BY-SA":"CC BY";
   if(/non.?commercial|no.?derivatives/i.test(label+" "+extra))return{ok:false,name:label,url:rawUrl,credit:"",reason:"Conflicting restricted-rights statement"};
   return{ok:true,name:label||type,url:rawUrl,credit:type==="CC BY-SA"?"Attribution required; ShareAlike terms apply":"Attribution required",reason:type+" official licence URL"};
  }
- if(/^\\/publicdomain\\/(zero|mark)\\/1\\.0$/.test(path))return{ok:true,name:label||"Public Domain / CC0",url:rawUrl,credit:"",reason:"Official Creative Commons public-domain URL"};
+ if(/^\/publicdomain\/(zero|mark)\/1\.0$/.test(path))return{ok:true,name:label||"Public Domain / CC0",url:rawUrl,credit:"",reason:"Official Creative Commons public-domain URL"};
  return{ok:false,name:label,url:rawUrl,credit:"",reason:"Licence version or terms not in the auto-publish allowlist"};
 }
 async function testVideo(url){
