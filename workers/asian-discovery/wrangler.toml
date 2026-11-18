@@ -1,0 +1,13 @@
+name = "masenet-asian-discovery-preview"
+main = "src/index.ts"
+compatibility_date = "2026-11-18"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "masenet-asian-discovery-preview"
+database_id = "783e9c3d-b758-4273-9999-b6fffc6b560c"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["15 */6 * * *"]
