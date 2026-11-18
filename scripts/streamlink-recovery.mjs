@@ -154,11 +154,15 @@ async function main() {
   const scan = await recoveryApi("scan");
   console.log(`Scanned ${scan.count} saved stream variants.`);
   const expired = [];
-  for (const item of scan.links || []) {
-    const result = await checkLink(item.streamUrl);
-    if (result.expired) {
-      console.log(`Confirmed expired: ${item.title} S${item.season}E${item.episode} ${item.quality}`);
-      expired.push(item);
+  const links = scan.links || [];
+  for (let offset = 0; offset < links.length; offset += 12) {
+    const batch = links.slice(offset, offset + 12);
+    const checks = await Promise.all(batch.map(async item => ({ item, result: await checkLink(item.streamUrl) })));
+    for (const { item, result } of checks) {
+      if (result.expired) {
+        console.log(`Confirmed expired: ${item.title} S${item.season}E${item.episode} ${item.quality}`);
+        expired.push(item);
+      }
     }
   }
   if (!expired.length) {
