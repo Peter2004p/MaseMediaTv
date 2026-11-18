@@ -13,5 +13,7 @@ jobs:
         with:
           node-version: 22.18
       - run: npm install
+      - run: node --check scripts/streamlink-recovery.mjs
+      - run: node --check scripts/create-telegram-session.mjs
       - run: npm run build
       - run: npm run typecheck:functions
