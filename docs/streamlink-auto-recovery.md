@@ -18,7 +18,7 @@ The workflow never deletes a title, episode, poster, subtitle, or other quality.
 
 Cloudflare Pages Functions can safely scan and update D1, but they cannot act as a logged-in Telegram user through the ordinary Telegram Bot API. The separate GitHub Actions runner uses GramJS/MTProto for the personal-account interaction. This avoids replacing or changing the existing MaseNet Stream Manager bot token or webhook.
 
-The scheduled workflow is every 15 minutes. GitHub may delay scheduled workflows, so this is periodic recovery, not a guaranteed instant refresh. The workflow only runs automatically after this branch is merged into the repository's default branch. It can also be manually dispatched for a test.
+The scheduled workflow is every 15 minutes. GitHub may delay scheduled workflows, so this is periodic recovery, not a guaranteed instant refresh. GitHub scheduled workflows run from the repository's default branch (`main` here), not from the Cloudflare production branch (`cloudflare-migration`). Automatic production recovery therefore requires the workflow to be merged into `main` and the protected Pages API to be released on `cloudflare-migration`. Before that, use `workflow_dispatch` on this feature branch with the preview URL and preview secret for staging tests.
 
 ## Required configuration
 
