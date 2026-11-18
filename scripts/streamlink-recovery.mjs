@@ -27,7 +27,7 @@ async function checkLink(url) {
     const timer = setTimeout(() => controller.abort(), 9000);
     try {
       const response = await fetch(url, {
-        method, headers, redirect: "manual", signal: controller.signal,
+        method, redirect: "manual", signal: controller.signal,
         headers: { "User-Agent": "MaseNet-Link-Recovery/1.0", ...headers }
       });
       try { await response.body?.cancel(); } catch {}
@@ -136,7 +136,18 @@ async function collectFreshLink(client, peer, item) {
   const text = String(state.message.message || "");
   const match = text.match(/your link\s*:\s*(https:\/\/[^\s<>]+)/i);
   if (!match) throw new Error("KDL Air response did not contain a readable streamlink.");
-  return match[1].replace(/[),.]+$/, "");
+  const freshUrl = match[1].replace(/[),.]+$/, "");
+  let filename = "";
+  try { filename = decodeURIComponent(new URL(freshUrl).pathname.split("/").pop() || ""); } catch {}
+  const freshQuality = filename.match(/\\b(2160p|1440p|1080p|720p|576p|540p|480p|360p)\\b/i)?.[1]?.toLowerCase();
+  const freshCodec = filename.match(/\\b(x265|h265|hevc|x264|h264|av1)\\b/i)?.[1]?.toLowerCase();
+  const expectedCodec = String(item.codec || "Unknown").toLowerCase();
+  const aliases = { hevc: "x265", h265: "x265", h264: "x264" };
+  if (freshQuality !== String(item.quality).toLowerCase()) throw new Error("KDL Air returned a different quality; replacement was blocked.");
+  if (!freshCodec || (aliases[freshCodec] || freshCodec) !== (aliases[expectedCodec] || expectedCodec)) {
+    throw new Error("KDL Air returned a different or unidentified codec; replacement was blocked.");
+  }
+  return freshUrl;
 }
 
 async function main() {
