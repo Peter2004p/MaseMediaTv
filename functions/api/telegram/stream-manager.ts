@@ -40,14 +40,14 @@ const parseStream = (raw: string): ParsedStream | null => {
   if (!/\.(?:mkv|mp4|m4v|webm)$/i.test(filename)) return null;
 
   const year = filename.match(/\b(19\d{2}|20\d{2})\b/)?.[1] || "";
-  const quality = filename.match(/\b(2160p|1440p|1080p|720p|576p|480p|360p)\b/i)?.[1]?.toLowerCase() || "Unknown";
+  const quality = filename.match(/\b(2160p|1440p|1080p|720p|576p|540p|480p|360p)\b/i)?.[1]?.toLowerCase() || "Unknown";
   const codec = filename.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1]?.toLowerCase() || "Unknown";
   const format = filename.split(".").pop()?.toLowerCase() || "unknown";
   const se = filename.match(/\bS(\d{1,2})E(\d{1,3})\b/i);
   const cleanTitle = (value: string) => value
     .replace(/\.(?:mkv|mp4|m4v|webm)$/i, "")
     .replace(/\b(19\d{2}|20\d{2})\b/g, " ")
-    .replace(/\b(2160p|1440p|1080p|720p|576p|480p|360p|x265|h265|hevc|x264|h264|av1|10bit|8bit|hdr10?|hdr|web[- .]?dl|webrip|bluray|blu[- .]?ray|brrip|dvdrip|aac\d*|ddp?\d*|dts(?:-hd)?|proper|repack)\b/ig, " ")
+    .replace(/\b(2160p|1440p|1080p|720p|576p|540p|480p|360p|x265|h265|hevc|x264|h264|av1|10bit|8bit|hdr10?|hdr|web[- .]?dl|webrip|bluray|blu[- .]?ray|brrip|dvdrip|aac\d*|ddp?\d*|dts(?:-hd)?|proper|repack)\b/ig, " ")
     .replace(/^@[^\s-]+[-_]/, " ")
     .replace(/[\[\](){}]/g, " ")
     .replace(/[+_.-]+/g, " ").replace(/\s+/g, " ").trim();
