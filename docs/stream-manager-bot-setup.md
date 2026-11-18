@@ -1,6 +1,6 @@
 # MaseNet Stream Manager Bot setup
 
-This bot is separate from @MaseTv_Bot. It is restricted to the configured admin Telegram account and proposes catalogue changes for explicit approval.
+This bot is separate from @MaseTv_Bot. It is restricted to the configured admin Telegram account and automatically publishes supported links forwarded by the configured admin account.
 
 ## Production deployment
 
