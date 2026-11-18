@@ -78,7 +78,14 @@ const findMatches = async (env: Env, parsed: ParsedStream) => {
   const kind = parsed.kind === "drama" ? "drama" : "movie";
   const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?")
     .bind(kind).all<{ id: string; name: string; kind: string; metadata_json: string }>();
-  return (rows.results || []).filter(row => normalize(row.name) === normalize(parsed.title));
+  return (rows.results || []).filter(row => {
+    if (normalize(row.name) !== normalize(parsed.title)) return false;
+    if (!parsed.year) return true;
+    try {
+      const existingYear = String((JSON.parse(row.metadata_json || "{}") as Record<string, unknown>).year || "");
+      return !existingYear || existingYear === parsed.year;
+    } catch { return true; }
+  });
 };
 const applyPending = async (env: Env, pendingId: string) => {
   // Season/episode 0/0 is reserved for a standalone movie in the existing pending table.
@@ -92,7 +99,14 @@ const applyPending = async (env: Env, pendingId: string) => {
   try {
     const matches = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?")
       .bind(kind).all<{ id: string; name: string; kind: string; metadata_json: string }>();
-    const matching = (matches.results || []).filter(row => normalize(row.name) === normalize(pending.title));
+    const matching = (matches.results || []).filter(row => {
+      if (normalize(row.name) !== normalize(pending.title)) return false;
+      if (!pending.year) return true;
+      try {
+        const existingYear = String((JSON.parse(row.metadata_json || "{}") as Record<string, unknown>).year || "");
+        return !existingYear || existingYear === pending.year;
+      } catch { return true; }
+    });
     let row = matching.length === 1 ? matching[0] : null;
     let metadata: Record<string, unknown> = {};
     if (row) {
@@ -212,6 +226,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!token || !secret || !adminId) return json({ ok: false, error: "Stream Manager bot secrets or admin ID are not configured." }, 503);
   if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== secret) return json({ ok: false }, 401);
   const update = await request.json().catch(() => ({})) as {
+    update_id?: number;
     message?: TelegramMessage;
     callback_query?: { id: string; data?: string; from?: { id?: number | string }; message?: { chat?: { id?: number | string } } };
   };
@@ -222,6 +237,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     status TEXT NOT NULL DEFAULT 'pending', received_at TEXT NOT NULL DEFAULT(datetime('now')),
     processed_at TEXT
   )`).run();
+  // Telegram retries webhook deliveries. Claim each update ID once so a retry
+  // cannot create a second pending item or repeat a catalogue write.
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS stream_manager_updates (
+    update_id INTEGER PRIMARY KEY, received_at TEXT NOT NULL DEFAULT(datetime('now'))
+  )`).run();
+  if (Number.isSafeInteger(update.update_id)) {
+    const claimed = await env.DB.prepare("INSERT OR IGNORE INTO stream_manager_updates (update_id) VALUES (?)")
+      .bind(update.update_id).run();
+    if (Number(claimed.meta?.changes || 0) === 0) return json({ ok: true, duplicate: true });
+  }
   if (update.callback_query) {
     const cb = update.callback_query;
     if (String(cb.from?.id || "") !== adminId) {
