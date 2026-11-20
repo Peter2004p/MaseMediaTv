@@ -40,7 +40,7 @@ npm install telegram input
 TELEGRAM_API_ID=your_api_id TELEGRAM_API_HASH=your_api_hash node scripts/create-telegram-session.mjs
 ```
 
-The script asks for your phone number, the Telegram login code, and (if enabled) your 2-step verification password. It prints a session string. Store it immediately as the GitHub Actions secret `TELEGRAM_SESSION`, then clear the terminal output. Never commit the session string, paste it into ChatGPT, or share it with anyone. Revoke the session from Telegram Settings → Devices if it is ever exposed.
+The script displays a Telegram QR code in the terminal. On a separate device, open Telegram → Settings → Devices → Link Desktop Device and scan the QR code. If 2-step verification is enabled, enter its password only in the private terminal. After login, the script prints a session string. Store it immediately as the GitHub Actions secret `TELEGRAM_SESSION`, then clear the terminal output. Never commit the session string, paste it into ChatGPT, or share it with anyone. Revoke the session from Telegram Settings → Devices if it is ever exposed.
 
 ## Staging and activation
 
