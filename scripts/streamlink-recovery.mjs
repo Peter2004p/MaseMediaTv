@@ -108,7 +108,7 @@ async function waitFor(client, peer, predicate, description, timeoutMs = 25000) 
 const normalizeTitle = value => String(value || "")
   .normalize("NFKC")
   .toLocaleLowerCase("en")
-  .replace(/[^\\p{L}\\p{N}]+/gu, " ")
+  .replace(/[^\p{L}\p{N}]+/gu, " ")
   .trim();
 
 function responseMatchesExactTitle(message, title) {
