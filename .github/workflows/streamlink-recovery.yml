@@ -39,6 +39,12 @@ jobs:
               missing=1
             fi
           done
+          # Never allow this pre-release scheduler to mutate the live catalogue.
+          # The recovery API and credentials must target the isolated preview deployment.
+          if [ "$MASETV_RECOVERY_URL" != "https://02158987.masetv-cloudflare-migration.pages.dev/api/streamlink-recovery" ]; then
+            echo "::warning::Recovery is not activated: MASETV_RECOVERY_URL must point to the verified isolated preview deployment."
+            missing=1
+          fi
           if [ "$missing" -eq 0 ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
