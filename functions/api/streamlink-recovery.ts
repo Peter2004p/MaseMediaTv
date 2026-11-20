@@ -27,9 +27,17 @@ const safeHttpsUrl = (value: unknown) => {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password || url.port && url.port !== "443") return null;
     const host = url.hostname.toLowerCase();
-    if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") ||
-      host === "127.0.0.1" || host === "::1" || host.startsWith("10.") || host.startsWith("192.168.") ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return null;
+    const bareHost = host.replace(/^\\[|\\]$/g, "");
+    // Stream links must use public DNS names. Reject every IP literal and
+    // common private/special-use suffix instead of maintaining an incomplete
+    // list of private address ranges in this API layer.
+    if (!host || !host.includes(".") || bareHost.includes(":") ||
+      /^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(bareHost) ||
+      host === "localhost" || host.endsWith(".localhost") ||
+      host.endsWith(".local") || host.endsWith(".internal") ||
+      host.endsWith(".lan") || host.endsWith(".home.arpa") ||
+      host.endsWith(".test") || host.endsWith(".invalid") ||
+      host.endsWith(".example")) return null;
     return url;
   } catch { return null; }
 };
