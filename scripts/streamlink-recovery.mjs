@@ -105,14 +105,35 @@ async function waitFor(client, peer, predicate, description, timeoutMs = 25000) 
   throw new Error(`Timed out waiting for KDL Air: ${description}`);
 }
 
+const normalizeTitle = value => String(value || "")
+  .normalize("NFKC")
+  .toLocaleLowerCase("en")
+  .replace(/[^\\p{L}\\p{N}]+/gu, " ")
+  .trim();
+
+function responseMatchesExactTitle(message, title) {
+  const expected = normalizeTitle(title);
+  if (!expected) return false;
+  const visible = [
+    String(message.message || ""),
+    ...buttonList(message).map(item => item.text)
+  ].map(normalizeTitle);
+  return visible.some(value => value === expected || value.startsWith(expected + " ") || value.endsWith(" " + expected));
+}
+
 async function collectFreshLink(client, peer, item) {
   const seasonText = `S${String(item.season).padStart(2, "0")}`;
   const episodeText = `S${String(item.season).padStart(2, "0")}E${String(item.episode).padStart(2, "0")}`;
-  await client.sendMessage(peer, { message: item.title });
+  const sent = await client.sendMessage(peer, { message: item.title });
+  const sentId = Number(sent?.id || 0);
 
+  // Only accept a fresh bot response that visibly identifies the exact title.
+  // Similar titles and stale buttons from an earlier lookup must never be used.
   let state = await waitFor(client, peer,
-    message => buttonList(message).some(x => /quality/i.test(x.text)),
-    "quality and episode results");
+    message => Number(message.id) > sentId &&
+      responseMatchesExactTitle(message, item.title) &&
+      buttonList(message).some(x => /quality/i.test(x.text)),
+    `an exact-title result for "${item.title}" with a quality selector`);
 
   const qualityOpened = await clickMatching(client, peer, state.messages, /^quality$/i, "Quality");
   if (!qualityOpened) throw new Error("KDL Air did not expose its Quality filter; refusing to guess a stream variant.");
