@@ -23,3 +23,17 @@ binding = "DB"
 database_name = "masenet-asian-discovery-preview"
 database_id = "783e9c3d-b758-4273-9999-b6fffc6b560c"
 migrations_dir = "migrations"
+
+# Worker preview bindings must use isolated preview resources, never production.
+[[previews.d1_databases]]
+binding = "DB"
+database_name = "masenet-asian-discovery-preview"
+database_id = "783e9c3d-b758-4273-9999-b6fffc6b560c"
+migrations_dir = "migrations"
+
+[[previews.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "masetv-mkv-preview-media"
+
+[previews.ai]
+binding = "AI"
