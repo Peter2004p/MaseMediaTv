@@ -31,6 +31,7 @@
     "tailwindcss": "^3.4.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
-    "@cloudflare/workers-types": "^5.20261018.1"
+    "@cloudflare/workers-types": "^5.20261018.1",
+    "qrcode-terminal": "^0.12.0"
   }
 }
