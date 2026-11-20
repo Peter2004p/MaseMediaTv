@@ -18,7 +18,7 @@ The workflow never deletes a title, episode, poster, subtitle, or other quality.
 
 Cloudflare Pages Functions can safely scan and update D1, but they cannot act as a logged-in Telegram user through the ordinary Telegram Bot API. The separate GitHub Actions runner uses GramJS/MTProto for the personal-account interaction. This avoids replacing or changing the existing MaseNet Stream Manager bot token or webhook.
 
-The scheduled workflow is every 15 minutes. GitHub may delay scheduled workflows, so this is periodic recovery, not a guaranteed instant refresh. GitHub scheduled workflows run from the repository's default branch (`main` here), not from the Cloudflare production branch (`cloudflare-migration`). Automatic production recovery therefore requires the workflow to be merged into `main` and the protected Pages API to be released on `cloudflare-migration`. Before that, use `workflow_dispatch` on this feature branch with the preview URL and preview secret for staging tests.
+The scheduled workflow is configured for every 15 minutes, but GitHub only runs scheduled workflows from the repository default branch (`main`). This workflow currently lives on `feature/streamlink-auto-recovery`, so its schedule is not active. Do not merge the entire feature branch into `main`: that branch has a separate, heavily diverged history. A separately reviewed scheduler workflow must be added to `main` and explicitly configured to check out the reviewed recovery code from `cloudflare-migration` (or a release branch). The Cloudflare Pages API must be deployed to the intended environment separately. Until those steps are reviewed and released, no automatic schedule is active.
 
 ## Required configuration
 
@@ -44,7 +44,7 @@ The script displays a Telegram QR code in the terminal. On a separate device, op
 
 ## Staging and activation
 
-The Pages project's Preview D1 binding is isolated to the existing `masenet-asian-discovery-preview` database; production continues using its own D1 binding. The additive recovery-history migration has been applied to that Preview database only.
+The Pages project's Preview D1 binding is isolated to `masenet-asian-discovery-preview`; production uses `masetv-cloudflare-migration`. The recovery-history migration file is included in this branch. The production D1 table was previously verified as present; do not assume the Preview D1 table exists until its migration is separately applied and verified.
 
 1. Apply migration `0004_streamlink_recovery.sql` to the isolated preview D1 database only.
 2. Configure `STREAMLINK_RECOVERY_SECRET` as a Cloudflare Pages preview secret.
@@ -58,7 +58,7 @@ Do not point the workflow at production until staging tests pass and the owner e
 ## Known limitations / safety
 
 - The owner confirmed the source bot username as `@KDLAirBot`; the workflow secret should contain `KDLAirBot` without the `@`.
-- The bot's current button labels and callback behaviour can change. If the exact quality, season, episode, or Generate Streamlink button cannot be identified, the runner stops for that item and leaves the old URL untouched.
+- The bot's current button labels and callback behaviour can change. The runner now requires a fresh KDL Air response that visibly matches the exact requested title before it will use its quality selector. If the exact title, quality, season, episode, or Generate Streamlink button cannot be identified, the runner stops for that item and leaves the old URL untouched.
 - A replacement is blocked if the generated filename does not identify the same quality and codec. If KDL Air does not expose codec-specific choices, this strict check may leave a link unreplaced rather than silently substituting a different encode.
 - Some hosts deliberately return 403 to automated checks. 403 is inconclusive and is not treated as expiry.
 - Telegram's account session is highly sensitive. Use a dedicated account if possible, enable 2-step verification, store the session only in GitHub Actions secrets, and revoke it if exposed.
