@@ -79,8 +79,12 @@ const buttonList = message => (message?.replyMarkup?.rows || [])
   .flatMap(row => row.buttons || [])
   .map(button => ({ button, text: String(button.text || "").trim() }));
 
-async function clickMatching(client, peer, messages, pattern, label) {
-  for (const message of messages) {
+async function clickMatching(client, peer, messages, pattern, label, minMessageId = 0) {
+  // Ignore outgoing messages and every bot message that predates this lookup.
+  const freshMessages = messages
+    .filter(message => !message.out && Number(message.id) > minMessageId)
+    .sort((a, b) => Number(b.id) - Number(a.id));
+  for (const message of freshMessages) {
     for (const item of buttonList(message)) {
       if (!pattern.test(item.text)) continue;
       if (!item.button.data) throw new Error(`The ${label} button is not a supported callback button.`);
@@ -94,11 +98,13 @@ async function clickMatching(client, peer, messages, pattern, label) {
   return false;
 }
 
-async function waitFor(client, peer, predicate, description, timeoutMs = 25000) {
+async function waitFor(client, peer, predicate, description, timeoutMs = 25000, minMessageId = 0) {
   const end = Date.now() + timeoutMs;
   while (Date.now() < end) {
     const messages = await client.getMessages(peer, { limit: 30 });
-    const found = messages.find(predicate);
+    const found = messages.find(message =>
+      !message.out && Number(message.id) > minMessageId && predicate(message)
+    );
     if (found) return { message: found, messages };
     await sleep(1200);
   }
@@ -118,7 +124,7 @@ function responseMatchesExactTitle(message, title) {
     String(message.message || ""),
     ...buttonList(message).map(item => item.text)
   ].map(normalizeTitle);
-  return visible.some(value => value === expected || value.startsWith(expected + " ") || value.endsWith(" " + expected));
+  return visible.some(value => value === expected);
 }
 
 async function collectFreshLink(client, peer, item) {
@@ -133,48 +139,198 @@ async function collectFreshLink(client, peer, item) {
     message => Number(message.id) > sentId &&
       responseMatchesExactTitle(message, item.title) &&
       buttonList(message).some(x => /quality/i.test(x.text)),
-    `an exact-title result for "${item.title}" with a quality selector`);
+    `an exact-title result for "${item.title}" with a quality selector`, 25000, sentId);
 
-  const qualityOpened = await clickMatching(client, peer, state.messages, /^quality$/i, "Quality");
+  const qualityOpened = await clickMatching(client, peer, state.messages, /^quality$/i, "Quality", sentId);
   if (!qualityOpened) throw new Error("KDL Air did not expose its Quality filter; refusing to guess a stream variant.");
 
   state = await waitFor(client, peer,
     message => buttonList(message).some(x => new RegExp(`^\\s*${item.quality}\\s*$`, "i").test(x.text)),
-    `the ${item.quality} quality option`);
+    `the ${item.quality} quality option`, 25000, sentId);
   const qualityChosen = await clickMatching(client, peer, state.messages,
-    new RegExp(`^\\s*${item.quality}\\s*$`, "i"), "quality option");
+    new RegExp(`^\\s*${item.quality}\\s*import { TelegramClient, Api } from "telegram";
+import { StringSession } from "telegram/sessions/index.js";
+
+const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_SECRET", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
+for (const key of required) {
+  if (!process.env[key]) throw new Error(`Missing required environment secret: ${key}`);
+}
+const recoveryEndpoint = new URL(process.env.MASETV_RECOVERY_URL);
+if (!recoveryEndpoint.pathname.replace(/\/$/, "").endsWith("/api/streamlink-recovery")) {
+  recoveryEndpoint.pathname = `${recoveryEndpoint.pathname.replace(/\/$/, "")}/api/streamlink-recovery`;
+}
+const recoveryUrl = recoveryEndpoint.toString();
+const authHeaders = {
+  Authorization: `Bearer ${process.env.STREAMLINK_RECOVERY_SECRET}`,
+  "Content-Type": "application/json"
+};
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function recoveryApi(action, payload = {}) {
+  const response = await fetch(recoveryUrl, {
+    method: "POST", headers: authHeaders, body: JSON.stringify({ action, ...payload })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok) throw new Error(data.error || `MaseNet recovery API returned HTTP ${response.status}`);
+  return data;
+}
+
+async function checkLink(url) {
+  const request = async (method, headers = {}) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 9000);
+    try {
+      const response = await fetch(url, {
+        method, redirect: "manual", signal: controller.signal,
+        headers: { "User-Agent": "MaseNet-Link-Recovery/1.0", ...headers }
+      });
+      try { await response.body?.cancel(); } catch {}
+      return response.status;
+    } finally { clearTimeout(timer); }
+  };
+
+  // HEAD is only a quick probe. Some hosts incorrectly return 404/410 to
+  // HEAD while the actual media GET still works, so never expire on HEAD alone.
+  let headStatus;
+  try {
+    headStatus = await request("HEAD");
+  } catch {
+    return { expired: false, reason: "network-inconclusive" };
+  }
+  if (![404, 410, 405, 501].includes(headStatus)) {
+    return { expired: false, reason: headStatus === 401 || headStatus === 403
+      ? "access-denied-inconclusive" : `http-${headStatus}` };
+  }
+
+  // Confirm with a one-byte GET. Only repeated GET 404/410 responses count.
+  let firstGet;
+  try {
+    firstGet = await request("GET", { Range: "bytes=0-0" });
+  } catch {
+    return { expired: false, reason: "get-network-inconclusive" };
+  }
+  if (![404, 410].includes(firstGet)) {
+    return { expired: false, reason: `get-http-${firstGet}` };
+  }
+
+  await sleep(2500);
+  try {
+    const confirmGet = await request("GET", { Range: "bytes=0-0" });
+    return {
+      expired: [404, 410].includes(confirmGet),
+      reason: `confirmed-get-http-${confirmGet}`
+    };
+  } catch {
+    return { expired: false, reason: "confirmation-network-inconclusive" };
+  }
+}
+
+const buttonList = message => (message?.replyMarkup?.rows || [])
+  .flatMap(row => row.buttons || [])
+  .map(button => ({ button, text: String(button.text || "").trim() }));
+
+async function clickMatching(client, peer, messages, pattern, label, minMessageId = 0) {
+  // Ignore outgoing messages and every bot message that predates this lookup.
+  const freshMessages = messages
+    .filter(message => !message.out && Number(message.id) > minMessageId)
+    .sort((a, b) => Number(b.id) - Number(a.id));
+  for (const message of freshMessages) {
+    for (const item of buttonList(message)) {
+      if (!pattern.test(item.text)) continue;
+      if (!item.button.data) throw new Error(`The ${label} button is not a supported callback button.`);
+      await client.invoke(new Api.messages.GetBotCallbackAnswer({
+        peer, msgId: message.id, data: item.button.data
+      }));
+      await sleep(1200);
+      return true;
+    }
+  }
+  return false;
+}
+
+async function waitFor(client, peer, predicate, description, timeoutMs = 25000, minMessageId = 0) {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    const messages = await client.getMessages(peer, { limit: 30 });
+    const found = messages.find(message =>
+      !message.out && Number(message.id) > minMessageId && predicate(message)
+    );
+    if (found) return { message: found, messages };
+    await sleep(1200);
+  }
+  throw new Error(`Timed out waiting for KDL Air: ${description}`);
+}
+
+const normalizeTitle = value => String(value || "")
+  .normalize("NFKC")
+  .toLocaleLowerCase("en")
+  .replace(/[^\p{L}\p{N}]+/gu, " ")
+  .trim();
+
+function responseMatchesExactTitle(message, title) {
+  const expected = normalizeTitle(title);
+  if (!expected) return false;
+  const visible = [
+    String(message.message || ""),
+    ...buttonList(message).map(item => item.text)
+  ].map(normalizeTitle);
+  return visible.some(value => value === expected);
+}
+
+async function collectFreshLink(client, peer, item) {
+  const seasonText = `S${String(item.season).padStart(2, "0")}`;
+  const episodeText = `S${String(item.season).padStart(2, "0")}E${String(item.episode).padStart(2, "0")}`;
+  const sent = await client.sendMessage(peer, { message: item.title });
+  const sentId = Number(sent?.id || 0);
+
+  // Only accept a fresh bot response that visibly identifies the exact title.
+  // Similar titles and stale buttons from an earlier lookup must never be used.
+  let state = await waitFor(client, peer,
+    message => Number(message.id) > sentId &&
+      responseMatchesExactTitle(message, item.title) &&
+      buttonList(message).some(x => /quality/i.test(x.text)),
+    `an exact-title result for "${item.title}" with a quality selector`, 25000, sentId);
+
+  const qualityOpened = await clickMatching(client, peer, state.messages, /^quality$/i, "Quality", sentId);
+  if (!qualityOpened) throw new Error("KDL Air did not expose its Quality filter; refusing to guess a stream variant.");
+
+  state = await waitFor(client, peer,
+    message => buttonList(message).some(x => new RegExp(`^\\s*${item.quality}\\s*$`, "i").test(x.text)),
+    `the ${item.quality} quality option`, 25000, sentId);
+  const qualityChosen = await clickMatching(client, peer, state.messages,
+, "i"), "quality option", sentId);
   if (!qualityChosen) throw new Error(`KDL Air did not offer ${item.quality}; no other quality will be substituted.`);
 
   if (Number(item.season) > 1) {
     state = await waitFor(client, peer,
       message => buttonList(message).some(x => /season/i.test(x.text)),
-      "season selector", 12000);
-    const seasonOpened = await clickMatching(client, peer, state.messages, /^season$/i, "Season");
+      "season selector", 12000, sentId);
+    const seasonOpened = await clickMatching(client, peer, state.messages, /^season$/i, "Season", sentId);
     if (!seasonOpened) throw new Error("Season selector unavailable.");
     state = await waitFor(client, peer,
       message => buttonList(message).some(x => new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i").test(x.text)),
-      `${seasonText} option`);
+      `${seasonText} option`, 25000, sentId);
     const seasonChosen = await clickMatching(client, peer, state.messages,
-      new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i"), "season option");
+      new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i"), "season option", sentId);
     if (!seasonChosen) throw new Error(`KDL Air did not offer ${seasonText}.`);
   }
 
   state = await waitFor(client, peer,
     message => buttonList(message).some(x => new RegExp(episodeText, "i").test(x.text)),
-    `${episodeText} episode`);
-  const episodeChosen = await clickMatching(client, peer, state.messages, new RegExp(episodeText, "i"), "episode");
+    `${episodeText} episode`, 25000, sentId);
+  const episodeChosen = await clickMatching(client, peer, state.messages, new RegExp(episodeText, "i"), "episode", sentId);
   if (!episodeChosen) throw new Error(`KDL Air did not expose ${episodeText} as a selectable button.`);
 
   state = await waitFor(client, peer,
     message => buttonList(message).some(x => /generate streamlink/i.test(x.text)),
-    "Generate Streamlink button");
-  const generated = await clickMatching(client, peer, state.messages, /generate streamlink/i, "Generate Streamlink");
+    "Generate Streamlink button", 25000, sentId);
+  const generated = await clickMatching(client, peer, state.messages, /generate streamlink/i, "Generate Streamlink", sentId);
   if (!generated) throw new Error("Generate Streamlink button was unavailable.");
 
   state = await waitFor(client, peer,
     message => /your link\s*:/i.test(String(message.message || "")) &&
       /https:\/\//i.test(String(message.message || "")),
-    "generated streamlink", 45000);
+    "generated streamlink", 45000, sentId);
   const text = String(state.message.message || "");
   const match = text.match(/your link\s*:\s*(https:\/\/[^\s<>]+)/i);
   if (!match) throw new Error("KDL Air response did not contain a readable streamlink.");
