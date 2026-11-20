@@ -139,6 +139,12 @@ async function collectFreshLink(client, peer, item) {
   const match = text.match(/your link\s*:\s*(https:\/\/[^\s<>]+)/i);
   if (!match) throw new Error("KDL Air response did not contain a readable streamlink.");
   const freshUrl = match[1].replace(/[),.]+$/, "");
+  const parsedFreshUrl = new URL(freshUrl);
+  if (parsedFreshUrl.protocol !== "https:" || parsedFreshUrl.username || parsedFreshUrl.password ||
+      (parsedFreshUrl.port && parsedFreshUrl.port !== "443")) {
+    throw new Error("KDL Air returned an unsafe stream URL; replacement was blocked.");
+  }
+  await resolvePublicTarget(parsedFreshUrl);
   let filename = "";
   try { filename = decodeURIComponent(new URL(freshUrl).pathname.split("/").pop() || ""); } catch {}
   const freshQuality = filename.match(/\b(2160p|1440p|1080p|720p|576p|540p|480p|360p)\b/i)?.[1]?.toLowerCase();
