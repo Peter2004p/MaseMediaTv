@@ -1,5 +1,8 @@
 import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+import { request as httpsRequest } from "node:https";
 
 const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_SECRET", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
 for (const key of required) {
@@ -25,53 +28,103 @@ async function recoveryApi(action, payload = {}) {
   return data;
 }
 
-async function checkLink(url) {
-  const request = async (method, headers = {}) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 9000);
-    try {
-      const response = await fetch(url, {
-        method, redirect: "manual", signal: controller.signal,
-        headers: { "User-Agent": "MaseNet-Link-Recovery/1.0", ...headers }
-      });
-      try { await response.body?.cancel(); } catch {}
-      return response.status;
-    } finally { clearTimeout(timer); }
-  };
+function isPublicIPv4(address) {
+  const parts = address.split(".").map(Number);
+  if (parts.length !== 4 || parts.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return false;
+  const [a, b, d] = parts;
+  if (a === 0 || a === 10 || a === 127 || a >= 224) return false;
+  if (a === 100 && b >= 64 && b <= 127) return false;
+  if (a === 169 && b === 254) return false;
+  if (a === 172 && b >= 16 && b <= 31) return false;
+  if (a === 192 && (b === 0 || b === 168)) return false;
+  if (a === 192 && b === 0 && (d === 0 || d === 2)) return false;
+  if (a === 198 && (b === 18 || b === 19 || b === 51)) return false;
+  if (a === 203 && b === 0 && d === 113) return false;
+  return true;
+}
 
-  // HEAD is only a quick probe. Some hosts incorrectly return 404/410 to
-  // HEAD while the actual media GET still works, so never expire on HEAD alone.
-  let headStatus;
-  try {
-    headStatus = await request("HEAD");
-  } catch {
-    return { expired: false, reason: "network-inconclusive" };
-  }
-  if (![404, 410, 405, 501].includes(headStatus)) {
-    return { expired: false, reason: headStatus === 401 || headStatus === 403
-      ? "access-denied-inconclusive" : `http-${headStatus}` };
-  }
+function isPublicIPv6(address) {
+  const value = address.toLowerCase().split("%")[0];
+  if (value.startsWith("::ffff:") || value === "::" || value === "::1") return false;
+  const first = Number.parseInt(value.split(":")[0] || "0", 16);
+  // Accept only global-unicast 2000::/3; reject documentation and transition ranges.
+  if (!Number.isFinite(first) || first < 0x2000 || first > 0x3fff) return false;
+  if (value.startsWith("2001:db8:") || value.startsWith("2001:10:") || value.startsWith("2002:")) return false;
+  return true;
+}
 
-  // Confirm with a one-byte GET. Only repeated GET 404/410 responses count.
-  let firstGet;
-  try {
-    firstGet = await request("GET", { Range: "bytes=0-0" });
-  } catch {
-    return { expired: false, reason: "get-network-inconclusive" };
+async function resolvePublicTarget(url) {
+  const hostname = url.hostname.toLowerCase();
+  if (!hostname || hostname === "localhost" || hostname.endsWith(".localhost") ||
+      hostname.endsWith(".local") || hostname.endsWith(".internal")) {
+    throw new Error("Blocked non-public media hostname.");
   }
-  if (![404, 410].includes(firstGet)) {
-    return { expired: false, reason: `get-http-${firstGet}` };
+  const literalFamily = isIP(hostname);
+  if (literalFamily) throw new Error("IP-literal stream URLs are not allowed.");
+  const records = await lookup(hostname, { all: true, verbatim: true });
+  if (!records.length || records.some(record =>
+    record.family === 4 ? !isPublicIPv4(record.address) :
+    record.family === 6 ? !isPublicIPv6(record.address) : true
+  )) {
+    throw new Error("Media hostname resolves to a non-public or mixed address set.");
   }
+  // Pin the connection to one validated address to reduce DNS-rebinding/TOCTOU risk.
+  return records[0];
+}
 
-  await sleep(2500);
+async function requestPinnedStatus(url, method, headers, target) {
+  return new Promise((resolve, reject) => {
+    const request = httpsRequest({
+      protocol: "https:",
+      hostname: url.hostname,
+      port: 443,
+      method,
+      path: url.pathname + url.search,
+      headers: { "User-Agent": "MaseNet-Link-Recovery/1.0", ...headers },
+      servername: url.hostname,
+      lookup: (_hostname, options, callback) => {
+        if (options?.all) callback(null, [target]);
+        else callback(null, target.address, target.family);
+      }
+    }, response => {
+      const status = response.statusCode || 0;
+      response.resume();
+      response.on("end", () => resolve(status));
+      response.on("error", reject);
+    });
+    request.setTimeout(9000, () => request.destroy(new Error("Media probe timed out.")));
+    request.on("error", reject);
+    request.end();
+  });
+}
+
+async function checkLink(value) {
+  let url;
   try {
-    const confirmGet = await request("GET", { Range: "bytes=0-0" });
+    url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password ||
+        (url.port && url.port !== "443")) {
+      return { expired: false, reason: "unsafe-url-inconclusive" };
+    }
+    const target = await resolvePublicTarget(url);
+    const headStatus = await requestPinnedStatus(url, "HEAD", {}, target);
+    // HEAD alone never proves expiry; confirm with two bounded GET requests.
+    if (![404, 410, 405, 501].includes(headStatus)) {
+      return { expired: false, reason: headStatus === 401 || headStatus === 403
+        ? "access-denied-inconclusive" : `http-${headStatus}` };
+    }
+    const firstGet = await requestPinnedStatus(url, "GET", { Range: "bytes=0-0" }, target);
+    if (![404, 410].includes(firstGet)) {
+      return { expired: false, reason: `get-http-${firstGet}` };
+    }
+    await sleep(2500);
+    const confirmGet = await requestPinnedStatus(url, "GET", { Range: "bytes=0-0" }, target);
     return {
       expired: [404, 410].includes(confirmGet),
       reason: `confirmed-get-http-${confirmGet}`
     };
-  } catch {
-    return { expired: false, reason: "confirmation-network-inconclusive" };
+  } catch (error) {
+    return { expired: false, reason: `probe-inconclusive: ${error.message}` };
   }
 }
 
