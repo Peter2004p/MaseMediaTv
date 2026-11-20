@@ -24,7 +24,7 @@ The scheduled workflow is configured for every 15 minutes, but GitHub only runs 
 
 Configure the following values as GitHub Actions repository secrets (Settings → Secrets and variables → Actions → New repository secret):
 
-- `MASETV_RECOVERY_URL`: the base URL of the MaseNet environment that has this API deployed, without a trailing slash (for example, the Pages preview URL for this branch during staging).
+- `MASETV_RECOVERY_URL`: the full HTTPS API endpoint, including `/api/streamlink-recovery` (for example, `https://<preview-deployment>.masetv-cloudflare-migration.pages.dev/api/streamlink-recovery`). Do not paste the secret or add a second copy of the path.
 - `STREAMLINK_RECOVERY_SECRET`: a long random secret. Configure the exact same value as a Cloudflare Pages secret named `STREAMLINK_RECOVERY_SECRET` for that environment.
 - `TELEGRAM_API_ID`: API ID from https://my.telegram.org.
 - `TELEGRAM_API_HASH`: API hash from https://my.telegram.org.
@@ -46,10 +46,10 @@ The script displays a Telegram QR code in the terminal. On a separate device, op
 
 The Pages project's Preview D1 binding is isolated to `masenet-asian-discovery-preview`; production uses `masetv-cloudflare-migration`. The recovery-history migration file is included in this branch. The production D1 table was previously verified as present; do not assume the Preview D1 table exists until its migration is separately applied and verified.
 
-1. Apply migration `0004_streamlink_recovery.sql` to the isolated preview D1 database only.
+1. Verify the `streamlink_recovery_history` table exists in the isolated preview D1 database before testing. It was present in the latest read-only check; if a fresh preview database is provisioned, apply migration `0004_streamlink_recovery.sql` to that preview database only.
 2. Configure `STREAMLINK_RECOVERY_SECRET` as a Cloudflare Pages preview secret.
 3. Add the GitHub Actions secrets above.
-4. Set the preview URL in `MASETV_RECOVERY_URL`.
+4. Set the full preview API endpoint (including `/api/streamlink-recovery`) in `MASETV_RECOVERY_URL`.
 5. Run the workflow manually and inspect its logs. It must report “No confirmed expired links” or show a narrowly scoped successful replacement.
 6. Test with a link that is known to be expired and a non-production title/episode before considering production activation.
 
