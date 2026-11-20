@@ -44,9 +44,9 @@ The script displays a Telegram QR code in the terminal. On a separate device, op
 
 ## Staging and activation
 
-The Pages project's Preview D1 binding is isolated to `masenet-asian-discovery-preview`; production uses `masetv-cloudflare-migration`. The recovery-history migration file is included in this branch. The production D1 table was previously verified as present; do not assume the Preview D1 table exists until its migration is separately applied and verified.
+The Pages project's Preview D1 binding is isolated to `masenet-asian-discovery-preview`; production uses `masetv-cloudflare-migration`. The recovery-history table and index are present in both databases. The preview database currently has 13 title rows, but its episode data is not identical to production (for example, one title has 9 preview episodes versus 15 production episodes). Do not use preview results as a production catalogue baseline, and never copy preview metadata back into production.
 
-1. Verify the `streamlink_recovery_history` table exists in the isolated preview D1 database before testing. It was present in the latest read-only check; if a fresh preview database is provisioned, apply migration `0004_streamlink_recovery.sql` to that preview database only.
+1. Verify the `streamlink_recovery_history` table and index in the isolated preview D1 database before testing. Both were present in the latest read-only check; if a fresh preview database is provisioned, apply migration `0004_streamlink_recovery.sql` to that preview database only.
 2. Configure `STREAMLINK_RECOVERY_SECRET` as a Cloudflare Pages preview secret.
 3. Add the GitHub Actions secrets above.
 4. Set the full preview API endpoint (including `/api/streamlink-recovery`) in `MASETV_RECOVERY_URL`.
