@@ -5,8 +5,8 @@ This feature is additive and is intentionally isolated from the existing Telegra
 ## What it does
 
 1. A scheduled GitHub Actions job asks the protected Pages Function for the currently saved movie/drama stream variants.
-2. It checks each direct HTTPS URL with HEAD (and a one-byte Range GET fallback where HEAD is unsupported).
-3. Only a repeated HTTP 404 or 410 is treated as confirmed expiry. Network failures, timeouts, 401/403, redirects and 5xx responses are inconclusive and never trigger replacement.
+2. It probes each direct HTTPS URL with HEAD. A HEAD 404/410/405/501 triggers two one-byte Range GET checks, separated by 2.5 seconds.
+3. Only when both Range GET checks return HTTP 404 or 410 is the URL treated as confirmed expired. A HEAD response by itself never triggers replacement. Network failures, timeouts, 401/403, redirects and 5xx responses are inconclusive.
 4. For a confirmed expired variant, a separate Telegram MTProto user session opens the configured KDL Air bot, selects the same quality and episode, presses Generate Streamlink, and reads the generated URL.
 5. The runner verifies that the new filename still identifies the same quality and codec.
 6. The protected Pages Function replaces only the exact old URL for the exact episode and quality/codec. A concurrent edit causes a 409 conflict rather than overwriting newer data.
