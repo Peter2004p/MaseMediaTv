@@ -134,15 +134,23 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }
 
     metadata.episodes = episodes;
-    await env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=?")
-      .bind(JSON.stringify(metadata), row.id).run();
-
-    await env.DB.prepare(`INSERT INTO streamlink_recovery_history
-      (id,title_id,episode_id,season,episode,quality,codec,old_url,new_url,source)
-      VALUES (?,?,?,?,?,?,?,?,?,'telegram-user-session')`)
-      .bind(crypto.randomUUID(), row.id, episodeId, Number(episode.season) || 1,
-        Number(episode.episode) || 1, String(body.quality || "Unknown"),
-        String(body.codec || "Unknown"), oldUrlRaw, newUrl.toString()).run();
+    // Compare-and-swap the entire metadata document so a concurrent catalogue edit
+    // cannot be overwritten by this recovery job. Keep the audit insert in the
+    // same D1 batch and only insert it when the guarded UPDATE changed one row.
+    const updatedMetadata = JSON.stringify(metadata);
+    const results = await env.DB.batch([
+      env.DB.prepare("UPDATE titles SET metadata_json=?,updated_at=datetime('now') WHERE id=? AND metadata_json=?")
+        .bind(updatedMetadata, row.id, row.metadata_json),
+      env.DB.prepare(`INSERT INTO streamlink_recovery_history
+        (id,title_id,episode_id,season,episode,quality,codec,old_url,new_url,source)
+        SELECT ?,?,?,?,?,?,?,?,?,'telegram-user-session' WHERE changes() > 0`)
+        .bind(crypto.randomUUID(), row.id, episodeId, Number(episode.season) || 1,
+          Number(episode.episode) || 1, String(body.quality || "Unknown"),
+          String(body.codec || "Unknown"), oldUrlRaw, newUrl.toString())
+    ]);
+    if (!results[0]?.meta?.changes) {
+      return json({ ok: false, error: "The catalogue changed during recovery. No link was overwritten; scan again." }, 409);
+    }
 
     return json({ ok: true, replaced: true, title: row.name, episodeId,
       season: Number(episode.season) || 1, episode: Number(episode.episode) || 1,
