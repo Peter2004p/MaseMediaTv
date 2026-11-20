@@ -34,21 +34,38 @@ async function checkLink(url) {
       return response.status;
     } finally { clearTimeout(timer); }
   };
-  let status;
+
+  // HEAD is only a quick probe. Some hosts incorrectly return 404/410 to
+  // HEAD while the actual media GET still works, so never expire on HEAD alone.
+  let headStatus;
   try {
-    status = await request("HEAD");
-    if ([405, 501].includes(status)) status = await request("GET", { Range: "bytes=0-0" });
+    headStatus = await request("HEAD");
   } catch {
     return { expired: false, reason: "network-inconclusive" };
   }
-  if (![404, 410].includes(status)) {
-    return { expired: false, reason: status === 401 || status === 403 ? "access-denied-inconclusive" : `http-${status}` };
+  if (![404, 410, 405, 501].includes(headStatus)) {
+    return { expired: false, reason: headStatus === 401 || headStatus === 403
+      ? "access-denied-inconclusive" : `http-${headStatus}` };
   }
+
+  // Confirm with a one-byte GET. Only repeated GET 404/410 responses count.
+  let firstGet;
+  try {
+    firstGet = await request("GET", { Range: "bytes=0-0" });
+  } catch {
+    return { expired: false, reason: "get-network-inconclusive" };
+  }
+  if (![404, 410].includes(firstGet)) {
+    return { expired: false, reason: `get-http-${firstGet}` };
+  }
+
   await sleep(2500);
   try {
-    let confirm = await request("HEAD");
-    if ([405, 501].includes(confirm)) confirm = await request("GET", { Range: "bytes=0-0" });
-    return { expired: [404, 410].includes(confirm), reason: `confirmed-http-${confirm}` };
+    const confirmGet = await request("GET", { Range: "bytes=0-0" });
+    return {
+      expired: [404, 410].includes(confirmGet),
+      reason: `confirmed-get-http-${confirmGet}`
+    };
   } catch {
     return { expired: false, reason: "confirmation-network-inconclusive" };
   }
