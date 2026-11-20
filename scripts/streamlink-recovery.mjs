@@ -54,7 +54,7 @@ function isPublicIPv6(address) {
 }
 
 async function resolvePublicTarget(url) {
-  const hostname = url.hostname.toLowerCase();
+  const hostname = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
   if (!hostname || hostname === "localhost" || hostname.endsWith(".localhost") ||
       hostname.endsWith(".local") || hostname.endsWith(".internal")) {
     throw new Error("Blocked non-public media hostname.");
