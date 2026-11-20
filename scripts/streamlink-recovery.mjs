@@ -5,7 +5,11 @@ const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_SECRET", "TELEGRAM
 for (const key of required) {
   if (!process.env[key]) throw new Error(`Missing required environment secret: ${key}`);
 }
-const baseUrl = process.env.MASETV_RECOVERY_URL.replace(/\/$/, "");
+const recoveryEndpoint = new URL(process.env.MASETV_RECOVERY_URL);
+if (!recoveryEndpoint.pathname.replace(/\/$/, "").endsWith("/api/streamlink-recovery")) {
+  recoveryEndpoint.pathname = `${recoveryEndpoint.pathname.replace(/\/$/, "")}/api/streamlink-recovery`;
+}
+const recoveryUrl = recoveryEndpoint.toString();
 const authHeaders = {
   Authorization: `Bearer ${process.env.STREAMLINK_RECOVERY_SECRET}`,
   "Content-Type": "application/json"
@@ -13,7 +17,7 @@ const authHeaders = {
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function recoveryApi(action, payload = {}) {
-  const response = await fetch(`${baseUrl}/api/streamlink-recovery`, {
+  const response = await fetch(recoveryUrl, {
     method: "POST", headers: authHeaders, body: JSON.stringify({ action, ...payload })
   });
   const data = await response.json().catch(() => ({}));
