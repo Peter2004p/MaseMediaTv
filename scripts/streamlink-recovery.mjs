@@ -162,7 +162,7 @@ async function collectFreshLink(client, peer, item) {
 
   // The title result may include the episode list immediately. Quality and
   // Season are filters, not mandatory steps: first try the default result.
-  const state = await waitFor(client, peer,
+  let state = await waitFor(client, peer,
     message => Number(message.id) > sentId &&
       responseMatchesExactTitle(message, item.title),
     `an exact-title result for "${item.title}"`,25000,sentId);
