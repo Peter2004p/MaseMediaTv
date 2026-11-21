@@ -55,7 +55,7 @@ async function clickMatching(client, peer, messages, pattern, label, minMessageI
 }
 
 async function clickButtonOnMessage(client, peer, message, pattern, label) {
-  const match = buttonList(message).find(x => pattern.test(x.text));
+  const match = buttonList(message).find(x => typeof pattern === "function" ? pattern(x.text) : pattern.test(x.text));
   if (!match?.button?.data) throw new Error(`The exact ${label} button was not present on its matched message.`);
   await client.invoke(new Api.messages.GetBotCallbackAnswer({
     peer, msgId: message.id, data: match.button.data
