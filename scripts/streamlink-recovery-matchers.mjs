@@ -4,14 +4,14 @@ export function normalizeCodec(value) {
 }
 
 export function matchesKdlFileButton(buttonText, item, episodeText) {
-  const value = String(buttonText || "");
+  const tokens = String(buttonText || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
   const expectedQuality = String(item.quality || "").toLowerCase();
   const expectedCodec = normalizeCodec(item.codec);
   if (!expectedQuality || !expectedCodec || expectedCodec === "unknown") return false;
-  if (!new RegExp("\\b" + episodeText.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&") + "\\b", "i").test(value)) return false;
-  if (!new RegExp("\\b" + expectedQuality.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&") + "\\b", "i").test(value)) return false;
-  const codecMatch = value.match(/\\b(x265|h265|hevc|x264|h264|av1)\\b/i)?.[1];
-  return !!codecMatch && normalizeCodec(codecMatch) === expectedCodec;
+  if (!tokens.includes(String(episodeText || "").toLowerCase())) return false;
+  if (!tokens.includes(expectedQuality)) return false;
+  const codecToken = tokens.find(token => ["x265", "h265", "hevc", "x264", "h264", "av1"].includes(token));
+  return !!codecToken && normalizeCodec(codecToken) === expectedCodec;
 }
 
 export function isNextPageLabel(value) {
