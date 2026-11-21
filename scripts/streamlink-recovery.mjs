@@ -113,9 +113,19 @@ async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText)
 
 async function waitFor(client, peer, predicate, description, timeoutMs = 25000, minMessageId = 0) {
   const end = Date.now() + timeoutMs;
+  const observed = new Set();
   while (Date.now() < end) {
     const messages = await client.getMessages(peer, { limit: 30 });
-    const found = messages.find(m=>!m.out&&Number(m.id)>minMessageId&&predicate(m));
+    const fresh = messages.filter(m => !m.out && Number(m.id) > minMessageId);
+    for (const message of fresh) {
+      const id = Number(message.id);
+      if (observed.has(id)) continue;
+      observed.add(id);
+      const preview = String(message.message || "").replace(/https?:\\/\\/[^\\s<>]+/gi, "[url]").replace(/\\s+/g, " ").slice(0, 140);
+      const labels = buttonList(message).map(item => item.text).filter(Boolean).slice(0, 16);
+      console.log("KDL Air response:", JSON.stringify({ id, text: preview, buttons: labels }));
+    }
+    const found = fresh.find(predicate);
     if (found) return { message: found, messages };
     await sleep(1200);
   }
@@ -256,7 +266,14 @@ async function main() {
   // to the next scheduled run.
   const maxRecoveries = Math.max(1, Math.min(5,
     Number.parseInt(process.env.MAX_RECOVERIES_PER_RUN || "2", 10) || 2));
-  const recoveryBatch = expired.slice(0, maxRecoveries);
+  // First validate against the exact drama title shown in the supplied KDL Air
+  // walkthrough. This is only an ordering preference; every episode, season,
+  // quality and codec still has to match exactly before a replacement is allowed.
+  const knownWalkthroughTitle = "blossom in darkness";
+  const recoveryBatch = [...expired].sort((a, b) =>
+    Number(String(b.title || "").trim().toLocaleLowerCase("en") === knownWalkthroughTitle) -
+    Number(String(a.title || "").trim().toLocaleLowerCase("en") === knownWalkthroughTitle)
+  ).slice(0, maxRecoveries);
   if (expired.length > recoveryBatch.length) {
     console.log(`Deferring ${expired.length - recoveryBatch.length} expired variants to later scheduled runs.`);
   }
@@ -270,6 +287,7 @@ async function main() {
   await client.connect();
   try {
     const peer = await client.getEntity(process.env.KDL_AIR_BOT_USERNAME);
+    let failedRecoveries = 0;
     for (const item of recoveryBatch) {
       try {
         const newUrl = await collectFreshLink(client, peer, item);
@@ -279,9 +297,13 @@ async function main() {
         });
         console.log(`Replaced ${updated.title} S${updated.season}E${updated.episode} ${updated.quality} only.`);
       } catch (error) {
+        failedRecoveries++;
         console.error(`Recovery failed for ${item.title} ${item.episodeId} ${item.quality}:`, error.message);
       }
       await sleep(1800);
+    }
+    if (failedRecoveries > 0) {
+      throw new Error(`${failedRecoveries} of ${recoveryBatch.length} attempted recoveries failed; no unverified URL was written.`);
     }
   } finally {
     await client.disconnect();
