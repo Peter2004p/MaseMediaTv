@@ -145,7 +145,10 @@ function responseMatchesExactTitle(message, title) {
     String(message.message || ""),
     ...buttonList(message).map(item => item.text)
   ].map(normalizeTitle);
-  return visible.some(value => value === expected);
+  // KDL wraps the title in labels such as "Drama" and "Results For".
+  // Match the complete normalized title phrase inside that text, not only
+  // when the entire Telegram message consists of the title.
+  return visible.some(value => (" " + value + " ").includes(" " + expected + " "));
 }
 
 async function collectFreshLink(client, peer, item) {
@@ -157,38 +160,47 @@ async function collectFreshLink(client, peer, item) {
   const sent = await client.sendMessage(peer, { message: item.title });
   const sentId = Number(sent?.id || 0);
 
-  // Only accept a fresh bot response that visibly identifies the exact title.
-  // Similar titles and stale buttons from an earlier lookup must never be used.
-  let state = await waitFor(client, peer,
+  // The title result may include the episode list immediately. Quality and
+  // Season are filters, not mandatory steps: first try the default result.
+  const state = await waitFor(client, peer,
     message => Number(message.id) > sentId &&
-      responseMatchesExactTitle(message, item.title) &&
-      buttonList(message).some(x => /quality/i.test(x.text)),
-    `an exact-title result for "${item.title}" with a quality selector`,25000,sentId);
+      responseMatchesExactTitle(message, item.title),
+    `an exact-title result for "${item.title}"`,25000,sentId);
 
-  const qualityOpened = await clickMatching(client, peer, state.messages, /^quality$/i, "Quality",sentId);
-  if (!qualityOpened) throw new Error("KDL Air did not expose its Quality filter; refusing to guess a stream variant.");
+  let selectedFilename;
+  try {
+    selectedFilename = await findAndSelectEpisodeFile(client, peer, item, sentId, episodeText);
+    console.log(`Selected exact default-list variant: ${selectedFilename}`);
+  } catch (directError) {
+    console.log(`Default episode list did not expose an exact quality/codec match: ${directError.message}`);
+    // Use Quality only as a fallback when the unfiltered list cannot identify
+    // the saved variant. Never substitute a different quality.
+    const qualityOpened = await clickMatching(client, peer, state.messages, /^quality$/i, "Quality",sentId);
+    if (!qualityOpened) throw new Error(`No exact default-list match and KDL Air has no Quality filter: ${directError.message}`);
+    const qualityState = await waitFor(client, peer,
+      message => buttonList(message).some(x => new RegExp(`^\\s*${item.quality}\\s*$`, "i").test(x.text)),
+      `the ${item.quality} quality option`,25000,sentId);
+    const qualityChosen = await clickMatching(client, peer, qualityState.messages,
+      new RegExp(`^\\s*${item.quality}\\s*$`, "i"), "quality option",sentId);
+    if (!qualityChosen) throw new Error(`KDL Air did not offer ${item.quality}; no other quality will be substituted.`);
 
-  state = await waitFor(client, peer,
-    message => buttonList(message).some(x => new RegExp(`^\\s*${item.quality}\\s*$`, "i").test(x.text)),
-    `the ${item.quality} quality option`,25000,sentId);
-  const qualityChosen = await clickMatching(client, peer, state.messages,
-    new RegExp(`^\\s*${item.quality}\\s*$`, "i"), "quality option",sentId);
-  if (!qualityChosen) throw new Error(`KDL Air did not offer ${item.quality}; no other quality will be substituted.`);
-
-  // Always select the exact saved season, including S01; do not rely on KDL defaults.
-    state = await waitFor(client, peer,
-      message => buttonList(message).some(x => /season/i.test(x.text)),
-      "season selector",12000,sentId);
-    const seasonOpened = await clickMatching(client, peer, state.messages, /^season$/i, "Season",sentId);
-    if (!seasonOpened) throw new Error("Season selector unavailable.");
-    state = await waitFor(client, peer,
-      message => buttonList(message).some(x => new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i").test(x.text)),
-      `${seasonText} option`,25000,sentId);
-    const seasonChosen = await clickMatching(client, peer, state.messages,
-      new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i"), "season option",sentId);
-    if (!seasonChosen) throw new Error(`KDL Air did not offer ${seasonText}.`);
-
-  const selectedFilename = await findAndSelectEpisodeFile(client, peer, item, sentId, episodeText);
+    // Season is also a fallback, only used if the filtered episode list does
+    // not contain the exact saved episode on its current pages.
+    try {
+      selectedFilename = await findAndSelectEpisodeFile(client, peer, item, sentId, episodeText);
+    } catch (qualityError) {
+      const latest = await client.getMessages(peer, { limit: 30 });
+      const seasonOpened = await clickMatching(client, peer, latest, /^season$/i, "Season",sentId);
+      if (!seasonOpened) throw new Error(`Exact episode not found after Quality filter and no Season filter was available: ${qualityError.message}`);
+      const seasonState = await waitFor(client, peer,
+        message => buttonList(message).some(x => new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i").test(x.text)),
+        `${seasonText} option`,25000,sentId);
+      const seasonChosen = await clickMatching(client, peer, seasonState.messages,
+        new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i"), "season option",sentId);
+      if (!seasonChosen) throw new Error(`KDL Air did not offer ${seasonText}.`);
+      selectedFilename = await findAndSelectEpisodeFile(client, peer, item, sentId, episodeText);
+    }
+  }
 
   // Generate must belong to the exact file card selected above. Never click a
   // Generate button from a different or merely newer KDL message.
