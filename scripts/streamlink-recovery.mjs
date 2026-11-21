@@ -2,6 +2,7 @@ import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { matchesKdlFileButton, isNextPageLabel } from "./streamlink-recovery-matchers.mjs";
 import { request as httpsRequest } from "node:https";
 
 const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_SECRET", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
@@ -64,21 +65,9 @@ async function clickButtonOnMessage(client, peer, message, pattern, label) {
   return true;
 }
 
-const normalizeCodec = value => {
-  const codec = String(value || "").toLowerCase();
-  return ({ hevc: "x265", h265: "x265", h264: "x264" })[codec] || codec;
-};
-const qualityPattern = value => new RegExp("\\b" + String(value).toLowerCase() + "\\b", "i");
 function exactEpisodeFileButton(message, item, episodeText) {
-  const expectedQuality = String(item.quality || "").toLowerCase();
-  const expectedCodec = normalizeCodec(item.codec);
-  return buttonList(message).find(({text}) => {
-    const value = text.toLowerCase();
-    if (!new RegExp(`\\b${episodeText}\\b`, "i").test(text)) return false;
-    if (!qualityPattern(expectedQuality).test(value)) return false;
-    const codecMatch = value.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1];
-    return !!codecMatch && normalizeCodec(codecMatch) === expectedCodec;
-  });
+  return buttonList(message).find(({text}) =>
+    matchesKdlFileButton(text, item, episodeText));
 }
 
 async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText) {
