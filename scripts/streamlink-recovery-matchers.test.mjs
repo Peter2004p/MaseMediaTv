@@ -24,3 +24,8 @@ test("recognizes the observed next-page button label", () => {
   assert.equal(isNextPageLabel("NEXT »"), true);
   assert.equal(isNextPageLabel("NEXT PAGE"), false);
 });
+
+test("accepts a file without a visible quality label only after the exact Quality filter was applied", () => {
+  assert.equal(matchesKdlFileButton("862.48 MB • S01E17 • Blossom In Darkness 2026 X265 mkv", item, "S01E17", { qualityConfirmed: true }), true);
+  assert.equal(matchesKdlFileButton("862.48 MB • S01E17 • Blossom In Darkness 2026 X265 mkv", item, "S01E17"), false);
+});
