@@ -20,7 +20,8 @@
     "movi-player": "^0.4.1",
     "@capacitor/core": "^7.0.0",
     "@capacitor/app": "^7.0.0",
-    "@capacitor/browser": "^7.0.0"
+    "@capacitor/browser": "^7.0.0",
+    "telegram": "^2.26.21"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
