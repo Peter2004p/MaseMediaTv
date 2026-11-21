@@ -68,7 +68,7 @@ const normalizeCodec = value => {
   const codec = String(value || "").toLowerCase();
   return ({ hevc: "x265", h265: "x265", h264: "x264" })[codec] || codec;
 };
-const qualityPattern = value => new RegExp(`(?:^|\\b)${String(value).replace(/[.*+?^${}()|[\\]\\\\]/g, "\\async function waitFor(client, peer, predicate, description, timeoutMs = 25000, minMessageId = 0) {")}(?:\\b|$)`, "i");
+const qualityPattern = value => new RegExp("\\b" + String(value).toLowerCase() + "\\b", "i");
 function exactEpisodeFileButton(message, item, episodeText) {
   const expectedQuality = String(item.quality || "").toLowerCase();
   const expectedCodec = normalizeCodec(item.codec);
