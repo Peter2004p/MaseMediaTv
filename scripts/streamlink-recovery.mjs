@@ -85,13 +85,13 @@ async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText)
       }
     }
     const pageMessage = fresh.find(message =>
-      buttonList(message).some(x => /^(?:NEXT\s*»|»\s*NEXT|NEXT)$/i.test(x.text)));
+      buttonList(message).some(x => isNextPageLabel(x.text)));
     if (!pageMessage) throw new Error(`Could not find ${episodeText} at the current page, and KDL Air exposed no Next button. No other episode was selected.`);
     const pageSignature = `${pageMessage.id}:${pageMessage.message || ""}:${buttonList(pageMessage).map(x=>x.text).join("|")}`;
     if (visited.has(pageSignature)) throw new Error("KDL Air pagination did not advance; stopping safely.");
     visited.add(pageSignature);
     await clickButtonOnMessage(client, peer, pageMessage,
-      /^(?:NEXT\s*»|»\s*NEXT|NEXT)$/i, "Next page");
+      isNextPageLabel, "Next page");
     await sleep(1100);
   }
   throw new Error("Episode was not found within 30 KDL Air pages; no substitute was selected.");
