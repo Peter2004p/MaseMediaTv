@@ -39,6 +39,20 @@ const buttonList = message => (message?.replyMarkup?.rows || [])
   .flatMap(row => row.buttons || [])
   .map(button => ({ button, text: String(button.text || "").trim() }));
 
+function messageFileNames(message) {
+  const attributes = message?.media?.document?.attributes || [];
+  return attributes
+    .filter(attribute => typeof attribute?.fileName === "string")
+    .map(attribute => attribute.fileName);
+}
+
+function messageHasFilename(message, filename) {
+  const expected = String(filename || "").toLocaleLowerCase("en");
+  if (!expected) return false;
+  return [String(message?.message || ""), ...messageFileNames(message)]
+    .some(value => value.toLocaleLowerCase("en").includes(expected));
+}
+
 async function clickMatching(client, peer, messages, pattern, label, minMessageId = 0) {
   const freshMessages=messages.filter(m=>!m.out&&Number(m.id)>minMessageId).sort((a,b)=>Number(b.id)-Number(a.id));
   for (const message of freshMessages) {
@@ -151,26 +165,360 @@ async function collectFreshLink(client, peer, item) {
     new RegExp(`^\\s*${item.quality}\\s*$`, "i"), "quality option",sentId);
   if (!qualityChosen) throw new Error(`KDL Air did not offer ${item.quality}; no other quality will be substituted.`);
 
-  if (Number(item.season) > 1) {
-    state = await waitFor(client, peer,
-      message => buttonList(message).some(x => /season/i.test(x.text)),
-      "season selector",12000,sentId);
-    const seasonOpened = await clickMatching(client, peer, state.messages, /^season$/i, "Season",sentId);
-    if (!seasonOpened) throw new Error("Season selector unavailable.");
-    state = await waitFor(client, peer,
-      message => buttonList(message).some(x => new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i").test(x.text)),
-      `${seasonText} option`,25000,sentId);
-    const seasonChosen = await clickMatching(client, peer, state.messages,
-      new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i"), "season option",sentId);
-    if (!seasonChosen) throw new Error(`KDL Air did not offer ${seasonText}.`);
+  // Always choose the saved season explicitly, including S01. Never rely on
+  // KDL Air's remembered/default season when multiple seasons may be available.
+  state = await waitFor(client, peer,
+    message => buttonList(message).some(x => /^season$/i.test(x.text)),
+    "season selector",12000,sentId);
+  const seasonOpened = await clickMatching(client, peer, state.messages, /^season$/i, "Season",sentId);
+  if (!seasonOpened) throw new Error("Season selector unavailable; refusing to assume a default season.");
+  state = await waitFor(client, peer,
+    message => buttonList(message).some(x => new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*import { TelegramClient, Api } from "telegram";
+import { StringSession } from "telegram/sessions/index.js";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+import { matchesKdlFileButton, isNextPageLabel } from "./streamlink-recovery-matchers.mjs";
+import { request as httpsRequest } from "node:https";
+
+const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_SECRET", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
+for (const key of required) {
+  if (!process.env[key]) throw new Error(`Missing required environment secret: ${key}`);
+}
+const recoveryEndpoint = new URL(process.env.MASETV_RECOVERY_URL);
+if (!recoveryEndpoint.pathname.replace(/\/$/, "").endsWith("/api/streamlink-recovery")) {
+  recoveryEndpoint.pathname = `${recoveryEndpoint.pathname.replace(/\/$/, "")}/api/streamlink-recovery`;
+}
+const recoveryUrl = recoveryEndpoint.toString();
+const authHeaders = {
+  Authorization: `Bearer ${process.env.STREAMLINK_RECOVERY_SECRET}`,
+  "Content-Type": "application/json"
+};
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function recoveryApi(action, payload = {}) {
+  const response = await fetch(recoveryUrl, {
+    method: "POST", headers: authHeaders, body: JSON.stringify({ action, ...payload })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok) throw new Error(data.error || `MaseNet recovery API returned HTTP ${response.status}`);
+  return data;
+}
+
+function isPublicIPv4(address){const p=address.split(".").map(Number);if(p.length!==4||p.some(n=>!Number.isInteger(n)||n<0||n>255))return false;const[a,b,d]=p;if(a===0||a===10||a===127||a>=224)return false;if(a===100&&b>=64&&b<=127)return false;if(a===169&&b===254)return false;if(a===172&&b>=16&&b<=31)return false;if(a===192&&(b===0||b===168))return false;if(a===198&&(b===18||b===19||b===51))return false;if(a===203&&b===0&&d===113)return false;return true;}
+function isPublicIPv6(address){const v=address.toLowerCase().split("%")[0];if(v.startsWith("::ffff:")||v==="::"||v==="::1")return false;const first=Number.parseInt(v.split(":")[0]||"0",16);if(!Number.isFinite(first)||first<0x2000||first>0x3fff)return false;if(v.startsWith("2001:db8:")||v.startsWith("2001:10:")||v.startsWith("2002:"))return false;return true;}
+async function resolvePublicTarget(url){const host=url.hostname.toLowerCase().replace(/^\[|\]$/g,"");if(!host||host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal"))throw new Error("Blocked non-public media hostname.");if(isIP(host))throw new Error("IP-literal stream URLs are not allowed.");const records=await lookup(host,{all:true,verbatim:true});if(!records.length||records.some(r=>r.family===4?!isPublicIPv4(r.address):r.family===6?!isPublicIPv6(r.address):true))throw new Error("Media hostname resolves to a non-public or mixed address set.");return records[0];}
+async function requestPinnedStatus(url,method,headers,target){return new Promise((resolve,reject)=>{const req=httpsRequest({protocol:"https:",hostname:url.hostname,port:443,method,path:url.pathname+url.search,headers:{"User-Agent":"MaseNet-Link-Recovery/1.0",...headers},servername:url.hostname,lookup:(_hostname,options,callback)=>options?.all?callback(null,[target]):callback(null,target.address,target.family)},res=>{const status=res.statusCode||0;res.destroy();resolve(status);});req.setTimeout(9000,()=>req.destroy(new Error("Media probe timed out.")));req.on("error",reject);req.end();});}
+async function checkLink(value){try{const url=new URL(value);if(url.protocol!=="https:"||url.username||url.password||(url.port&&url.port!=="443"))return{expired:false,reason:"unsafe-url-inconclusive"};const target=await resolvePublicTarget(url);const head=await requestPinnedStatus(url,"HEAD",{},target);if(![404,410,405,501].includes(head))return{expired:false,reason:head===401||head===403?"access-denied-inconclusive":`http-${head}`};const first=await requestPinnedStatus(url,"GET",{"Range":"bytes=0-0"},target);if(![404,410].includes(first))return{expired:false,reason:`get-http-${first}`};await sleep(2500);const confirm=await requestPinnedStatus(url,"GET",{"Range":"bytes=0-0"},target);return{expired:[404,410].includes(confirm),reason:`confirmed-get-http-${confirm}`};}catch(error){return{expired:false,reason:`probe-inconclusive: ${error.message}`};}}
+
+const buttonList = message => (message?.replyMarkup?.rows || [])
+  .flatMap(row => row.buttons || [])
+  .map(button => ({ button, text: String(button.text || "").trim() }));
+
+function messageFileNames(message) {
+  const attributes = message?.media?.document?.attributes || [];
+  return attributes
+    .filter(attribute => typeof attribute?.fileName === "string")
+    .map(attribute => attribute.fileName);
+}
+
+function messageHasFilename(message, filename) {
+  const expected = String(filename || "").toLocaleLowerCase("en");
+  if (!expected) return false;
+  return [String(message?.message || ""), ...messageFileNames(message)]
+    .some(value => value.toLocaleLowerCase("en").includes(expected));
+}
+
+async function clickMatching(client, peer, messages, pattern, label, minMessageId = 0) {
+  const freshMessages=messages.filter(m=>!m.out&&Number(m.id)>minMessageId).sort((a,b)=>Number(b.id)-Number(a.id));
+  for (const message of freshMessages) {
+    for (const item of buttonList(message)) {
+      if (!pattern.test(item.text)) continue;
+      if (!item.button.data) throw new Error(`The ${label} button is not a supported callback button.`);
+      await client.invoke(new Api.messages.GetBotCallbackAnswer({
+        peer, msgId: message.id, data: item.button.data
+      }));
+      await sleep(1200);
+      return true;
+    }
   }
+  return false;
+}
+
+async function clickButtonOnMessage(client, peer, message, pattern, label) {
+  const match = buttonList(message).find(x => typeof pattern === "function" ? pattern(x.text) : pattern.test(x.text));
+  if (!match?.button?.data) throw new Error(`The exact ${label} button was not present on its matched message.`);
+  await client.invoke(new Api.messages.GetBotCallbackAnswer({
+    peer, msgId: message.id, data: match.button.data
+  }));
+  await sleep(900);
+  return true;
+}
+
+function exactEpisodeFileButton(message, item, episodeText) {
+  return buttonList(message).find(({text}) =>
+    matchesKdlFileButton(text, item, episodeText));
+}
+
+async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText) {
+  const visited = new Set();
+  for (let page = 0; page < 30; page++) {
+    const messages = await client.getMessages(peer, { limit: 30 });
+    const fresh = messages.filter(m => !m.out && Number(m.id) > sentId)
+      .sort((a,b) => Number(b.id) - Number(a.id));
+    for (const message of fresh) {
+      const candidate = exactEpisodeFileButton(message, item, episodeText);
+      if (candidate?.button?.data) {
+        await clickButtonOnMessage(client, peer, message,
+          text => text === candidate.text, `${episodeText} ${item.quality} ${item.codec} file`);
+        return candidate.text;
+      }
+    }
+    const pageMessage = fresh.find(message =>
+      buttonList(message).some(x => isNextPageLabel(x.text)));
+    if (!pageMessage) throw new Error(`Could not find ${episodeText} at the current page, and KDL Air exposed no Next button. No other episode was selected.`);
+    const pageSignature = `${pageMessage.id}:${pageMessage.message || ""}:${buttonList(pageMessage).map(x=>x.text).join("|")}`;
+    if (visited.has(pageSignature)) throw new Error("KDL Air pagination did not advance; stopping safely.");
+    visited.add(pageSignature);
+    await clickButtonOnMessage(client, peer, pageMessage,
+      isNextPageLabel, "Next page");
+    await sleep(1100);
+  }
+  throw new Error("Episode was not found within 30 KDL Air pages; no substitute was selected.");
+}
+
+async function waitFor(client, peer, predicate, description, timeoutMs = 25000, minMessageId = 0) {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    const messages = await client.getMessages(peer, { limit: 30 });
+    const found = messages.find(m=>!m.out&&Number(m.id)>minMessageId&&predicate(m));
+    if (found) return { message: found, messages };
+    await sleep(1200);
+  }
+  throw new Error(`Timed out waiting for KDL Air: ${description}`);
+}
+
+const normalizeTitle = value => String(value || "")
+  .normalize("NFKC")
+  .toLocaleLowerCase("en")
+  .replace(/[^\p{L}\p{N}]+/gu, " ")
+  .trim();
+
+function responseMatchesExactTitle(message, title) {
+  const expected = normalizeTitle(title);
+  if (!expected) return false;
+  const visible = [
+    String(message.message || ""),
+    ...buttonList(message).map(item => item.text)
+  ].map(normalizeTitle);
+  return visible.some(value => value === expected);
+}
+
+async function collectFreshLink(client, peer, item) {
+  if (item.kind !== "drama") {
+    throw new Error("This verified Telegram workflow is for dramas only. Movie retrieval remains disabled until its KDL Air selection flow is verified.");
+  }
+  const seasonText = `S${String(item.season).padStart(2, "0")}`;
+  const episodeText = `S${String(item.season).padStart(2, "0")}E${String(item.episode).padStart(2, "0")}`;
+  const sent = await client.sendMessage(peer, { message: item.title });
+  const sentId = Number(sent?.id || 0);
+
+  // Only accept a fresh bot response that visibly identifies the exact title.
+  // Similar titles and stale buttons from an earlier lookup must never be used.
+  let state = await waitFor(client, peer,
+    message => Number(message.id) > sentId &&
+      responseMatchesExactTitle(message, item.title) &&
+      buttonList(message).some(x => /quality/i.test(x.text)),
+    `an exact-title result for "${item.title}" with a quality selector`,25000,sentId);
+
+  const qualityOpened = await clickMatching(client, peer, state.messages, /^quality$/i, "Quality",sentId);
+  if (!qualityOpened) throw new Error("KDL Air did not expose its Quality filter; refusing to guess a stream variant.");
+
+  state = await waitFor(client, peer,
+    message => buttonList(message).some(x => new RegExp(`^\\s*${item.quality}\\s*$`, "i").test(x.text)),
+    `the ${item.quality} quality option`,25000,sentId);
+  const qualityChosen = await clickMatching(client, peer, state.messages,
+    new RegExp(`^\\s*${item.quality}\\s*$`, "i"), "quality option",sentId);
+  if (!qualityChosen) throw new Error(`KDL Air did not offer ${item.quality}; no other quality will be substituted.`);
+
+, "i").test(x.text)),
+    `${seasonText} option`,25000,sentId);
+  const seasonChosen = await clickMatching(client, peer, state.messages,
+    new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*import { TelegramClient, Api } from "telegram";
+import { StringSession } from "telegram/sessions/index.js";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+import { matchesKdlFileButton, isNextPageLabel } from "./streamlink-recovery-matchers.mjs";
+import { request as httpsRequest } from "node:https";
+
+const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_SECRET", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
+for (const key of required) {
+  if (!process.env[key]) throw new Error(`Missing required environment secret: ${key}`);
+}
+const recoveryEndpoint = new URL(process.env.MASETV_RECOVERY_URL);
+if (!recoveryEndpoint.pathname.replace(/\/$/, "").endsWith("/api/streamlink-recovery")) {
+  recoveryEndpoint.pathname = `${recoveryEndpoint.pathname.replace(/\/$/, "")}/api/streamlink-recovery`;
+}
+const recoveryUrl = recoveryEndpoint.toString();
+const authHeaders = {
+  Authorization: `Bearer ${process.env.STREAMLINK_RECOVERY_SECRET}`,
+  "Content-Type": "application/json"
+};
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function recoveryApi(action, payload = {}) {
+  const response = await fetch(recoveryUrl, {
+    method: "POST", headers: authHeaders, body: JSON.stringify({ action, ...payload })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok) throw new Error(data.error || `MaseNet recovery API returned HTTP ${response.status}`);
+  return data;
+}
+
+function isPublicIPv4(address){const p=address.split(".").map(Number);if(p.length!==4||p.some(n=>!Number.isInteger(n)||n<0||n>255))return false;const[a,b,d]=p;if(a===0||a===10||a===127||a>=224)return false;if(a===100&&b>=64&&b<=127)return false;if(a===169&&b===254)return false;if(a===172&&b>=16&&b<=31)return false;if(a===192&&(b===0||b===168))return false;if(a===198&&(b===18||b===19||b===51))return false;if(a===203&&b===0&&d===113)return false;return true;}
+function isPublicIPv6(address){const v=address.toLowerCase().split("%")[0];if(v.startsWith("::ffff:")||v==="::"||v==="::1")return false;const first=Number.parseInt(v.split(":")[0]||"0",16);if(!Number.isFinite(first)||first<0x2000||first>0x3fff)return false;if(v.startsWith("2001:db8:")||v.startsWith("2001:10:")||v.startsWith("2002:"))return false;return true;}
+async function resolvePublicTarget(url){const host=url.hostname.toLowerCase().replace(/^\[|\]$/g,"");if(!host||host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal"))throw new Error("Blocked non-public media hostname.");if(isIP(host))throw new Error("IP-literal stream URLs are not allowed.");const records=await lookup(host,{all:true,verbatim:true});if(!records.length||records.some(r=>r.family===4?!isPublicIPv4(r.address):r.family===6?!isPublicIPv6(r.address):true))throw new Error("Media hostname resolves to a non-public or mixed address set.");return records[0];}
+async function requestPinnedStatus(url,method,headers,target){return new Promise((resolve,reject)=>{const req=httpsRequest({protocol:"https:",hostname:url.hostname,port:443,method,path:url.pathname+url.search,headers:{"User-Agent":"MaseNet-Link-Recovery/1.0",...headers},servername:url.hostname,lookup:(_hostname,options,callback)=>options?.all?callback(null,[target]):callback(null,target.address,target.family)},res=>{const status=res.statusCode||0;res.destroy();resolve(status);});req.setTimeout(9000,()=>req.destroy(new Error("Media probe timed out.")));req.on("error",reject);req.end();});}
+async function checkLink(value){try{const url=new URL(value);if(url.protocol!=="https:"||url.username||url.password||(url.port&&url.port!=="443"))return{expired:false,reason:"unsafe-url-inconclusive"};const target=await resolvePublicTarget(url);const head=await requestPinnedStatus(url,"HEAD",{},target);if(![404,410,405,501].includes(head))return{expired:false,reason:head===401||head===403?"access-denied-inconclusive":`http-${head}`};const first=await requestPinnedStatus(url,"GET",{"Range":"bytes=0-0"},target);if(![404,410].includes(first))return{expired:false,reason:`get-http-${first}`};await sleep(2500);const confirm=await requestPinnedStatus(url,"GET",{"Range":"bytes=0-0"},target);return{expired:[404,410].includes(confirm),reason:`confirmed-get-http-${confirm}`};}catch(error){return{expired:false,reason:`probe-inconclusive: ${error.message}`};}}
+
+const buttonList = message => (message?.replyMarkup?.rows || [])
+  .flatMap(row => row.buttons || [])
+  .map(button => ({ button, text: String(button.text || "").trim() }));
+
+function messageFileNames(message) {
+  const attributes = message?.media?.document?.attributes || [];
+  return attributes
+    .filter(attribute => typeof attribute?.fileName === "string")
+    .map(attribute => attribute.fileName);
+}
+
+function messageHasFilename(message, filename) {
+  const expected = String(filename || "").toLocaleLowerCase("en");
+  if (!expected) return false;
+  return [String(message?.message || ""), ...messageFileNames(message)]
+    .some(value => value.toLocaleLowerCase("en").includes(expected));
+}
+
+async function clickMatching(client, peer, messages, pattern, label, minMessageId = 0) {
+  const freshMessages=messages.filter(m=>!m.out&&Number(m.id)>minMessageId).sort((a,b)=>Number(b.id)-Number(a.id));
+  for (const message of freshMessages) {
+    for (const item of buttonList(message)) {
+      if (!pattern.test(item.text)) continue;
+      if (!item.button.data) throw new Error(`The ${label} button is not a supported callback button.`);
+      await client.invoke(new Api.messages.GetBotCallbackAnswer({
+        peer, msgId: message.id, data: item.button.data
+      }));
+      await sleep(1200);
+      return true;
+    }
+  }
+  return false;
+}
+
+async function clickButtonOnMessage(client, peer, message, pattern, label) {
+  const match = buttonList(message).find(x => typeof pattern === "function" ? pattern(x.text) : pattern.test(x.text));
+  if (!match?.button?.data) throw new Error(`The exact ${label} button was not present on its matched message.`);
+  await client.invoke(new Api.messages.GetBotCallbackAnswer({
+    peer, msgId: message.id, data: match.button.data
+  }));
+  await sleep(900);
+  return true;
+}
+
+function exactEpisodeFileButton(message, item, episodeText) {
+  return buttonList(message).find(({text}) =>
+    matchesKdlFileButton(text, item, episodeText));
+}
+
+async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText) {
+  const visited = new Set();
+  for (let page = 0; page < 30; page++) {
+    const messages = await client.getMessages(peer, { limit: 30 });
+    const fresh = messages.filter(m => !m.out && Number(m.id) > sentId)
+      .sort((a,b) => Number(b.id) - Number(a.id));
+    for (const message of fresh) {
+      const candidate = exactEpisodeFileButton(message, item, episodeText);
+      if (candidate?.button?.data) {
+        await clickButtonOnMessage(client, peer, message,
+          text => text === candidate.text, `${episodeText} ${item.quality} ${item.codec} file`);
+        return candidate.text;
+      }
+    }
+    const pageMessage = fresh.find(message =>
+      buttonList(message).some(x => isNextPageLabel(x.text)));
+    if (!pageMessage) throw new Error(`Could not find ${episodeText} at the current page, and KDL Air exposed no Next button. No other episode was selected.`);
+    const pageSignature = `${pageMessage.id}:${pageMessage.message || ""}:${buttonList(pageMessage).map(x=>x.text).join("|")}`;
+    if (visited.has(pageSignature)) throw new Error("KDL Air pagination did not advance; stopping safely.");
+    visited.add(pageSignature);
+    await clickButtonOnMessage(client, peer, pageMessage,
+      isNextPageLabel, "Next page");
+    await sleep(1100);
+  }
+  throw new Error("Episode was not found within 30 KDL Air pages; no substitute was selected.");
+}
+
+async function waitFor(client, peer, predicate, description, timeoutMs = 25000, minMessageId = 0) {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    const messages = await client.getMessages(peer, { limit: 30 });
+    const found = messages.find(m=>!m.out&&Number(m.id)>minMessageId&&predicate(m));
+    if (found) return { message: found, messages };
+    await sleep(1200);
+  }
+  throw new Error(`Timed out waiting for KDL Air: ${description}`);
+}
+
+const normalizeTitle = value => String(value || "")
+  .normalize("NFKC")
+  .toLocaleLowerCase("en")
+  .replace(/[^\p{L}\p{N}]+/gu, " ")
+  .trim();
+
+function responseMatchesExactTitle(message, title) {
+  const expected = normalizeTitle(title);
+  if (!expected) return false;
+  const visible = [
+    String(message.message || ""),
+    ...buttonList(message).map(item => item.text)
+  ].map(normalizeTitle);
+  return visible.some(value => value === expected);
+}
+
+async function collectFreshLink(client, peer, item) {
+  if (item.kind !== "drama") {
+    throw new Error("This verified Telegram workflow is for dramas only. Movie retrieval remains disabled until its KDL Air selection flow is verified.");
+  }
+  const seasonText = `S${String(item.season).padStart(2, "0")}`;
+  const episodeText = `S${String(item.season).padStart(2, "0")}E${String(item.episode).padStart(2, "0")}`;
+  const sent = await client.sendMessage(peer, { message: item.title });
+  const sentId = Number(sent?.id || 0);
+
+  // Only accept a fresh bot response that visibly identifies the exact title.
+  // Similar titles and stale buttons from an earlier lookup must never be used.
+  let state = await waitFor(client, peer,
+    message => Number(message.id) > sentId &&
+      responseMatchesExactTitle(message, item.title) &&
+      buttonList(message).some(x => /quality/i.test(x.text)),
+    `an exact-title result for "${item.title}" with a quality selector`,25000,sentId);
+
+  const qualityOpened = await clickMatching(client, peer, state.messages, /^quality$/i, "Quality",sentId);
+  if (!qualityOpened) throw new Error("KDL Air did not expose its Quality filter; refusing to guess a stream variant.");
+
+  state = await waitFor(client, peer,
+    message => buttonList(message).some(x => new RegExp(`^\\s*${item.quality}\\s*$`, "i").test(x.text)),
+    `the ${item.quality} quality option`,25000,sentId);
+  const qualityChosen = await clickMatching(client, peer, state.messages,
+    new RegExp(`^\\s*${item.quality}\\s*$`, "i"), "quality option",sentId);
+  if (!qualityChosen) throw new Error(`KDL Air did not offer ${item.quality}; no other quality will be substituted.`);
+
+, "i"), "season option",sentId);
+  if (!seasonChosen) throw new Error(`KDL Air did not offer ${seasonText}.`);
 
   const selectedFilename = await findAndSelectEpisodeFile(client, peer, item, sentId, episodeText);
 
   // Generate must belong to the exact file card selected above. Never click a
   // Generate button from a different or merely newer KDL message.
   state = await waitFor(client, peer,
-    message => String(message.message || "").toLowerCase().includes(selectedFilename.toLowerCase()) &&
+    message => messageHasFilename(message, selectedFilename) &&
       buttonList(message).some(x => /generate streamlink/i.test(x.text)),
     `Generate Streamlink for ${selectedFilename}`,25000,sentId);
   await clickButtonOnMessage(client, peer, state.message, /generate streamlink/i,
