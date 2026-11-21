@@ -31,5 +31,7 @@ jobs:
         run: npm install --ignore-scripts
       - name: Check recovery runner syntax
         run: node --check scripts/streamlink-recovery.mjs
+      - name: Run full Cloudflare Pages and Functions build
+        run: npm run build
       - name: Run exact-match regression tests
         run: npm run test:streamlink-matchers
