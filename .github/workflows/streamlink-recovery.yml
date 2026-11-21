@@ -43,6 +43,7 @@ jobs:
           done
           # Never allow this pre-release scheduler to mutate the live catalogue.
           # The recovery API and credentials must target the isolated preview deployment.
+          # API authorization uses a short-lived, repository-scoped GitHub OIDC token.
           if [ "$MASETV_RECOVERY_URL" != "https://feature-streamlink-recovery.masetv-cloudflare-migration.pages.dev/api/streamlink-recovery" ]; then
             echo "::error::Recovery endpoint is not the isolated recovery Preview deployment."
             exit 1
