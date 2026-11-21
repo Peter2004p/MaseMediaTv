@@ -5,7 +5,7 @@ import { isIP } from "node:net";
 import { matchesKdlFileButton, isNextPageLabel } from "./streamlink-recovery-matchers.mjs";
 import { request as httpsRequest } from "node:https";
 
-const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_SECRET", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
+const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_TOKEN", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
 for (const key of required) {
   if (!process.env[key]) throw new Error(`Missing required environment secret: ${key}`);
 }
@@ -15,7 +15,7 @@ if (!recoveryEndpoint.pathname.replace(/\/$/, "").endsWith("/api/streamlink-reco
 }
 const recoveryUrl = recoveryEndpoint.toString();
 const authHeaders = {
-  Authorization: `Bearer ${process.env.STREAMLINK_RECOVERY_SECRET}`,
+  Authorization: `Bearer ${process.env.STREAMLINK_RECOVERY_TOKEN}`,
   "Content-Type": "application/json"
 };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
