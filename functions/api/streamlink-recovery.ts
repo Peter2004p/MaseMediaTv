@@ -128,7 +128,7 @@ const streamEntries = (row: TitleRow, metadata: Record<string, unknown>) => {
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const configured = String(env.STREAMLINK_RECOVERY_SECRET || "").trim();
-  const supplied = (request.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "").trim();
+  const supplied = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
   const staticAuthorized = !!configured && !!supplied && await constantTimeEqual(configured, supplied);
   const oidcAuthorized = !staticAuthorized && !!supplied && await verifyGitHubActionsToken(supplied);
   if (!staticAuthorized && !oidcAuthorized) {
