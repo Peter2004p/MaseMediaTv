@@ -65,9 +65,9 @@ const verifyGitHubActionsToken = async (token: string) => {
       : audience === "masenet-streamlink-recovery";
     if (claims.iss !== "https://token.actions.githubusercontent.com" ||
         !hasAudience || Number(claims.exp) <= now || Number(claims.nbf || 0) > now + 30 ||
-        claims.repository !== "Peter2004P/MaseMediaTv" ||
+        String(claims.repository || "").toLowerCase() !== "peter2004p/masemediatv" ||
         claims.ref !== "refs/heads/main" ||
-        claims.workflow_ref !== "Peter2004P/MaseMediaTv/.github/workflows/streamlink-recovery.yml@refs/heads/main") return false;
+        String(claims.workflow_ref || "").toLowerCase() !== "peter2004p/masemediatv/.github/workflows/streamlink-recovery.yml@refs/heads/main") return false;
     const jwksResponse = await fetch("https://token.actions.githubusercontent.com/.well-known/jwks");
     if (!jwksResponse.ok) return false;
     const jwks = await jwksResponse.json() as { keys?: (JsonWebKey & { kid?: string })[] };
