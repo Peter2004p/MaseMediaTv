@@ -88,3 +88,4 @@ jobs:
 
 # Bound each scheduled Telegram recovery run to two exact variants.
 # Re-run the isolated Preview recovery with the latest exact-title diagnostics.
+# Preview run after KDL default-list and quality-filter matching fixes.
