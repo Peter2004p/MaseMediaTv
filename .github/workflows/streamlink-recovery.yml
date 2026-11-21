@@ -20,12 +20,12 @@ jobs:
       - name: Check out reviewed recovery implementation
         uses: actions/checkout@v4
         with:
-          ref: feature/streamlink-auto-recovery
+          ref: feature/streamlink-recovery-unified
 
       - name: Check recovery credentials before starting
         id: credentials
         env:
-          MASETV_RECOVERY_URL: ${{ secrets.MASETV_RECOVERY_URL }}
+          MASETV_RECOVERY_URL: https://feature-streamlink-recovery.masetv-cloudflare-migration.pages.dev/api/streamlink-recovery
           STREAMLINK_RECOVERY_SECRET: ${{ secrets.STREAMLINK_RECOVERY_SECRET }}
           TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
           TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
@@ -41,9 +41,9 @@ jobs:
           done
           # Never allow this pre-release scheduler to mutate the live catalogue.
           # The recovery API and credentials must target the isolated preview deployment.
-          if [ "$MASETV_RECOVERY_URL" != "https://02158987.masetv-cloudflare-migration.pages.dev/api/streamlink-recovery" ]; then
-            echo "::warning::Recovery is not activated: MASETV_RECOVERY_URL must point to the verified isolated preview deployment."
-            missing=1
+          if [ "$MASETV_RECOVERY_URL" != "https://feature-streamlink-recovery.masetv-cloudflare-migration.pages.dev/api/streamlink-recovery" ]; then
+            echo "::error::Recovery endpoint is not the isolated recovery Preview deployment."
+            exit 1
           fi
           if [ "$missing" -eq 0 ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -64,7 +64,7 @@ jobs:
       - name: Recover confirmed expired streamlinks
         if: steps.credentials.outputs.ready == 'true'
         env:
-          MASETV_RECOVERY_URL: ${{ secrets.MASETV_RECOVERY_URL }}
+          MASETV_RECOVERY_URL: https://feature-streamlink-recovery.masetv-cloudflare-migration.pages.dev/api/streamlink-recovery
           STREAMLINK_RECOVERY_SECRET: ${{ secrets.STREAMLINK_RECOVERY_SECRET }}
           TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
           TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
