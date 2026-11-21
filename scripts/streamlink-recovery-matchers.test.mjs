@@ -29,3 +29,7 @@ test("accepts a file without a visible quality label only after the exact Qualit
   assert.equal(matchesKdlFileButton("862.48 MB • S01E17 • Blossom In Darkness 2026 X265 mkv", item, "S01E17", { qualityConfirmed: true }), true);
   assert.equal(matchesKdlFileButton("862.48 MB • S01E17 • Blossom In Darkness 2026 X265 mkv", item, "S01E17"), false);
 });
+
+test("recognizes KDL Air's stylized Unicode NEXT button", () => {
+  assert.equal(isNextPageLabel("𝖭𝖤𝖷𝖳 »"), true);
+});
