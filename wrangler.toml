@@ -23,3 +23,10 @@ binding = "AI"
 binding = "DB"
 database_name = "masetv-cloudflare-migration-preview"
 database_id = "783e9c3d-b758-4273-9999-b6fffc6b560c"
+
+[[env.preview.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "masenet-posters"
+
+[env.preview.ai]
+binding = "AI"
