@@ -76,7 +76,7 @@ function exactEpisodeFileButton(message, item, episodeText) {
     const value = text.toLowerCase();
     if (!new RegExp(`\\b${episodeText}\\b`, "i").test(text)) return false;
     if (!qualityPattern(expectedQuality).test(value)) return false;
-    const codecMatch = value.match(/\\b(x265|h265|hevc|x264|h264|av1)\\b/i)?.[1];
+    const codecMatch = value.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1];
     return !!codecMatch && normalizeCodec(codecMatch) === expectedCodec;
   });
 }
@@ -96,13 +96,13 @@ async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText)
       }
     }
     const pageMessage = fresh.find(message =>
-      buttonList(message).some(x => /^(?:NEXT\\s*»|»\\s*NEXT|NEXT)$/i.test(x.text)));
+      buttonList(message).some(x => /^(?:NEXT\s*»|»\s*NEXT|NEXT)$/i.test(x.text)));
     if (!pageMessage) throw new Error(`Could not find ${episodeText} at the current page, and KDL Air exposed no Next button. No other episode was selected.`);
     const pageSignature = `${pageMessage.id}:${pageMessage.message || ""}:${buttonList(pageMessage).map(x=>x.text).join("|")}`;
     if (visited.has(pageSignature)) throw new Error("KDL Air pagination did not advance; stopping safely.");
     visited.add(pageSignature);
     await clickButtonOnMessage(client, peer, pageMessage,
-      /^(?:NEXT\\s*»|»\\s*NEXT|NEXT)$/i, "Next page");
+      /^(?:NEXT\s*»|»\s*NEXT|NEXT)$/i, "Next page");
     await sleep(1100);
   }
   throw new Error("Episode was not found within 30 KDL Air pages; no substitute was selected.");
