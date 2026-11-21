@@ -42,6 +42,49 @@ const safeHttpsUrl = (value: unknown) => {
   } catch { return null; }
 };
 
+const base64UrlBytes = (value: string) => {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
+  return Uint8Array.from(binary, character => character.charCodeAt(0));
+};
+
+const decodeJwtPart = (value: string): Record<string, unknown> =>
+  JSON.parse(new TextDecoder().decode(base64UrlBytes(value))) as Record<string, unknown>;
+
+const verifyGitHubActionsToken = async (token: string) => {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const header = decodeJwtPart(parts[0]);
+    const claims = decodeJwtPart(parts[1]);
+    if (header.alg !== "RS256" || typeof header.kid !== "string") return false;
+    const now = Math.floor(Date.now() / 1000);
+    const audience = claims.aud;
+    const hasAudience = Array.isArray(audience)
+      ? audience.includes("masenet-streamlink-recovery")
+      : audience === "masenet-streamlink-recovery";
+    if (claims.iss !== "https://token.actions.githubusercontent.com" ||
+        !hasAudience || Number(claims.exp) <= now || Number(claims.nbf || 0) > now + 30 ||
+        claims.repository !== "Peter2004P/MaseMediaTv" ||
+        claims.ref !== "refs/heads/main" ||
+        claims.workflow_ref !== "Peter2004P/MaseMediaTv/.github/workflows/streamlink-recovery.yml@refs/heads/main") return false;
+    const jwksResponse = await fetch("https://token.actions.githubusercontent.com/.well-known/jwks");
+    if (!jwksResponse.ok) return false;
+    const jwks = await jwksResponse.json() as { keys?: (JsonWebKey & { kid?: string })[] };
+    const jwk = (jwks.keys || []).find(key => key.kid === header.kid);
+    if (!jwk) return false;
+    const publicKey = await crypto.subtle.importKey(
+      "jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]
+    );
+    return await crypto.subtle.verify(
+      { name: "RSASSA-PKCS1-v1_5" }, publicKey, base64UrlBytes(parts[2]),
+      new TextEncoder().encode(parts[0] + "." + parts[1])
+    );
+  } catch {
+    return false;
+  }
+};
+
 const parseMetadata = (value: string): Record<string, unknown> => {
   try {
     const parsed = JSON.parse(value);
@@ -85,8 +128,10 @@ const streamEntries = (row: TitleRow, metadata: Record<string, unknown>) => {
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const configured = String(env.STREAMLINK_RECOVERY_SECRET || "").trim();
-  const supplied = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
-  if (!configured || !supplied || !(await constantTimeEqual(configured, supplied))) {
+  const supplied = (request.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "").trim();
+  const staticAuthorized = !!configured && !!supplied && await constantTimeEqual(configured, supplied);
+  const oidcAuthorized = !staticAuthorized && !!supplied && await verifyGitHubActionsToken(supplied);
+  if (!staticAuthorized && !oidcAuthorized) {
     return json({ ok: false, error: "Unauthorized recovery service." }, 401);
   }
 
