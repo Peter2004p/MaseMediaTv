@@ -182,7 +182,8 @@ async function collectFreshLink(client, peer, item) {
     console.log(`Default episode list did not expose an exact quality/codec match: ${directError.message}`);
     // Use Quality only as a fallback when the unfiltered list cannot identify
     // the saved variant. Never substitute a different quality.
-    const qualityOpened = await clickMatching(client, peer, state.messages, /^quality$/i, "Quality",sentId);
+    const latestDefaultResults = await client.getMessages(peer, { limit: 30 });
+    const qualityOpened = await clickMatching(client, peer, latestDefaultResults, /^quality$/i, "Quality",sentId);
     if (!qualityOpened) throw new Error(`No exact default-list match and KDL Air has no Quality filter: ${directError.message}`);
     const qualityState = await waitFor(client, peer,
       message => buttonList(message).some(x => new RegExp(`^\\s*${item.quality}\\s*$`, "i").test(x.text)),
