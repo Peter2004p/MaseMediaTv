@@ -6,7 +6,7 @@ interface Env {
 }
 
 type Episode = Record<string, unknown>;
-type TitleRow = { id: string; name: string; kind: string; metadata_json: string };
+type TitleRow = { id: string; name: string; kind: string; metadata_json: string; stream_url: string | null; quality: string | null };
 
 const constantTimeEqual = async (left: string, right: string) => {
   const encoder = new TextEncoder();
@@ -50,6 +50,15 @@ const parseMetadata = (value: string): Record<string, unknown> => {
 };
 
 const streamEntries = (row: TitleRow, metadata: Record<string, unknown>) => {
+  const titleEntries: Array<Record<string, unknown>> = [];
+  if (row.kind === "movie" && safeHttpsUrl(row.stream_url)) {
+    titleEntries.push({
+      titleId: row.id, title: row.name, kind: row.kind, episodeId: "__title__",
+      episodeIndex: -1, season: 0, episode: 0,
+      quality: String(row.quality || "Unknown"), codec: "Unknown",
+      streamUrl: String(row.stream_url), variantIndex: -1, isPrimary: true, scope: "title"
+    });
+  }
   const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Episode[] : [];
   const entries: Array<Record<string, unknown>> = [];
   episodes.forEach((episode, episodeIndex) => {
@@ -71,7 +80,7 @@ const streamEntries = (row: TitleRow, metadata: Record<string, unknown>) => {
     add(episode, -1, true);
     variants.forEach((variant, index) => add(variant, index, false));
   });
-  return entries;
+  return [...titleEntries, ...entries];
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -86,7 +95,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   catch { return json({ ok: false, error: "A JSON request body is required." }, 400); }
 
   if (body.action === "scan") {
-    const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind IN ('movie','drama')")
+    const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json,stream_url,quality FROM titles WHERE kind IN ('movie','drama')")
       .all<TitleRow>();
     const links = (rows.results || []).flatMap(row => streamEntries(row, parseMetadata(row.metadata_json)));
     return json({ ok: true, scannedAt: new Date().toISOString(), count: links.length, links });
@@ -104,9 +113,31 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       return json({ ok: false, error: "A title, episode, current URL and different replacement HTTPS URL are required." }, 400);
     }
 
-    const row = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE id=?")
+    const row = await env.DB.prepare("SELECT id,name,kind,metadata_json,stream_url,quality FROM titles WHERE id=?")
       .bind(titleId).first<TitleRow>();
     if (!row) return json({ ok: false, error: "The title no longer exists." }, 404);
+
+    // Movie primary streams are stored on the title row, not in metadata. Keep
+    // this scope separate so a movie replacement can never touch an episode.
+    if (episodeId === "__title__") {
+      const currentQuality = String(row.quality || "Unknown").trim().toLowerCase();
+      if (row.kind !== "movie" || String(row.stream_url || "") !== oldUrlRaw ||
+          currentQuality !== quality || codec !== "unknown") {
+        return json({ ok: false, error: "The exact movie stream no longer matches the scan. No catalogue data was changed." }, 409);
+      }
+      const results = await env.DB.batch([
+        env.DB.prepare("UPDATE titles SET stream_url=?,updated_at=datetime('now') WHERE id=? AND stream_url=? AND lower(coalesce(quality,'Unknown'))=?")
+          .bind(newUrl.toString(), row.id, oldUrlRaw, quality),
+        env.DB.prepare("INSERT INTO streamlink_recovery_history (id,title_id,episode_id,season,episode,quality,codec,old_url,new_url,source) SELECT ?,?,'__title__',0,0,?,?,?,?,'telegram-user-session' WHERE changes() > 0")
+          .bind(crypto.randomUUID(), row.id, String(body.quality || "Unknown"),
+            String(body.codec || "Unknown"), oldUrlRaw, newUrl.toString())
+      ]);
+      if (!results[0]?.meta?.changes) {
+        return json({ ok: false, error: "The movie link changed during recovery. Scan again; nothing was overwritten." }, 409);
+      }
+      return json({ ok: true, replaced: true, title: row.name, scope: "title",
+        quality: String(body.quality || "Unknown"), codec: String(body.codec || "Unknown") });
+    }
 
     const metadata = parseMetadata(row.metadata_json);
     const episodes = Array.isArray(metadata.episodes) ? metadata.episodes as Episode[] : [];
