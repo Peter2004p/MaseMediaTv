@@ -251,6 +251,16 @@ async function main() {
     return;
   }
 
+  // Bound each scheduled run so a large backlog cannot flood KDL Air or
+  // monopolize the Telegram session. Remaining exact matches are deferred
+  // to the next scheduled run.
+  const maxRecoveries = Math.max(1, Math.min(5,
+    Number.parseInt(process.env.MAX_RECOVERIES_PER_RUN || "2", 10) || 2));
+  const recoveryBatch = expired.slice(0, maxRecoveries);
+  if (expired.length > recoveryBatch.length) {
+    console.log(`Deferring ${expired.length - recoveryBatch.length} expired variants to later scheduled runs.`);
+  }
+
   const client = new TelegramClient(
     new StringSession(process.env.TELEGRAM_SESSION),
     Number(process.env.TELEGRAM_API_ID),
@@ -260,7 +270,7 @@ async function main() {
   await client.connect();
   try {
     const peer = await client.getEntity(process.env.KDL_AIR_BOT_USERNAME);
-    for (const item of expired) {
+    for (const item of recoveryBatch) {
       try {
         const newUrl = await collectFreshLink(client, peer, item);
         const updated = await recoveryApi("replace", {
