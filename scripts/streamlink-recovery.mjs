@@ -224,6 +224,14 @@ async function collectFreshLink(client, peer, item) {
 }
 
 async function main() {
+  const tokenParts = process.env.STREAMLINK_RECOVERY_TOKEN.split(".");
+  if (tokenParts.length === 3) {
+    const claims = JSON.parse(Buffer.from(tokenParts[1], "base64url").toString("utf8"));
+    console.log("Recovery OIDC identity:", JSON.stringify({
+      iss: claims.iss, aud: claims.aud, repository: claims.repository,
+      ref: claims.ref, workflow: claims.workflow, exp: claims.exp
+    }));
+  }
   const scan = await recoveryApi("scan");
   console.log(`Scanned ${scan.count} saved stream variants.`);
   const expired = [];
