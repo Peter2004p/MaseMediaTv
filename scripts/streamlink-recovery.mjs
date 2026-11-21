@@ -203,12 +203,11 @@ async function collectFreshLink(client, peer, item) {
     `the title result and its Quality button for "${item.title}"`, 25000, sentId);
 
   await clickButtonOnMessage(client, peer, titleState.message, /^quality$/i, "Quality");
+  const qualityMatches = text => String(text).trim().toLowerCase() === String(item.quality).trim().toLowerCase();
   const qualityState = await waitFor(client, peer,
-    message => buttonList(message).some(x =>
-      new RegExp(`^\\s*${String(item.quality).replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\s*$`, "i").test(x.text)),
+    message => buttonList(message).some(x => qualityMatches(x.text)),
     `the exact ${item.quality} quality option`, 25000, sentId);
-  const qualityPattern = new RegExp(`^\\s*${String(item.quality).replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\s*$`, "i");
-  await clickButtonOnMessage(client, peer, qualityState.message, qualityPattern, `${item.quality} quality`);
+  await clickButtonOnMessage(client, peer, qualityState.message, qualityMatches, `${item.quality} quality`);
 
   // Quality is now explicitly selected. Search only the resulting episode
   // pages; pagination is allowed solely to locate the same episode/variant.
@@ -217,7 +216,7 @@ async function collectFreshLink(client, peer, item) {
   );
   console.log(`Selected exact KDL Air file after choosing ${item.quality}: ${selectedFilename}`);
 
-  state = await waitFor(client, peer,
+  let state = await waitFor(client, peer,
     message => messageHasFilename(message, selectedFilename) &&
       buttonList(message).some(x => /generate streamlink/i.test(x.text)),
     `Generate Streamlink for ${selectedFilename}`, 25000, sentId);
