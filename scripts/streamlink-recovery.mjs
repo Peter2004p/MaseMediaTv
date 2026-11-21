@@ -121,7 +121,7 @@ async function waitFor(client, peer, predicate, description, timeoutMs = 25000, 
       const id = Number(message.id);
       if (observed.has(id)) continue;
       observed.add(id);
-      const preview = String(message.message || "").replace(/https?:\\/\\/[^\\s<>]+/gi, "[url]").replace(/\\s+/g, " ").slice(0, 140);
+      const preview = String(message.message || "").replace(/https?:\/\/[^\s<>]+/gi, "[url]").replace(/\s+/g, " ").slice(0, 140);
       const labels = buttonList(message).map(item => item.text).filter(Boolean).slice(0, 16);
       console.log("KDL Air response:", JSON.stringify({ id, text: preview, buttons: labels }));
     }
