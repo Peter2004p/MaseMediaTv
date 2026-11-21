@@ -1,0 +1,36 @@
+name: Streamlink recovery checks
+
+on:
+  pull_request:
+    branches:
+      - feature/streamlink-production-prep
+    paths:
+      - "scripts/streamlink-recovery.mjs"
+      - "scripts/streamlink-recovery-matchers.mjs"
+      - "scripts/streamlink-recovery-matchers.test.mjs"
+      - "functions/api/streamlink-recovery.ts"
+      - "package.json"
+      - ".github/workflows/streamlink-recovery-checks.yml"
+  push:
+    branches:
+      - feature/streamlink-recovery-unified
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Check recovery runner syntax
+        run: node --check scripts/streamlink-recovery.mjs
+      - name: Run exact-match regression tests
+        run: npm run test:streamlink-matchers
