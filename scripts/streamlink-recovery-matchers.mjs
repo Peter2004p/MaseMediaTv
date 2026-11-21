@@ -19,5 +19,10 @@ export function matchesKdlFileButton(buttonText, item, episodeText, { qualityCon
 }
 
 export function isNextPageLabel(value) {
-  return /^(?:NEXT\s*»|»\s*NEXT|NEXT)$/i.test(String(value || "").trim());
+  const normalized = String(value || "").normalize("NFKC").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").trim();
+  return /^(?:NEXT\\s*»|»\\s*NEXT|NEXT)$/i.test(normalized);
 }
+
+test("recognizes KDL Air's stylized Unicode NEXT button", () => {
+  assert.equal(isNextPageLabel("𝖭𝖤𝖷𝖳 »"), true);
+});
