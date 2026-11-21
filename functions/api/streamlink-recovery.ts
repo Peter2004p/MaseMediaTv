@@ -243,3 +243,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   return json({ ok: false, error: "Unknown action. Use scan or replace." }, 400);
 };
+
+// Recovery API is isolated to the Preview D1 binding during validation.
