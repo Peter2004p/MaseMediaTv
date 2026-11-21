@@ -53,17 +53,49 @@ function messageHasFilename(message, filename) {
     .some(value => value.toLocaleLowerCase("en").includes(expected));
 }
 
+async function invokeKdlCallback(client, peer, message, button, label) {
+  const before = JSON.stringify({
+    text: String(message.message || ""),
+    buttons: buttonList(message).map(x => x.text)
+  });
+  try {
+    await client.invoke(new Api.messages.GetBotCallbackAnswer({
+      peer, msgId: message.id, data: button.data
+    }));
+    await sleep(1200);
+    return true;
+  } catch (error) {
+    if (!/BOT_RESPONSE_TIMEOUT|TIMEOUT/i.test(String(error?.message || error))) throw error;
+    // Some KDL callbacks edit the existing result message without returning
+    // a callback answer. Accept that only when Telegram shows an actual state
+    // change or a new bot response; otherwise fail closed.
+    const deadline = Date.now() + 6000;
+    while (Date.now() < deadline) {
+      const latest = await client.getMessages(peer, { limit: 30 });
+      const same = latest.find(x => Number(x.id) === Number(message.id));
+      const after = same && JSON.stringify({
+        text: String(same.message || ""),
+        buttons: buttonList(same).map(x => x.text)
+      });
+      const newReply = latest.some(x => !x.out && Number(x.id) > Number(message.id));
+      if ((after && after !== before) || newReply) {
+        await sleep(800);
+        console.log(`KDL Air ${label} callback confirmed by message update despite callback timeout.`);
+        return true;
+      }
+      await sleep(500);
+    }
+    throw new Error(`KDL Air did not confirm the ${label} callback: ${String(error?.message || error)}`);
+  }
+}
+
 async function clickMatching(client, peer, messages, pattern, label, minMessageId = 0) {
   const freshMessages=messages.filter(m=>!m.out&&Number(m.id)>minMessageId).sort((a,b)=>Number(b.id)-Number(a.id));
   for (const message of freshMessages) {
     for (const item of buttonList(message)) {
       if (!pattern.test(item.text)) continue;
       if (!item.button.data) throw new Error(`The ${label} button is not a supported callback button.`);
-      await client.invoke(new Api.messages.GetBotCallbackAnswer({
-        peer, msgId: message.id, data: item.button.data
-      }));
-      await sleep(1200);
-      return true;
+      return invokeKdlCallback(client, peer, message, item.button, label);
     }
   }
   return false;
@@ -72,11 +104,7 @@ async function clickMatching(client, peer, messages, pattern, label, minMessageI
 async function clickButtonOnMessage(client, peer, message, pattern, label) {
   const match = buttonList(message).find(x => typeof pattern === "function" ? pattern(x.text) : pattern.test(x.text));
   if (!match?.button?.data) throw new Error(`The exact ${label} button was not present on its matched message.`);
-  await client.invoke(new Api.messages.GetBotCallbackAnswer({
-    peer, msgId: message.id, data: match.button.data
-  }));
-  await sleep(900);
-  return true;
+  return invokeKdlCallback(client, peer, message, match.button, label);
 }
 
 function exactEpisodeFileButton(message, item, episodeText) {
