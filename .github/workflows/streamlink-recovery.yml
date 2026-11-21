@@ -83,3 +83,4 @@ jobs:
           TELEGRAM_SESSION: ${{ secrets.TELEGRAM_SESSION }}
           KDL_AIR_BOT_USERNAME: ${{ secrets.KDL_AIR_BOT_USERNAME }}
         run: node scripts/streamlink-recovery.mjs
+# Preview OIDC validation trigger: isolated recovery deployment is ready.
