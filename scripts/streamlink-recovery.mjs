@@ -84,14 +84,21 @@ function exactEpisodeFileButton(message, item, episodeText) {
     matchesKdlFileButton(text, item, episodeText));
 }
 
-async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText) {
+async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText, { qualityConfirmed = false } = {}) {
   const visited = new Set();
   for (let page = 0; page < 30; page++) {
     const messages = await client.getMessages(peer, { limit: 30 });
     const fresh = messages.filter(m => !m.out && Number(m.id) > sentId)
       .sort((a,b) => Number(b.id) - Number(a.id));
     for (const message of fresh) {
-      const candidate = exactEpisodeFileButton(message, item, episodeText);
+      const candidates = buttonList(message).filter(({text}) =>
+        matchesKdlFileButton(text, item, episodeText, { qualityConfirmed }) &&
+        (!item.language || text.toLowerCase().includes(String(item.language).toLowerCase()))
+      );
+      if (candidates.length > 1) {
+        throw new Error(`KDL Air returned ${candidates.length} indistinguishable files for ${episodeText} after filtering. Refusing to guess a language or release.`);
+      }
+      const candidate = candidates[0];
       if (candidate?.button?.data) {
         await clickButtonOnMessage(client, peer, message,
           text => text === candidate.text, `${episodeText} ${item.quality} ${item.codec} file`);
@@ -187,7 +194,7 @@ async function collectFreshLink(client, peer, item) {
     // Season is also a fallback, only used if the filtered episode list does
     // not contain the exact saved episode on its current pages.
     try {
-      selectedFilename = await findAndSelectEpisodeFile(client, peer, item, sentId, episodeText);
+      selectedFilename = await findAndSelectEpisodeFile(client, peer, item, sentId, episodeText, { qualityConfirmed: true });
     } catch (qualityError) {
       const latest = await client.getMessages(peer, { limit: 30 });
       const seasonOpened = await clickMatching(client, peer, latest, /^season$/i, "Season",sentId);
@@ -198,7 +205,7 @@ async function collectFreshLink(client, peer, item) {
       const seasonChosen = await clickMatching(client, peer, seasonState.messages,
         new RegExp(`(?:^|\\b)${seasonText}(?:\\b|$)|^\\s*${item.season}\\s*$`, "i"), "season option",sentId);
       if (!seasonChosen) throw new Error(`KDL Air did not offer ${seasonText}.`);
-      selectedFilename = await findAndSelectEpisodeFile(client, peer, item, sentId, episodeText);
+      selectedFilename = await findAndSelectEpisodeFile(client, peer, item, sentId, episodeText, { qualityConfirmed: true });
     }
   }
 
