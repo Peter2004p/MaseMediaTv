@@ -21,7 +21,11 @@ export function matchesKdlFileButton(buttonText, item, episodeText, { qualityCon
     return false;
   }
   const codecToken = tokens.find(token => ["x265", "h265", "hevc", "x264", "h264", "av1"].includes(token));
-  return !!codecToken && normalizeCodec(codecToken) === expectedCodec;
+  // KDL Air's episode-list buttons show only file size, episode and title.
+  // Codec is available on the selected Telegram document card, so defer that
+  // verification until after selecting the unique episode row.
+  if (!codecToken) return qualityConfirmed;
+  return normalizeCodec(codecToken) === expectedCodec;
 }
 
 export function isNextPageLabel(value) {
