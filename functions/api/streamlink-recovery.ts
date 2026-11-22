@@ -121,10 +121,14 @@ const streamEntries = (row: TitleRow, metadata: Record<string, unknown>) => {
       if (pathQuality && String(variant.quality || "").toLowerCase() !== pathQuality.toLowerCase()) return;
       const pathCodec = streamUrl.pathname.match(/(?:^|[._+\\-])(x265|h265|hevc|x264|h264|av1)(?=[._+\\-]|$)/i)?.[1];
       if (pathCodec && variant.codec && normalizeCodec(String(variant.codec)) !== normalizeCodec(pathCodec)) return;
+      let filename = streamUrl.pathname.split("/").pop() || "";
+      try { filename = decodeURIComponent(filename); } catch {}
+      const releaseTag = filename.match(/(?:x265|h265|hevc|x264|h264|av1)[+._-]+([a-z0-9]{2,12})(?:[+._-]?mkv)?$/i)?.[1] || "";
       entries.push({
         titleId: row.id, title: row.name, kind: row.kind, episodeId, episodeIndex,
         season, episode: episodeNumber, quality: String(variant.quality || "Unknown"),
-        codec: String(variant.codec || "Unknown"), streamUrl: String(variant.streamUrl),
+        codec: String(variant.codec || pathCodec || "Unknown"), releaseTag,
+        streamUrl: String(variant.streamUrl),
         variantIndex: root ? -1 : variantIndex, isPrimary: root
       });
     };
