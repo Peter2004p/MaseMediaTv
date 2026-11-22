@@ -2,7 +2,7 @@ import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { matchesKdlFileButton, isNextPageLabel, isKdlEpisodeRowLabel } from "./streamlink-recovery-matchers.mjs";
+import { matchesKdlFileButton, isNextPageLabel, isKdlEpisodeRowLabel, matchesReleaseTag } from "./streamlink-recovery-matchers.mjs";
 import { request as httpsRequest } from "node:https";
 
 const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_TOKEN", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
@@ -150,6 +150,7 @@ async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText,
     const message = current.message;
     const candidates = buttonList(message).filter(({ text }) =>
       matchesKdlFileButton(text, item, episodeText, { qualityConfirmed }) &&
+      matchesReleaseTag(text, item.releaseTag) &&
       (!item.language || text.toLowerCase().includes(String(item.language).toLowerCase()))
     );
     if (candidates.length > 1) {
