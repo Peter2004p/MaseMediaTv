@@ -11,6 +11,12 @@ export function normalizeCodec(value) {
 
 export function matchesKdlFileButton(buttonText, item, episodeText, { qualityConfirmed = false } = {}) {
   const tokens = String(buttonText || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  if (item.title) {
+    const normalizeTitle = value => stripSourceLabelSuffix(value).normalize("NFKC").toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+    const expectedTitle = normalizeTitle(item.title);
+    const visibleTitle = normalizeTitle(buttonText);
+    if (!expectedTitle || !(" " + visibleTitle + " ").includes(" " + expectedTitle + " ")) return false;
+  }
   const expectedQuality = String(item.quality || "").toLowerCase();
   const expectedCodec = normalizeCodec(item.codec);
   if (!expectedQuality || !expectedCodec || expectedCodec === "unknown") return false;
