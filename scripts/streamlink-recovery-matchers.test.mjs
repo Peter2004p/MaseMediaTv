@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchesKdlFileButton, isNextPageLabel, stripSourceLabelSuffix, isKdlEpisodeRowLabel } from "./streamlink-recovery-matchers.mjs";
+import { matchesKdlFileButton, isNextPageLabel, stripSourceLabelSuffix, isKdlEpisodeRowLabel, matchesReleaseTag } from "./streamlink-recovery-matchers.mjs";
 
 const item = { quality: "1080p", codec: "HEVC" };
 
@@ -53,4 +53,11 @@ test("requires the exact drama title in a KDL episode row when title metadata is
   const exact = { title: "Blossom in Darkness IQ", quality: "1080p", codec: "HEVC" };
   assert.equal(matchesKdlFileButton("179.86 MB • S01E08 • @KLandd Blossom In Darkness", exact, "S01E08", { qualityConfirmed: true }), true);
   assert.equal(matchesKdlFileButton("179.86 MB • S01E08 • Another Drama", exact, "S01E08", { qualityConfirmed: true }), false);
+});
+
+test("matches the exact release/provider suffix when the old URL records one", () => {
+  assert.equal(matchesReleaseTag("567.60 MB • S01E40 • Tigers Sniff The Rose X264 WETV mkv", "WETV"), true);
+  assert.equal(matchesReleaseTag("305.69 MB • S01E40 • Tigers Sniff The Rose X264 VIKI mkv", "WETV"), false);
+  assert.equal(matchesReleaseTag("305.69 MB • S01E40 • Tigers Sniff The Rose X264 VIKI mkv", "VIKI"), true);
+  assert.equal(matchesReleaseTag("305.69 MB • S01E40 • Tigers Sniff The Rose X264 VIKI mkv", ""), true);
 });
