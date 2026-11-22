@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - feature/streamlink-production-prep
+      - feature/streamlink-recovery-unified
     paths:
       - "scripts/streamlink-recovery.mjs"
       - "scripts/streamlink-recovery-matchers.mjs"
@@ -14,6 +15,7 @@ on:
   push:
     branches:
       - feature/streamlink-recovery-unified
+      - fix/recovery-drama-only-runner
 
 permissions:
   contents: read
