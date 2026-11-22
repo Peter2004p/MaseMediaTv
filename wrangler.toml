@@ -1,4 +1,18 @@
 # MaseTv Cloudflare Pages configuration (migration workspace)
+
+# Wrangler's Worker preview command uses the top-level previews block.
+# Keep all preview bindings pointed at the isolated Preview resources.
+[[previews.d1_databases]]
+binding = "DB"
+database_id = "783e9c3d-b758-4273-9999-b6fffc6b560c"
+
+[[previews.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "masenet-posters"
+
+[previews.ai]
+binding = "AI"
+
 name = "masetv-cloudflare-migration"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-10-18"
