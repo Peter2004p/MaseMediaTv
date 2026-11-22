@@ -361,7 +361,11 @@ async function main() {
   // walkthrough. This is only an ordering preference; every episode, season,
   // quality and codec still has to match exactly before a replacement is allowed.
   const knownWalkthroughTitle = "blossom in darkness";
+  const recoveryScore = item =>
+    (String(item.codec || "Unknown").toLowerCase() !== "unknown" ? 2 : 0) +
+    (String(item.releaseTag || "").trim() ? 4 : 0);
   const recoveryBatch = [...expired].sort((a, b) =>
+    recoveryScore(b) - recoveryScore(a) ||
     Number(String(b.title || "").trim().toLocaleLowerCase("en") === knownWalkthroughTitle) -
     Number(String(a.title || "").trim().toLocaleLowerCase("en") === knownWalkthroughTitle)
   ).slice(0, maxRecoveries);
