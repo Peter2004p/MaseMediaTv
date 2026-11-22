@@ -9,6 +9,7 @@ on:
       - "scripts/streamlink-recovery.mjs"
       - "scripts/streamlink-recovery-matchers.mjs"
       - "scripts/streamlink-recovery-matchers.test.mjs"
+      - "scripts/streamlink-recovery-authorization.test.mjs"
       - "functions/api/streamlink-recovery.ts"
       - "package.json"
       - ".github/workflows/streamlink-recovery-checks.yml"
@@ -36,3 +37,5 @@ jobs:
         run: npm run build
       - name: Run exact-match regression tests
         run: npm run test:streamlink-matchers
+      - name: Verify authorization gate fails closed
+        run: npm run test:streamlink-authorization
