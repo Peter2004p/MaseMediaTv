@@ -112,36 +112,55 @@ function exactEpisodeFileButton(message, item, episodeText) {
     matchesKdlFileButton(text, item, episodeText));
 }
 
+async function waitForKdlFilePage(client, peer, sentId, previousSignature = null, timeoutMs = 22000) {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    const messages = await client.getMessages(peer, { limit: 30 });
+    const fresh = messages.filter(message => !message.out && Number(message.id) > sentId)
+      .sort((a, b) => Number(b.id) - Number(a.id));
+    for (const message of fresh) {
+      const buttons = buttonList(message);
+      const hasEpisodeRows = buttons.some(item => /\\bS\\d{2}E\\d{2}\\b/i.test(item.text));
+      const hasNext = buttons.some(item => isNextPageLabel(item.text));
+      if (!hasEpisodeRows && !hasNext) continue;
+      const signature = `${message.id}:${message.message || ""}:${buttons.map(item => item.text).join("|")}`;
+      if (signature !== previousSignature) return { message, signature };
+    }
+    await sleep(850);
+  }
+  throw new Error("KDL Air did not finish refreshing the episode file list after the quality or page selection.");
+}
+
 async function findAndSelectEpisodeFile(client, peer, item, sentId, episodeText, { qualityConfirmed = false } = {}) {
   const visited = new Set();
+  let previousSignature = null;
   for (let page = 0; page < 30; page++) {
-    const messages = await client.getMessages(peer, { limit: 30 });
-    const fresh = messages.filter(m => !m.out && Number(m.id) > sentId)
-      .sort((a,b) => Number(b.id) - Number(a.id));
-    for (const message of fresh) {
-      const candidates = buttonList(message).filter(({text}) =>
-        matchesKdlFileButton(text, item, episodeText, { qualityConfirmed }) &&
-        (!item.language || text.toLowerCase().includes(String(item.language).toLowerCase()))
-      );
-      if (candidates.length > 1) {
-        throw new Error(`KDL Air returned ${candidates.length} indistinguishable files for ${episodeText} after filtering. Refusing to guess a language or release.`);
-      }
-      const candidate = candidates[0];
-      if (candidate?.button?.data) {
-        await clickButtonOnMessage(client, peer, message,
-          text => text === candidate.text, `${episodeText} ${item.quality} ${item.codec} file`);
-        return candidate.text;
-      }
+    // Telegram edits the same bot message when an inline button is pressed.
+    // Wait for that edited keyboard instead of inspecting the stale quality
+    // menu or the pre-filter page immediately after the callback returns.
+    const current = await waitForKdlFilePage(client, peer, sentId, previousSignature);
+    const message = current.message;
+    const candidates = buttonList(message).filter(({ text }) =>
+      matchesKdlFileButton(text, item, episodeText, { qualityConfirmed }) &&
+      (!item.language || text.toLowerCase().includes(String(item.language).toLowerCase()))
+    );
+    if (candidates.length > 1) {
+      throw new Error(`KDL Air returned ${candidates.length} indistinguishable files for ${episodeText} after filtering. Refusing to guess a language or release.`);
     }
-    const pageMessage = fresh.find(message =>
-      buttonList(message).some(x => isNextPageLabel(x.text)));
-    if (!pageMessage) throw new Error(`Could not find ${episodeText} at the current page, and KDL Air exposed no Next button. No other episode was selected.`);
-    const pageSignature = `${pageMessage.id}:${pageMessage.message || ""}:${buttonList(pageMessage).map(x=>x.text).join("|")}`;
-    if (visited.has(pageSignature)) throw new Error("KDL Air pagination did not advance; stopping safely.");
-    visited.add(pageSignature);
-    await clickButtonOnMessage(client, peer, pageMessage,
-      isNextPageLabel, "Next page");
-    await sleep(1100);
+    const candidate = candidates[0];
+    if (candidate?.button?.data) {
+      await clickButtonOnMessage(client, peer, message,
+        text => text === candidate.text, `${episodeText} ${item.quality} ${item.codec} file`);
+      return candidate.text;
+    }
+    const next = buttonList(message).some(item => isNextPageLabel(item.text));
+    if (!next) {
+      throw new Error(`KDL Air reached the end of the available pages without an exact ${episodeText} ${item.quality} ${item.codec} file. No other episode was selected.`);
+    }
+    if (visited.has(current.signature)) throw new Error("KDL Air pagination repeated the same page; stopping safely.");
+    visited.add(current.signature);
+    await clickButtonOnMessage(client, peer, message, isNextPageLabel, "Next page");
+    previousSignature = current.signature;
   }
   throw new Error("Episode was not found within 30 KDL Air pages; no substitute was selected.");
 }
