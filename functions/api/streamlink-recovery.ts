@@ -3,6 +3,7 @@ import { json } from "./auth/_shared";
 interface Env {
   DB: D1Database;
   STREAMLINK_RECOVERY_SECRET?: string;
+  STREAMLINK_RECOVERY_ALLOWED_HOSTS?: string;
 }
 
 type Episode = Record<string, unknown>;
@@ -178,6 +179,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const codec = String(body.codec || "Unknown").trim().toLowerCase();
     if (!titleId || !episodeId || !oldUrl || !newUrl || oldUrlRaw === newUrl.toString()) {
       return json({ ok: false, error: "A title, episode, current URL and different replacement HTTPS URL are required." }, 400);
+    }
+
+    // Enforce the destination allowlist at the database boundary as well as in
+    // the runner. A compromised or misconfigured caller cannot write a stream
+    // URL from an arbitrary HTTPS host. Exact hostname matches only.
+    const allowedHosts = String(env.STREAMLINK_RECOVERY_ALLOWED_HOSTS || "")
+      .split(",")
+      .map(host => host.trim().toLowerCase())
+      .filter(Boolean);
+    if (!allowedHosts.length) {
+      return json({ ok: false, error: "Stream recovery is disabled: no authorized replacement-host allowlist is configured." }, 503);
+    }
+    if (!allowedHosts.includes(newUrl.hostname.toLowerCase())) {
+      return json({ ok: false, error: "The replacement host is not on the authorized stream-source allowlist. No catalogue data was changed." }, 403);
     }
 
     const row = await env.DB.prepare("SELECT id,name,kind,metadata_json,stream_url,quality FROM titles WHERE id=?")
