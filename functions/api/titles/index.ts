@@ -20,7 +20,7 @@ const validateExternalEpisodeLinks = (episodes: unknown, requestUrl: string): st
 };
 type StoredTitle = { id: string; name: string; kind: string; metadata_json: string; created_at: string };
 const stripProviderSuffix = (value: string) => value
-  .replace(/(^|[\s._+@-])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|Viki|VIK|IQ)(?=$|[\s._+-])/gi, " ")
+  .replace(/(^|[\s._+@-])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|VIKI|Viki|VIK|IQ)(?=$|[\s._+-])/gi, " ")
   .replace(/\s+/g, " ").trim();
 const normalizeLibraryName = (value: unknown) => stripProviderSuffix(String(value ?? "").normalize("NFKC"))
   .toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -141,7 +141,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     await env.DB.prepare("UPDATE titles SET name=?,kind=?,metadata_json=?,updated_at=datetime('now') WHERE id=?").bind(existing.name, kind, JSON.stringify(title), id).run();
   } else {
     id = typeof body.id === "string" && body.id ? body.id : crypto.randomUUID();
-    title = { ...body, id };
+    title = { ...body, id, name: stripProviderSuffix(body.name.trim()) };
     await env.DB.prepare("INSERT INTO titles (id,name,kind,metadata_json) VALUES (?,?,?,?)").bind(id, String(title.name), kind, JSON.stringify(title)).run();
   }
 
