@@ -25,9 +25,10 @@ test("recognizes the observed next-page button label", () => {
   assert.equal(isNextPageLabel("NEXT PAGE"), false);
 });
 
-test("accepts a file without a visible quality label only after the exact Quality filter was applied", () => {
-  assert.equal(matchesKdlFileButton("862.48 MB • S01E17 • Blossom In Darkness 2026 X265 mkv", item, "S01E17", { qualityConfirmed: true }), true);
-  assert.equal(matchesKdlFileButton("862.48 MB • S01E17 • Blossom In Darkness 2026 X265 mkv", item, "S01E17"), false);
+test("accepts KDL episode-list rows without codec or quality labels only after the quality filter was applied", () => {
+  assert.equal(matchesKdlFileButton("179.86 MB • S01E08 • @KLandd Blossom In Darkness", item, "S01E08", { qualityConfirmed: true }), true);
+  assert.equal(matchesKdlFileButton("179.86 MB • S01E08 • @KLandd Blossom In Darkness", item, "S01E08"), false);
+  assert.equal(matchesKdlFileButton("179.86 MB • S01E09 • @KLandd Blossom In Darkness", item, "S01E08", { qualityConfirmed: true }), false);
 });
 
 test("recognizes KDL Air's stylized Unicode NEXT button", () => {
