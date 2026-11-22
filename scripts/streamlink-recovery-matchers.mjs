@@ -1,4 +1,10 @@
-export function stripSourceLabelSuffix(value) {\n  return String(value || "").normalize("NFKC")\n    .replace(/(^|[\\s._+@-])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|VIKI|Viki|VIK|IQ)(?=$|[\\s._+-])/gi, " ")\n    .replace(/\\s+/g, " ").trim();\n}\n\nexport function normalizeCodec(value) {
+export function stripSourceLabelSuffix(value) {
+  return String(value || "").normalize("NFKC")
+    .replace(/(^|[\\s._+@-])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|VIKI|Viki|VIK|IQ)(?=$|[\\s._+-])/gi, " ")
+    .replace(/\\s+/g, " ").trim();
+}
+
+export function normalizeCodec(value) {
   const codec = String(value || "").toLowerCase();
   return ({ hevc: "x265", h265: "x265", h264: "x264" })[codec] || codec;
 }
@@ -19,6 +25,6 @@ export function matchesKdlFileButton(buttonText, item, episodeText, { qualityCon
 }
 
 export function isNextPageLabel(value) {
-  const normalized = String(value || "").normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
-  return /^(?:NEXT\s*»|»\s*NEXT|NEXT)$/i.test(normalized);
+  const normalized = String(value || "").normalize("NFKC").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").trim();
+  return /^(?:NEXT\\s*»|»\\s*NEXT|NEXT)$/i.test(normalized);
 }
