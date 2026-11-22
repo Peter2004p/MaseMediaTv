@@ -19,6 +19,11 @@ const validateExternalEpisodeLinks = (episodes: unknown, requestUrl: string): st
   return null;
 };
 type StoredTitle = { id: string; name: string; kind: string; metadata_json: string; created_at: string };
+const stripProviderSuffix = (value: string) => value
+  .replace(/(^|[\\s._+\\-@])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|Viki|VIK|IQ)(?=$|[\\s._+\\-])/gi, " ")
+  .replace(/\\s+/g, " ").trim();
+const normalizeLibraryName = (value: unknown) => stripProviderSuffix(String(value ?? "").normalize("NFKC"))
+  .toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
 const normalizeTitleType = (...values: unknown[]): "Movie" | "Drama" => {
   for (const value of values) {
     const type = String(value ?? "").trim().toLowerCase().replace(/[_-]+/g, " ");
@@ -51,7 +56,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     return {
       ...metadata,
       id: row.id,
-      name: String(metadata.name || row.name || "Untitled"),
+      name: stripProviderSuffix(String(metadata.name || row.name || "Untitled")),
       type: normalizeTitleType(metadata.type, row.kind),
       description: typeof metadata.description === "string" ? metadata.description : "",
       year: String(metadata.year || ""),
@@ -69,18 +74,35 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       standaloneMovies.push(title);
       continue;
     }
-    const normalizedName = String(title.name || "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const normalizedName = normalizeLibraryName(title.name);
     const key = "drama|" + (normalizedName || String(title.id || crypto.randomUUID()));
     const current = grouped.get(key);
     if (!current) { grouped.set(key, title); continue; }
+    // Combine provider-labelled rows into one visible drama card. Keep one
+    // episode per season/episode and preserve distinct stream variants.
     const all = [...(Array.isArray(current.episodes) ? current.episodes as Record<string, unknown>[] : []), ...(Array.isArray(title.episodes) ? title.episodes as Record<string, unknown>[] : [])];
     const seen = new Map<string, Record<string, unknown>>();
+    const variantKey = (v: Record<string, unknown>) => [String(v.quality || ""), String(v.codec || "Unknown").toLowerCase(), String(v.streamUrl || "")].join("|");
     for (const ep of all) {
-      const episodeKey = String(ep.season || 1) + "|" + String(ep.episode || 1) + "|" + String(ep.quality || "");
-      if (!seen.has(episodeKey)) seen.set(episodeKey, ep);
+      const episodeKey = String(ep.season || 1) + "|" + String(ep.episode || 1);
+      const existing = seen.get(episodeKey);
+      if (!existing) { seen.set(episodeKey, { ...ep, qualities: Array.isArray(ep.qualities) ? [...ep.qualities as Record<string, unknown>[]] : [] }); continue; }
+      const variants = Array.isArray(existing.qualities) ? existing.qualities as Record<string, unknown>[] : [];
+      const incoming = [...(Array.isArray(ep.qualities) ? ep.qualities as Record<string, unknown>[] : []), ...(ep.streamUrl ? [{ quality: ep.quality, codec: ep.codec, streamUrl: ep.streamUrl, mimeType: ep.mimeType }] : [])];
+      const known = new Set([variantKey(existing), ...variants.map(variantKey)]);
+      for (const variant of incoming) {
+        const key = variantKey(variant);
+        if (!variant.streamUrl || known.has(key)) continue;
+        variants.push(variant); known.add(key);
+      }
+      existing.qualities = variants;
+      if (!existing.streamUrl && ep.streamUrl) {
+        existing.streamUrl = ep.streamUrl; existing.quality = ep.quality; existing.codec = ep.codec;
+      }
     }
     current.episodes = [...seen.values()].sort((a,b) => Number(a.season||1)-Number(b.season||1) || Number(a.episode||1)-Number(b.episode||1));
     for (const field of ["description","posterUrl","posterPath","trailerUrl","year"]) if (!current[field] && title[field]) current[field] = title[field];
+    current.name = stripProviderSuffix(String(current.name || title.name || "Untitled"));
   }
   return json({ titles: [...standaloneMovies, ...grouped.values()] });
 };
