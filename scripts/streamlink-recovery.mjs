@@ -128,7 +128,7 @@ async function waitForKdlFilePage(client, peer, sentId, previousSignature = null
           /back to files/i, "return to filtered episode files");
         break;
       }
-      const hasEpisodeRows = buttons.some(item => /\\bS\\d{2}E\\d{2}\\b/i.test(item.text));
+      const hasEpisodeRows = buttons.some(item => /\bS\d{2}E\d{2}\b/i.test(item.text));
       const hasNext = buttons.some(item => isNextPageLabel(item.text));
       if (!hasEpisodeRows && !hasNext) continue;
       const signature = `${message.id}:${message.message || ""}:${buttons.map(item => item.text).join("|")}`;
