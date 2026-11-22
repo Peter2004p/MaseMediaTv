@@ -1,7 +1,7 @@
 export function stripSourceLabelSuffix(value) {
   return String(value || "").normalize("NFKC")
-    .replace(/(^|[\\s._+@-])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|VIKI|Viki|VIK|IQ)(?=$|[\\s._+-])/gi, " ")
-    .replace(/\\s+/g, " ").trim();
+    .replace(/(^|[\s._+@-])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|VIKI|Viki|VIK|IQ)(?=$|[\s._+-])/gi, " ")
+    .replace(/\s+/g, " ").trim();
 }
 
 export function normalizeCodec(value) {
@@ -25,6 +25,6 @@ export function matchesKdlFileButton(buttonText, item, episodeText, { qualityCon
 }
 
 export function isNextPageLabel(value) {
-  const normalized = String(value || "").normalize("NFKC").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").trim();
-  return /^(?:NEXT\\s*»|»\\s*NEXT|NEXT)$/i.test(normalized);
+  const normalized = String(value || "").normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+  return /^(?:NEXT\s*»|»\s*NEXT|NEXT)$/i.test(normalized);
 }
