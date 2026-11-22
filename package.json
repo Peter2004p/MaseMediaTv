@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json",
     "test:telegram-e2e": "node scripts/telegram-access-e2e.mjs",
-    "test:streamlink-matchers": "node --test scripts/streamlink-recovery-matchers.test.mjs"
+    "test:streamlink-matchers": "node --test scripts/streamlink-recovery-matchers.test.mjs",
+    "test:streamlink-authorization": "node --test scripts/streamlink-recovery-authorization.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.469.0",
