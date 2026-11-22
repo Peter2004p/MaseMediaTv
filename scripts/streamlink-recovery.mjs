@@ -2,7 +2,7 @@ import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { matchesKdlFileButton, isNextPageLabel } from "./streamlink-recovery-matchers.mjs";
+import { matchesKdlFileButton, isNextPageLabel, isKdlEpisodeRowLabel } from "./streamlink-recovery-matchers.mjs";
 import { request as httpsRequest } from "node:https";
 
 const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_TOKEN", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
@@ -128,7 +128,7 @@ async function waitForKdlFilePage(client, peer, sentId, previousSignature = null
           /back to files/i, "return to filtered episode files");
         break;
       }
-      const hasEpisodeRows = buttons.some(item => /\bS\d{2}E\d{2}\b/i.test(item.text));
+      const hasEpisodeRows = buttons.some(item => isKdlEpisodeRowLabel(item.text));
       const hasNext = buttons.some(item => isNextPageLabel(item.text));
       if (!hasEpisodeRows && !hasNext) continue;
       const signature = `${message.id}:${message.message || ""}:${buttons.map(item => item.text).join("|")}`;
