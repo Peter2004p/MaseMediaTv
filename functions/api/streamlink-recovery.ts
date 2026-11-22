@@ -43,6 +43,15 @@ const safeHttpsUrl = (value: unknown) => {
     return url;
   } catch { return null; }
 };
+const qualityFromUrl = (value: unknown) => {
+  const url = safeHttpsUrl(value);
+  return url?.pathname.match(/(?:^|[._+\\-])(2160p|1440p|1080p|720p|576p|540p|480p|360p)(?=[._+\\-]|$)/i)?.[1] || "Unknown";
+};
+const codecFromUrl = (value: unknown) => {
+  const url = safeHttpsUrl(value);
+  return url?.pathname.match(/(?:^|[._+\\-])(x265|h265|hevc|x264|h264|av1)(?=[._+\\-]|$)/i)?.[1] || "Unknown";
+};
+
 
 const base64UrlBytes = (value: string) => {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -127,7 +136,7 @@ const streamEntries = (row: TitleRow, metadata: Record<string, unknown>) => {
       const releaseTag = filename.match(/(?:x265|h265|hevc|x264|h264|av1)[+._-]+([a-z0-9]{2,12})$/i)?.[1] || "";
       entries.push({
         titleId: row.id, title: row.name, kind: row.kind, episodeId, episodeIndex,
-        season, episode: episodeNumber, quality: String(variant.quality || "Unknown"),
+        season, episode: episodeNumber, quality: String(variant.quality || pathQuality || "Unknown"),
         codec: String(variant.codec || pathCodec || "Unknown"), releaseTag,
         streamUrl: String(variant.streamUrl),
         variantIndex: root ? -1 : variantIndex, isPrimary: root
@@ -208,20 +217,25 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }
 
     let changed = false;
-    const currentQuality = String(episode.quality || "Unknown").trim().toLowerCase();
-    const currentCodec = String(episode.codec || "Unknown").trim().toLowerCase();
-    if (String(episode.streamUrl || "") === oldUrlRaw && currentQuality === quality && currentCodec === codec) {
+    const currentQuality = String(episode.quality || qualityFromUrl(episode.streamUrl)).trim().toLowerCase();
+    const currentCodec = normalizeCodec(String(episode.codec || codecFromUrl(episode.streamUrl)));
+    if (String(episode.streamUrl || "") === oldUrlRaw && currentQuality === quality &&
+        currentCodec === normalizeCodec(codec)) {
       episode.streamUrl = newUrl.toString();
+      if (!episode.quality || String(episode.quality).trim().toLowerCase() === "unknown") episode.quality = body.quality;
+      if (!episode.codec || String(episode.codec).trim().toLowerCase() === "unknown") episode.codec = body.codec;
       changed = true;
     } else {
       const variants = Array.isArray(episode.qualities) ? episode.qualities as Episode[] : [];
       const variant = variants.find(item =>
         String(item.streamUrl || "") === oldUrlRaw &&
-        String(item.quality || "Unknown").trim().toLowerCase() === quality &&
-        String(item.codec || "Unknown").trim().toLowerCase() === codec
+        String(item.quality || qualityFromUrl(item.streamUrl)).trim().toLowerCase() === quality &&
+        normalizeCodec(String(item.codec || codecFromUrl(item.streamUrl))) === normalizeCodec(codec)
       );
       if (variant) {
         variant.streamUrl = newUrl.toString();
+        if (!variant.quality || String(variant.quality).trim().toLowerCase() === "unknown") variant.quality = body.quality;
+        if (!variant.codec || String(variant.codec).trim().toLowerCase() === "unknown") variant.codec = body.codec;
         changed = true;
       }
       episode.qualities = variants;
