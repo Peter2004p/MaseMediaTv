@@ -20,7 +20,7 @@ type ParsedStream = {
 };
 // Source labels belong to the stream provider, never to the catalogue title.
 const stripSourceLabels = (value: string) => value
-  .replace(/(^|[\s._+\-@])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|Viki|VIK|IQ)(?=$|[\s._+\-])/gi, " ")
+  .replace(/(^|[\s._+\-@])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|VIKI|Viki|VIK|IQ)(?=$|[\s._+\-])/gi, " ")
   .replace(/\s+/g, " ").trim();
 const normalize = (value: unknown) => stripSourceLabels(String(value ?? "").normalize("NFKC"))
   .toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
