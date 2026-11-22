@@ -355,10 +355,9 @@ async function main() {
   // Bound each scheduled run so a large backlog cannot flood KDL Air or
   // monopolize the Telegram session. Remaining exact matches are deferred
   // to the next scheduled run.
-  // KDL Air pagination can take several minutes for older episodes.
-  // Keep each scheduled run to one exact variant so it can finish safely
-  // before the next 15-minute scheduler tick.
-  const maxRecoveries = 1;
+  // Keep batches small enough to finish comfortably inside the
+  // scheduled job timeout while recovering more than one exact variant.
+  const maxRecoveries = 2;
   // First validate against the exact drama title shown in the supplied KDL Air
   // walkthrough. This is only an ordering preference; every episode, season,
   // quality and codec still has to match exactly before a replacement is allowed.
