@@ -226,11 +226,11 @@ async function collectFreshLink(client, peer, item) {
   const generateMessageId = Number(state.message.id);
   state = await waitFor(client, peer,
     message => Number(message.id) > generateMessageId &&
-      /your link\\s*:/i.test(String(message.message || "")) &&
-      /https:\\/\\//i.test(String(message.message || "")),
+      /your link\s*:/i.test(String(message.message || "")) &&
+      /https:\/\//i.test(String(message.message || "")),
     "a newly generated streamlink for the selected file", 45000, generateMessageId);
   const text = String(state.message.message || "");
-  const match = text.match(/your link\\s*:\\s*(https:\\/\\/[^\\s<>]+)/i);
+  const match = text.match(/your link\s*:\s*(https:\/\/[^\s<>]+)/i);
   if (!match) throw new Error("KDL Air response did not contain a readable streamlink.");
   const freshUrl = match[1].replace(/[),.]+$/, "");
   const parsedFreshUrl = new URL(freshUrl);
@@ -241,8 +241,8 @@ async function collectFreshLink(client, peer, item) {
   await resolvePublicTarget(parsedFreshUrl);
   let filename = "";
   try { filename = decodeURIComponent(new URL(freshUrl).pathname.split("/").pop() || ""); } catch {}
-  const freshQuality = filename.match(/\\b(2160p|1440p|1080p|720p|576p|540p|480p|360p)\\b/i)?.[1]?.toLowerCase();
-  const freshCodec = filename.match(/\\b(x265|h265|hevc|x264|h264|av1)\\b/i)?.[1]?.toLowerCase();
+  const freshQuality = filename.match(/\b(2160p|1440p|1080p|720p|576p|540p|480p|360p)\b/i)?.[1]?.toLowerCase();
+  const freshCodec = filename.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1]?.toLowerCase();
   const expectedCodec = String(item.codec || "Unknown").toLowerCase();
   const aliases = { hevc: "x265", h265: "x265", h264: "x264" };
   if (freshQuality && freshQuality !== String(item.quality).toLowerCase()) {
