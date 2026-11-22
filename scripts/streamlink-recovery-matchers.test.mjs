@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchesKdlFileButton, isNextPageLabel, stripSourceLabelSuffix } from "./streamlink-recovery-matchers.mjs";
+import { matchesKdlFileButton, isNextPageLabel, stripSourceLabelSuffix, isKdlEpisodeRowLabel } from "./streamlink-recovery-matchers.mjs";
 
 const item = { quality: "1080p", codec: "HEVC" };
 
@@ -40,4 +40,11 @@ test("strips provider suffixes without changing the drama title", () => {
     assert.equal(stripSourceLabelSuffix("The Lament Of Autumn " + suffix), "The Lament Of Autumn");
   }
   assert.equal(stripSourceLabelSuffix("Blossom in Darkness"), "Blossom in Darkness");
+});
+
+test("recognizes KDL episode rows even when there is no NEXT pagination button", () => {
+  assert.equal(isKdlEpisodeRowLabel("179.86 MB • S01E17 • Blossom in Darkness"), true);
+  assert.equal(isKdlEpisodeRowLabel("S02E03 - 1080p HEVC"), true);
+  assert.equal(isKdlEpisodeRowLabel("NEXT »"), false);
+  assert.equal(isKdlEpisodeRowLabel("No matching files"), false);
 });
