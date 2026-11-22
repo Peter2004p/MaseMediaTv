@@ -317,14 +317,18 @@ async function main() {
     const batch = links.slice(offset, offset + 12);
     const checks = await Promise.all(batch.map(async item => ({ item, result: await checkLink(item.streamUrl) })));
     for (const { item, result } of checks) {
-      if (result.expired) {
-        console.log(`Confirmed expired: ${item.title} S${item.season}E${item.episode} ${item.quality}`);
+      if (result.expired && item.kind === "drama") {
+        console.log(`Confirmed expired drama link: ${item.title} S${item.season}E${item.episode} ${item.quality}`);
         expired.push(item);
+      } else if (result.expired) {
+        // Movie retrieval has no verified KDL selection flow yet. Keep those
+        // records untouched and out of the drama recovery batch.
+        console.log(`Confirmed expired movie link, skipped safely (movie recovery is not enabled): ${item.title} ${item.quality}`);
       }
     }
   }
   if (!expired.length) {
-    console.log("No confirmed expired links. No catalogue changes made.");
+    console.log("No confirmed expired drama links eligible for this runner. No catalogue changes made.");
     return;
   }
 
