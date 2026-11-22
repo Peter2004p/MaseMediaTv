@@ -21,6 +21,8 @@ const constantTimeEqual = async (left: string, right: string) => {
   return diff === 0;
 };
 
+const normalizeCodec = (value: string) => ({ hevc: "x265", h265: "x265", h264: "x264" } as Record<string,string>)[value.toLowerCase()] || value.toLowerCase();
+
 const safeHttpsUrl = (value: unknown) => {
   if (typeof value !== "string" || value.length > 4096) return null;
   try {
@@ -113,6 +115,12 @@ const streamEntries = (row: TitleRow, metadata: Record<string, unknown>) => {
     const add = (variant: Episode, variantIndex: number, root: boolean) => {
       const streamUrl = safeHttpsUrl(variant.streamUrl);
       if (!streamUrl) return;
+      // Reject internally inconsistent catalogue variants. Some imported rows
+      // label a 720p file as 1080p; the filename is the stronger evidence.
+      const pathQuality = streamUrl.pathname.match(/(?:^|[._+\\-])(2160p|1440p|1080p|720p|576p|540p|480p|360p)(?=[._+\\-]|$)/i)?.[1];
+      if (pathQuality && String(variant.quality || "").toLowerCase() !== pathQuality.toLowerCase()) return;
+      const pathCodec = streamUrl.pathname.match(/(?:^|[._+\\-])(x265|h265|hevc|x264|h264|av1)(?=[._+\\-]|$)/i)?.[1];
+      if (pathCodec && variant.codec && normalizeCodec(String(variant.codec)) !== normalizeCodec(pathCodec)) return;
       entries.push({
         titleId: row.id, title: row.name, kind: row.kind, episodeId, episodeIndex,
         season, episode: episodeNumber, quality: String(variant.quality || "Unknown"),
