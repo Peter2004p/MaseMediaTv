@@ -32,3 +32,7 @@ export function isNextPageLabel(value) {
   const normalized = String(value || "").normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
   return /^(?:NEXT\s*»|»\s*NEXT|NEXT)$/i.test(normalized);
 }
+
+export function isKdlEpisodeRowLabel(value) {
+  return /\bS\d{2}E\d{2}\b/i.test(String(value || ""));
+}
