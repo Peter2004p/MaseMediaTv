@@ -82,7 +82,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     // episode per season/episode and preserve distinct stream variants.
     const all = [...(Array.isArray(current.episodes) ? current.episodes as Record<string, unknown>[] : []), ...(Array.isArray(title.episodes) ? title.episodes as Record<string, unknown>[] : [])];
     const seen = new Map<string, Record<string, unknown>>();
-    const variantKey = (v: Record<string, unknown>) => [String(v.quality || ""), String(v.codec || "Unknown").toLowerCase(), String(v.streamUrl || "")].join("|");
+    const variantKey = (v: Record<string, unknown>) => [String(v.quality || ""), String(v.codec || "Unknown").toLowerCase()].join("|");
     for (const ep of all) {
       const episodeKey = String(ep.season || 1) + "|" + String(ep.episode || 1);
       const existing = seen.get(episodeKey);
