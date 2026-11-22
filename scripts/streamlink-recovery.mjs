@@ -291,9 +291,6 @@ async function collectFreshLink(client, peer, item) {
     throw new Error(`Selected KDL attachment codec ${selectedCodec || "unknown"} does not exactly match ${expectedCodec}; replacement was blocked.`);
   }
   console.log(`Verified selected attachment: ${selectedAttachment}`);
-  await clickButtonOnMessage(client, peer, state.message, /generate streamlink/i,
-    `Generate Streamlink for ${selectedAttachment}`);
-
   const generateSourceMessage = state.message;
   await clickButtonOnMessage(client, peer, generateSourceMessage, /generate streamlink/i,
     `Generate Streamlink for ${selectedAttachment}`);
