@@ -42,3 +42,10 @@ export function isNextPageLabel(value) {
 export function isKdlEpisodeRowLabel(value) {
   return /\bS\d{2}E\d{2}\b/i.test(String(value || ""));
 }
+
+export function matchesReleaseTag(buttonText, releaseTag) {
+  const expected = String(releaseTag || "").trim().toLowerCase();
+  if (!expected) return true;
+  const tokens = String(buttonText || "").normalize("NFKC").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return tokens.includes(expected);
+}
