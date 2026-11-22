@@ -228,8 +228,18 @@ async function collectFreshLink(client, peer, item) {
     `the exact ${item.quality} quality option`, 25000, sentId);
   await clickButtonOnMessage(client, peer, qualityState.message, qualityMatches, `${item.quality} quality`);
 
-  // Quality is now explicitly selected. Search only the resulting episode
-  // pages; pagination is allowed solely to locate the same episode/variant.
+  // KDL Air's quality picker is a separate menu. Selecting a resolution
+  // confirms the filter but leaves the bot on that menu; the user workflow
+  // then requires the explicit "Back to files" callback to return to the
+  // filtered episode list. Do not mistake the quality menu for a stale page.
+  const refreshedQualityMenu = await waitFor(client, peer,
+    message => buttonList(message).some(x => /back to files/i.test(x.text)),
+    `the Back to files control after selecting ${item.quality}`, 12000, sentId);
+  await clickButtonOnMessage(client, peer, refreshedQualityMenu.message,
+    /back to files/i, `return to ${item.quality} episode files`);
+
+  // Quality is now explicitly selected and the file list has been reopened.
+  // Pagination is allowed solely to locate the same episode/variant.
   const selectedFilename = await findAndSelectEpisodeFile(
     client, peer, item, sentId, episodeText, { qualityConfirmed: true }
   );
