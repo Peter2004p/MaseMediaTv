@@ -114,12 +114,20 @@ function exactEpisodeFileButton(message, item, episodeText) {
 
 async function waitForKdlFilePage(client, peer, sentId, previousSignature = null, timeoutMs = 22000) {
   const end = Date.now() + timeoutMs;
+  const backClicked = new Set();
   while (Date.now() < end) {
     const messages = await client.getMessages(peer, { limit: 30 });
     const fresh = messages.filter(message => !message.out && Number(message.id) > sentId)
       .sort((a, b) => Number(b.id) - Number(a.id));
     for (const message of fresh) {
       const buttons = buttonList(message);
+      const back = buttons.find(item => /back to files/i.test(item.text));
+      if (back?.button?.data && !backClicked.has(Number(message.id))) {
+        backClicked.add(Number(message.id));
+        await clickButtonOnMessage(client, peer, message,
+          /back to files/i, "return to filtered episode files");
+        break;
+      }
       const hasEpisodeRows = buttons.some(item => /\\bS\\d{2}E\\d{2}\\b/i.test(item.text));
       const hasNext = buttons.some(item => isNextPageLabel(item.text));
       if (!hasEpisodeRows && !hasNext) continue;
@@ -228,17 +236,9 @@ async function collectFreshLink(client, peer, item) {
     `the exact ${item.quality} quality option`, 25000, sentId);
   await clickButtonOnMessage(client, peer, qualityState.message, qualityMatches, `${item.quality} quality`);
 
-  // KDL Air's quality picker is a separate menu. Selecting a resolution
-  // confirms the filter but leaves the bot on that menu; the user workflow
-  // then requires the explicit "Back to files" callback to return to the
-  // filtered episode list. Do not mistake the quality menu for a stale page.
-  const refreshedQualityMenu = await waitFor(client, peer,
-    message => buttonList(message).some(x => /back to files/i.test(x.text)),
-    `the Back to files control after selecting ${item.quality}`, 12000, sentId);
-  await clickButtonOnMessage(client, peer, refreshedQualityMenu.message,
-    /back to files/i, `return to ${item.quality} episode files`);
-
-  // Quality is now explicitly selected and the file list has been reopened.
+  // KDL Air may either return directly to the filtered episode list or
+  // show a separate "Back to files" control. waitForKdlFilePage handles both
+  // layouts; do not require a button that some bot responses never display.
   // Pagination is allowed solely to locate the same episode/variant.
   const selectedFilename = await findAndSelectEpisodeFile(
     client, peer, item, sentId, episodeText, { qualityConfirmed: true }
