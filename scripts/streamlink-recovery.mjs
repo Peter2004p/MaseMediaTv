@@ -281,8 +281,6 @@ async function collectFreshLink(client, peer, item) {
   try { filename = decodeURIComponent(new URL(freshUrl).pathname.split("/").pop() || ""); } catch {}
   const freshQuality = filename.match(/\b(2160p|1440p|1080p|720p|576p|540p|480p|360p)\b/i)?.[1]?.toLowerCase();
   const freshCodec = filename.match(/\b(x265|h265|hevc|x264|h264|av1)\b/i)?.[1]?.toLowerCase();
-  const expectedCodec = String(item.codec || "Unknown").toLowerCase();
-  const aliases = { hevc: "x265", h265: "x265", h264: "x264" };
   if (freshQuality && freshQuality !== String(item.quality).toLowerCase()) {
     throw new Error("KDL Air URL filename contradicts the selected quality; replacement was blocked.");
   }
