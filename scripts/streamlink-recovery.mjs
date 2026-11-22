@@ -194,6 +194,29 @@ async function waitFor(client, peer, predicate, description, timeoutMs = 25000, 
   throw new Error(`Timed out waiting for KDL Air: ${description}`);
 }
 
+async function waitForGeneratedLink(client, peer, sourceMessage, timeoutMs = 45000) {
+  const sourceId = Number(sourceMessage.id);
+  const originalText = String(sourceMessage.message || "");
+  const originalButtons = buttonList(sourceMessage).map(item => item.text).join("|");
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    const messages = await client.getMessages(peer, { limit: 30 });
+    const fresh = messages.filter(message => !message.out && Number(message.id) > sourceId);
+    const same = messages.find(message => !message.out && Number(message.id) === sourceId);
+    const sameChanged = same &&
+      (String(same.message || "") !== originalText ||
+       buttonList(same).map(item => item.text).join("|") !== originalButtons);
+    const candidates = [...fresh, ...(sameChanged ? [same] : [])]
+      .sort((a, b) => Number(b.id) - Number(a.id));
+    const found = candidates.find(message =>
+      /your link\s*:/i.test(String(message.message || "")) &&
+      /https:\/\//i.test(String(message.message || "")));
+    if (found) return { message: found, messages };
+    await sleep(1000);
+  }
+  throw new Error("KDL Air did not return a generated streamlink as a new reply or an edited file message.");
+}
+
 const normalizeTitle = value => String(value || "")
   .normalize("NFKC")
   .toLocaleLowerCase("en")
@@ -271,12 +294,11 @@ async function collectFreshLink(client, peer, item) {
   await clickButtonOnMessage(client, peer, state.message, /generate streamlink/i,
     `Generate Streamlink for ${selectedAttachment}`);
 
-  const generateMessageId = Number(state.message.id);
-  state = await waitFor(client, peer,
-    message => Number(message.id) > generateMessageId &&
-      /your link\s*:/i.test(String(message.message || "")) &&
-      /https:\/\//i.test(String(message.message || "")),
-    "a newly generated streamlink for the selected file", 45000, generateMessageId);
+  const generateSourceMessage = state.message;
+  await clickButtonOnMessage(client, peer, generateSourceMessage, /generate streamlink/i,
+    `Generate Streamlink for ${selectedAttachment}`);
+
+  state = await waitForGeneratedLink(client, peer, generateSourceMessage, 45000);
   const text = String(state.message.message || "");
   const match = text.match(/your link\s*:\s*(https:\/\/[^\s<>]+)/i);
   if (!match) throw new Error("KDL Air response did not contain a readable streamlink.");
