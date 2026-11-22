@@ -1,4 +1,4 @@
-export function normalizeCodec(value) {
+export function stripSourceLabelSuffix(value) {\n  return String(value || "").normalize("NFKC")\n    .replace(/(^|[\\s._+@-])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|VIKI|Viki|VIK|IQ)(?=$|[\\s._+-])/gi, " ")\n    .replace(/\\s+/g, " ").trim();\n}\n\nexport function normalizeCodec(value) {
   const codec = String(value || "").toLowerCase();
   return ({ hevc: "x265", h265: "x265", h264: "x264" })[codec] || codec;
 }
