@@ -48,3 +48,9 @@ test("recognizes KDL episode rows even when there is no NEXT pagination button",
   assert.equal(isKdlEpisodeRowLabel("NEXT »"), false);
   assert.equal(isKdlEpisodeRowLabel("No matching files"), false);
 });
+
+test("requires the exact drama title in a KDL episode row when title metadata is available", () => {
+  const exact = { title: "Blossom in Darkness IQ", quality: "1080p", codec: "HEVC" };
+  assert.equal(matchesKdlFileButton("179.86 MB • S01E08 • @KLandd Blossom In Darkness", exact, "S01E08", { qualityConfirmed: true }), true);
+  assert.equal(matchesKdlFileButton("179.86 MB • S01E08 • Another Drama", exact, "S01E08", { qualityConfirmed: true }), false);
+});
