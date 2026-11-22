@@ -222,6 +222,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     if (String(episode.streamUrl || "") === oldUrlRaw && currentQuality === quality &&
         currentCodec === normalizeCodec(codec)) {
       episode.streamUrl = newUrl.toString();
+      if (String(episode.downloadUrl || "") === oldUrlRaw) episode.downloadUrl = newUrl.toString();
       if (!episode.quality || String(episode.quality).trim().toLowerCase() === "unknown") episode.quality = body.quality;
       if (!episode.codec || String(episode.codec).trim().toLowerCase() === "unknown") episode.codec = body.codec;
       changed = true;
@@ -234,6 +235,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       );
       if (variant) {
         variant.streamUrl = newUrl.toString();
+        if (String(variant.downloadUrl || "") === oldUrlRaw) variant.downloadUrl = newUrl.toString();
         if (!variant.quality || String(variant.quality).trim().toLowerCase() === "unknown") variant.quality = body.quality;
         if (!variant.codec || String(variant.codec).trim().toLowerCase() === "unknown") variant.codec = body.codec;
         changed = true;
