@@ -235,12 +235,31 @@ async function collectFreshLink(client, peer, item) {
   );
   console.log(`Selected exact KDL Air file after choosing ${item.quality}: ${selectedFilename}`);
 
+  // KDL's episode-list button is only a size/title label. The selected
+  // Telegram document carries the real filename, including its actual quality
+  // and codec. Verify that attachment before asking KDL to generate a URL.
   let state = await waitFor(client, peer,
-    message => messageHasFilename(message, selectedFilename) &&
+    message => messageFileNames(message).some(name =>
+      /S\\d{2}E\\d{2}/i.test(name) &&
+      name.toLowerCase().includes(episodeText.toLowerCase())) &&
       buttonList(message).some(x => /generate streamlink/i.test(x.text)),
-    `Generate Streamlink for ${selectedFilename}`, 25000, sentId);
+    `the selected ${episodeText} file card and Generate Streamlink button`, 25000, sentId);
+  const selectedAttachment = messageFileNames(state.message).find(name =>
+    name.toLowerCase().includes(episodeText.toLowerCase()));
+  if (!selectedAttachment) throw new Error("KDL Air did not attach a verifiable filename for the selected episode.");
+  const selectedQuality = selectedAttachment.match(/\\b(2160p|1440p|1080p|720p|576p|540p|480p|360p)\\b/i)?.[1]?.toLowerCase();
+  const selectedCodec = selectedAttachment.match(/\\b(x265|h265|hevc|x264|h264|av1)\\b/i)?.[1]?.toLowerCase();
+  const aliases = { hevc: "x265", h265: "x265", h264: "x264" };
+  const expectedCodec = String(item.codec || "Unknown").toLowerCase();
+  if (!selectedQuality || selectedQuality !== String(item.quality).toLowerCase()) {
+    throw new Error(`Selected KDL attachment quality ${selectedQuality || "unknown"} does not exactly match ${item.quality}; replacement was blocked.`);
+  }
+  if (!selectedCodec || (aliases[selectedCodec] || selectedCodec) !== (aliases[expectedCodec] || expectedCodec)) {
+    throw new Error(`Selected KDL attachment codec ${selectedCodec || "unknown"} does not exactly match ${expectedCodec}; replacement was blocked.`);
+  }
+  console.log(`Verified selected attachment: ${selectedAttachment}`);
   await clickButtonOnMessage(client, peer, state.message, /generate streamlink/i,
-    `Generate Streamlink for ${selectedFilename}`);
+    `Generate Streamlink for ${selectedAttachment}`);
 
   const generateMessageId = Number(state.message.id);
   state = await waitFor(client, peer,
