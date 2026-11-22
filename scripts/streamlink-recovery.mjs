@@ -9,6 +9,14 @@ const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_TOKEN", "TELEGRAM_
 for (const key of required) {
   if (!process.env[key]) throw new Error(`Missing required environment secret: ${key}`);
 }
+
+// Fail closed until the operator has verified that the KDL Air source and the
+// specific content may legally be redistributed by MaseNet. This is an
+// explicit deployment gate, not a claim that a source is licensed.
+const authorizationReference = String(process.env.KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE || "").trim();
+if (process.env.KDL_AIR_REDISTRIBUTION_AUTHORIZED !== "true" || !authorizationReference) {
+  throw new Error("KDL Air recovery is disabled: verify redistribution rights, then configure KDL_AIR_REDISTRIBUTION_AUTHORIZED=true and KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE.");
+}
 const recoveryEndpoint = new URL(process.env.MASETV_RECOVERY_URL);
 if (!recoveryEndpoint.pathname.replace(/\/$/, "").endsWith("/api/streamlink-recovery")) {
   recoveryEndpoint.pathname = `${recoveryEndpoint.pathname.replace(/\/$/, "")}/api/streamlink-recovery`;
