@@ -18,8 +18,12 @@ type ParsedStream = {
   url: string; filename: string; title: string; year: string; kind: "movie" | "drama";
   season: number; episode: number; quality: string; codec: string; format: string; host: string;
 };
-const normalize = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase()
-  .replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+// Source labels belong to the stream provider, never to the catalogue title.
+const stripSourceLabels = (value: string) => value
+  .replace(/(^|[\s._+\-@])(?:KDLand|KLandd|KDLAir|iQIYI|IQIYI|Youku|Youk|Viki|VIK|IQ)(?=$|[\s._+\-])/gi, " ")
+  .replace(/\s+/g, " ").trim();
+const normalize = (value: unknown) => stripSourceLabels(String(value ?? "").normalize("NFKC"))
+  .toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 const telegram = async (env: Env, method: string, payload: Record<string, unknown>) => {
   const token = String(env.MASE_STREAM_BOT_TOKEN || "").trim();
   if (!token) throw new Error("Stream Manager bot token is not configured.");
@@ -50,16 +54,17 @@ const parseStream = (raw: string): ParsedStream | null => {
     .replace(/\b(2160p|1440p|1080p|720p|576p|540p|480p|360p|x265|h265|hevc|x264|h264|av1|10bit|8bit|hdr10?|hdr|web[- .]?dl|webrip|bluray|blu[- .]?ray|brrip|dvdrip|aac\d*|ddp?\d*|dts(?:-hd)?|proper|repack)\b/ig, " ")
     .replace(/^@[^\s-]+[-_]/, " ")
     .replace(/[\[\](){}]/g, " ")
-    .replace(/[+_.-]+/g, " ").replace(/\s+/g, " ").trim();
+    .replace(/[+_.-]+/g, " ");
+  const finalTitle = (value: string) => stripSourceLabels(value).replace(/\s+/g, " ").trim();
 
   if (se) {
     const after = filename.slice((se.index || 0) + se[0].length).replace(/^[\s@._-]+|[\s._-]+$/g, "");
-    const title = cleanTitle(after);
+    const title = finalTitle(cleanTitle(after));
     if (!title) return null;
     return { url: raw, filename, title, year, kind: "drama", season: Number(se[1]), episode: Number(se[2]), quality, codec, format, host: url.hostname };
   }
 
-  const title = cleanTitle(filename);
+  const title = finalTitle(cleanTitle(filename));
   if (!title) return null;
   return { url: raw, filename, title, year, kind: "movie", season: 0, episode: 0, quality, codec, format, host: url.hostname };
 };
