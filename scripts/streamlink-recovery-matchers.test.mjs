@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchesKdlFileButton, isNextPageLabel } from "./streamlink-recovery-matchers.mjs";
+import { matchesKdlFileButton, isNextPageLabel, stripSourceLabelSuffix } from "./streamlink-recovery-matchers.mjs";
 
 const item = { quality: "1080p", codec: "HEVC" };
 
@@ -32,4 +32,11 @@ test("accepts a file without a visible quality label only after the exact Qualit
 
 test("recognizes KDL Air's stylized Unicode NEXT button", () => {
   assert.equal(isNextPageLabel("𝖭𝖤𝖷𝖳 »"), true);
+});
+
+test("strips provider suffixes without changing the drama title", () => {
+  for (const suffix of ["IQ", "iQIYI", "Youk", "Youku", "VIK", "VIKI", "Viki", "KDLand", "KLandd", "KDLAir"]) {
+    assert.equal(stripSourceLabelSuffix("The Lament Of Autumn " + suffix), "The Lament Of Autumn");
+  }
+  assert.equal(stripSourceLabelSuffix("Blossom in Darkness"), "Blossom in Darkness");
 });
