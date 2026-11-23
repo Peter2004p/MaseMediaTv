@@ -5,6 +5,8 @@ interface Env {
   STREAMLINK_RECOVERY_SECRET?: string;
   STREAMLINK_RECOVERY_SCAN_SECRET?: string;
   STREAMLINK_RECOVERY_ALLOWED_HOSTS?: string;
+  KDL_AIR_REDISTRIBUTION_AUTHORIZED?: string;
+  KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE?: string;
 }
 
 type Episode = Record<string, unknown>;
@@ -190,6 +192,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   if (body.action === "replace") {
+    // Enforce the redistribution-rights gate at the API boundary, not only
+    // in the GitHub runner. A direct API caller cannot bypass the runner's
+    // preflight check. The reference records the operator's documented basis;
+    // this code does not itself determine whether rights exist.
+    const authorizationReference = String(env.KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE || "").trim();
+    if (env.KDL_AIR_REDISTRIBUTION_AUTHORIZED !== "true" || !authorizationReference) {
+      return json({ ok: false, error: "Stream replacement is disabled until redistribution rights are verified and the server-side authorization reference is configured. No catalogue data was changed." }, 403);
+    }
+
     const titleId = String(body.titleId || "");
     const episodeId = String(body.episodeId || "");
     const oldUrlRaw = String(body.oldUrl || "");
