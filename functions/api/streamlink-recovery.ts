@@ -64,13 +64,13 @@ const base64UrlBytes = (value: string) => {
 const decodeJwtPart = (value: string): Record<string, unknown> =>
   JSON.parse(new TextDecoder().decode(base64UrlBytes(value))) as Record<string, unknown>;
 
-const verifyGitHubActionsToken = async (token: string) => {
+const verifyGitHubActionsToken = async (token: string): Promise<Record<string, unknown> | null> => {
   try {
     const parts = token.split(".");
-    if (parts.length !== 3) return false;
+    if (parts.length !== 3) return null;
     const header = decodeJwtPart(parts[0]);
     const claims = decodeJwtPart(parts[1]);
-    if (header.alg !== "RS256" || typeof header.kid !== "string") return false;
+    if (header.alg !== "RS256" || typeof header.kid !== "string") return null;
     const now = Math.floor(Date.now() / 1000);
     const audience = claims.aud;
     const hasAudience = Array.isArray(audience)
@@ -80,21 +80,23 @@ const verifyGitHubActionsToken = async (token: string) => {
         !hasAudience || Number(claims.exp) <= now || Number(claims.nbf || 0) > now + 30 ||
         String(claims.repository || "").toLowerCase() !== "peter2004p/masemediatv" ||
         claims.ref !== "refs/heads/main" ||
-        claims.workflow !== "MaseNet Streamlink Recovery") return false;
+        claims.workflow !== "MaseNet Streamlink Recovery" ||
+        typeof claims.workflow_ref !== "string") return null;
     const jwksResponse = await fetch("https://token.actions.githubusercontent.com/.well-known/jwks");
-    if (!jwksResponse.ok) return false;
+    if (!jwksResponse.ok) return null;
     const jwks = await jwksResponse.json() as { keys?: (JsonWebKey & { kid?: string })[] };
     const jwk = (jwks.keys || []).find(key => key.kid === header.kid);
-    if (!jwk) return false;
+    if (!jwk) return null;
     const publicKey = await crypto.subtle.importKey(
       "jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]
     );
-    return await crypto.subtle.verify(
+    const valid = await crypto.subtle.verify(
       { name: "RSASSA-PKCS1-v1_5" }, publicKey, base64UrlBytes(parts[2]),
       new TextEncoder().encode(parts[0] + "." + parts[1])
     );
+    return valid ? claims : null;
   } catch {
-    return false;
+    return null;
   }
 };
 
@@ -161,18 +163,24 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const recoveryAuthorized = !!configured && !!supplied && await constantTimeEqual(configured, supplied);
   const scanOnlyAuthorized = body.action === "scan" && !!scanOnlyConfigured && !!supplied &&
     await constantTimeEqual(scanOnlyConfigured, supplied);
-  const oidcAuthorized = !recoveryAuthorized && !scanOnlyAuthorized && !!supplied &&
-    await verifyGitHubActionsToken(supplied);
+  const oidcClaims = !recoveryAuthorized && !scanOnlyAuthorized && !!supplied
+    ? await verifyGitHubActionsToken(supplied)
+    : null;
+  const workflowRef = String(oidcClaims?.workflow_ref || "").toLowerCase();
+  const recoveryWorkflowRef = "peter2004p/masemediatv/.github/workflows/streamlink-recovery.yml@refs/heads/main";
+  const dryRunWorkflowRef = "peter2004p/masemediatv/.github/workflows/masenet-preview-recovery-dry-run.yml@refs/heads/main";
+  const oidcScanAuthorized = body.action === "scan" &&
+    (workflowRef === recoveryWorkflowRef || workflowRef === dryRunWorkflowRef);
+  const oidcReplaceAuthorized = body.action === "replace" && workflowRef === recoveryWorkflowRef;
+  const oidcAuthorized = !!oidcClaims && (oidcScanAuthorized || oidcReplaceAuthorized);
   if (!recoveryAuthorized && !scanOnlyAuthorized && !oidcAuthorized) {
     return json({ ok: false, error: "Unauthorized recovery service." }, 401);
   }
 
-  // GitHub Actions OIDC is intentionally read-only. Catalogue replacement
-  // requires the separately configured recovery secret, even when a caller
-  // presents a valid token from the approved scan workflow.
-  if (oidcAuthorized && body.action !== "scan") {
-    return json({ ok: false, error: "GitHub Actions OIDC credentials are read-only; catalogue replacement requires the dedicated recovery credential." }, 403);
-  }
+  // Only the exact main-branch recovery workflow can present an OIDC token
+  // for replacement. The separately named dry-run workflow is scan-only.
+  // The recovery runner still fails closed until redistribution rights have
+  // been explicitly reviewed and configured.
 
   if (body.action === "scan") {
     const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json,stream_url,quality FROM titles WHERE kind IN ('movie','drama')")
