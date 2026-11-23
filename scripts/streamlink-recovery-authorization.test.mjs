@@ -62,6 +62,7 @@ test("dry-run mode scans with its read-only token and exits before retrieval", a
     assert.match(result.stdout, /no Telegram retrieval and no catalogue replacements were performed/);
     assert.doesNotMatch(result.stderr, /Missing required environment secret: TELEGRAM_/);
   } finally {
+    server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
   }
 });
