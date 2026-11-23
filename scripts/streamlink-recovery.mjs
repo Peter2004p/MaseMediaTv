@@ -2,7 +2,7 @@ import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { matchesKdlFileButton, isNextPageLabel, isKdlEpisodeRowLabel, matchesReleaseTag } from "./streamlink-recovery-matchers.mjs";
+import { matchesKdlFileButton, isNextPageLabel, isKdlEpisodeRowLabel, matchesReleaseTag, isRecoverableExpiredDrama } from "./streamlink-recovery-matchers.mjs";
 import { request as httpsRequest } from "node:https";
 
 const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_TOKEN", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
@@ -345,7 +345,7 @@ async function main() {
     const batch = links.slice(offset, offset + 12);
     const checks = await Promise.all(batch.map(async item => ({ item, result: await checkLink(item.streamUrl) })));
     for (const { item, result } of checks) {
-      if (result.expired && item.kind === "drama") {
+      if (isRecoverableExpiredDrama(item, result)) {
         console.log(`Confirmed expired drama link: ${item.title} S${item.season}E${item.episode} ${item.quality}`);
         expired.push(item);
       } else if (result.expired) {
