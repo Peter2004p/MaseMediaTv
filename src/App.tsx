@@ -977,7 +977,7 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
    const result=await api.post('/api/media/download-token',{assetId});
    const target=String(result.data?.telegramUrl||'');
    if(!/^https:\/\/t\.me\/MaseTv_Bot\?start=dl_[a-f0-9]{48}$/i.test(target))throw new Error('MaseNet could not create a secure Telegram download link.');
-   window.open(target,'_blank','noopener,noreferrer');
+   window.location.assign(target);
   }catch(error){setVaultError(error instanceof Error?error.message:'Could not prepare the Telegram download. Please try again.')}
   finally{setVaultBusyId('')}
  };
