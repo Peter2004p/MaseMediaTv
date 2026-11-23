@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS telegram_media_assets (
   vault_chat_id TEXT NOT NULL,
   vault_message_id INTEGER NOT NULL,
   file_unique_id TEXT,
+  source_update_id INTEGER UNIQUE,
   source_bot TEXT NOT NULL DEFAULT 'MaseNetStreamManagerBot',
   status TEXT NOT NULL DEFAULT 'staged' CHECK (status IN ('staged','published','disabled','missing')),
   rights_confirmed INTEGER NOT NULL DEFAULT 0,
