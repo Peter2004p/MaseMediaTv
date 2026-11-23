@@ -52,8 +52,12 @@ export default function MaseNetVlcPlayer({src,fallbackSrc,alternateSources=[],ti
    const Player=mod.MoviPlayer||mod.default;if(!Player)throw new Error("MaseNet playback engine failed to initialize.");
    instance=new Player({source:{type:"url",url:playbackSrc},canvas:canvas.current,renderer:"canvas",decoder:"auto"});engine.current=instance;
    if(overlay.current)instance.setSubtitleOverlay?.(overlay.current);
-   const sync=(list?:any[])=>{const all=Array.isArray(list)?list:instance.getTracks?.()||[];const s=instance.getSubtitleTracks?.()||all.filter((t:any)=>t.type==="subtitle");const a=instance.getAudioTracks?.()||all.filter((t:any)=>t.type==="audio");if(live){setSubs(s.map((t:any)=>({...t,language:t.language||t.lang||t.languageCode||t.tags?.language})));setAudios(a.map((t:any)=>({...t,language:t.language||t.lang||t.languageCode||t.tags?.language})));}};
+   const sync=(list?:any[])=>{const all=Array.isArray(list)?list:instance.getTracks?.()||[];const reportedSubs=instance.getSubtitleTracks?.();const reportedAudios=instance.getAudioTracks?.();const s=Array.isArray(reportedSubs)&&reportedSubs.length?reportedSubs:all.filter((t:any)=>t.type==="subtitle");const a=Array.isArray(reportedAudios)&&reportedAudios.length?reportedAudios:all.filter((t:any)=>t.type==="audio");if(live){setSubs(s.map((t:any)=>({...t,language:t.language||t.lang||t.languageCode||t.tags?.language})));setAudios(a.map((t:any)=>({...t,language:t.language||t.lang||t.languageCode||t.tags?.language})));}};
+   // Some demuxers publish the full track list before the convenience getters
+   // are populated. Reconcile from both the event payload and getters after load.
    instance.on?.("tracksChange",sync);
+   instance.on?.("loadEnd",()=>sync());
+   instance.on?.("preloadComplete",()=>sync());
    instance.on?.("timeUpdate",(t:number)=>{if(!live)return;const d=instance.getDuration?.()||0;setTime(t);if(t>0){lastKnownTime.current=t;firstFrameSeen=true;automaticRetries.current=0;if(startupTimer){clearTimeout(startupTimer);startupTimer=null;}if(!firstFrameNotified){firstFrameNotified=true;onPlaybackStarted?.();}}else if(lastKnownTime.current===0)lastKnownTime.current=t;setDuration(d);onPlaybackPosition?.(t);if(d>0)onProgress?.(Math.min(100,t/d*100));onPlaybackStateChange?.(instance.getState?.()==="playing",t);});
    instance.on?.("durationChange",(d:number)=>{if(live)setDuration(d);});
    instance.on?.("frame",()=>{if(!live)return;if(!firstFrameSeen){firstFrameSeen=true;automaticRetries.current=0;console.info("[MaseNet player] First decoded MKV frame received");}if(!firstFrameNotified){firstFrameNotified=true;onPlaybackStarted?.();}if(startupTimer){clearTimeout(startupTimer);startupTimer=null;}});
