@@ -167,6 +167,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return json({ ok: false, error: "Unauthorized recovery service." }, 401);
   }
 
+  // GitHub Actions OIDC is intentionally read-only. Catalogue replacement
+  // requires the separately configured recovery secret, even when a caller
+  // presents a valid token from the approved scan workflow.
+  if (oidcAuthorized && body.action !== "scan") {
+    return json({ ok: false, error: "GitHub Actions OIDC credentials are read-only; catalogue replacement requires the dedicated recovery credential." }, 403);
+  }
+
   if (body.action === "scan") {
     const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json,stream_url,quality FROM titles WHERE kind IN ('movie','drama')")
       .all<TitleRow>();
