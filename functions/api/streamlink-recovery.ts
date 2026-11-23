@@ -157,7 +157,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const configured = String(env.STREAMLINK_RECOVERY_SECRET || "").trim();
   const scanOnlyConfigured = String(env.STREAMLINK_RECOVERY_SCAN_SECRET || "").trim();
-  const supplied = (request.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "").trim();
+  const supplied = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
   const recoveryAuthorized = !!configured && !!supplied && await constantTimeEqual(configured, supplied);
   const scanOnlyAuthorized = body.action === "scan" && !!scanOnlyConfigured && !!supplied &&
     await constantTimeEqual(scanOnlyConfigured, supplied);
