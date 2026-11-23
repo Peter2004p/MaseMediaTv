@@ -106,6 +106,9 @@ test("API scopes OIDC replacement to the exact recovery workflow", () => {
   assert.match(source, /body\.action === "preflight" && workflowRef === recoveryWorkflowRef/);
   assert.match(source, /body\.action === "replace" && workflowRef === recoveryWorkflowRef/);
   assert.match(source, /oidcPreflightAuthorized/);
+  assert.match(source, /validDnsName = bareHost\.length <= 253 && labels\.length >= 2/);
+  assert.match(source, /label\.length >= 1 && label\.length <= 63/);
+  assert.match(source, /\^\[a-z0-9\]\(\?:\[a-z0-9-\]\*\[a-z0-9\]\)\?\$/);
   assert.match(source, /parseAllowedHosts/);
   assert.match(source, /allowlist\.invalid\.length/);
   assert.match(source, /replacement-host allowlist is missing or contains invalid entries/);
