@@ -30,7 +30,8 @@ test("dry-run mode does not require Telegram credentials or redistribution autho
       ...process.env,
       RECOVERY_DRY_RUN: "true",
       MASETV_RECOVERY_URL: "http://127.0.0.1:1/api/streamlink-recovery",
-      STREAMLINK_RECOVERY_TOKEN: "dummy-preview-read-token",
+      STREAMLINK_RECOVERY_SCAN_TOKEN: "dummy-preview-read-token",
+      STREAMLINK_RECOVERY_TOKEN: "",
       TELEGRAM_API_ID: "",
       TELEGRAM_API_HASH: "",
       TELEGRAM_SESSION: "",
@@ -41,6 +42,7 @@ test("dry-run mode does not require Telegram credentials or redistribution autho
   });
   assert.equal(result.status, 1); // The deliberately unreachable local API must fail.
   assert.doesNotMatch(result.stderr, /Missing required environment secret: TELEGRAM_/);
+  assert.doesNotMatch(result.stderr, /Missing required environment secret: STREAMLINK_RECOVERY_SCAN_TOKEN/);
   assert.doesNotMatch(result.stderr, /KDL Air recovery is disabled/);
   assert.match(result.stderr, /fetch failed|ECONNREFUSED|Failed to fetch/i);
 });
