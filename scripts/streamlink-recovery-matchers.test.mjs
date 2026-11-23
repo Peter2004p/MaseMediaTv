@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchesKdlFileButton, isNextPageLabel, stripSourceLabelSuffix, isKdlEpisodeRowLabel, matchesReleaseTag } from "./streamlink-recovery-matchers.mjs";
+import { matchesKdlFileButton, isNextPageLabel, stripSourceLabelSuffix, isKdlEpisodeRowLabel, matchesReleaseTag, isRecoverableExpiredDrama } from "./streamlink-recovery-matchers.mjs";
 
 const item = { quality: "1080p", codec: "HEVC" };
 
@@ -60,4 +60,11 @@ test("matches the exact release/provider suffix when the old URL records one", (
   assert.equal(matchesReleaseTag("305.69 MB • S01E40 • Tigers Sniff The Rose X264 VIKI mkv", "WETV"), false);
   assert.equal(matchesReleaseTag("305.69 MB • S01E40 • Tigers Sniff The Rose X264 VIKI mkv", "VIKI"), true);
   assert.equal(matchesReleaseTag("305.69 MB • S01E40 • Tigers Sniff The Rose X264 VIKI mkv", ""), true);
+});
+
+test("queues only confirmed-expired dramas; skips expired movies and unexpired links", () => {
+  assert.equal(isRecoverableExpiredDrama({ kind: "drama" }, { expired: true }), true);
+  assert.equal(isRecoverableExpiredDrama({ kind: "movie" }, { expired: true }), false);
+  assert.equal(isRecoverableExpiredDrama({ kind: "drama" }, { expired: false }), false);
+  assert.equal(isRecoverableExpiredDrama({ kind: "movie" }, { expired: false }), false);
 });
