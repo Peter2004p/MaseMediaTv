@@ -18,17 +18,25 @@ test("recovery runner stops at server-side preflight before scan or Telegram acc
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
   try {
-    const result = spawnSync(process.execPath, ["scripts/streamlink-recovery.mjs"], {
-      encoding: "utf8",
+    const child = spawn(process.execPath, ["scripts/streamlink-recovery.mjs"], {
+      stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, MASETV_RECOVERY_URL: `http://127.0.0.1:${port}/api/streamlink-recovery`,
         STREAMLINK_RECOVERY_TOKEN: "dummy.token.value", TELEGRAM_API_ID: "1",
         TELEGRAM_API_HASH: "dummy", TELEGRAM_SESSION: "dummy", KDL_AIR_BOT_USERNAME: "dummy_bot" }
     });
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /Recovery preflight blocked before Telegram access/);
-    assert.match(result.stderr, /Redistribution rights are not verified/);
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", chunk => { stdout += chunk; });
+    child.stderr.setEncoding("utf8").on("data", chunk => { stderr += chunk; });
+    const exitCode = await new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", resolve);
+    });
+    assert.equal(exitCode, 1);
+    assert.match(stderr, /Recovery preflight blocked before Telegram access/);
+    assert.match(stderr, /Redistribution rights are not verified/);
     assert.deepEqual(requests, [{ action: "preflight" }]);
-    assert.doesNotMatch(result.stdout, /Scanned \\d+ saved stream variants/);
+    assert.doesNotMatch(stdout, /Scanned \\d+ saved stream variants/);
   } finally {
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
