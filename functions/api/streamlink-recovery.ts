@@ -3,6 +3,7 @@ import { json } from "./auth/_shared";
 interface Env {
   DB: D1Database;
   STREAMLINK_RECOVERY_SECRET?: string;
+  STREAMLINK_RECOVERY_SCAN_SECRET?: string;
   STREAMLINK_RECOVERY_ALLOWED_HOSTS?: string;
 }
 
@@ -150,17 +151,21 @@ const streamEntries = (row: TitleRow, metadata: Record<string, unknown>) => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const configured = String(env.STREAMLINK_RECOVERY_SECRET || "").trim();
-  const supplied = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
-  const staticAuthorized = !!configured && !!supplied && await constantTimeEqual(configured, supplied);
-  const oidcAuthorized = !staticAuthorized && !!supplied && await verifyGitHubActionsToken(supplied);
-  if (!staticAuthorized && !oidcAuthorized) {
-    return json({ ok: false, error: "Unauthorized recovery service." }, 401);
-  }
-
   let body: Record<string, unknown>;
   try { body = await request.json() as Record<string, unknown>; }
   catch { return json({ ok: false, error: "A JSON request body is required." }, 400); }
+
+  const configured = String(env.STREAMLINK_RECOVERY_SECRET || "").trim();
+  const scanOnlyConfigured = String(env.STREAMLINK_RECOVERY_SCAN_SECRET || "").trim();
+  const supplied = (request.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "").trim();
+  const recoveryAuthorized = !!configured && !!supplied && await constantTimeEqual(configured, supplied);
+  const scanOnlyAuthorized = body.action === "scan" && !!scanOnlyConfigured && !!supplied &&
+    await constantTimeEqual(scanOnlyConfigured, supplied);
+  const oidcAuthorized = !recoveryAuthorized && !scanOnlyAuthorized && !!supplied &&
+    await verifyGitHubActionsToken(supplied);
+  if (!recoveryAuthorized && !scanOnlyAuthorized && !oidcAuthorized) {
+    return json({ ok: false, error: "Unauthorized recovery service." }, 401);
+  }
 
   if (body.action === "scan") {
     const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json,stream_url,quality FROM titles WHERE kind IN ('movie','drama')")
