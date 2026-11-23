@@ -31,7 +31,7 @@ jobs:
             if (!raw) throw new Error("Missing GitHub secret MASETV_PREVIEW_RECOVERY_URL.");
             if (!process.env.STREAMLINK_RECOVERY_SCAN_TOKEN) throw new Error("Missing GitHub secret STREAMLINK_RECOVERY_SCAN_TOKEN.");
             const url = new URL(raw);
-            if (url.protocol !== "https:" || !/^[a-f0-9]{8}\\.masetv-cloudflare-migration\\.pages\\.dev$/i.test(url.hostname)) {
+            if (url.protocol !== "https:" || !/^[a-f0-9]{8}\.masetv-cloudflare-migration\.pages\.dev$/i.test(url.hostname)) {
               throw new Error("Refusing to run: URL must be a hashed Cloudflare Pages Preview hostname, never the production hostname.");
             }
             console.log("Preview hostname validated:", url.hostname);
