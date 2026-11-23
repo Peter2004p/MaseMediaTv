@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -74,4 +75,15 @@ test("dry-run mode scans with its read-only token and exits before retrieval", a
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
   }
+});
+
+
+test("API scopes OIDC replacement to the exact recovery workflow", () => {
+  const source = readFileSync(new URL("../functions/api/streamlink-recovery.ts", import.meta.url), "utf8");
+  assert.match(source, /claims\.workflow_ref/);
+  assert.match(source, /\.github\/workflows\/streamlink-recovery\.yml@refs\/heads\/main/);
+  assert.match(source, /\.github\/workflows\/masenet-preview-recovery-dry-run\.yml@refs\/heads\/main/);
+  assert.match(source, /body\.action === "scan" &&\s*\(workflowRef === recoveryWorkflowRef \|\| workflowRef === dryRunWorkflowRef\)/);
+  assert.match(source, /body\.action === "replace" && workflowRef === recoveryWorkflowRef/);
+  assert.match(source, /oidcClaims && \(oidcScanAuthorized \|\| oidcReplaceAuthorized\)/);
 });
