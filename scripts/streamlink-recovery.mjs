@@ -5,7 +5,8 @@ import { isIP } from "node:net";
 import { matchesKdlFileButton, isNextPageLabel, isKdlEpisodeRowLabel, matchesReleaseTag, isRecoverableExpiredDrama } from "./streamlink-recovery-matchers.mjs";
 import { request as httpsRequest } from "node:https";
 
-const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_TOKEN", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"];
+const dryRun = process.env.RECOVERY_DRY_RUN === "true";
+const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_TOKEN", ...(dryRun ? [] : ["TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"])];
 for (const key of required) {
   if (!process.env[key]) throw new Error(`Missing required environment secret: ${key}`);
 }
@@ -14,7 +15,7 @@ for (const key of required) {
 // specific content may legally be redistributed by MaseNet. This is an
 // explicit deployment gate, not a claim that a source is licensed.
 const authorizationReference = String(process.env.KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE || "").trim();
-if (process.env.KDL_AIR_REDISTRIBUTION_AUTHORIZED !== "true" || !authorizationReference) {
+if (!dryRun && (process.env.KDL_AIR_REDISTRIBUTION_AUTHORIZED !== "true" || !authorizationReference)) {
   throw new Error("KDL Air recovery is disabled: verify redistribution rights, then configure KDL_AIR_REDISTRIBUTION_AUTHORIZED=true and KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE.");
 }
 const recoveryEndpoint = new URL(process.env.MASETV_RECOVERY_URL);
@@ -340,20 +341,31 @@ async function main() {
   const scan = await recoveryApi("scan");
   console.log(`Scanned ${scan.count} saved stream variants.`);
   const expired = [];
+  const dryRunSummary = { checked: 0, expiredDrama: 0, expiredMovie: 0, inconclusive: 0 };
   const links = scan.links || [];
   for (let offset = 0; offset < links.length; offset += 12) {
     const batch = links.slice(offset, offset + 12);
     const checks = await Promise.all(batch.map(async item => ({ item, result: await checkLink(item.streamUrl) })));
     for (const { item, result } of checks) {
+      dryRunSummary.checked++;
       if (isRecoverableExpiredDrama(item, result)) {
+        dryRunSummary.expiredDrama++;
         console.log(`Confirmed expired drama link: ${item.title} S${item.season}E${item.episode} ${item.quality}`);
         expired.push(item);
       } else if (result.expired) {
+        dryRunSummary.expiredMovie++;
         // Movie retrieval has no verified KDL selection flow yet. Keep those
         // records untouched and out of the drama recovery batch.
         console.log(`Confirmed expired movie link, skipped safely (movie recovery is not enabled): ${item.title} ${item.quality}`);
+      } else if (String(result.reason || "").startsWith("probe-inconclusive") || String(result.reason || "").includes("access-denied-inconclusive") || String(result.reason || "").startsWith("unsafe-url-inconclusive")) {
+        dryRunSummary.inconclusive++;
       }
     }
+  }
+  if (dryRun) {
+    console.log("DRY RUN ONLY — no Telegram retrieval and no catalogue replacements were performed.");
+    console.log("Recovery scan report:", JSON.stringify({ ...dryRunSummary, eligibleDrama: expired.map(item => ({ title: item.title, season: item.season, episode: item.episode, quality: item.quality, codec: item.codec })) }, null, 2));
+    return;
   }
   if (!expired.length) {
     console.log("No confirmed expired drama links eligible for this runner. No catalogue changes made.");
