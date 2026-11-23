@@ -47,6 +47,22 @@ const safeHttpsUrl = (value: unknown) => {
     return url;
   } catch { return null; }
 };
+const parseAllowedHosts = (value: unknown) => {
+  const entries = String(value || "").split(",").map(host => host.trim().toLowerCase()).filter(Boolean);
+  const hosts: string[] = [];
+  const invalid: string[] = [];
+  for (const host of entries) {
+    const parsed = safeHttpsUrl("https://" + host);
+    if (!parsed || parsed.hostname.toLowerCase() !== host || parsed.host.toLowerCase() !== host ||
+        parsed.pathname !== "/" || parsed.search || parsed.hash) {
+      invalid.push(host);
+      continue;
+    }
+    hosts.push(host);
+  }
+  return { hosts: [...new Set(hosts)], invalid };
+};
+
 const qualityFromUrl = (value: unknown) => {
   const url = safeHttpsUrl(value);
   return url?.pathname.match(/(?:^|[._+\\-])(2160p|1440p|1080p|720p|576p|540p|480p|360p)(?=[._+\\-]|$)/i)?.[1] || "Unknown";
@@ -188,14 +204,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (body.action === "preflight") {
     const rightsAuthorized = env.KDL_AIR_REDISTRIBUTION_AUTHORIZED === "true" &&
       !!String(env.KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE || "").trim();
-    const allowedHostsConfigured = String(env.STREAMLINK_RECOVERY_ALLOWED_HOSTS || "")
-      .split(",").map(host => host.trim()).some(Boolean);
+    const allowlist = parseAllowedHosts(env.STREAMLINK_RECOVERY_ALLOWED_HOSTS);
     const blockers = [];
     if (!rightsAuthorized) blockers.push("Redistribution rights are not verified/configured in the Preview API environment.");
-    if (!allowedHostsConfigured) blockers.push("No approved replacement-host allowlist is configured in the Preview API environment.");
+    if (!allowlist.hosts.length) blockers.push("No valid approved replacement-host allowlist is configured in the Preview API environment.");
+    if (allowlist.invalid.length) blockers.push("The replacement-host allowlist contains invalid entries; correct the list before recovery.");
     return json({
       ok: true, action: "preflight", ready: blockers.length === 0,
-      checks: { redistributionAuthorization: rightsAuthorized, replacementHostAllowlist: allowedHostsConfigured },
+      checks: { redistributionAuthorization: rightsAuthorized, replacementHostAllowlist: allowlist.hosts.length > 0 && allowlist.invalid.length === 0 },
       blockers
     });
   }
@@ -231,12 +247,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // Enforce the destination allowlist at the database boundary as well as in
     // the runner. A compromised or misconfigured caller cannot write a stream
     // URL from an arbitrary HTTPS host. Exact hostname matches only.
-    const allowedHosts = String(env.STREAMLINK_RECOVERY_ALLOWED_HOSTS || "")
-      .split(",")
-      .map(host => host.trim().toLowerCase())
-      .filter(Boolean);
-    if (!allowedHosts.length) {
-      return json({ ok: false, error: "Stream recovery is disabled: no authorized replacement-host allowlist is configured." }, 503);
+    const allowlist = parseAllowedHosts(env.STREAMLINK_RECOVERY_ALLOWED_HOSTS);
+    const allowedHosts = allowlist.hosts;
+    if (!allowedHosts.length || allowlist.invalid.length) {
+      return json({ ok: false, error: "Stream recovery is disabled: the replacement-host allowlist is missing or contains invalid entries." }, 503);
     }
     if (!allowedHosts.includes(newUrl.hostname.toLowerCase())) {
       return json({ ok: false, error: "The replacement host is not on the authorized stream-source allowlist. No catalogue data was changed." }, 403);
