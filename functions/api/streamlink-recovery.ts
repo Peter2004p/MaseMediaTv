@@ -332,7 +332,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       quality: String(body.quality || "Unknown"), codec: String(body.codec || "Unknown") });
   }
 
-  return json({ ok: false, error: "Unknown action. Use scan or replace." }, 400);
+  return json({ ok: false, error: "Unknown action. Use preflight, scan or replace." }, 400);
 };
 
 // Recovery API is isolated to the Preview D1 binding during validation.
