@@ -7,7 +7,7 @@ const sha256 = async (value:string) => {
 };
 export const onRequestPost: PagesFunction<Env> = async ({request,env}) => {
   const origin = request.headers.get("Origin");
-  if (origin && origin !== new URL(request.url).origin) return json({ok:false,error:"Cross-origin requests are not accepted."},403);
+  if (origin !== new URL(request.url).origin) return json({ok:false,error:"Same-origin requests are required."},403);
   let body: {assetId?:string};
   try { body = await request.json() as {assetId?:string}; } catch { return json({ok:false,error:"Invalid request."},400); }
   const assetId = String(body.assetId || "").trim();
