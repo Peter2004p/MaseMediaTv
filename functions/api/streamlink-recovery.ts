@@ -173,8 +173,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const dryRunWorkflowRef = "peter2004p/masemediatv/.github/workflows/masenet-preview-recovery-dry-run.yml@refs/heads/main";
   const oidcScanAuthorized = body.action === "scan" &&
     (workflowRef === recoveryWorkflowRef || workflowRef === dryRunWorkflowRef);
+  const oidcPreflightAuthorized = body.action === "preflight" && workflowRef === recoveryWorkflowRef;
   const oidcReplaceAuthorized = body.action === "replace" && workflowRef === recoveryWorkflowRef;
-  const oidcAuthorized = !!oidcClaims && (oidcScanAuthorized || oidcReplaceAuthorized);
+  const oidcAuthorized = !!oidcClaims && (oidcScanAuthorized || oidcPreflightAuthorized || oidcReplaceAuthorized);
   if (!recoveryAuthorized && !scanOnlyAuthorized && !oidcAuthorized) {
     return json({ ok: false, error: "Unauthorized recovery service." }, 401);
   }
@@ -183,6 +184,21 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   // for replacement. The separately named dry-run workflow is scan-only.
   // The recovery runner still fails closed until redistribution rights have
   // been explicitly reviewed and configured.
+
+  if (body.action === "preflight") {
+    const rightsAuthorized = env.KDL_AIR_REDISTRIBUTION_AUTHORIZED === "true" &&
+      !!String(env.KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE || "").trim();
+    const allowedHostsConfigured = String(env.STREAMLINK_RECOVERY_ALLOWED_HOSTS || "")
+      .split(",").map(host => host.trim()).some(Boolean);
+    const blockers = [];
+    if (!rightsAuthorized) blockers.push("Redistribution rights are not verified/configured in the Preview API environment.");
+    if (!allowedHostsConfigured) blockers.push("No approved replacement-host allowlist is configured in the Preview API environment.");
+    return json({
+      ok: true, action: "preflight", ready: blockers.length === 0,
+      checks: { redistributionAuthorization: rightsAuthorized, replacementHostAllowlist: allowedHostsConfigured },
+      blockers
+    });
+  }
 
   if (body.action === "scan") {
     const rows = await env.DB.prepare("SELECT id,name,kind,metadata_json,stream_url,quality FROM titles WHERE kind IN ('movie','drama')")
