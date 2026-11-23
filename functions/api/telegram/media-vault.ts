@@ -79,9 +79,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_media_updates (
     update_id INTEGER PRIMARY KEY, created_at TEXT NOT NULL DEFAULT(datetime('now'))
   )`).run();
-  if (Number.isSafeInteger(update.update_id)) {
-    const claimed = await env.DB.prepare("INSERT OR IGNORE INTO telegram_media_updates(update_id) VALUES (?)").bind(update.update_id).run();
-    if (!Number(claimed.meta?.changes || 0)) return json({ ok: true, duplicate: true });
+  const updateId = Number.isSafeInteger(update.update_id) ? Number(update.update_id) : null;
+  if (updateId !== null) {
+    const prior = await env.DB.prepare("SELECT id FROM telegram_media_assets WHERE source_update_id=?").bind(updateId).first<{id:string}>();
+    if (prior) return json({ ok:true, duplicate:true, mediaId:prior.id });
   }
   const incoming = msg.video || msg.document;
   if (!incoming?.file_id || !msg.message_id) {
@@ -99,11 +100,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const id = crypto.randomUUID();
   const format = fileName.split(".").pop()?.toLowerCase() || "unknown";
   await env.DB.prepare(`INSERT INTO telegram_media_assets
-    (id,media_kind,title,release_year,season,episode,quality,codec,language,container_format,file_name,file_size,mime_type,vault_chat_id,vault_message_id,file_unique_id,status)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'staged')`)
+    (id,media_kind,title,release_year,season,episode,quality,codec,language,container_format,file_name,file_size,mime_type,vault_chat_id,vault_message_id,file_unique_id,source_update_id,status)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'staged')`)
     .bind(id, meta.kind, meta.title, meta.year, meta.season, meta.episode, meta.quality, meta.codec,
       meta.language, format, fileName, Number(incoming.file_size || 0) || null, String(incoming.mime_type || ""), vaultChatId,
-      copied.message_id, String(incoming.file_unique_id || "")).run();
+      copied.message_id, String(incoming.file_unique_id || ""), updateId).run();
+  if (updateId !== null) {
+    await env.DB.prepare("INSERT OR IGNORE INTO telegram_media_updates(update_id) VALUES (?)").bind(updateId).run();
+  }
   const category = meta.kind === "movie" ? "🎞 MOVIE" : "📺 DRAMA EPISODE";
   const episode = meta.kind === "drama" ? "\nEpisode: S" + String(meta.season).padStart(2,"0") + "E" + String(meta.episode).padStart(2,"0") : "";
   await reply(env, adminId,
