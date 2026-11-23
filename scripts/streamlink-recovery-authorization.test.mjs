@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -38,8 +38,8 @@ test("dry-run mode scans with its read-only token and exits before retrieval", a
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
   try {
-    const result = spawnSync(process.execPath, ["scripts/streamlink-recovery.mjs"], {
-      encoding: "utf8",
+    const child = spawn(process.execPath, ["scripts/streamlink-recovery.mjs"], {
+      stdio: ["ignore", "pipe", "pipe"],
       env: {
         ...process.env,
         RECOVERY_DRY_RUN: "true",
@@ -54,6 +54,15 @@ test("dry-run mode scans with its read-only token and exits before retrieval", a
         KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE: ""
       }
     });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", chunk => { stdout += chunk; });
+    child.stderr.setEncoding("utf8").on("data", chunk => { stderr += chunk; });
+    const exitCode = await new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", resolve);
+    });
+    const result = { status: exitCode, stdout, stderr };
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(requestBody, { action: "scan" });
     assert.equal(authorization, "Bearer dedicated-scan-only-token");
