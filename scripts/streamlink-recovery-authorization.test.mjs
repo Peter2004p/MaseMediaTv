@@ -4,24 +4,35 @@ import { createServer } from "node:http";
 import test from "node:test";
 import assert from "node:assert/strict";
 
-test("recovery runner refuses to start without explicit redistribution authorization", () => {
-  const result = spawnSync(process.execPath, ["scripts/streamlink-recovery.mjs"], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      MASETV_RECOVERY_URL: "https://preview.example/api/streamlink-recovery",
-      STREAMLINK_RECOVERY_TOKEN: "dummy.token.value",
-      TELEGRAM_API_ID: "1",
-      TELEGRAM_API_HASH: "dummy",
-      TELEGRAM_SESSION: "dummy",
-      KDL_AIR_BOT_USERNAME: "dummy_bot",
-      KDL_AIR_REDISTRIBUTION_AUTHORIZED: "",
-      KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE: ""
-    }
+test("recovery runner stops at server-side preflight before scan or Telegram access", async () => {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    let raw = "";
+    for await (const chunk of request) raw += chunk;
+    requests.push(JSON.parse(raw));
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ ok: true, action: "preflight", ready: false,
+      checks: { redistributionAuthorization: false, replacementHostAllowlist: false },
+      blockers: ["Redistribution rights are not verified/configured.", "No approved replacement-host allowlist is configured."] }));
   });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /KDL Air recovery is disabled: verify redistribution rights/);
-  assert.doesNotMatch(result.stderr, /Scanned \d+ saved stream variants/);
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  try {
+    const result = spawnSync(process.execPath, ["scripts/streamlink-recovery.mjs"], {
+      encoding: "utf8",
+      env: { ...process.env, MASETV_RECOVERY_URL: `http://127.0.0.1:${port}/api/streamlink-recovery`,
+        STREAMLINK_RECOVERY_TOKEN: "dummy.token.value", TELEGRAM_API_ID: "1",
+        TELEGRAM_API_HASH: "dummy", TELEGRAM_SESSION: "dummy", KDL_AIR_BOT_USERNAME: "dummy_bot" }
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Recovery preflight blocked before Telegram access/);
+    assert.match(result.stderr, /Redistribution rights are not verified/);
+    assert.deepEqual(requests, [{ action: "preflight" }]);
+    assert.doesNotMatch(result.stdout, /Scanned \\d+ saved stream variants/);
+  } finally {
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+  }
 });
 
 
@@ -84,8 +95,11 @@ test("API scopes OIDC replacement to the exact recovery workflow", () => {
   assert.match(source, /\.github\/workflows\/streamlink-recovery\.yml@refs\/heads\/main/);
   assert.match(source, /\.github\/workflows\/masenet-preview-recovery-dry-run\.yml@refs\/heads\/main/);
   assert.match(source, /body\.action === "scan" &&\s*\(workflowRef === recoveryWorkflowRef \|\| workflowRef === dryRunWorkflowRef\)/);
+  assert.match(source, /body\.action === "preflight" && workflowRef === recoveryWorkflowRef/);
   assert.match(source, /body\.action === "replace" && workflowRef === recoveryWorkflowRef/);
-  assert.match(source, /oidcClaims && \(oidcScanAuthorized \|\| oidcReplaceAuthorized\)/);
+  assert.match(source, /oidcPreflightAuthorized/);
+  assert.match(source, /allowedHostsConfigured/);
+  assert.match(source, /oidcClaims && \(oidcScanAuthorized \|\| oidcPreflightAuthorized \|\| oidcReplaceAuthorized\)/);
   assert.match(source, /KDL_AIR_REDISTRIBUTION_AUTHORIZED\?: string/);
   assert.match(source, /KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE\?: string/);
   assert.match(source, /env\.KDL_AIR_REDISTRIBUTION_AUTHORIZED !== "true" \|\| !authorizationReference/);
