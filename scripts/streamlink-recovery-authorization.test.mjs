@@ -113,5 +113,8 @@ test("API scopes OIDC replacement to the exact recovery workflow", () => {
   assert.match(source, /KDL_AIR_REDISTRIBUTION_AUTHORIZED\?: string/);
   assert.match(source, /KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE\?: string/);
   assert.match(source, /env\.KDL_AIR_REDISTRIBUTION_AUTHORIZED !== "true" \|\| !authorizationReference/);
-  assert.ok(source.indexOf("redistribution rights are verified") < source.indexOf('const allowedHosts = String(env.STREAMLINK_RECOVERY_ALLOWED_HOSTS'));
+  const replaceStart = source.indexOf('if (body.action === "replace")');
+  const rightsGate = source.indexOf('if (env.KDL_AIR_REDISTRIBUTION_AUTHORIZED !== "true" || !authorizationReference)', replaceStart);
+  const replacementAllowlist = source.indexOf("const allowlist = parseAllowedHosts", replaceStart);
+  assert.ok(replaceStart >= 0 && rightsGate > replaceStart && replacementAllowlist > rightsGate);
 });
