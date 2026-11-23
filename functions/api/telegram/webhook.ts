@@ -6,6 +6,7 @@ interface Env {
   TELEGRAM_WEBAPP_URL?: string;
   TELEGRAM_MINI_APP_URL?: string;
   ADMIN_TELEGRAM_CHAT_ID?: string;
+  MASE_MEDIA_VAULT_CHAT_ID?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
 }
@@ -349,6 +350,50 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const active = disablesAlerts ? 0 : 1;
       await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title,active=excluded.active,updated_at=datetime('now'),chat_type='private'").bind(chatId,title,active).run();
       const alertNote = startPayload === "alerts_on" ? "\n\n🔔 New-title alerts are enabled." : disablesAlerts ? "\n\n🔕 New-title alerts are paused." : "";
+      const deliveryStart = startPayload.match(/^dl_([a-f0-9]{48})$/i);
+      if (deliveryStart) {
+        const rawToken = deliveryStart[1].toLowerCase();
+        const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawToken));
+        const tokenHash = [...new Uint8Array(digest)].map((x) => x.toString(16).padStart(2, "0")).join("");
+        const tokenRow = await env.DB.prepare(
+          "SELECT media_asset_id FROM telegram_media_delivery_tokens WHERE token_hash=? AND used_at IS NULL AND expires_at > datetime('now')"
+        ).bind(tokenHash).first<{media_asset_id:string}>();
+        if (!tokenRow) {
+          await sendMessage(env, chatId, "That download link has expired or has already been used. Please return to the MaseNet title page and request a fresh link.", keyboard);
+          return json({ ok:true, delivery:"invalid_or_expired" });
+        }
+        const asset = await env.DB.prepare(
+          "SELECT title,media_kind,season,episode,quality,file_name,vault_chat_id,vault_message_id FROM telegram_media_assets WHERE id=? AND status='published' AND rights_confirmed=1"
+        ).bind(tokenRow.media_asset_id).first<{title:string;media_kind:string;season:number;episode:number;quality:string;file_name:string;vault_chat_id:string;vault_message_id:number}>();
+        if (!asset) {
+          await sendMessage(env, chatId, "This file is not currently available for delivery. Please check the MaseNet title page.", keyboard);
+          return json({ ok:true, delivery:"asset_unavailable" });
+        }
+        const claimed = await env.DB.prepare(
+          "UPDATE telegram_media_delivery_tokens SET used_at=datetime('now') WHERE token_hash=? AND used_at IS NULL AND expires_at > datetime('now')"
+        ).bind(tokenHash).run();
+        if (!Number(claimed.meta?.changes || 0)) {
+          await sendMessage(env, chatId, "This download link has already been used. Please request a fresh link from MaseNet.", keyboard);
+          return json({ ok:true, delivery:"already_used" });
+        }
+        try {
+          await telegramCall(env, "copyMessage", {
+            chat_id: chatId, from_chat_id: asset.vault_chat_id, message_id: asset.vault_message_id,
+            protect_content: false
+          });
+          const label = asset.media_kind === "drama"
+            ? "S" + String(asset.season).padStart(2,"0") + "E" + String(asset.episode).padStart(2,"0")
+            : "Movie";
+          await env.DB.prepare("INSERT INTO telegram_media_delivery_logs (media_asset_id,chat_id,delivered_at) VALUES (?,?,datetime('now'))").bind(tokenRow.media_asset_id,chatId).run().catch(()=>{});
+          await sendMessage(env, chatId, "✅ <b>MaseNet delivery complete</b>\n\n" + String(asset.title).replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "\n" + label + " · " + asset.quality + "\n\nEnjoy your video! 🎬", keyboard, "HTML");
+          return json({ ok:true, delivery:"sent" });
+        } catch (error) {
+          await env.DB.prepare("UPDATE telegram_media_delivery_tokens SET used_at=NULL WHERE token_hash=?").bind(tokenHash).run().catch(()=>{});
+          console.error("MaseNet Telegram media delivery failed", error instanceof Error ? error.message : "unknown error");
+          await sendMessage(env, chatId, "I couldn't retrieve that file right now. Your download link has been restored; please tap it again in a moment.", keyboard);
+          return json({ ok:false, delivery:"telegram_copy_failed" }, 502);
+        }
+      }
       const titleStart = startPayload.match(/^title_([a-zA-Z0-9_-]{1,100})$/);
       if (titleStart) {
         const selected = await env.DB.prepare("SELECT name,kind,year FROM titles WHERE id=?").bind(titleStart[1]).first<{name:string;kind:string;year:number|null}>();
