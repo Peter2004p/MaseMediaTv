@@ -26,6 +26,8 @@ jobs:
       MASETV_RECOVERY_URL: https://5968ebda.masetv-cloudflare-migration.pages.dev
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feature/streamlink-recovery-unified
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
