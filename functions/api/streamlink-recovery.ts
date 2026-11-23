@@ -34,10 +34,16 @@ const safeHttpsUrl = (value: unknown) => {
     if (url.protocol !== "https:" || url.username || url.password || url.port && url.port !== "443") return null;
     const host = url.hostname.toLowerCase();
     const bareHost = host.replace(/^\[|\]$/g, "");
-    // Stream links must use public DNS names. Reject every IP literal and
-    // common private/special-use suffix instead of maintaining an incomplete
-    // list of private address ranges in this API layer.
-    if (!host || !host.includes(".") || bareHost.includes(":") ||
+    // Accept only canonical public DNS hostnames. URL() normalizes some
+    // unusual numeric and Unicode forms, so validate the resulting ASCII
+    // hostname and every DNS label rather than relying on includes(".").
+    const labels = bareHost.split(".");
+    const validDnsName = bareHost.length <= 253 && labels.length >= 2 &&
+      labels.every(label => label.length >= 1 && label.length <= 63 &&
+        /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label));
+    // Stream links must use public DNS names. Reject IP literals and
+    // common private/special-use suffixes in addition to malformed DNS names.
+    if (!validDnsName || bareHost.includes(":") ||
       /^\d{1,3}(?:\.\d{1,3}){3}$/.test(bareHost) ||
       host === "localhost" || host.endsWith(".localhost") ||
       host.endsWith(".local") || host.endsWith(".internal") ||
