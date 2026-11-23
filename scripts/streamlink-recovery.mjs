@@ -6,7 +6,8 @@ import { matchesKdlFileButton, isNextPageLabel, isKdlEpisodeRowLabel, matchesRel
 import { request as httpsRequest } from "node:https";
 
 const dryRun = process.env.RECOVERY_DRY_RUN === "true";
-const required = ["MASETV_RECOVERY_URL", "STREAMLINK_RECOVERY_TOKEN", ...(dryRun ? [] : ["TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"])];
+const recoveryToken = dryRun ? process.env.STREAMLINK_RECOVERY_SCAN_TOKEN : process.env.STREAMLINK_RECOVERY_TOKEN;
+const required = ["MASETV_RECOVERY_URL", ...(dryRun ? ["STREAMLINK_RECOVERY_SCAN_TOKEN"] : ["STREAMLINK_RECOVERY_TOKEN", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "KDL_AIR_BOT_USERNAME"])];
 for (const key of required) {
   if (!process.env[key]) throw new Error(`Missing required environment secret: ${key}`);
 }
@@ -24,7 +25,7 @@ if (!recoveryEndpoint.pathname.replace(/\/$/, "").endsWith("/api/streamlink-reco
 }
 const recoveryUrl = recoveryEndpoint.toString();
 const authHeaders = {
-  Authorization: `Bearer ${process.env.STREAMLINK_RECOVERY_TOKEN}`,
+  Authorization: `Bearer ${recoveryToken}`,
   "Content-Type": "application/json"
 };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -330,7 +331,7 @@ async function collectFreshLink(client, peer, item) {
 }
 
 async function main() {
-  const tokenParts = process.env.STREAMLINK_RECOVERY_TOKEN.split(".");
+  const tokenParts = recoveryToken.split(".");
   if (tokenParts.length === 3) {
     const claims = JSON.parse(Buffer.from(tokenParts[1], "base64url").toString("utf8"));
     console.log("Recovery OIDC identity:", JSON.stringify({
