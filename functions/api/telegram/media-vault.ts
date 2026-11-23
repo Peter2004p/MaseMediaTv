@@ -71,7 +71,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     episode_title TEXT, quality TEXT NOT NULL DEFAULT 'Unknown', codec TEXT NOT NULL DEFAULT 'Unknown',
     container_format TEXT NOT NULL DEFAULT 'Unknown', language TEXT NOT NULL DEFAULT 'Unknown',
     file_name TEXT NOT NULL, file_size INTEGER, mime_type TEXT, vault_chat_id TEXT NOT NULL,
-    vault_message_id INTEGER NOT NULL, file_unique_id TEXT, source_bot TEXT NOT NULL DEFAULT 'MaseNetStreamManagerBot',
+    vault_message_id INTEGER NOT NULL, file_unique_id TEXT, source_update_id INTEGER UNIQUE, source_bot TEXT NOT NULL DEFAULT 'MaseNetStreamManagerBot',
     status TEXT NOT NULL DEFAULT 'staged', rights_confirmed INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(vault_chat_id,vault_message_id)
