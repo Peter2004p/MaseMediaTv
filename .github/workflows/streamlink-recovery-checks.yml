@@ -16,6 +16,7 @@ on:
   push:
     branches:
       - feature/streamlink-recovery-unified
+      - fix/recovery-drama-only-runner
 
 permissions:
   contents: read
