@@ -49,3 +49,8 @@ export function matchesReleaseTag(buttonText, releaseTag) {
   const tokens = String(buttonText || "").normalize("NFKC").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
   return tokens.includes(expected);
 }
+
+// Only confirmed-expired drama links may enter the current KDL Air recovery flow.
+export function isRecoverableExpiredDrama(item, result) {
+  return result?.expired === true && item?.kind === "drama";
+}
