@@ -12,13 +12,6 @@ for (const key of required) {
   if (!process.env[key]) throw new Error(`Missing required environment secret: ${key}`);
 }
 
-// Fail closed until the operator has verified that the KDL Air source and the
-// specific content may legally be redistributed by MaseNet. This is an
-// explicit deployment gate, not a claim that a source is licensed.
-const authorizationReference = String(process.env.KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE || "").trim();
-if (!dryRun && (process.env.KDL_AIR_REDISTRIBUTION_AUTHORIZED !== "true" || !authorizationReference)) {
-  throw new Error("KDL Air recovery is disabled: verify redistribution rights, then configure KDL_AIR_REDISTRIBUTION_AUTHORIZED=true and KDL_AIR_REDISTRIBUTION_AUTHORIZATION_REFERENCE.");
-}
 const recoveryEndpoint = new URL(process.env.MASETV_RECOVERY_URL);
 if (!recoveryEndpoint.pathname.replace(/\/$/, "").endsWith("/api/streamlink-recovery")) {
   recoveryEndpoint.pathname = `${recoveryEndpoint.pathname.replace(/\/$/, "")}/api/streamlink-recovery`;
@@ -331,6 +324,17 @@ async function collectFreshLink(client, peer, item) {
 }
 
 async function main() {
+  if (!dryRun) {
+    // Ask the Preview API to check its own server-side safeguards before
+    // scanning expired URLs or opening a Telegram session.
+    const readiness = await recoveryApi("preflight");
+    if (!readiness.ready) {
+      const blockers = Array.isArray(readiness.blockers) ? readiness.blockers : ["Recovery authorization is incomplete."];
+      throw new Error("Recovery preflight blocked before Telegram access: " + blockers.join(" "));
+    }
+    console.log("Recovery preflight passed: server-side redistribution authorization and replacement-host allowlist are configured.");
+  }
+
   const tokenParts = recoveryToken.split(".");
   if (tokenParts.length === 3) {
     const claims = JSON.parse(Buffer.from(tokenParts[1], "base64url").toString("utf8"));
