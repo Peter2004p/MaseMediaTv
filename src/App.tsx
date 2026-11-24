@@ -1004,9 +1004,9 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
   return [...merged.values()].sort((a,b)=>a.season-b.season||a.episode-b.episode);
  },[title.episodes,title.type,vaultAssets]);
  const seasons=[...new Set(availableEpisodes.map(e=>e.season))];
- useEffect(()=>{if(seasons.length&&!seasons.includes(season))setSeason(seasons[0]);},[seasons.join('|'),season]);
  const initialEpisode=title.trailerUrl?null:(availableEpisodes.find(item=>item.id===lastEpisodes[title.id])||(availableEpisodes[0]||null));
  const [season,setSeason]=useState(initialEpisode?.season||seasons[0]||1);
+ useEffect(()=>{if(seasons.length&&!seasons.includes(season))setSeason(seasons[0]);},[seasons.join('|'),season]);
  const [episode,setEpisode]=useState<Episode|null>(initialEpisode);
  const watchedEpisodes=useRef(new Set<string>());
  const [autoNextSeconds,setAutoNextSeconds]=useState(0);
@@ -1025,7 +1025,6 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
  const selectedHasDownload=Boolean(episode?.vaultAssetId);
  return <div className="page detail"><button className="back" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Library</button><section className="detailHero"><Poster title={title}/><div><small className="eyebrow">{title.type} · {title.year}</small><h1>{title.name}</h1><p>{title.description||'No description has been added yet.'}</p><div className="chips"><span>{title.quality}</span><span>{availableEpisodes.length} {title.type==='Drama'?'episodes':'media files'}</span><span>{title.type==='Drama'?'Drama library':'Movie library'}</span></div><div className="actions"><button className="secondary" onClick={toggle}>{saved.includes(title.id)?'Saved':'My List'}</button></div></div></section>
  {vaultError&&<p className="muted" role="status">{vaultError}</p>}
- {episode&&episode.streamUrl&&<EpisodeRadar title={title}/>}
  {episode&&episode.streamUrl&&<EpisodeRadar title={title}/>}
   {episode?<section className="playerSection">
    <div className="playerHeading"><div><small>{episode.streamUrl?'NOW PLAYING':title.type==='Movie'?'AVAILABLE MOVIE FILE':'AVAILABLE EPISODE'}</small><h3>{title.type==='Drama'?'S'+episode.season+' E'+episode.episode+' · ':''}{episode.title}</h3><p className="muted">Quality: {episode.quality}{episode.fileName?' · '+episode.fileName:''}</p></div><div className="playerActions"><button className="icon" disabled={!previous} onClick={()=>previous&&choose(previous)} aria-label="Previous episode"><ArrowLeft/></button><button className="icon" disabled={!next} onClick={()=>{setAutoNextSeconds(0);if(next)choose(next)}} aria-label="Next episode"><ChevronRight/></button></div></div>
