@@ -986,7 +986,7 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
  const availableEpisodes=useMemo(()=>{
   const merged=new Map<string,Episode>();
   for(const ep of title.episodes||[]){const key=(Number(ep.season)||1)+'|'+(Number(ep.episode)||1);merged.set(key,{...ep});}
-  const qualityOf=(value:string):Quality=>value==='480p'||value==='1080p'?'' as Quality:'720p';
+  const qualityOf=(value:string):Quality=>value==='480p'||value==='1080p'?value as Quality:'720p';
   for(const asset of vaultAssets){
    const season=title.type==='Movie'?1:(Number(asset.season)||1);
    const episodeNo=title.type==='Movie'?1:(Number(asset.episode)||1);
