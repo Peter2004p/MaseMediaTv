@@ -681,7 +681,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
    if(active)setVaultItems(assets.map((asset:any)=>({
     key:'vault-'+String(asset.id),
     assetId:String(asset.id),
-    title:{id:String(asset.title_id||asset.id),name:String(asset.title||asset.file_name||'Telegram media'),type:asset.media_kind==='drama'?'Drama':'Movie',year:String(asset.release_year||'')},
+    title:{id:String(asset.title_id||asset.id),name:String(asset.title||asset.file_name||'Telegram media'),type:(asset.media_kind==='drama'?'Drama':'Movie') as 'Drama'|'Movie',year:String(asset.release_year||'')},
     season:Number(asset.season||0),
     episode:Number(asset.episode||0),
     quality:String(asset.quality||'Unknown'),
