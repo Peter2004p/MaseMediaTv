@@ -323,6 +323,10 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   if (!campaign) return json({ ok: false, error: "Promotion campaign is unavailable" }, 500);
+  // Automatic catalogue spotlights are disabled: do not send AI-generated watch suggestions to bots or channels.
+  if (campaign.contentType === "catalogue") {
+    return json({ ok: true, skipped: "automatic_catalogue_suggestions_disabled", delivered: 0 });
+  }
 
   const subs = await env.DB.prepare("SELECT chat_id,chat_type,title FROM telegram_subscribers WHERE active=1 AND chat_type IN ('private','channel','supergroup')").all<{ chat_id: string; chat_type: string; title?: string | null }>();
   // The main channel may be present twice: once as the legacy @username target
@@ -484,7 +488,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     await env.DB.prepare("INSERT INTO telegram_promo_history (title_name,last_sent_at) VALUES (?,datetime('now')) ON CONFLICT(title_name) DO UPDATE SET last_sent_at=datetime('now')").bind(campaign.historyKey).run();
   }
   let engagementPollSent = false;
-  if (delivered > 0 && batchIndex === 0) {
+  if (false && delivered > 0 && batchIndex === 0) {
     await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_engagement_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sent_at TEXT NOT NULL DEFAULT (datetime('now')),
