@@ -7,7 +7,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const origin = new URL(request.url).origin;
   if (request.headers.get("Origin") !== origin) return json({ ok:false,error:"Same-origin confirmation is required." },403);
   const secret=String(env.MASE_STREAM_BOT_WEBHOOK_SECRET||"").trim();
-  if(!secret) return json({ok:false,error:"The Preview vault encryption key is not configured."},503);
+  if(!secret) return json({ok:false,error:"The Media Vault encryption key is not configured in this environment."},503);
   const config=await loadMediaVaultConfig(env.DB,secret);
   if(!config) return json({ok:false,error:"Connect and verify the manager bot in the Media Vault setup panel first."},503);
   const token=config.token;
@@ -22,9 +22,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return data.result||{};
   };
   try {
-    const previous=await call("getWebhookInfo");
-    const previousUrl=String(previous.url||"");
-    if(previousUrl && previousUrl!==webhookUrl) return json({ok:false,error:"This manager bot already has a different webhook URL. I did not replace it, to protect the existing bot connection. Use a separate Preview test bot for Preview, or keep this bot connected to its current environment."},409);
+    // The owner has explicitly approved moving this dedicated Manager Bot to the
+    // current MaseNet environment. Telegram setWebhook replaces this bot's prior
+    // webhook; pending updates are preserved and the public @MaseTv_Bot is untouched.
     await call("setWebhook",{url:webhookUrl,secret_token:secret,allowed_updates:["message"],drop_pending_updates:false});
     const info=await call("getWebhookInfo");
     if(String(info.url||"")!==webhookUrl) return json({ok:false,error:"Telegram webhook URL did not verify."},502);
