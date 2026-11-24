@@ -667,7 +667,7 @@ function HistoryPage({titles,progress,completed,setProgress,setCompleted,go}:{ti
 function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
  const [busyId,setBusyId]=useState('');
  const [message,setMessage]=useState('');
- const [vaultItems,setVaultItems]=useState<Array<{key:string;assetId:string;title:Title;season:number;episode:number;quality:string;fileName:string}>>([]);
+ const [vaultItems,setVaultItems]=useState<Array<{key:string;assetId:string;title:{id:string;name:string;type:'Movie'|'Drama';year:string};season:number;episode:number;quality:string;fileName:string}>>([]);
  const [vaultLoading,setVaultLoading]=useState(true);
  const items=useMemo(()=>titles.flatMap(title=>title.episodes.flatMap(episode=>{
   const variants=episode.qualities?.length?episode.qualities:[{quality:episode.quality,streamUrl:episode.streamUrl,streamPath:episode.streamPath,downloadUrl:episode.downloadUrl,downloadPath:episode.downloadPath}];
@@ -676,22 +676,20 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
  useEffect(()=>{
   let active=true;
   setVaultLoading(true);
-  const requests=titles.flatMap(title=>{
-   const mediaKind=title.type==='Drama'?'drama':'movie';
-   if(mediaKind==='drama'){
-    const episodes=[...new Map((title.episodes||[]).map(ep=>[String(ep.season)+'-'+String(ep.episode),ep])).values()];
-    return episodes.map(ep=>({title,params:{titleId:title.id,mediaKind,season:ep.season,episode:ep.episode}}));
-   }
-   return [{title,params:{titleId:title.id,mediaKind}}];
-  });
-  Promise.all(requests.map(async request=>{
-   try{
-    const response=await api.get('/api/media/vault-assets',request.params);
-    return (Array.isArray(response.data?.assets)?response.data.assets:[]).map((asset:any)=>({key:'vault-'+asset.id,assetId:String(asset.id),title:request.title,season:Number(asset.season||0),episode:Number(asset.episode||0),quality:String(asset.quality||'Unknown'),fileName:String(asset.file_name||'Telegram media')}));
-   }catch{return []}
-  })).then(groups=>{if(active)setVaultItems(groups.flat())}).finally(()=>{if(active)setVaultLoading(false)});
+  api.get('/api/media/vault-assets').then(response=>{
+   const assets=Array.isArray(response.data?.assets)?response.data.assets:[];
+   if(active)setVaultItems(assets.map((asset:any)=>({
+    key:'vault-'+String(asset.id),
+    assetId:String(asset.id),
+    title:{id:String(asset.title_id||asset.id),name:String(asset.title||asset.file_name||'Telegram media'),type:(asset.media_kind==='drama'?'Drama':'Movie') as 'Drama'|'Movie',year:String(asset.release_year||'')},
+    season:Number(asset.season||0),
+    episode:Number(asset.episode||0),
+    quality:String(asset.quality||'Unknown'),
+    fileName:String(asset.file_name||'Telegram media')
+   })));
+  }).catch(()=>{if(active)setVaultItems([])}).finally(()=>{if(active)setVaultLoading(false)});
   return()=>{active=false};
- },[titles]);
+ },[]);
  const startDownload=async(item:typeof items[number])=>{
   if(busyId)return;
   setBusyId(item.key);setMessage('');
@@ -704,7 +702,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
     if(!response.data?.url)throw new Error('The secure media link could not be created. Please try again.');
     url=String(response.data.url);
    }
-   if(!/^https?:\/\//i.test(url))throw new Error('This download entry has no valid HTTPS/HTTP link.');
+   const parsedDownloadUrl=new URL(url);if(!['http:','https:'].includes(parsedDownloadUrl.protocol))throw new Error('This download entry has no valid HTTPS/HTTP link.');
    if(tab)tab.location.href=url;else window.location.assign(url);
    setMessage('Download source opened for '+item.title.name+'.');
   }catch(error){tab?.close();setMessage(error instanceof Error?error.message:'Could not open this download source.')}
@@ -717,7 +715,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
   try{
    const response=await api.post('/api/media/download-token',{assetId:item.assetId});
    const url=String(response.data?.telegramUrl||'');
-   if(!/^https:\/\/t\.me\/MaseTv_Bot\?start=dl_[a-f0-9]{48}$/i.test(url))throw new Error('MaseNet could not create a valid Telegram delivery link.');
+   const deliveryUrl=new URL(url);const deliveryToken=deliveryUrl.searchParams.get('start')||'';if(deliveryUrl.protocol!=='https:'||deliveryUrl.hostname!=='t.me'||deliveryUrl.pathname!=='/MaseTv_Bot'||!deliveryToken.startsWith('dl_')||! /^[a-f0-9]{48}$/i.test(deliveryToken.slice(3)))throw new Error('MaseNet could not create a valid Telegram delivery link.');
    if(tab)tab.location.href=url;else window.location.assign(url);
    setMessage('Opening @MaseTv_Bot to deliver '+item.title.name+'. Start the bot if Telegram asks you to.');
   }catch(error){tab?.close();setMessage((error as any)?.response?.data?.error||(error instanceof Error?error.message:'Could not prepare Telegram delivery.'))}
@@ -728,13 +726,13 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
   <header className="maseUtilityHead"><div><span className="iqKicker">YOUR VIDEO LIBRARY</span><h1>Downloads</h1><p>Get available files from MaseNet or receive published vault media in Telegram.</p></div><span className="maseUtilityCount">{total} available</span></header>
   <section className="downloadInfo"><Download size={19}/><span><b>Secure Telegram delivery</b><small>Published Media Vault files are sent by @MaseTv_Bot using a short-lived, single-use download link. The private vault remains private.</small></span></section>
   {message&&<p className="downloadFeedback" role="status">{message}</p>}
-  {vaultItems.length>0&&<><h2 className="downloadSectionTitle">MaseNet Telegram Vault</h2><section className="maseDownloadList">{vaultItems.map(item=><article className="maseDownloadItem" key={item.key}><button className="maseDownloadPoster" onClick={()=>go('#/title/'+encodeURIComponent(item.title.id))}><Poster title={item.title} small/></button><div className="maseDownloadCopy"><b>{item.title.name}</b><small>{item.title.type==='Drama'?'Season '+item.season+' · Episode '+item.episode+' · ':''}{item.fileName} · {item.quality}</small><span>Published · Telegram delivery</span></div><button className="primary maseDownloadAction" disabled={Boolean(busyId)} onClick={()=>void startVaultDownload(item)}>{busyId===item.key?'Preparing…':<><Download size={15}/> Get in Telegram</>}</button></article>)}</section></>}
+  {vaultItems.length>0&&<><h2 className="downloadSectionTitle">MaseNet Telegram Vault</h2><section className="maseDownloadList">{vaultItems.map(item=><article className="maseDownloadItem" key={item.key}><div className="maseDownloadPoster" aria-hidden="true"><Download size={21}/></div><div className="maseDownloadCopy"><b>{item.title.name}</b><small>{item.title.type==='Drama'?'Season '+item.season+' · Episode '+item.episode+' · ':''}{item.fileName} · {item.quality}</small><span>Published · Telegram delivery</span></div><button className="primary maseDownloadAction" disabled={Boolean(busyId)} onClick={()=>void startVaultDownload(item)}>{busyId===item.key?'Preparing…':<><Download size={15}/> Get in Telegram</>}</button></article>)}</section></>}
   {vaultLoading&&<p className="downloadFeedback">Checking published Telegram files…</p>}
   {items.length>0&&<><h2 className="downloadSectionTitle">Other download sources</h2><section className="maseDownloadList">{items.map(item=><article className="maseDownloadItem" key={item.key}><button className="maseDownloadPoster" onClick={()=>go('#/title/'+encodeURIComponent(item.title.id))}><Poster title={item.title} small/></button><div className="maseDownloadCopy"><b>{item.title.name}</b><small>{item.title.type==='Drama'?'Season '+item.episode.season+' · Episode '+item.episode.episode+' · ':''}{item.episode.title} · {item.variant.quality}</small><span>Download source available</span></div><button className="primary maseDownloadAction" disabled={Boolean(busyId)} onClick={()=>void startDownload(item)}>{busyId===item.key?'Preparing…':<><Download size={15}/> Download</>}</button></article>)}</section></>}
   {!vaultLoading&&!total&&<section className="emptyState"><Download size={34}/><h2>No downloads available yet</h2><p>Published Media Vault files and admin-provided download links will appear here.</p><button className="primary" onClick={()=>go('#/home')}>Explore library</button></section>}
   <button className="secondary" onClick={()=>go('#/history')}>View watch history</button>
   <button className="secondary maseBackButton" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Back to MaseNet</button>
-  <style>{".downloadInfo{display:flex;gap:13px;align-items:flex-start;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.045);margin:18px 0 22px}.downloadInfo>svg{flex:none;color:#62e9ad}.downloadInfo span,.maseDownloadCopy{display:flex;flex-direction:column;gap:5px;min-width:0}.downloadInfo small,.maseDownloadCopy small{color:var(--muted,#aab0c0);line-height:1.5}.downloadSectionTitle{font-size:16px;margin:20px 0 10px}.maseDownloadList{display:grid;gap:10px}.maseDownloadItem{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:13px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}.maseDownloadPoster{width:62px;height:82px;overflow:hidden;border:0;border-radius:9px;background:transparent;padding:0}.maseDownloadPoster .poster{width:100%;height:100%}.maseDownloadCopy>b{overflow-wrap:anywhere}.maseDownloadCopy>span{font-size:10px;color:#70e9b2}.maseDownloadAction{white-space:nowrap}.downloadFeedback{padding:12px 14px;border-radius:12px;background:rgba(0,213,138,.1);color:#9bf3ca}@media(max-width:520px){.maseDownloadItem{grid-template-columns:52px minmax(0,1fr);gap:10px}.maseDownloadPoster{width:52px;height:72px}.maseDownloadAction{grid-column:2;justify-self:start}.maseDownloadCopy small{font-size:10px}}"} </style>
+  <style>{" .downloadInfo{display:flex;gap:13px;align-items:flex-start;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.045);margin:18px 0 22px}.downloadInfo>svg{flex:none;color:#62e9ad}.downloadInfo span,.maseDownloadCopy{display:flex;flex-direction:column;gap:5px;min-width:0}.downloadInfo small,.maseDownloadCopy small{color:var(--muted,#aab0c0);line-height:1.5}.downloadSectionTitle{font-size:16px;margin:20px 0 10px}.maseDownloadList{display:grid;gap:10px}.maseDownloadItem{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:13px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}.maseDownloadPoster{width:62px;height:82px;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.06);color:#8de9c0;padding:0}.maseDownloadPoster .poster{width:100%;height:100%}.maseDownloadCopy>b{overflow-wrap:anywhere}.maseDownloadCopy>span{font-size:10px;color:#70e9b2}.maseDownloadAction{white-space:nowrap}@media(max-width:520px){.maseDownloadItem{grid-template-columns:52px minmax(0,1fr);gap:10px}.maseDownloadPoster{width:52px;height:72px}.maseDownloadAction{grid-column:2;justify-self:start}.maseDownloadCopy small{font-size:10px}}"} </style>
  </main>;
 }
 function WatchlistPage({titles,setSaved,go}:{titles:Title[];setSaved:(ids:string[])=>void;go:(r:string)=>void}){
