@@ -22,6 +22,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return data.result||{};
   };
   try {
+    const previous=await call("getWebhookInfo");
+    const previousUrl=String(previous.url||"");
+    if(previousUrl && new URL(previousUrl).origin!==origin) return json({ok:false,error:"This manager bot already has a webhook on another environment. I did not replace it, to protect the existing bot connection. Use a separate Preview test bot for Preview, or keep this bot connected to its current environment."},409);
     await call("setWebhook",{url:webhookUrl,secret_token:secret,allowed_updates:["message"],drop_pending_updates:false});
     const info=await call("getWebhookInfo");
     if(String(info.url||"")!==webhookUrl) return json({ok:false,error:"Telegram webhook URL did not verify."},502);
