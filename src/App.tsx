@@ -702,7 +702,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
     if(!response.data?.url)throw new Error('The secure media link could not be created. Please try again.');
     url=String(response.data.url);
    }
-   if(!/^https?:\\/\\//i.test(url))throw new Error('This download entry has no valid HTTPS/HTTP link.');
+   const parsedDownloadUrl=new URL(url);if(!['http:','https:'].includes(parsedDownloadUrl.protocol))throw new Error('This download entry has no valid HTTPS/HTTP link.');
    if(tab)tab.location.href=url;else window.location.assign(url);
    setMessage('Download source opened for '+item.title.name+'.');
   }catch(error){tab?.close();setMessage(error instanceof Error?error.message:'Could not open this download source.')}
@@ -715,7 +715,7 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
   try{
    const response=await api.post('/api/media/download-token',{assetId:item.assetId});
    const url=String(response.data?.telegramUrl||'');
-   if(!/^https:\\/\\/t\\.me\\/MaseTv_Bot\\?start=dl_[a-f0-9]{48}$/i.test(url))throw new Error('MaseNet could not create a valid Telegram delivery link.');
+   const deliveryUrl=new URL(url);const deliveryToken=deliveryUrl.searchParams.get('start')||'';if(deliveryUrl.protocol!=='https:'||deliveryUrl.hostname!=='t.me'||deliveryUrl.pathname!=='/MaseTv_Bot'||!deliveryToken.startsWith('dl_')||! /^[a-f0-9]{48}$/i.test(deliveryToken.slice(3)))throw new Error('MaseNet could not create a valid Telegram delivery link.');
    if(tab)tab.location.href=url;else window.location.assign(url);
    setMessage('Opening @MaseTv_Bot to deliver '+item.title.name+'. Start the bot if Telegram asks you to.');
   }catch(error){tab?.close();setMessage((error as any)?.response?.data?.error||(error instanceof Error?error.message:'Could not prepare Telegram delivery.'))}
