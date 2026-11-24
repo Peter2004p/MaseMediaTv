@@ -993,7 +993,7 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
    const key=season+'|'+episodeNo;
    const quality=qualityOf(String(asset.quality||''));
    const existing=merged.get(key);
-   if(existing){existing.vaultAssetId=String(asset.id);existing.fileName=String(asset.file_name||'');if(!existing.streamUrl)existing.quality=quality;continue;}
+   if(existing){if(!existing.vaultAssetId){existing.vaultAssetId=String(asset.id);existing.fileName=String(asset.file_name||'');if(!existing.streamUrl)existing.quality=quality;}continue;}
    merged.set(key,{id:String(asset.id),season,episode:episodeNo,title:title.type==='Movie'?'Movie file':String(asset.episode_title||('Episode '+episodeNo)),quality,streamUrl:'',vaultAssetId:String(asset.id),fileName:String(asset.file_name||'')});
   }
   return [...merged.values()].sort((a,b)=>a.season-b.season||a.episode-b.episode);
