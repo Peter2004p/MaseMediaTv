@@ -676,11 +676,18 @@ function DownloadsPage({titles,go}:{titles:Title[];go:(r:string)=>void}){
  useEffect(()=>{
   let active=true;
   setVaultLoading(true);
-  Promise.all(titles.map(async title=>{
+  const requests=titles.flatMap(title=>{
+   const mediaKind=title.type==='Drama'?'drama':'movie';
+   if(mediaKind==='drama'){
+    const episodes=[...new Map((title.episodes||[]).map(ep=>[String(ep.season)+'-'+String(ep.episode),ep])).values()];
+    return episodes.map(ep=>({title,params:{titleId:title.id,mediaKind,season:ep.season,episode:ep.episode}}));
+   }
+   return [{title,params:{titleId:title.id,mediaKind}}];
+  });
+  Promise.all(requests.map(async request=>{
    try{
-    const mediaKind=title.type==='Drama'?'drama':'movie';
-    const response=await api.get('/api/media/vault-assets',{titleId:title.id,mediaKind});
-    return (Array.isArray(response.data?.assets)?response.data.assets:[]).map((asset:any)=>({key:'vault-'+asset.id,assetId:String(asset.id),title,season:Number(asset.season||0),episode:Number(asset.episode||0),quality:String(asset.quality||'Unknown'),fileName:String(asset.file_name||'Telegram media')}));
+    const response=await api.get('/api/media/vault-assets',request.params);
+    return (Array.isArray(response.data?.assets)?response.data.assets:[]).map((asset:any)=>({key:'vault-'+asset.id,assetId:String(asset.id),title:request.title,season:Number(asset.season||0),episode:Number(asset.episode||0),quality:String(asset.quality||'Unknown'),fileName:String(asset.file_name||'Telegram media')}));
    }catch{return []}
   })).then(groups=>{if(active)setVaultItems(groups.flat())}).finally(()=>{if(active)setVaultLoading(false)});
   return()=>{active=false};
