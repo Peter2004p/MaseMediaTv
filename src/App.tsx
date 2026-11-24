@@ -7,7 +7,7 @@ const Player = lazy(() => import('./MaseNetPlayerV3'));
 const PlayerLoading = () => <div role="status" aria-live="polite" style={{ minHeight: 180, display: "grid", placeItems: "center", borderRadius: 16, background: "#08090d", color: "#e8c77a", fontSize: 14 }}>Loading video player…</div>;
 import { House, Clapperboard, Search, UserRound, SlidersHorizontal, Play, Download, Plus, X, Send, ShieldCheck, Check, ArrowLeft, Upload, Link2, Bot, Trash2, ChevronRight, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Subtitles, RotateCcw, RotateCw, ImagePlus, LogOut, Save, Eye, EyeOff, Film, LayoutDashboard, Paperclip, Palette, Mic, Copy, ExternalLink, RefreshCw, Youtube, Facebook, Music2, Share2, MessageCircle, Sparkles, Bell, Bookmark, CheckCheck, Database } from 'lucide-react';
 
-type Quality = '480p'|'720p'|'1080p';
+type Quality = '480p'|'576p'|'720p'|'1080p'|'1440p'|'2160p';
 type StreamVariant = { quality:Quality; streamUrl:string; streamPath?:string; mimeType?:string; downloadUrl?:string; downloadPath?:string; subtitleTracks?:{label:string;url:string;path?:string;lang?:string;mimeType?:string}[] };
 type Episode = { id:string; season:number; episode:number; title:string; quality:Quality; streamUrl:string; streamPath?:string; mimeType?:string; downloadUrl?:string; downloadPath?:string; subtitleTracks?:{label:string;url:string;path?:string;lang?:string;mimeType?:string}[]; qualities?:StreamVariant[]; vaultAssetId?:string; fileName?:string };
 type Title = { id:string; name:string; type:'Movie'|'Drama'; description:string; year:string; posterUrl:string; posterPath?:string; trailerUrl?:string; quality:Quality; language?:string; country?:string; rating?:number; featured?:boolean; durationMinutes?:number; status?:'active'|'ended'; isEnded?:boolean; ended?:boolean; completed?:boolean; isCompleted?:boolean; episodes:Episode[] };
@@ -986,7 +986,7 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
  const availableEpisodes=useMemo(()=>{
   const merged=new Map<string,Episode>();
   for(const ep of title.episodes||[]){const key=(Number(ep.season)||1)+'|'+(Number(ep.episode)||1);merged.set(key,{...ep});}
-  const qualityOf=(value:string):Quality=>value==='480p'||value==='1080p'?value as Quality:'720p';
+  const qualityOf=(value:string):Quality=>['480p','576p','720p','1080p','1440p','2160p'].includes(value)?value as Quality:'720p';
   for(const asset of vaultAssets){
    const season=title.type==='Movie'?1:(Number(asset.season)||1);
    const episodeNo=title.type==='Movie'?1:(Number(asset.episode)||1);
