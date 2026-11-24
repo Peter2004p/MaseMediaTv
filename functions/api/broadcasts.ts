@@ -54,7 +54,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
             const method = mediaType === "video" ? "sendVideo" : mediaType === "animation" ? "sendAnimation" : "sendPhoto";
             const mediaField = mediaType === "video" ? "video" : mediaType === "animation" ? "animation" : "photo";
             const caption = [heading || title, plainDescription].filter(Boolean).join("\n\n").slice(0,1000);
-            const channelActions = { inline_keyboard: [[...(appUrl.startsWith("https://") ? [{ text: "🚀 Open MaseNet", url: appUrl }] : []), { text: "🤖 Ask MaseNet AI", url: "https://t.me/MaseTv_Bot" }]] };
+            const channelActions = { inline_keyboard: appUrl.startsWith("https://") ? [[{ text: "🚀 Open MaseNet", url: appUrl }]] : [] };
             const response = await fetch("https://api.telegram.org/bot" + config.TELEGRAM_BOT_TOKEN + "/" + method, {
               method:"POST", headers:{"content-type":"application/json"},
               body:JSON.stringify({chat_id:chatId,[mediaField]:mediaUrl,caption,reply_markup:channelActions,disable_notification:false})

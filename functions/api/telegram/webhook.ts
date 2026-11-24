@@ -339,7 +339,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const text = typeof message?.text === "string" ? message.text.trim() : "";
   const title = chatTitle(chat);
   const appUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
-  const keyboard = { keyboard: [[{ text: "🎬 Recommend a movie" }, { text: "📺 Find a drama" }], [{ text: "🔎 Search a title" }, { text: "🛠 Playback help" }], [{ text: "🚀 Open MaseNet", web_app: { url: appUrl } }]], resize_keyboard: true, is_persistent: true, input_field_placeholder: "Ask MaseNet about movies, dramas or playback…" };
+  const keyboard = { inline_keyboard: [[{ text: "🚀 Open MaseNet", web_app: { url: appUrl } }]] };
 
   if (chatType === "private") {
     const startMatch = text.match(/^\/start(?:@\w+)?(?:\s+([\w-]+))?$/i);
@@ -357,7 +357,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           return json({ ok: true, openedTitle: true });
         }
       }
-      await sendMessage(env, chatId, "Welcome to MaseNet 🎬\n\nI can help you discover movies and dramas, find episodes, troubleshoot subtitles and playback, and understand download options. Choose a suggestion below or just type naturally, then use Open MaseNet to browse the Mini App.\n\nCommands: /app, /help, /notifications_on, /notifications_off, /privacy" + alertNote, keyboard);
+      await sendMessage(env, chatId, "Welcome to MaseNet 🎬\n\nI can help you discover movies and dramas, find episodes, troubleshoot subtitles and playback, and understand download options. Just type naturally to chat, or use Open MaseNet to browse the Mini App.\n\nCommands: /app, /help, /notifications_on, /notifications_off, /privacy" + alertNote, keyboard);
     } else if (/^\/notifications_off(?:@\w+)?$/i.test(text)) {
       await env.DB.prepare("UPDATE telegram_subscribers SET active=0,updated_at=datetime('now') WHERE chat_id=?").bind(chatId).run();
       await sendMessage(env, chatId, "Movie and episode alerts are now off. Send /notifications_on to turn them back on.");
