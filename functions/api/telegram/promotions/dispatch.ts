@@ -217,6 +217,10 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
   if (!env.DB || !env.TELEGRAM_BOT_TOKEN) return json({ ok: false, error: "Telegram or D1 binding unavailable" }, 503);
 
+  // Automated AI/promotional suggestions are intentionally paused for both private bots and channels.
+  // Manual admin broadcasts and user-requested bot conversations remain available.
+  return json({ ok: true, skipped: "automatic_telegram_promotions_paused", delivered: 0 });
+
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_promo_history (
     title_name TEXT PRIMARY KEY,
     last_sent_at TEXT NOT NULL DEFAULT (datetime('now'))
