@@ -1,11 +1,10 @@
 import { json } from "../auth/_shared";
+import { loadMediaVaultConfig } from "../admin/_media-vault-config";
 
 interface Env {
   DB: D1Database;
-  MASE_STREAM_BOT_TOKEN?: string;
   MASE_STREAM_BOT_WEBHOOK_SECRET?: string;
-  MASE_MEDIA_VAULT_CHAT_ID?: string;
-  ADMIN_TELEGRAM_CHAT_ID?: string;
+  MASE_STREAM_BOT_TOKEN?: string;
 }
 type TgFile = { file_id?: string; file_unique_id?: string; file_name?: string; file_size?: number; mime_type?: string };
 type TgMessage = {
@@ -53,12 +52,13 @@ const reply = (env: Env, chatId: string | number, text: string, markup?: unknown
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const secret = String(env.MASE_STREAM_BOT_WEBHOOK_SECRET || "").trim();
-  const adminId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
-  const vaultChatId = String(env.MASE_MEDIA_VAULT_CHAT_ID || "").trim();
-  if (!secret || !adminId || !vaultChatId || !env.MASE_STREAM_BOT_TOKEN) {
-    return json({ ok: false, error: "Media Vault is not configured. Required server-side settings are missing." }, 503);
-  }
+  if (!secret) return json({ ok: false, error: "Media Vault encryption is not configured." }, 503);
   if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== secret) return json({ ok: false }, 401);
+  const config = await loadMediaVaultConfig(env.DB, secret);
+  if (!config) return json({ ok: false, error: "Media Vault manager bot setup is incomplete." }, 503);
+  const adminId = config.adminChatId;
+  const vaultChatId = config.vaultChatId;
+  const runtimeEnv: Env = { ...env, MASE_STREAM_BOT_TOKEN: config.token };
   const update = await request.json().catch(() => ({})) as { update_id?: number; message?: TgMessage };
   const msg = update.message;
   if (!msg || String(msg.chat?.type || "") !== "private" ||
@@ -86,7 +86,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
   const incoming = msg.video || msg.document;
   if (!incoming?.file_id || !msg.message_id) {
-    await reply(env, adminId, "🎬 MaseNet Media Vault is ready. Send a video or document file here. I will store it in the private vault and organise its metadata.\n\nBest filename format: Title (2026) S01E02 1080p x265.mkv\nFor a movie, omit SxxExx. You can add a caption with Title:, Type:, and Language:.");
+    await reply(runtimeEnv, adminId, "🎬 MaseNet Media Vault is ready. Send a video or document file here. I will store it in the private vault and organise its metadata.\n\nBest filename format: Title (2026) S01E02 1080p x265.mkv\nFor a movie, omit SxxExx. You can add a caption with Title:, Type:, and Language:.");
     return json({ ok: true, help: true });
   }
   const fileName = String(incoming.file_name || (msg.video ? "video.mp4" : "document.bin")).slice(0, 255);
