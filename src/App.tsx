@@ -1047,7 +1047,7 @@ function TitleCommunity({titleId}:{titleId:string}){
 function youtubeVideoId(raw:string):string{
  try{
   const parsed=new URL(raw.trim());
-  const host=parsed.hostname.toLowerCase().replace(/^www\\./,'').replace(/^m\\./,'');
+  const host=parsed.hostname.toLowerCase().replace(/^www\./,'').replace(/^m\./,'');
   if(!['youtube.com','youtube-nocookie.com','youtu.be'].includes(host))return '';
   let id='';
   if(host==='youtu.be')id=parsed.pathname.split('/').filter(Boolean)[0]||'';
@@ -1062,10 +1062,10 @@ function youtubeVideoId(raw:string):string{
 function TrailerPreview({url}:{url:string}){
  const [open,setOpen]=useState(false);
  const [embedFailed,setEmbedFailed]=useState(false);
- const safe=/^https?:\\/\\//i.test(url.trim())?url.trim():'';
+ const safe=/^https?:\/\//i.test(url.trim())?url.trim():'';
  const youtubeId=youtubeVideoId(safe);
- const isYoutube=/youtube\\.com|youtu\\.be/i.test(safe);
- const video=/\\.(mp4|webm|ogg)(?:[?#].*)?$/i.test(safe);
+ const isYoutube=/youtube\.com|youtu\.be/i.test(safe);
+ const video=/\.(mp4|webm|ogg)(?:[?#].*)?$/i.test(safe);
  if(!safe||(!youtubeId&&!video&&!isYoutube))return null;
  const close=()=>{setOpen(false);setEmbedFailed(false)};
  return <><button className="secondary" onClick={()=>setOpen(true)}><Play size={15}/> Watch trailer</button>{open&&<div role="dialog" aria-modal="true" aria-label="Trailer preview" onClick={close} style={{position:'fixed',inset:0,zIndex:10000,display:'grid',placeItems:'center',padding:16,background:'rgba(0,0,0,.92)'}}><div onClick={e=>e.stopPropagation()} style={{width:'min(100%,900px)',maxHeight:'92vh',overflowY:'auto',background:'#080b12',border:'1px solid #ffffff25',borderRadius:18,padding:12}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,padding:'4px 4px 12px',color:'white'}}><b>Movie trailer</b><button className="secondary" onClick={close}>Close</button></div>{youtubeId?<><div style={{width:'100%',aspectRatio:'16/9',background:'#000',borderRadius:12,overflow:'hidden'}}><iframe key={youtubeId} title="Movie trailer" src={'https://www.youtube.com/embed/'+encodeURIComponent(youtubeId)+'?autoplay=1&playsinline=1&rel=0'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="eager" referrerPolicy="strict-origin-when-cross-origin" onError={()=>setEmbedFailed(true)} style={{width:'100%',height:'100%',border:0}}/></div><p style={{margin:'10px 2px 2px',fontSize:12,color:'#b7bdc9'}}>If YouTube blocks playback inside MaseNet, <a href={'https://www.youtube.com/watch?v='+encodeURIComponent(youtubeId)} target="_blank" rel="noopener noreferrer" style={{color:'#e8c77a'}}>open this trailer on YouTube</a>.</p>{embedFailed&&<p role="alert" style={{color:'#ffb4a8',fontSize:12}}>The embedded player could not load. Open the trailer directly on YouTube.</p>}</>:video?<video src={safe} controls autoPlay playsInline style={{width:'100%',maxHeight:'72vh',background:'#000',borderRadius:12}}/>:<div style={{padding:18,color:'#f4f1e8'}}><p>This YouTube link format could not be embedded automatically.</p><a href={safe} target="_blank" rel="noopener noreferrer" style={{color:'#e8c77a'}}>Open trailer on YouTube</a></div>}</div></div>}</>;
