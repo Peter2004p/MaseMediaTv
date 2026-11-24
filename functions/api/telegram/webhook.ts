@@ -41,6 +41,43 @@ async function sendTyping(env: Env, chatId: string | number) {
   try { await telegramCall(env, "sendChatAction", { chat_id: chatId, action: "typing" }); } catch { /* Typing is optional. */ }
 }
 
+
+async function deliverVaultDownload(env: Env, chatId: string, rawToken: string): Promise<"delivered"|"invalid"|"failed"> {
+  const token = rawToken.toLowerCase();
+  if (!/^[a-f0-9]{48}$/.test(token)) return "invalid";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  const tokenHash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  const claim = await env.DB.prepare(`
+    UPDATE telegram_media_delivery_tokens
+    SET used_at=datetime('now')
+    WHERE token_hash=? AND used_at IS NULL AND expires_at>datetime('now')
+      AND media_asset_id IN (
+        SELECT id FROM telegram_media_assets
+        WHERE status='published' AND rights_confirmed=1
+      )
+    RETURNING media_asset_id
+  `).bind(tokenHash).first<{media_asset_id:string}>();
+  if (!claim?.media_asset_id) return "invalid";
+  const asset = await env.DB.prepare(
+    "SELECT vault_chat_id,vault_message_id FROM telegram_media_assets WHERE id=? AND status='published' AND rights_confirmed=1"
+  ).bind(claim.media_asset_id).first<{vault_chat_id:string;vault_message_id:number}>();
+  if (!asset?.vault_chat_id || !asset.vault_message_id) return "failed";
+  try {
+    await telegramCall(env, "copyMessage", {
+      chat_id: chatId,
+      from_chat_id: asset.vault_chat_id,
+      message_id: asset.vault_message_id
+    });
+    await env.DB.prepare(
+      "INSERT INTO telegram_media_delivery_logs(media_asset_id,chat_id) VALUES (?,?)"
+    ).bind(claim.media_asset_id, chatId).run();
+    return "delivered";
+  } catch (error) {
+    console.error("MaseNet vault delivery failed", error instanceof Error ? error.message : "unknown error");
+    return "failed";
+  }
+}
+
 async function reserveTelegramAIRequest(env: Env, chatId: string, limit = 10): Promise<boolean> {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_ai_rate_limits (
     chat_id TEXT PRIMARY KEY,
@@ -345,6 +382,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const startMatch = text.match(/^\/start(?:@\w+)?(?:\s+([\w-]+))?$/i);
     if (startMatch) {
       const startPayload = (startMatch[1] || "").toLowerCase();
+      if (startPayload.startsWith("dl_")) {
+        const delivery = await deliverVaultDownload(env, chatId, startPayload.slice(3));
+        if (delivery === "delivered") {
+          await sendMessage(env, chatId, "✅ Your MaseNet file is ready. The published media has been delivered above.");
+        } else if (delivery === "invalid") {
+          await sendMessage(env, chatId, "This download link is invalid, expired, or has already been used. Please return to MaseNet and request a fresh download link.");
+        } else {
+          await sendMessage(env, chatId, "I couldn't deliver this file right now. Please request a fresh download link from MaseNet or try again later.");
+        }
+        return json({ ok: true, vaultDelivery: delivery });
+      }
       const disablesAlerts = startPayload === "alerts_off";
       const active = disablesAlerts ? 0 : 1;
       await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title,active=excluded.active,updated_at=datetime('now'),chat_type='private'").bind(chatId,title,active).run();
