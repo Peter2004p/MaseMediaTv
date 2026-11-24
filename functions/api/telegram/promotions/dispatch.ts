@@ -514,7 +514,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
           if (response.ok) pollDelivered++;
           else console.error("Engagement poll delivery failed:", target, response.status, (await response.text()).slice(0, 180));
         } catch (error) {
-          console.error("Engagement poll delivery failed:", target, error instanceof Error ? error.message : String(error));
+          console.error("Engagement poll delivery failed:", target, String(error));
         }
       }
       if (pollDelivered > 0) {
