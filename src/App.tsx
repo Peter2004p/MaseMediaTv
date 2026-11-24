@@ -1004,6 +1004,7 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
   return [...merged.values()].sort((a,b)=>a.season-b.season||a.episode-b.episode);
  },[title.episodes,title.type,vaultAssets]);
  const seasons=[...new Set(availableEpisodes.map(e=>e.season))];
+ useEffect(()=>{if(seasons.length&&!seasons.includes(season))setSeason(seasons[0]);},[seasons.join('|'),season]);
  const initialEpisode=title.trailerUrl?null:(availableEpisodes.find(item=>item.id===lastEpisodes[title.id])||(availableEpisodes[0]||null));
  const [season,setSeason]=useState(initialEpisode?.season||seasons[0]||1);
  const [episode,setEpisode]=useState<Episode|null>(initialEpisode);
