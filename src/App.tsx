@@ -1004,14 +1004,14 @@ function Detail({title,go,profileId,progress,setProgress,positions,setPositions,
   return [...merged.values()].sort((a,b)=>a.season-b.season||a.episode-b.episode);
  },[title.episodes,title.type,vaultAssets]);
  const seasons=[...new Set(availableEpisodes.map(e=>e.season))];
- const initialEpisode=availableEpisodes.find(item=>item.id===lastEpisodes[title.id])||availableEpisodes[0]||null;
+ const initialEpisode=availableEpisodes.find(item=>item.id===lastEpisodes[title.id])||(title.trailerUrl?null:(availableEpisodes[0]||null));
  const [season,setSeason]=useState(initialEpisode?.season||seasons[0]||1);
  const [episode,setEpisode]=useState<Episode|null>(initialEpisode);
  const watchedEpisodes=useRef(new Set<string>());
  const [autoNextSeconds,setAutoNextSeconds]=useState(0);
  const [playRequest,setPlayRequest]=useState(0);
  const nextEpisodeRef=useRef<Episode|null>(null);
- useEffect(()=>{if(!episode&&availableEpisodes.length){const first=availableEpisodes[0];setEpisode(first);setSeason(first.season)}},[availableEpisodes,episode]);
+ useEffect(()=>{if(!episode&&availableEpisodes.length&&!title.trailerUrl){const first=availableEpisodes[0];setEpisode(first);setSeason(first.season)}},[availableEpisodes,episode,title.trailerUrl]);
  useEffect(()=>{if(episode&&!availableEpisodes.some(ep=>ep.id===episode.id)){const first=availableEpisodes[0]||null;setEpisode(first);if(first)setSeason(first.season)}},[availableEpisodes,episode]);
  const choose=(e:Episode)=>{setAutoNextSeconds(0);setEpisode(e);setSeason(e.season);setProgress({...progress,[title.id]:Math.max(progress[title.id]||0,1)})};
  const toggle=()=>setSaved(saved.includes(title.id)?saved.filter(x=>x!==title.id):[...saved,title.id]);
@@ -1069,12 +1069,12 @@ function TrailerPreview({url}:{url:string}){
  const youtubeId=youtubeVideoId(safe);
  const video=/\.(mp4|webm|ogg)(?:[?#].*)?$/i.test(safe);
  if(!safe||(!youtubeId&&!video))return null;
- return <section className="playerSection maseTrailerPlayer" aria-label="Movie trailer">
+ return <div className="maseTrailerPlayer" aria-label="Movie trailer">
   <div className="playerHeading"><div><small>OFFICIAL TRAILER</small><h3>Watch trailer</h3></div></div>
   <div className="maseTrailerFrame">
    {youtubeId?<iframe title="Movie trailer" src={'https://www.youtube.com/embed/'+encodeURIComponent(youtubeId)+'?playsinline=1&rel=0'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="eager" referrerPolicy="strict-origin-when-cross-origin"/>:<video src={safe} controls playsInline preload="metadata"/>}
   </div>
- </section>;
+ </div>;
 }
 
 function PremiereAdminPanel({titles,onUploadMedia}:{titles:Title[];onUploadMedia:(file:File,folder?:string)=>Promise<{url:string;path:string;contentType:string}>}){
