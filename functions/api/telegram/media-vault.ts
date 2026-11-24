@@ -110,7 +110,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
   const category = meta.kind === "movie" ? "🎞 MOVIE" : "📺 DRAMA EPISODE";
   const episode = meta.kind === "drama" ? "\nEpisode: S" + String(meta.season).padStart(2,"0") + "E" + String(meta.episode).padStart(2,"0") : "";
-  await reply(env, adminId,
+  await reply(runtimeEnv, adminId,
     "✅ STORED IN PRIVATE TELEGRAM VAULT\n\n" + category + "\nTitle: " + meta.title +
     (meta.year ? "\nYear: " + meta.year : "") + episode + "\nQuality: " + meta.quality +
     "\nCodec: " + meta.codec + "\nFormat: " + format.toUpperCase() +
