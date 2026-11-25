@@ -319,3 +319,19 @@ button{transition:transform .22s cubic-bezier(.22,1,.36,1),opacity .22s ease,bac
 }
 @keyframes liquidNavIn{from{opacity:.35;transform:scale(.84)}to{opacity:1;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.app .liquidBottomNav button,.app .liquidBottomNav button.active:before{animation:none!important;transition:none!important}}
+
+
+/* Reference-matched liquid morphing navigation: one continuous moving glass lens */
+@media(max-width:760px){
+ .app .liquidBottomNav{isolation:isolate;overflow:hidden;justify-content:space-between;gap:0;padding:7px 8px;border-radius:30px;background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.035) 42%,rgba(12,16,30,.74));border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.045),0 18px 42px rgba(0,0,0,.52),0 3px 10px rgba(0,0,0,.28);backdrop-filter:blur(38px) saturate(220%);-webkit-backdrop-filter:blur(38px) saturate(220%); }
+ .app .liquidBottomNav:before{content:"";position:absolute;z-index:0;inset:0 8% auto;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.48),transparent);opacity:.8;pointer-events:none}
+ .app .liquidBottomNav:after{content:"";position:absolute;z-index:0;inset:0;border-radius:inherit;background:radial-gradient(ellipse at 15% -35%,rgba(255,255,255,.22),transparent 48%),radial-gradient(ellipse at 90% 130%,rgba(108,137,255,.13),transparent 48%);pointer-events:none}
+ .app .liquidNavIndicator{position:absolute;z-index:1;left:8px;top:7px;bottom:7px;width:calc((100% - 16px)/4);border-radius:23px;background:linear-gradient(155deg,rgba(255,255,255,.22),rgba(157,190,255,.12) 45%,rgba(94,235,216,.13));border:1px solid rgba(255,255,255,.24);box-shadow:inset 0 1px 1px rgba(255,255,255,.34),inset 0 -5px 12px rgba(120,160,255,.07),0 0 22px rgba(123,190,255,.16),0 5px 16px rgba(0,0,0,.18);backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);transition:transform .72s cubic-bezier(.22,1.35,.36,1),border-radius .45s cubic-bezier(.2,.8,.2,1),filter .4s ease;will-change:transform}
+ .app .liquidBottomNav button{z-index:2;flex:1;height:54px;border-radius:23px;gap:4px;color:rgba(238,242,255,.57);transition:color .3s ease,transform .38s cubic-bezier(.2,1.4,.3,1);-webkit-tap-highlight-color:transparent}
+ .app .liquidBottomNav button.active{color:#fff;transform:scale(1.035)}
+ .app .liquidBottomNav button.active svg{filter:drop-shadow(0 0 8px rgba(177,224,255,.85));stroke-width:2.15}
+ .app .liquidBottomNav button span{font-size:9px;font-weight:700;letter-spacing:.025em;text-shadow:0 1px 8px rgba(0,0,0,.22)}
+ .app .liquidBottomNav button:active{transform:scale(.88)}
+ .app .liquidBottomNav button:active svg{filter:drop-shadow(0 0 12px rgba(164,237,255,.95))}
+}
+@media(prefers-reduced-motion:reduce){.app .liquidNavIndicator{transition:none!important}}
