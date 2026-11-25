@@ -1,0 +1,204 @@
+/* MaseNet unified visual system — video/player surfaces intentionally excluded.
+   Reference direction: soft mint inventory dashboard, refined liquid glass, calm motion. */
+:root{
+  color-scheme:dark;
+  --mn-accent:#20c98a;
+  --mn-accent-strong:#0aa875;
+  --mn-accent-soft:rgba(32,201,138,.13);
+  --mn-bg:#08110e;
+  --mn-bg-elevated:#0d1914;
+  --mn-surface:rgba(20,34,28,.78);
+  --mn-surface-solid:#14221b;
+  --mn-surface-soft:rgba(255,255,255,.045);
+  --mn-text:#f1f8f4;
+  --mn-muted:#9eafa5;
+  --mn-line:rgba(220,245,232,.13);
+  --mn-shadow:0 18px 48px rgba(0,0,0,.24);
+  --mn-glass-blur:26px;
+  --mn-radius:22px;
+  --mn-ease:cubic-bezier(.2,.75,.25,1);
+}
+html{scroll-behavior:smooth}
+body{background:var(--mn-bg);color:var(--mn-text);transition:background-color .35s ease,color .35s ease}
+.app.theme-dark{
+  --accent:var(--mn-accent)!important;--accentText:#04170f!important;
+  --bg:var(--mn-bg)!important;--text:var(--mn-text)!important;--muted:var(--mn-muted)!important;
+  --glass:rgba(255,255,255,.055)!important;--glassStrong:rgba(255,255,255,.09)!important;--border:var(--mn-line)!important;
+  color:var(--mn-text)!important;background:
+    radial-gradient(ellipse at 14% -12%,rgba(32,201,138,.105),transparent 34%),
+    radial-gradient(ellipse at 100% 22%,rgba(78,154,123,.055),transparent 28%),var(--mn-bg)!important;
+}
+.app.theme-light{
+  color-scheme:light;
+  --accent:#159d70!important;--accentText:#fff!important;
+  --bg:#f2f7f4!important;--text:#17251e!important;--muted:#65776c!important;
+  --glass:rgba(255,255,255,.68)!important;--glassStrong:rgba(255,255,255,.88)!important;--border:rgba(32,76,54,.13)!important;
+  --mn-accent:#159d70;--mn-accent-strong:#087e59;--mn-accent-soft:rgba(21,157,112,.10);
+  --mn-bg:#f2f7f4;--mn-bg-elevated:#eaf2ed;--mn-surface:rgba(255,255,255,.78);--mn-surface-solid:#fff;
+  --mn-surface-soft:rgba(255,255,255,.68);--mn-text:#17251e;--mn-muted:#65776c;--mn-line:rgba(32,76,54,.13);
+  --mn-shadow:0 18px 48px rgba(29,65,45,.09);
+  background:
+    radial-gradient(ellipse at 12% -12%,rgba(32,180,124,.11),transparent 35%),
+    radial-gradient(ellipse at 100% 20%,rgba(123,188,155,.09),transparent 30%),#f2f7f4!important;
+}
+.app{color:var(--mn-text);background-color:var(--mn-bg);transition:background-color .35s ease,color .35s ease}
+.app :where(.nav,.searchDock,.side,.telegram,.aiDock,.adminCard,.settings,.profile,.notificationList,.notificationItem,.iqCategories,.iqHero,.detailHero,.playerSection,.broadcastExisting,.episodeDetailPage){
+  border-color:var(--mn-line);
+}
+.app .glass{background:var(--mn-surface);border-color:var(--mn-line);color:var(--mn-text);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),var(--mn-shadow);backdrop-filter:blur(var(--mn-glass-blur)) saturate(165%);-webkit-backdrop-filter:blur(var(--mn-glass-blur)) saturate(165%)}
+.app .nav.maseReferenceHeader{
+  width:min(1420px,calc(100% - 32px))!important;min-height:66px!important;margin:12px auto 0!important;padding:9px 15px!important;
+  border:1px solid var(--mn-line)!important;border-radius:25px!important;
+  background:linear-gradient(115deg,color-mix(in srgb,var(--mn-surface-solid) 82%,transparent),color-mix(in srgb,var(--mn-surface) 92%,transparent))!important;
+  box-shadow:0 14px 40px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.22)!important;
+  backdrop-filter:blur(30px) saturate(180%)!important;-webkit-backdrop-filter:blur(30px) saturate(180%)!important;
+}
+.app .nav .brandName{color:var(--mn-text)!important;font-weight:850;letter-spacing:-.045em}
+.app .nav .brandLogo{filter:drop-shadow(0 3px 9px rgba(32,201,138,.18))}
+.app .nav .navActions>button,.app .nav .maseSearchToggle,.app .nav .maseHeaderSearch{
+  border:1px solid var(--mn-line)!important;border-radius:16px!important;background:var(--mn-surface-soft)!important;color:var(--mn-text)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 5px 16px rgba(0,0,0,.07)!important;
+  transition:transform .28s var(--mn-ease),background .28s,border-color .28s,box-shadow .28s!important;
+}
+.app .nav .navActions>button:hover,.app .nav .maseSearchToggle:hover{transform:translateY(-2px);background:var(--mn-accent-soft)!important;border-color:color-mix(in srgb,var(--mn-accent) 40%,var(--mn-line))!important}
+.app .nav .maseHeaderSearch input{color:var(--mn-text)!important}
+.app .nav .maseHeaderSearch input::placeholder{color:var(--mn-muted)!important}
+.app .nav nav button,.app .icon{color:var(--mn-muted)}
+.app .nav nav button:hover,.app .icon:hover{color:var(--mn-text);background:var(--mn-accent-soft)}
+.app .masenetLiquidDock{
+  width:min(570px,calc(100% - 28px))!important;min-height:76px!important;padding:8px!important;gap:7px!important;
+  border:1px solid color-mix(in srgb,var(--mn-line) 120%,transparent)!important;border-radius:29px!important;
+  background:linear-gradient(120deg,color-mix(in srgb,var(--mn-surface-solid) 82%,transparent),color-mix(in srgb,var(--mn-surface) 94%,transparent))!important;
+  box-shadow:0 20px 52px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.28)!important;
+  backdrop-filter:blur(34px) saturate(185%)!important;-webkit-backdrop-filter:blur(34px) saturate(185%)!important;
+  transition:background .35s ease,border-color .35s ease,box-shadow .35s ease!important;
+}
+.app .masenetLiquidDock>button{border-radius:20px!important;color:var(--mn-muted)!important;transition:transform .35s var(--mn-ease),color .25s,background .3s,border-color .3s!important}
+.app .masenetLiquidDock>button:before{background:linear-gradient(145deg,rgba(255,255,255,.22),var(--mn-accent-soft) 55%,rgba(255,255,255,.04))!important}
+.app .masenetLiquidDock>button.active{color:var(--mn-text)!important;border-color:color-mix(in srgb,var(--mn-accent) 34%,var(--mn-line))!important}
+.app .masenetLiquidDock>button.active:before{background:linear-gradient(145deg,color-mix(in srgb,var(--mn-accent) 20%,transparent),rgba(255,255,255,.08))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.27),0 5px 18px rgba(0,0,0,.08)!important}
+.app .masenetLiquidDock>button.active:after{background:linear-gradient(90deg,transparent,var(--mn-accent),transparent)!important}
+.app .masenetLiquidDock>button:hover>svg{transform:translateY(-2px) scale(1.07)}
+.app .masenetLiquidDock>button:active{transform:scale(.94)!important}
+.app .primary,.app .aiSend,.app .playBig,.app .iqPlay{
+  border-radius:15px!important;background:linear-gradient(135deg,color-mix(in srgb,var(--mn-accent) 90%,white),var(--mn-accent-strong))!important;color:#fff!important;
+  border:1px solid color-mix(in srgb,var(--mn-accent) 72%,white)!important;
+  box-shadow:0 8px 22px color-mix(in srgb,var(--mn-accent) 20%,transparent),inset 0 1px 0 rgba(255,255,255,.24)!important;
+  transition:transform .28s var(--mn-ease),filter .25s,box-shadow .28s!important;
+}
+.app .primary:hover,.app .secondary:hover{transform:translateY(-2px);filter:brightness(1.04)}
+.app .primary:active,.app .secondary:active{transform:scale(.97)}
+.app .secondary,.app .settings button,.app .heroMini,.app .rowMore{
+  border:1px solid var(--mn-line)!important;border-radius:15px!important;background:var(--mn-surface-soft)!important;color:var(--mn-text)!important;
+  transition:transform .28s var(--mn-ease),background .25s,border-color .25s,box-shadow .25s!important;
+}
+.app .settings,.app .side,.app .aiPanel,.app .profile,.app .adminCard,.app .broadcastExisting{
+  border:1px solid var(--mn-line)!important;border-radius:24px!important;background:var(--mn-surface)!important;
+  box-shadow:var(--mn-shadow),inset 0 1px 0 rgba(255,255,255,.13)!important;
+  backdrop-filter:blur(var(--mn-glass-blur)) saturate(165%);-webkit-backdrop-filter:blur(var(--mn-glass-blur)) saturate(165%);
+}
+.app .settings label,.app .adminSectionHead h2,.app .adminHead h1,.app .rowHead h2,.app .iqRowHead h2{color:var(--mn-text)}
+.app .settings p,.app .settings small,.app .adminSectionHead p,.app .adminHead p{color:var(--mn-muted)}
+.app .formGrid input,.app .formGrid select,.app .formGrid textarea,.app .bulk input,.app .bulk textarea,.app .ai input{
+  border:1px solid var(--mn-line)!important;border-radius:13px!important;background:var(--mn-surface-soft)!important;color:var(--mn-text)!important;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.04)!important;
+}
+.app input::placeholder,.app textarea::placeholder{color:var(--mn-muted)!important;opacity:.8}
+.app .tabbar{border-color:var(--mn-line)}
+.app .tabbar button{border-radius:12px!important;color:var(--mn-muted)}
+.app .tabbar .tabActive{background:var(--mn-accent-soft)!important;color:var(--mn-accent)!important}
+.app .iqHome{color:var(--mn-text);background:radial-gradient(ellipse at 12% 0%,var(--mn-accent-soft),transparent 38%)}
+.app .iqHome .iqHero{
+  border-radius:28px!important;border:1px solid var(--mn-line)!important;
+  box-shadow:0 26px 68px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.15)!important;
+}
+.app .iqHome .iqCategories{border:1px solid var(--mn-line)!important;border-radius:19px!important;background:var(--mn-surface)!important;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.app .iqHome .iqCategories button{border-radius:13px!important}
+.app .iqHome .iqCategories button.active{background:var(--mn-accent)!important;color:#fff!important}
+.app .iqHome .iqKicker,.app .eyebrow{color:var(--mn-accent)!important}
+.app .iqHome .iqCard{border-radius:17px!important;transition:transform .35s var(--mn-ease),filter .3s!important}
+.app .iqHome .iqCard:hover{transform:translateY(-4px)}
+.app .iqHome .iqPoster{border-radius:15px!important;box-shadow:0 12px 28px rgba(0,0,0,.13)!important}
+.app .searchDock{border:1px solid var(--mn-line)!important;border-radius:24px!important;background:var(--mn-surface)!important;box-shadow:var(--mn-shadow)!important;backdrop-filter:blur(28px) saturate(175%)!important}
+.app .searchDock input{color:var(--mn-text)!important}
+.app .aiDock,.app .homeFloat,.app .telegram{
+  border:1px solid var(--mn-line)!important;background:var(--mn-surface)!important;color:var(--mn-text)!important;
+  box-shadow:0 14px 36px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.24)!important;
+  backdrop-filter:blur(26px) saturate(170%)!important;-webkit-backdrop-filter:blur(26px) saturate(170%)!important;
+  transition:transform .35s var(--mn-ease),box-shadow .3s,background .3s!important;
+}
+.app .aiDock:hover,.app .homeFloat:hover,.app .telegram:hover{transform:translateY(-4px)}
+.app .aiDock{border-color:color-mix(in srgb,var(--mn-accent) 36%,var(--mn-line))!important;color:var(--mn-accent)!important}
+.app .telegram a{color:var(--mn-accent)!important}
+.app .detailHero{border-radius:28px!important;border-color:var(--mn-line)!important}
+.app .detail>.back,.app .seasonTabs button,.app .episodeGrid .episode{border-radius:14px!important}
+.app .detail>.back{border-color:var(--mn-line)!important;background:var(--mn-surface-soft)!important;color:var(--mn-text)!important}
+.app .seasonTabs button.activeTab{background:var(--mn-accent)!important;color:#fff!important;border-color:var(--mn-accent)!important}
+.app .episodeGrid .episode.selected{border-color:var(--mn-accent)!important;background:var(--mn-accent-soft)!important}
+.app .themeGrid.settingsThemeCompact{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+.app .settingsThemeCompact button{min-height:54px!important;border-radius:16px!important}
+.app .settingsThemeCompact button.chosen{border-color:var(--mn-accent)!important;background:var(--mn-accent-soft)!important}
+.app .themeSwatch.dark{background:linear-gradient(135deg,#08110e,#20c98a)!important}
+.app .themeSwatch.light{background:linear-gradient(135deg,#f5faf7,#159d70)!important}
+.app .settings .experienceChoices,.app .settings label:has(+ .experienceChoices),
+.app .maseCustomizeSettings .customizeToggleRow+.customizeToggleRow,
+.app .maseCustomizeSettings .customizeWeather{display:none!important}
+.app .maseCustomizeSettings .customizePreview{border:1px solid var(--mn-line);border-radius:18px;background:var(--mn-surface-soft)}
+.app .maseCustomizeSettings .customizePreview b{color:var(--mn-text)}
+.app .maseCustomizeSettings .customizePreview small{color:var(--mn-muted)}
+.app .customizeFooterActions{gap:10px}
+.app .customizeFooterActions button{min-height:46px;border-radius:15px!important}
+.app .profileProPrivacy,.app .notificationItem,.app .adminItem,.app .layoutRow{border-color:var(--mn-line)!important}
+.app .notificationItem{background:var(--mn-surface-soft)!important;border-radius:16px!important}
+.app .aiHeader,.app .aiComposer{border-color:var(--mn-line)!important}
+.app .aiBubble.assistant{background:var(--mn-surface-soft)!important;color:var(--mn-text)!important}
+.app .aiBubble.user{background:var(--mn-accent)!important;color:#fff!important}
+.app :focus-visible{outline-color:var(--mn-accent)!important;outline-offset:3px}
+.app ::selection{background:color-mix(in srgb,var(--mn-accent) 30%,transparent);color:var(--mn-text)}
+.app .backdrop{background:rgba(2,10,6,.42)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+/* Light surfaces: make every surrounding page readable, while leaving the playback surface alone. */
+.app.theme-light .iqHome .iqHero{background:linear-gradient(120deg,#eaf4ee,#fff 65%,#e5f2eb)!important;color:#17251e!important;box-shadow:0 22px 56px rgba(29,65,45,.10),inset 0 1px 0 #fff!important}
+.app.theme-light .iqHome .iqHeroShade{background:linear-gradient(90deg,rgba(245,250,247,.97),rgba(245,250,247,.76),rgba(245,250,247,.20))!important}
+.app.theme-light .iqHome .iqHero h1,.app.theme-light .iqHome .iqHero p,.app.theme-light .iqHome .iqCard>b,.app.theme-light .iqHome .iqRowHead h2{color:#17251e!important}
+.app.theme-light .iqHome .iqHero p,.app.theme-light .iqHome .iqCard>small{color:#65776c!important}
+.app.theme-light .iqHome .iqCategories{background:rgba(255,255,255,.78)!important}
+.app.theme-light .iqHome .iqCategories button{color:#52665a!important}
+.app.theme-light .iqHome .iqCategories button.active{color:#fff!important}
+.app.theme-light .iqHome .iqPoster{box-shadow:0 10px 24px rgba(28,66,44,.13)!important}
+.app.theme-light .nav .navActions>button,.app.theme-light .nav .maseSearchToggle{color:#365447!important}
+.app.theme-light .settings,.app.theme-light .side,.app.theme-light .adminCard,.app.theme-light .profile,.app.theme-light .aiPanel,.app.theme-light .broadcastExisting{
+  background:rgba(255,255,255,.82)!important;color:#17251e!important;box-shadow:0 18px 48px rgba(29,65,45,.10),inset 0 1px 0 #fff!important;
+}
+.app.theme-light .settings button,.app.theme-light .secondary,.app.theme-light .tabbar button,.app.theme-light .episodeGrid .episode{
+  color:#263b30!important;background:rgba(244,249,246,.88)!important;border-color:rgba(32,76,54,.14)!important;
+}
+.app.theme-light .settings .chosen,.app.theme-light .tabbar .tabActive,.app.theme-light .seasonTabs button.activeTab{background:rgba(21,157,112,.13)!important;color:#087e59!important}
+.app.theme-light .formGrid input,.app.theme-light .formGrid select,.app.theme-light .formGrid textarea,.app.theme-light .bulk input,.app.theme-light .bulk textarea,.app.theme-light .ai input{
+  background:#f7faf8!important;color:#17251e!important;border-color:rgba(32,76,54,.16)!important;
+}
+.app.theme-light .searchDock{background:rgba(255,255,255,.9)!important}
+.app.theme-light .searchDockResult,.app.theme-light .searchDockNoResults{color:#17251e!important}
+.app.theme-light .detailHero{background:linear-gradient(125deg,#eaf3ed,#fff 60%,#e8f2ec)!important;color:#17251e!important;box-shadow:0 20px 52px rgba(29,65,45,.10)!important}
+.app.theme-light .detailHero h1,.app.theme-light .detailHero p,.app.theme-light .detailHero .chips span{color:#263b30!important}
+.app.theme-light .detailHero .chips span{background:rgba(255,255,255,.7)!important;border-color:rgba(32,76,54,.13)!important}
+.app.theme-light .aiBubble.assistant{background:#edf4ef!important;color:#17251e!important}
+.app.theme-light .aiComposer{background:#f3f8f5!important}
+.app.theme-light .notificationItem{color:#17251e!important}
+.app.theme-light .adminHead h1,.app.theme-light .adminSectionHead h2,.app.theme-light .adminItem b,.app.theme-light .layoutRow b{color:#17251e!important}
+.app.theme-light .adminItem,.app.theme-light .layoutRow{border-color:rgba(32,76,54,.12)!important}
+.app.theme-light .episodeGrid .episode.selected{background:rgba(21,157,112,.12)!important;border-color:#159d70!important}
+@keyframes mnSoftEnter{from{opacity:0;transform:translateY(12px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+.app .settings,.app .side,.app .notificationList,.app .iqSearchResults{animation:mnSoftEnter .34s var(--mn-ease) both}
+@media(max-width:760px){
+ .app .nav.maseReferenceHeader{width:calc(100% - 18px)!important;margin:7px 9px 0!important;min-height:57px!important;padding:6px 9px!important;border-radius:21px!important}
+ .app .masenetLiquidDock{width:calc(100% - 22px)!important;min-height:70px!important;bottom:max(9px,env(safe-area-inset-bottom,0px))!important;border-radius:25px!important;padding:6px!important}
+ .app .masenetLiquidDock>button{height:56px!important;min-height:56px!important;border-radius:17px!important}
+ .app .masenetLiquidDock>button>span{font-size:9px!important}
+ .app .page{padding-bottom:calc(118px + env(safe-area-inset-bottom))!important}
+ .app .iqHome{padding-left:10px!important;padding-right:10px!important}
+ .app .iqHome .iqHero{border-radius:20px!important}
+ .app .settings{border-radius:22px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .app,.app *{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
