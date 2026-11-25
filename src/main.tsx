@@ -81,3 +81,4 @@ if ('serviceWorker' in navigator && !Capacitor.isNativePlatform() && !telegramAp
 }
 import './liquid-navbar-redesign.css';
 import './masenet-daylight-ios-dock.css';
+import './liquid-glass-upgrade.css';
