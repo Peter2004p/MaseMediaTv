@@ -1,0 +1,167 @@
+/* MaseNet final theme + iOS-style liquid dock layer.
+   Loaded last intentionally so legacy styles cannot repaint Light mode dark.
+   Player markup and player controls are excluded from this layer. */
+:root:has(.app.theme-light){
+  color-scheme:light!important;
+  --bg:#f4f8f5!important;--text:#17271f!important;--muted:#66786d!important;
+}
+html:has(.app.theme-light),body:has(.app.theme-light),#root:has(.app.theme-light){
+  background:#f4f8f5!important;color:#17271f!important;
+}
+html:has(.app.theme-dark),body:has(.app.theme-dark),#root:has(.app.theme-dark){
+  background:#08110e!important;color:#f1f8f4!important;
+}
+.app.theme-light{
+  color-scheme:light!important;
+  --accent:#149b6e!important;--accentText:#fff!important;
+  --bg:#f4f8f5!important;--text:#17271f!important;--muted:#66786d!important;
+  --glass:rgba(255,255,255,.78)!important;--glassStrong:rgba(255,255,255,.94)!important;
+  --border:rgba(33,78,55,.14)!important;
+  --mn-accent:#149b6e!important;--mn-accent-strong:#087c57!important;
+  --mn-accent-soft:rgba(20,155,110,.11)!important;--mn-bg:#f4f8f5!important;
+  --mn-bg-elevated:#eaf2ed!important;--mn-surface:#fff!important;
+  --mn-surface-solid:#fff!important;--mn-surface-glass:rgba(255,255,255,.88)!important;
+  --mn-surface-soft:rgba(255,255,255,.76)!important;--mn-text:#17271f!important;
+  --mn-muted:#66786d!important;--mn-line:rgba(33,78,55,.14)!important;
+  --mn-shadow:0 12px 34px rgba(32,68,47,.09)!important;
+  background:#f4f8f5!important;color:#17271f!important;
+}
+.app.theme-dark{
+  color-scheme:dark!important;
+  --mn-accent:#28d49a!important;--mn-accent-strong:#0ca978!important;
+  --mn-accent-soft:rgba(40,212,154,.14)!important;--mn-bg:#08110e!important;
+  --mn-surface:#14221b!important;--mn-surface-solid:#14221b!important;
+  --mn-surface-glass:rgba(18,31,25,.88)!important;--mn-surface-soft:rgba(255,255,255,.055)!important;
+  --mn-text:#f1f8f4!important;--mn-muted:#a1b2a8!important;
+  --mn-line:rgba(220,245,232,.14)!important;--mn-shadow:0 16px 42px rgba(0,0,0,.24)!important;
+}
+.app.theme-light :where(.page,.iqHome,.content,.mainContent,.pageContent,.settingsPage,.adminPage){
+  background:transparent!important;color:#17271f!important;
+}
+.app.theme-light :where(.settings,.side,.profile,.adminCard,.broadcastExisting,.notificationList,.notificationItem,.searchDock,.searchDockResults,.searchDockNoResults,.tabbar,.episodeListItem,.layoutRow,.adminItem,.bulk,.formGrid,.aiPanel,.aiHeader,.aiComposer,.maseCustomizeSettings,.maseAppInstallGuide,.maseAppDownloadHero,.maseAppPromo,.maseAppSafetyNote,.iqCategories,.iqFilterControls,.detailHero,.adminSection,.adminToolbar,.adminTable,.settingsSection,.settingsGroup,.modal,.dialog,.sheet,.glass){
+  background-color:rgba(255,255,255,.9)!important;color:#17271f!important;
+  border-color:rgba(33,78,55,.14)!important;
+  box-shadow:0 12px 34px rgba(32,68,47,.085),inset 0 1px 0 rgba(255,255,255,.96)!important;
+}
+.app.theme-light :where(h1,h2,h3,h4,h5,label,b,strong,.title,.heading,.adminHead,.adminSectionHead,.rowHead,.iqRowHead,.sideHead){
+  color:#17271f!important;
+}
+.app.theme-light :where(p,small,.muted,.description,.subtle,.helper,.secondaryText,.adminHead p,.adminSectionHead p,.settings p){
+  color:#66786d!important;
+}
+.app.theme-light :where(input,textarea,select){
+  color:#17271f!important;background:#f7faf8!important;border-color:rgba(33,78,55,.17)!important;
+}
+.app.theme-light :where(input,textarea,select)::placeholder{color:#829188!important;opacity:1!important}
+.app.theme-light :where(.secondary,.settings button,.tabbar button,.heroMini,.rowMore,.detail>.back,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle){
+  color:#263b30!important;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(239,246,241,.9))!important;
+  border-color:rgba(33,78,55,.15)!important;box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(31,67,46,.06)!important;
+}
+.app.theme-light :where(.primary,.aiSend,.playBig,.iqPlay,.iqCategories button.active,.seasonTabs button.activeTab){
+  color:#fff!important;background:linear-gradient(135deg,#1ab783,#087c57)!important;border-color:rgba(8,124,87,.42)!important;
+}
+.app.theme-light :where(.tabbar .tabActive,.settings .chosen,.themeGrid button.chosen,.episodeGrid .episode.selected){
+  color:#087c57!important;background:rgba(20,155,110,.12)!important;border-color:rgba(20,155,110,.42)!important;
+}
+.app.theme-light .iqHome{background:transparent!important;color:#17271f!important}
+.app.theme-light .iqHome .iqHeroShade{
+  background:linear-gradient(90deg,rgba(244,249,246,.94),rgba(244,249,246,.72),rgba(244,249,246,.12))!important;
+}
+.app.theme-light .iqHome .iqHero h1,.app.theme-light .iqHome .iqHero p,
+.app.theme-light .iqHome .iqRowHead h2,.app.theme-light .iqHome .iqCard>b{color:#17271f!important}
+.app.theme-light .iqHome .iqHero p,.app.theme-light .iqHome .iqCard>small{color:#66786d!important}
+.app.theme-light .aiBubble.assistant{background:#edf4ef!important;color:#17271f!important}
+.app.theme-light .aiBubble.user{color:#fff!important}
+.app.theme-light .backdrop{background:rgba(25,43,33,.24)!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important}
+
+/* Floating iOS liquid-glass dock: separate glass chassis and individual glass keys. */
+.app .masenetLiquidDock{
+  position:fixed!important;left:50%!important;bottom:max(12px,env(safe-area-inset-bottom,0px))!important;
+  transform:translateX(-50%)!important;z-index:1200!important;isolation:isolate!important;
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;align-items:center!important;
+  width:min(540px,calc(100% - 26px))!important;min-height:74px!important;padding:7px!important;gap:5px!important;
+  overflow:visible!important;border:1px solid rgba(255,255,255,.24)!important;border-radius:28px!important;
+  background:
+    radial-gradient(130% 150% at 12% -45%,rgba(255,255,255,.42),transparent 58%),
+    linear-gradient(135deg,rgba(32,48,58,.76),rgba(13,23,32,.72) 52%,rgba(38,34,52,.72))!important;
+  -webkit-backdrop-filter:blur(28px) saturate(190%)!important;backdrop-filter:blur(28px) saturate(190%)!important;
+  box-shadow:0 18px 48px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.42),inset 0 -1px 0 rgba(255,255,255,.08)!important;
+  transition:background .28s ease,border-color .28s ease,box-shadow .28s ease!important;
+}
+.app.theme-light .masenetLiquidDock{
+  border-color:rgba(255,255,255,.92)!important;
+  background:
+    radial-gradient(130% 150% at 12% -45%,rgba(255,255,255,.98),transparent 58%),
+    linear-gradient(135deg,rgba(255,255,255,.88),rgba(240,248,243,.78) 52%,rgba(232,243,237,.84))!important;
+  box-shadow:0 16px 42px rgba(31,73,48,.17),inset 0 1px 0 #fff,inset 0 -1px 0 rgba(32,84,56,.06)!important;
+}
+.app .masenetLiquidDock:before{
+  content:""!important;position:absolute!important;inset:1px!important;border-radius:inherit!important;pointer-events:none!important;z-index:0!important;
+  background:linear-gradient(115deg,rgba(255,255,255,.26),transparent 35%,rgba(255,255,255,.08) 70%,transparent)!important;
+  opacity:1!important;animation:none!important;
+}
+.app .masenetLiquidDock:after{pointer-events:none!important;z-index:0!important}
+.app .masenetLiquidDock>button{
+  position:relative!important;isolation:isolate!important;overflow:hidden!important;z-index:1!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  min-width:0!important;min-height:58px!important;height:58px!important;padding:5px 2px!important;gap:4px!important;
+  border:1px solid transparent!important;border-radius:19px!important;background:transparent!important;
+  color:rgba(246,251,255,.78)!important;box-shadow:none!important;text-shadow:none!important;
+  font-size:10px!important;font-weight:700!important;line-height:1!important;
+  transition:background .22s ease,color .22s ease,border-color .22s ease,transform .22s cubic-bezier(.2,.8,.2,1)!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.app.theme-light .masenetLiquidDock>button{color:#4e6658!important}
+.app .masenetLiquidDock>button:before{
+  content:""!important;position:absolute!important;inset:0!important;z-index:-1!important;border-radius:inherit!important;
+  border:1px solid rgba(255,255,255,.2)!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.25),rgba(255,255,255,.035) 55%,rgba(140,205,255,.12))!important;
+  opacity:0!important;transform:scale(.82)!important;filter:none!important;
+  transition:opacity .22s ease,transform .25s cubic-bezier(.2,.8,.2,1)!important;
+}
+.app.theme-light .masenetLiquidDock>button:before{
+  border-color:rgba(255,255,255,.92)!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(223,241,230,.68) 62%,rgba(255,255,255,.52))!important;
+}
+.app .masenetLiquidDock>button.active{color:#fff!important;border-color:rgba(255,255,255,.38)!important}
+.app .masenetLiquidDock>button.active:before{
+  opacity:1!important;transform:scale(1)!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.34),rgba(111,194,245,.23) 52%,rgba(255,255,255,.08))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.48),0 5px 16px rgba(0,0,0,.13)!important;
+}
+.app.theme-light .masenetLiquidDock>button.active{color:#087c57!important;border-color:rgba(20,155,110,.25)!important}
+.app.theme-light .masenetLiquidDock>button.active:before{
+  background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(194,235,211,.82) 58%,rgba(255,255,255,.76))!important;
+  box-shadow:inset 0 1px 0 #fff,0 5px 16px rgba(26,91,56,.11)!important;
+}
+.app .masenetLiquidDock>button:after{
+  content:""!important;position:absolute!important;left:50%!important;top:3px!important;width:30%!important;height:2px!important;
+  border-radius:99px!important;transform:translateX(-50%) scaleX(.2)!important;opacity:0!important;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent)!important;transition:opacity .2s,transform .2s!important;
+}
+.app .masenetLiquidDock>button.active:after{opacity:.9!important;transform:translateX(-50%) scaleX(1)!important}
+.app .masenetLiquidDock>button>svg{width:21px!important;height:21px!important;filter:drop-shadow(0 2px 5px rgba(0,0,0,.12))!important;transition:transform .22s ease!important}
+.app .masenetLiquidDock>button>span{font-size:9px!important;font-weight:760!important;letter-spacing:.015em!important}
+.app .masenetLiquidDock>button:active{transform:scale(.92)!important}
+.app .masenetLiquidDock>button:hover>svg{transform:translateY(-2px)!important}
+.app.theme-light .masenetLiquidDock .dockHomeLogo{filter:drop-shadow(0 2px 5px rgba(24,83,51,.12))!important}
+.app .masenetLiquidDock .dockNotificationBadge{z-index:4!important}
+.app .masenetLiquidDock .dockYouTube .dockYoutubeMark{width:25px!important;height:25px!important}
+.app .masenetLiquidDock .dockYouTube .dockYoutubeMark img{width:100%!important;height:100%!important;object-fit:contain!important}
+
+/* Consistent iOS-like tactile buttons outside the playback controls. */
+.app :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle,.heroMini,.rowMore){
+  min-height:40px;border-radius:16px!important;
+  transition:transform .2s cubic-bezier(.2,.8,.2,1),background .2s ease,border-color .2s ease,box-shadow .2s ease!important;
+}
+.app :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle,.heroMini,.rowMore):active{transform:scale(.97)!important}
+@media(max-width:760px){
+  .app .masenetLiquidDock{width:calc(100% - 22px)!important;min-height:70px!important;padding:6px!important;gap:3px!important;border-radius:26px!important;bottom:max(8px,env(safe-area-inset-bottom,0px))!important}
+  .app .masenetLiquidDock>button{height:55px!important;min-height:55px!important;border-radius:17px!important;gap:4px!important}
+  .app .masenetLiquidDock>button>svg{width:20px!important;height:20px!important}
+  .app .masenetLiquidDock>button>span{font-size:8.5px!important}
+  .app .page{padding-bottom:calc(118px + env(safe-area-inset-bottom))!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .app .masenetLiquidDock,.app .masenetLiquidDock>button,.app :where(.primary,.secondary,.settings button,.tabbar button){transition:none!important}
+}
