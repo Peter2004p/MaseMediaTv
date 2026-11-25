@@ -187,3 +187,30 @@ body:has(.app.theme-dark){color-scheme:dark!important}
  .app .masenetLiquidDock,.app .masenetLiquidDock>.dockItem,.app .masenetLiquidDock .dockIconShell,
  .app :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button){transition:none!important}
 }
+
+
+/* Homepage-specific light/dark corrections for legacy hard-coded dark surfaces. */
+.app.theme-light .iqHome .iqHeroShade{
+  background:linear-gradient(90deg,rgba(247,251,248,.97) 0%,rgba(247,251,248,.84) 44%,rgba(247,251,248,.12) 100%),linear-gradient(0deg,rgba(244,248,245,.94),transparent 70%)!important;
+}
+.app.theme-light .iqHome .iqTags span{color:#405449!important;background:rgba(255,255,255,.82)!important;border-color:rgba(27,70,45,.14)!important}
+.app.theme-light .iqHome .iqTags span:first-child{color:#087f58!important;background:#e4f5eb!important;border-color:#b8e3ca!important}
+.app.theme-light .iqHome .iqHeroRail{background:rgba(255,255,255,.78)!important;border-color:rgba(26,65,43,.14)!important;box-shadow:0 8px 24px rgba(28,65,43,.09)!important}
+.app.theme-light .iqHome .iqHeroRail :where(b,small){color:#263a2e!important}
+.app.theme-light .iqHome .iqHeroActions .secondary{background:#fff!important;color:#24382b!important;border-color:rgba(28,75,48,.15)!important}
+.app.theme-light .iqHome .iqCategories{background:rgba(255,255,255,.90)!important;border-color:rgba(26,65,43,.13)!important;box-shadow:0 8px 24px rgba(28,65,43,.07)!important}
+.app.theme-light .iqHome .iqCategories button{color:#52665a!important}
+.app.theme-light .iqHome .iqCategories button.active,.app.theme-light .iqHome .iqCategories button:hover{background:#087f58!important;color:#fff!important}
+.app.theme-light .iqHome .iqRowHead h2,.app.theme-light .iqHome .iqCard>b{color:#17251d!important}
+.app.theme-light .iqHome .iqCard>small{color:#6d7c72!important}
+.app.theme-light .iqHome .rowMore{background:#fff!important;color:#385143!important;border-color:rgba(28,75,48,.14)!important}
+.app.theme-dark .iqHome .iqHeroShade{background:linear-gradient(90deg,rgba(7,11,9,.96) 0%,rgba(7,11,9,.72) 45%,rgba(7,11,9,.08) 100%),linear-gradient(0deg,rgba(5,8,6,.88),transparent 70%)!important}
+.app.theme-dark .iqHome .iqCategories{background:rgba(16,24,19,.92)!important;border-color:rgba(255,255,255,.10)!important}
+.app.theme-dark .iqHome .iqRowHead h2,.app.theme-dark .iqHome .iqCard>b{color:#edf5ef!important}
+.app.theme-dark .iqHome .iqCard>small{color:#9caca1!important}
+
+/* Admin, profile and side-sheet text stay readable in either palette. */
+.app.theme-light :where(.sideHead h2,.profileProIdentity h3,.profileProIdentity b,.adminCard h2,.adminCard h3,.adminSectionHead h2,.adminItem b,.layoutRow b,.settings b,.appearanceThemeHeading b){color:#17251d!important}
+.app.theme-dark :where(.sideHead h2,.profileProIdentity h3,.profileProIdentity b,.adminCard h2,.adminCard h3,.adminSectionHead h2,.adminItem b,.layoutRow b,.settings b,.appearanceThemeHeading b){color:#edf5ef!important}
+.app.theme-light .backdrop{background:rgba(28,43,33,.24)!important}
+.app.theme-dark .backdrop{background:rgba(0,0,0,.55)!important}
