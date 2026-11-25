@@ -214,3 +214,33 @@ body:has(.app.theme-dark){color-scheme:dark!important}
 .app.theme-dark :where(.sideHead h2,.profileProIdentity h3,.profileProIdentity b,.adminCard h2,.adminCard h3,.adminSectionHead h2,.adminItem b,.layoutRow b,.settings b,.appearanceThemeHeading b){color:#edf5ef!important}
 .app.theme-light .backdrop{background:rgba(28,43,33,.24)!important}
 .app.theme-dark .backdrop{background:rgba(0,0,0,.55)!important}
+
+
+/* FOLLOW-UP FIX: normalize legacy green/dark text in Light mode without touching the video player. */
+.app.theme-light :where(h1,h2,h3,h4,h5,h6,p,span,b,strong,small,label,legend,li,dt,dd,figcaption,summary,a,button,.muted,.eyebrow,.sectionTitle,.sectionSubtitle,.iqRowHead,.iqCard>small,.iqCard>b,.adminItem,.layoutRow,.settings,.profile,.sideHead,.formGrid,.broadcastExisting,.notificationItem,.searchDock,.tabbar,.iqCategories){
+  color:#202923!important;
+}
+.app.theme-light :where(.muted,small,.caption,.subtitle,.description,.helperText,.hint,.eyebrow,.sectionSubtitle,.iqCard>small){
+  color:#657168!important;
+}
+.app.theme-light :where(.primary,.cta,.active,.selected,.tabActive,.appearanceThemeCurrent,.appearanceThemeCheck,.dockNotificationBadge){
+  color:#fff!important;
+}
+.app.theme-light .masenetLiquidDock .dockHomeOnly .dockIconShell{
+  background:transparent!important;border:0!important;box-shadow:none!important;
+}
+.app.theme-light .masenetLiquidDock .dockHomeOnly.active .dockIconShell{
+  background:transparent!important;border:0!important;box-shadow:none!important;
+}
+.app .masenetLiquidDock .dockHomeOnly .dockIconShell{
+  background:transparent!important;border:0!important;box-shadow:none!important;
+}
+.app .masenetLiquidDock .dockYouTube .dockIconShell{
+  width:39px;height:36px;display:grid;place-items:center;background:transparent!important;border:0!important;box-shadow:none!important;
+}
+.app .masenetLiquidDock .dockYouTube .dockIconShell svg{
+  display:block!important;width:24px!important;height:24px!important;flex:none!important;
+}
+.app.theme-light .masenetLiquidDock .dockYouTube{color:#d92332!important}
+.app.theme-dark .masenetLiquidDock .dockYouTube{color:#ff626d!important}
+.app .masenetLiquidDock .dockDrama .dockIconShell{background:transparent!important;border:0!important;box-shadow:none!important}
