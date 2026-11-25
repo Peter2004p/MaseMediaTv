@@ -12,6 +12,7 @@ import './mobile-experience.css';
 import './design-refinement.css';
 import './ios-liquid-glass-quality.css';
 import './liquid-navbar-redesign.css';
+import './masenet-visual-system.css';
 
 type ErrorBoundaryState = { hasError: boolean; message: string };
 
