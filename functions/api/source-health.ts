@@ -62,7 +62,15 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   const combinedSources: SourceInput[] = [];
   const seenUrls = new Set<string>();
-  for (const source of [...catalogueSources, ...streamManagerSources]) {
+  // Reserve space for both groups so a full catalogue batch cannot hide
+  // every Stream Manager URL from the same diagnostic run.
+  const orderedSources = [
+    ...catalogueSources.slice(0, 15),
+    ...streamManagerSources.slice(0, 15),
+    ...catalogueSources.slice(15),
+    ...streamManagerSources.slice(15)
+  ];
+  for (const source of orderedSources) {
     const key = typeof source.url === "string" ? source.url.trim() : "";
     if (!key || seenUrls.has(key)) continue;
     seenUrls.add(key);
