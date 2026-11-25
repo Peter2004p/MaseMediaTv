@@ -216,22 +216,23 @@ body:has(.app.theme-dark){color-scheme:dark!important}
 .app.theme-dark .backdrop{background:rgba(0,0,0,.55)!important}
 
 
-/* FOLLOW-UP FIX: normalize legacy green/dark text in Light mode without touching the video player. */
-.app.theme-light :where(h1,h2,h3,h4,h5,h6,p,span,b,strong,small,label,legend,li,dt,dd,figcaption,summary,a,button,.muted,.eyebrow,.sectionTitle,.sectionSubtitle,.iqRowHead,.iqCard>small,.iqCard>b,.adminItem,.layoutRow,.settings,.profile,.sideHead,.formGrid,.broadcastExisting,.notificationItem,.searchDock,.tabbar,.iqCategories){
-  color:#202923!important;
+/* Targeted Light-mode text contrast. Keep dark-surface text rules intact. */
+.app.theme-light .iqHome .iqHeroCopy,
+.app.theme-light .iqHome .iqHeroCopy :where(h1,h2,h3,p,b,strong,span,small){
+  color:#17251d!important;
 }
-.app.theme-light :where(.muted,small,.caption,.subtitle,.description,.helperText,.hint,.eyebrow,.sectionSubtitle,.iqCard>small){
-  color:#657168!important;
-}
-.app.theme-light :where(.primary,.cta,.active,.selected,.tabActive,.appearanceThemeCurrent,.appearanceThemeCheck,.dockNotificationBadge){
-  color:#fff!important;
-}
-.app.theme-light .masenetLiquidDock .dockHomeOnly .dockIconShell{
-  background:transparent!important;border:0!important;box-shadow:none!important;
-}
-.app.theme-light .masenetLiquidDock .dockHomeOnly.active .dockIconShell{
-  background:transparent!important;border:0!important;box-shadow:none!important;
-}
+.app.theme-light .iqHome .iqHeroCopy .iqKicker,
+.app.theme-light .iqHome .iqHeroCopy .iqTags span:first-child{color:#087f58!important}
+.app.theme-light .iqHome .iqCard>b,
+.app.theme-light .iqHome .iqRowHead h2{color:#17251d!important}
+.app.theme-light .iqHome .iqCard>small,
+.app.theme-light .iqHome .rowCount{color:#657168!important}
+.app.theme-light .iqHome .iqCategories button{color:#52665a!important}
+.app.theme-light .iqHome .iqCategories button.active,
+.app.theme-light .iqHome .iqCategories button:hover{color:#fff!important}
+.app.theme-light .iqHome .iqHeroActions .primary{color:#fff!important}
+.app.theme-light .iqHome .iqHeroActions .secondary{color:#24382b!important}
+.app.theme-light .masenetLiquidDock .dockHomeOnly .dockIconShell,
 .app .masenetLiquidDock .dockHomeOnly .dockIconShell{
   background:transparent!important;border:0!important;box-shadow:none!important;
 }
