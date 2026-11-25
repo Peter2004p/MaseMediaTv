@@ -7,7 +7,7 @@
   --mase-nav-active:#f5fbff;
   --mase-nav-glow:rgba(105,190,255,.22);
 }
-.app .maseReferenceHeader{
+.maseReferenceHeader{
   position:sticky!important;
   top:calc(8px + env(safe-area-inset-top,0px))!important;
   z-index:1000!important;
@@ -27,28 +27,28 @@
   box-shadow:0 14px 42px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.34),inset 0 -1px 0 rgba(160,205,255,.1),0 0 28px rgba(92,170,255,.08)!important;
   transition:background .35s ease,border-color .35s ease,box-shadow .35s ease,transform .35s cubic-bezier(.2,.8,.2,1)!important;
 }
-.app .maseReferenceHeader:before,
-.app .masenetLiquidDock:before{
+.maseReferenceHeader:before,
+.masenetLiquidDock:before{
   content:"";position:absolute;inset:1px;border-radius:inherit;pointer-events:none;z-index:0;
   background:linear-gradient(112deg,transparent 8%,rgba(255,255,255,.10) 24%,transparent 39%,rgba(175,220,255,.055) 66%,transparent 84%);
   background-size:220% 100%;animation:maseLiquidBarSheen 9s ease-in-out infinite;
 }
-.app .maseReferenceHeader:after,
-.app .masenetLiquidDock:after{
+.maseReferenceHeader:after,
+.masenetLiquidDock:after{
   content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.045),inset 0 12px 25px rgba(255,255,255,.025);
 }
-.app .maseReferenceHeader>*{position:relative;z-index:1}
-.app .maseReferenceHeader .brand{
+.maseReferenceHeader>*{position:relative;z-index:1}
+.maseReferenceHeader .brand{
   min-height:46px!important;padding:4px 9px!important;border:1px solid transparent!important;border-radius:18px!important;
   color:#f7fbff!important;transition:background .3s,border-color .3s,transform .3s!important;
 }
-.app .maseReferenceHeader .brandLogo{width:39px!important;height:39px!important;filter:drop-shadow(0 2px 8px rgba(150,210,255,.22))}
-.app .maseReferenceHeader .brandName{font-weight:850!important;letter-spacing:-.045em!important}
-.app .maseReferenceHeader .brand:active{transform:scale(.97)}
-.app .maseReferenceHeader .maseSearchToggle,
-.app .maseReferenceHeader .navActions>button,
-.app .maseReferenceHeader .maseHeaderSearch button{
+.maseReferenceHeader .brandLogo{width:39px!important;height:39px!important;filter:drop-shadow(0 2px 8px rgba(150,210,255,.22))}
+.maseReferenceHeader .brandName{font-weight:850!important;letter-spacing:-.045em!important}
+.maseReferenceHeader .brand:active{transform:scale(.97)}
+.maseReferenceHeader .maseSearchToggle,
+.maseReferenceHeader .navActions>button,
+.maseReferenceHeader .maseHeaderSearch button{
   position:relative!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
   min-width:43px!important;min-height:43px!important;padding:0 13px!important;
   border:1px solid rgba(220,239,255,.17)!important;border-radius:16px!important;
@@ -58,27 +58,27 @@
   -webkit-backdrop-filter:blur(18px) saturate(170%)!important;backdrop-filter:blur(18px) saturate(170%)!important;
   transition:transform .35s cubic-bezier(.2,.8,.2,1),background .3s,border-color .3s,color .3s,box-shadow .3s!important;
 }
-.app .maseReferenceHeader .maseSearchToggle:hover,
-.app .maseReferenceHeader .navActions>button:hover,
-.app .maseReferenceHeader .maseHeaderSearch button:hover{
+.maseReferenceHeader .maseSearchToggle:hover,
+.maseReferenceHeader .navActions>button:hover,
+.maseReferenceHeader .maseHeaderSearch button:hover{
   color:#fff!important;border-color:rgba(210,237,255,.48)!important;
   background:linear-gradient(145deg,rgba(255,255,255,.24),rgba(110,180,255,.10))!important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 8px 22px rgba(0,0,0,.22),0 0 18px var(--mase-nav-glow)!important;
   transform:translateY(-2px);
 }
-.app .maseReferenceHeader .maseSearchToggle:active,
-.app .maseReferenceHeader .navActions>button:active{transform:scale(.92)!important}
-.app .maseReferenceHeader .maseProfileButton{
+.maseReferenceHeader .maseSearchToggle:active,
+.maseReferenceHeader .navActions>button:active{transform:scale(.92)!important}
+.maseReferenceHeader .maseProfileButton{
   border-color:rgba(147,220,255,.48)!important;
   background:radial-gradient(circle at 28% 18%,rgba(255,255,255,.27),transparent 46%),linear-gradient(145deg,rgba(60,132,177,.36),rgba(24,45,69,.56))!important;
   color:#e9f8ff!important;
 }
-.app .maseReferenceHeader .maseHeaderSearch{
+.maseReferenceHeader .maseHeaderSearch{
   min-height:45px!important;border-radius:999px!important;border-color:rgba(220,239,255,.22)!important;
   background:rgba(5,13,24,.34)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 5px 16px rgba(0,0,0,.12)!important;
 }
-.app .maseReferenceHeader .maseHeaderSearch input{background:transparent!important;box-shadow:none!important;backdrop-filter:none!important}
-.app .masenetLiquidDock{
+.maseReferenceHeader .maseHeaderSearch input{background:transparent!important;box-shadow:none!important;backdrop-filter:none!important}
+.masenetLiquidDock{
   position:fixed!important;z-index:900!important;isolation:isolate!important;overflow:visible!important;
   left:50%!important;bottom:max(13px,env(safe-area-inset-bottom,0px))!important;
   transform:translateX(-50%)!important;
@@ -92,7 +92,7 @@
   -webkit-backdrop-filter:blur(38px) saturate(205%)!important;backdrop-filter:blur(38px) saturate(205%)!important;
   box-shadow:0 18px 50px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.36),inset 0 -1px 0 rgba(151,197,244,.12),0 0 34px rgba(88,170,255,.11)!important;
 }
-.app .masenetLiquidDock>button{
+.masenetLiquidDock>button{
   position:relative!important;isolation:isolate!important;overflow:hidden!important;
   display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
   min-width:0!important;min-height:58px!important;height:58px!important;padding:6px 3px!important;gap:5px!important;
@@ -103,67 +103,67 @@
   transition:color .34s ease,transform .42s cubic-bezier(.2,.8,.2,1),border-color .34s ease,filter .34s ease!important;
   -webkit-tap-highlight-color:transparent!important;
 }
-.app .masenetLiquidDock>button:before{
+.masenetLiquidDock>button:before{
   content:"";position:absolute;z-index:-1;inset:0;border:1px solid transparent;border-radius:inherit;
   background:linear-gradient(145deg,rgba(255,255,255,.19),rgba(255,255,255,.025) 58%,rgba(128,194,255,.11));
   opacity:0;transform:scale(.76,.72);filter:blur(5px);
   transition:opacity .36s ease,transform .48s cubic-bezier(.16,.82,.24,1),filter .36s ease;
 }
-.app .masenetLiquidDock>button:after{
+.masenetLiquidDock>button:after{
   content:"";position:absolute;left:50%;top:0;width:35%;height:2px;border-radius:50%;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);
   opacity:0;transform:translateX(-50%) scaleX(.2);transition:all .35s ease;
 }
-.app .masenetLiquidDock>button>*{position:relative;z-index:1}
-.app .masenetLiquidDock>button>svg{width:21px!important;height:21px!important;filter:drop-shadow(0 2px 7px rgba(130,195,255,.18));transition:transform .42s cubic-bezier(.2,.8,.2,1),filter .3s!important}
-.app .masenetLiquidDock>button>span{font-size:10px!important;font-weight:750!important;letter-spacing:.015em!important}
-.app .masenetLiquidDock>button.active,
-.app .masenetLiquidDock>button.dockYouTube.active{
+.masenetLiquidDock>button>*{position:relative;z-index:1}
+.masenetLiquidDock>button>svg{width:21px!important;height:21px!important;filter:drop-shadow(0 2px 7px rgba(130,195,255,.18));transition:transform .42s cubic-bezier(.2,.8,.2,1),filter .3s!important}
+.masenetLiquidDock>button>span{font-size:10px!important;font-weight:750!important;letter-spacing:.015em!important}
+.masenetLiquidDock>button.active,
+.masenetLiquidDock>button.dockYouTube.active{
   color:#fff!important;border-color:rgba(211,239,255,.35)!important;
   background:transparent!important;text-shadow:0 0 15px rgba(175,224,255,.22)!important;
 }
-.app .masenetLiquidDock>button.active:before,
-.app .masenetLiquidDock>button.dockYouTube.active:before{
+.masenetLiquidDock>button.active:before,
+.masenetLiquidDock>button.dockYouTube.active:before{
   opacity:1;transform:scale(1);filter:blur(0);
   background:radial-gradient(120% 150% at 50% -15%,rgba(255,255,255,.29),transparent 64%),linear-gradient(145deg,rgba(122,192,245,.27),rgba(82,132,190,.12) 60%,rgba(255,255,255,.055));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.36),inset 0 -1px 0 rgba(164,209,255,.15),0 5px 18px rgba(0,0,0,.16),0 0 22px rgba(108,187,255,.12);
 }
-.app .masenetLiquidDock>button.active:after{opacity:.9;transform:translateX(-50%) scaleX(1)}
-.app .masenetLiquidDock>button:hover{color:#fff!important;filter:brightness(1.12)!important}
-.app .masenetLiquidDock>button:hover:before{opacity:.72;transform:scale(.96);filter:blur(1px)}
-.app .masenetLiquidDock>button:hover>svg{transform:translateY(-2px) scale(1.08)}
-.app .masenetLiquidDock>button:active{transform:scale(.91)!important;filter:brightness(1.2)!important}
-.app .masenetLiquidDock>button:active:before{transform:scale(1.06,.9);filter:blur(0);opacity:1}
-.app .masenetLiquidDock>button:focus-visible{outline:2px solid rgba(186,225,255,.95)!important;outline-offset:3px!important}
-.app .masenetLiquidDock>button.dockReels .dockR{
+.masenetLiquidDock>button.active:after{opacity:.9;transform:translateX(-50%) scaleX(1)}
+.masenetLiquidDock>button:hover{color:#fff!important;filter:brightness(1.12)!important}
+.masenetLiquidDock>button:hover:before{opacity:.72;transform:scale(.96);filter:blur(1px)}
+.masenetLiquidDock>button:hover>svg{transform:translateY(-2px) scale(1.08)}
+.masenetLiquidDock>button:active{transform:scale(.91)!important;filter:brightness(1.2)!important}
+.masenetLiquidDock>button:active:before{transform:scale(1.06,.9);filter:blur(0);opacity:1}
+.masenetLiquidDock>button:focus-visible{outline:2px solid rgba(186,225,255,.95)!important;outline-offset:3px!important}
+.masenetLiquidDock>button.dockReels .dockR{
   color:#ff78b7!important;-webkit-text-fill-color:#ff78b7!important;
   font-size:28px!important;filter:drop-shadow(0 0 9px rgba(255,100,170,.28))!important;
 }
-.app .masenetLiquidDock .dockHomeLogo{width:25px!important;height:25px!important;object-fit:contain!important;filter:drop-shadow(0 2px 7px rgba(175,225,255,.25))}
-.app .masenetLiquidDock .dockNotificationBadge{z-index:3!important}
-.app .masenetLiquidDock .dockYouTube .dockYoutubeMark{width:26px!important;height:26px!important}
-.app .masenetLiquidDock .dockYouTube .dockYoutubeMark img{width:100%;height:100%;object-fit:contain}
+.masenetLiquidDock .dockHomeLogo{width:25px!important;height:25px!important;object-fit:contain!important;filter:drop-shadow(0 2px 7px rgba(175,225,255,.25))}
+.masenetLiquidDock .dockNotificationBadge{z-index:3!important}
+.masenetLiquidDock .dockYouTube .dockYoutubeMark{width:26px!important;height:26px!important}
+.masenetLiquidDock .dockYouTube .dockYoutubeMark img{width:100%;height:100%;object-fit:contain}
 @keyframes maseLiquidBarSheen{0%,100%{background-position:110% 0;opacity:.5}50%{background-position:-110% 0;opacity:1}}
 @media(max-width:760px){
- .app .maseReferenceHeader{width:calc(100% - 18px)!important;min-height:56px!important;margin:6px 9px 0!important;padding:6px 9px!important;border-radius:21px!important;gap:7px!important}
- .app .maseReferenceHeader .brand{min-height:40px!important;padding:3px 5px!important;gap:6px!important}
- .app .maseReferenceHeader .brandLogo{width:32px!important;height:32px!important}
- .app .maseReferenceHeader .brandName{font-size:14px!important}
- .app .maseReferenceHeader .maseSearchToggle,.app .maseReferenceHeader .navActions>button{min-width:39px!important;min-height:39px!important;padding:0 10px!important;border-radius:14px!important}
- .app .maseReferenceHeader .maseHeaderSearch{height:40px!important;min-height:40px!important;padding:0 10px!important;gap:6px!important}
- .app .masenetLiquidDock{width:calc(100% - 22px)!important;min-height:69px!important;bottom:max(8px,env(safe-area-inset-bottom,0px))!important;padding:6px!important;gap:4px!important;border-radius:25px!important}
- .app .masenetLiquidDock>button{min-height:55px!important;height:55px!important;border-radius:17px!important;gap:4px!important;padding:5px 2px!important}
- .app .masenetLiquidDock>button>svg{width:20px!important;height:20px!important}
- .app .masenetLiquidDock>button>span{font-size:9px!important}
- .app .masenetLiquidDock .dockHomeLogo{width:23px!important;height:23px!important}
+ .maseReferenceHeader{width:calc(100% - 18px)!important;min-height:56px!important;margin:6px 9px 0!important;padding:6px 9px!important;border-radius:21px!important;gap:7px!important}
+ .maseReferenceHeader .brand{min-height:40px!important;padding:3px 5px!important;gap:6px!important}
+ .maseReferenceHeader .brandLogo{width:32px!important;height:32px!important}
+ .maseReferenceHeader .brandName{font-size:14px!important}
+ .maseReferenceHeader .maseSearchToggle,.maseReferenceHeader .navActions>button{min-width:39px!important;min-height:39px!important;padding:0 10px!important;border-radius:14px!important}
+ .maseReferenceHeader .maseHeaderSearch{height:40px!important;min-height:40px!important;padding:0 10px!important;gap:6px!important}
+ .masenetLiquidDock{width:calc(100% - 22px)!important;min-height:69px!important;bottom:max(8px,env(safe-area-inset-bottom,0px))!important;padding:6px!important;gap:4px!important;border-radius:25px!important}
+ .masenetLiquidDock>button{min-height:55px!important;height:55px!important;border-radius:17px!important;gap:4px!important;padding:5px 2px!important}
+ .masenetLiquidDock>button>svg{width:20px!important;height:20px!important}
+ .masenetLiquidDock>button>span{font-size:9px!important}
+ .masenetLiquidDock .dockHomeLogo{width:23px!important;height:23px!important}
 }
 @media(max-width:380px){
- .app .masenetLiquidDock{gap:2px!important;padding:5px!important}
- .app .masenetLiquidDock>button{border-radius:15px!important}
- .app .masenetLiquidDock>button>span{font-size:8px!important}
- .app .maseReferenceHeader .brandName{font-size:12px!important}
+ .masenetLiquidDock{gap:2px!important;padding:5px!important}
+ .masenetLiquidDock>button{border-radius:15px!important}
+ .masenetLiquidDock>button>span{font-size:8px!important}
+ .maseReferenceHeader .brandName{font-size:12px!important}
 }
 @media(prefers-reduced-motion:reduce){
- .app .maseReferenceHeader:before,.app .masenetLiquidDock:before{animation:none!important}
- .app .masenetLiquidDock>button,.app .masenetLiquidDock>button>*{transition:none!important}
+ .maseReferenceHeader:before,.masenetLiquidDock:before{animation:none!important}
+ .masenetLiquidDock>button,.masenetLiquidDock>button>*{transition:none!important}
 }
