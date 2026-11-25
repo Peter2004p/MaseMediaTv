@@ -18,8 +18,10 @@ type ParsedStream = {
   url: string; filename: string; title: string; year: string; kind: "movie" | "drama";
   season: number; episode: number; quality: string; codec: string; format: string; host: string;
 };
+// These are release/uploader labels seen after the technical tags in incoming filenames.
 const normalize = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase()
-  .replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  .replace(/[’']/g, "").replace(/\s+(?:youk|viki|vik|iq)\s*$/i, "")
+  .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 const telegram = async (env: Env, method: string, payload: Record<string, unknown>) => {
   const token = String(env.MASE_STREAM_BOT_TOKEN || "").trim();
   if (!token) throw new Error("Stream Manager bot token is not configured.");
@@ -46,6 +48,9 @@ const parseStream = (raw: string): ParsedStream | null => {
   const se = filename.match(/\bS(\d{1,2})E(\d{1,3})\b/i);
   const cleanTitle = (value: string) => value
     .replace(/\.(?:mkv|mp4|m4v|webm)$/i, "")
+    // Remove a known trailing source label before removing year/quality tags.
+    // This preserves a real title ending in "IQ" when the word is before the release metadata.
+    .replace(/\s+\b(?:YOUK|VIKI|VIK|IQ)\s*$/i, " ")
     .replace(/\b(19\d{2}|20\d{2})\b/g, " ")
     .replace(/\b(2160p|1440p|1080p|720p|576p|540p|480p|360p|x265|h265|hevc|x264|h264|av1|10bit|8bit|hdr10?|hdr|web[- .]?dl|webrip|bluray|blu[- .]?ray|brrip|dvdrip|aac\d*|ddp?\d*|dts(?:-hd)?|proper|repack)\b/ig, " ")
     .replace(/^@[^\s-]+[-_]/, " ")
