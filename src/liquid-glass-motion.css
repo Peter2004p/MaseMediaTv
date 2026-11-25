@@ -1,0 +1,148 @@
+/* MaseNet Liquid Glass + Fluid Motion layer
+   Visual-only enhancement: keeps existing navigation, routes and player controls intact. */
+:root {
+  --mn-glass-bg: rgba(18, 20, 28, .70);
+  --mn-glass-edge: rgba(255, 255, 255, .16);
+  --mn-glass-highlight: rgba(255, 255, 255, .24);
+  --mn-motion: cubic-bezier(.22, 1, .36, 1);
+}
+.nav {
+  position: sticky;
+  top: max(10px, env(safe-area-inset-top));
+  isolation: isolate;
+  overflow: visible;
+  background:
+    radial-gradient(120% 180% at 12% -55%, rgba(255,255,255,.17), transparent 54%),
+    linear-gradient(135deg, rgba(255,255,255,.075), transparent 45%),
+    var(--mn-glass-bg);
+  border: 1px solid var(--mn-glass-edge);
+  box-shadow:
+    0 14px 42px rgba(0,0,0,.30),
+    inset 0 1px 0 var(--mn-glass-highlight),
+    inset 0 -1px 0 rgba(255,255,255,.035);
+  -webkit-backdrop-filter: blur(26px) saturate(175%);
+  backdrop-filter: blur(26px) saturate(175%);
+  transition: background .45s var(--mn-motion), border-color .45s var(--mn-motion),
+    box-shadow .45s var(--mn-motion), transform .45s var(--mn-motion);
+  animation: mn-nav-arrive .8s var(--mn-motion) both;
+}
+.nav::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: .55;
+  background: linear-gradient(115deg, transparent 12%, rgba(255,255,255,.12) 30%, transparent 48%);
+  mask-image: linear-gradient(#000, transparent 90%);
+}
+.nav nav button {
+  position: relative;
+  isolation: isolate;
+  min-height: 40px;
+  border: 1px solid transparent;
+  transition: color .35s var(--mn-motion), background .35s var(--mn-motion),
+    border-color .35s var(--mn-motion), transform .45s var(--mn-motion),
+    box-shadow .35s var(--mn-motion);
+}
+.nav nav button::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  z-index: -1;
+  border-radius: 10px;
+  opacity: 0;
+  transform: scale(.82);
+  background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(210,173,96,.13));
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: inset 0 1px rgba(255,255,255,.15), 0 4px 14px rgba(0,0,0,.12);
+  transition: opacity .32s var(--mn-motion), transform .5s var(--mn-motion);
+}
+.nav nav button:is(.active,[aria-current="page"],[data-active="true"],[aria-pressed="true"]) {
+  color: #fff;
+  border-color: rgba(255,255,255,.09);
+  text-shadow: 0 1px 12px rgba(255,255,255,.18);
+}
+.nav nav button:is(.active,[aria-current="page"],[data-active="true"],[aria-pressed="true"])::after {
+  opacity: 1;
+  transform: scale(1);
+}
+.nav nav button:active { transform: scale(.94); }
+.nav .brandMark {
+  box-shadow: 0 4px 18px rgba(210,173,96,.25), inset 0 1px rgba(255,255,255,.3);
+  transition: transform .55s var(--mn-motion), box-shadow .4s ease;
+}
+.nav .brand:hover .brandMark { transform: rotate(-7deg) scale(1.06); }
+.nav .navActions .icon {
+  transition: transform .45s var(--mn-motion), color .3s ease, background .3s ease;
+}
+.nav .navActions .icon:active { transform: scale(.9); }
+
+/* Smooth, restrained entrances for route content and floating surfaces. */
+.page {
+  animation: mn-page-arrive .65s var(--mn-motion) both;
+}
+.searchDock, .aiDock, .telegram {
+  transition: transform .5s var(--mn-motion), box-shadow .4s ease,
+    background .4s ease, border-color .4s ease;
+}
+.searchDock {
+  background: rgba(20,22,30,.78);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 16px 44px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.12);
+  -webkit-backdrop-filter: blur(26px) saturate(175%);
+  backdrop-filter: blur(26px) saturate(175%);
+}
+.aiDock {
+  box-shadow: 0 10px 28px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.2);
+}
+.aiDock:active { transform: scale(.92); }
+.side {
+  animation: mn-sheet-arrive .55s var(--mn-motion) both;
+  background: rgba(15,17,24,.82);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: -18px 20px 70px rgba(0,0,0,.35), inset 0 1px rgba(255,255,255,.12);
+  -webkit-backdrop-filter: blur(28px) saturate(165%);
+  backdrop-filter: blur(28px) saturate(165%);
+}
+.primary, .secondary, .card .poster {
+  transition-timing-function: var(--mn-motion);
+}
+@keyframes mn-nav-arrive {
+  from { opacity: 0; transform: translateY(-12px) scale(.985); filter: blur(5px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes mn-page-arrive {
+  from { opacity: .72; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes mn-sheet-arrive {
+  from { opacity: 0; transform: translate3d(22px, 8px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .nav:hover { border-color: rgba(255,255,255,.22); box-shadow: 0 18px 50px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.22); }
+  .nav nav button:hover { transform: translateY(-1px); color: #fff; }
+  .aiDock:hover { transform: translateY(-3px); }
+}
+@media (max-width: 700px) {
+  .nav {
+    top: max(7px, env(safe-area-inset-top));
+    margin-left: 9px;
+    margin-right: 9px;
+    width: calc(100% - 18px);
+    border-radius: 19px;
+    padding: 8px 9px;
+    gap: 8px;
+  }
+  .nav nav { gap: 2px; min-width: 0; }
+  .nav nav button { padding: 8px 9px; gap: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav, .page, .side { animation: none !important; }
+  .nav, .nav *, .page *, .searchDock, .aiDock, .telegram, .side {
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
