@@ -2,7 +2,6 @@ import EpisodeDetail from './EpisodeDetail';
 import './telegram-verification.css';
 import './welcome.css';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 import { api, auth, image } from './cloudflare-client';
 import { ProfileManager, WatchPartyPage } from './AccountFeatures';
 const Player = lazy(() => import('./MaseNetPlayerV3'));
