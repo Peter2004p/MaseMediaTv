@@ -245,3 +245,5 @@ body:has(.app.theme-dark){color-scheme:dark!important}
 .app.theme-light .masenetLiquidDock .dockYouTube{color:#d92332!important}
 .app.theme-dark .masenetLiquidDock .dockYouTube{color:#ff626d!important}
 .app .masenetLiquidDock .dockDrama .dockIconShell{background:transparent!important;border:0!important;box-shadow:none!important}
+
+/* Preview rebuild trigger after enabling fix/* preview branches. */
