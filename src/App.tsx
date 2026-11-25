@@ -56,23 +56,58 @@ function Poster({title,small=false}:{title:Title;small?:boolean}){const [src,set
 
 export default function App(){
  useEffect(()=>{
-  const selector='nav button, nav a, nav [role="button"], nav [role="link"], header.nav button, header.nav a, .maseBackButton, .back, .episodePrevNext button, .maseShortsBrand';
-  const onNavigationClick=(event:MouseEvent)=>{
-   const origin=event.target;
-   if(!(origin instanceof Element))return;
-   const button=origin.closest<HTMLElement>(selector);
-   if(!button)return;
-   const rect=button.getBoundingClientRect();
-   button.style.setProperty('--mase-nav-x',Math.max(0,Math.min(rect.width,event.clientX-rect.left))+'px');
-   button.style.setProperty('--mase-nav-y',Math.max(0,Math.min(rect.height,event.clientY-rect.top))+'px');
-   button.classList.remove('maseLiquidNavAnimating');
-   void button.offsetWidth;
-   button.classList.add('maseLiquidNavTap','maseLiquidNavAnimating');
+  const selector='button, a, [role="button"], [role="link"], [role="tab"], input, select, textarea, .nav, .tabbar, .searchDock, .telegram, .aiDock, .side, .adminCard, .seasonTabs, .episodeGrid, .actions, .profileActions, .maseBackButton, .back, .episodePrevNext, .maseShortsBrand';
+  const vertexSource='attribute vec2 a_position; void main(){gl_Position=vec4(a_position,0.0,1.0);}';
+  const fragmentSource='precision mediump float; uniform vec2 u_resolution; uniform vec4 u_rect; uniform vec2 u_pointer; uniform float u_time; uniform float u_radius; float roundedBox(vec2 p,vec2 b,float r){vec2 q=abs(p)-b+vec2(r);return length(max(q,0.0))+min(max(q.x,q.y),0.0)-r;} void main(){vec2 p=vec2(gl_FragCoord.x,u_resolution.y-gl_FragCoord.y);vec2 local=p-u_rect.xy;vec2 halfSize=u_rect.zw*0.5;float d=roundedBox(local-halfSize,halfSize-vec2(1.0),u_radius);float mask=1.0-smoothstep(-1.0,1.5,d);if(mask<0.002)discard;vec2 touch=u_pointer-u_rect.xy;float maxR=length(u_rect.zw)*0.78;float progress=clamp(u_time/0.72,0.0,1.0);float wave=length(local-touch);float ring=exp(-pow((wave-(8.0+progress*maxR))/max(5.0,9.0+progress*5.0),2.0));float glow=exp(-wave/(18.0+progress*38.0))*(1.0-progress);float edge=1.0-smoothstep(0.0,9.0,abs(d));float topSheen=pow(clamp(1.0-local.y/max(1.0,u_rect.w),0.0,1.0),3.0);vec3 cool=vec3(0.55,0.82,1.0);vec3 warm=vec3(1.0,0.82,0.58);float chroma=sin(wave*0.09-progress*12.0)*0.5+0.5;vec3 color=mix(cool,warm,chroma*0.24);float alpha=mask*(ring*0.42+glow*0.2+edge*0.16+topSheen*0.08);gl_FragColor=vec4(color,clamp(alpha,0.0,0.58));}';
+  let activeCanvas:HTMLCanvasElement|null=null;
+  let frame=0;
+  const drawLens=(target:HTMLElement,x:number,y:number)=>{
+   const rect=target.getBoundingClientRect();
+   if(rect.width<2||rect.height<2)return;
+   if(activeCanvas){cancelAnimationFrame(frame);activeCanvas.remove();activeCanvas=null}
+   const canvas=document.createElement('canvas');
+   canvas.className='maseLiquidShaderOverlay';
+   const dpr=Math.min(window.devicePixelRatio||1,1.5);
+   canvas.width=Math.max(1,Math.round(window.innerWidth*dpr));
+   canvas.height=Math.max(1,Math.round(window.innerHeight*dpr));
+   canvas.style.width='100vw';canvas.style.height='100vh';
+   document.body.appendChild(canvas);activeCanvas=canvas;
+   const gl=canvas.getContext('webgl',{alpha:true,antialias:false,premultipliedAlpha:false});
+   if(!gl){canvas.remove();activeCanvas=null;return}
+   const compile=(type:number,source:string)=>{const shader=gl.createShader(type);if(!shader)return null;gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS)){gl.deleteShader(shader);return null}return shader};
+   const vs=compile(gl.VERTEX_SHADER,vertexSource),fs=compile(gl.FRAGMENT_SHADER,fragmentSource);
+   if(!vs||!fs){canvas.remove();activeCanvas=null;return}
+   const program=gl.createProgram();if(!program){canvas.remove();activeCanvas=null;return}
+   gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);
+   if(!gl.getProgramParameter(program,gl.LINK_STATUS)){canvas.remove();activeCanvas=null;return}
+   const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+   gl.useProgram(program);
+   const position=gl.getAttribLocation(program,'a_position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
+   const resolution=gl.getUniformLocation(program,'u_resolution'),box=gl.getUniformLocation(program,'u_rect'),pointer=gl.getUniformLocation(program,'u_pointer'),time=gl.getUniformLocation(program,'u_time'),radius=gl.getUniformLocation(program,'u_radius');
+   const left=rect.left*dpr,top=rect.top*dpr,width=rect.width*dpr,height=rect.height*dpr;
+   const px=Math.max(0,Math.min(rect.width,x-rect.left))*dpr,py=Math.max(0,Math.min(rect.height,y-rect.top))*dpr;
+   gl.viewport(0,0,canvas.width,canvas.height);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+   gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform4f(box,left,top,width,height);gl.uniform2f(pointer,px,py);gl.uniform1f(radius,Math.min(24,Math.min(width,height)*0.24));
+   const started=performance.now();
+   const render=(now:number)=>{if(activeCanvas!==canvas)return;const elapsed=(now-started)/1000;gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.uniform1f(time,elapsed);gl.drawArrays(gl.TRIANGLES,0,6);if(elapsed<0.72){frame=requestAnimationFrame(render)}else{canvas.remove();activeCanvas=null}};
+   frame=requestAnimationFrame(render);
   };
+  const animate=(target:HTMLElement,x:number,y:number)=>{
+   const rect=target.getBoundingClientRect();
+   target.style.setProperty('--mase-nav-x',Math.max(0,Math.min(rect.width,x-rect.left))+'px');
+   target.style.setProperty('--mase-nav-y',Math.max(0,Math.min(rect.height,y-rect.top))+'px');
+   target.classList.remove('maseLiquidNavAnimating');void target.offsetWidth;
+   target.classList.add('maseLiquidNavTap','maseLiquidNavAnimating');
+   drawLens(target,x,y);
+  };
+  const onPointerDown=(event:PointerEvent)=>{const origin=event.target;if(!(origin instanceof Element))return;const target=origin.closest<HTMLElement>(selector);if(!target)return;animate(target,event.clientX,event.clientY)};
+  const onKeyboardClick=(event:MouseEvent)=>{if(event.detail!==0)return;const origin=event.target;if(!(origin instanceof Element))return;const target=origin.closest<HTMLElement>(selector);if(!target)return;const rect=target.getBoundingClientRect();animate(target,rect.left+rect.width/2,rect.top+rect.height/2)};
   const cleanup=(event:AnimationEvent)=>{if(event.animationName==='maseLiquidDrop'&&event.target instanceof HTMLElement)event.target.classList.remove('maseLiquidNavAnimating')};
-  document.addEventListener('click',onNavigationClick,true);
+  document.addEventListener('pointerdown',onPointerDown,true);
+  document.addEventListener('click',onKeyboardClick,true);
   document.addEventListener('animationend',cleanup,true);
-  return()=>{document.removeEventListener('click',onNavigationClick,true);document.removeEventListener('animationend',cleanup,true)};
+  return()=>{document.removeEventListener('pointerdown',onPointerDown,true);document.removeEventListener('click',onKeyboardClick,true);document.removeEventListener('animationend',cleanup,true);if(activeCanvas){cancelAnimationFrame(frame);activeCanvas.remove()}};
  },[]);
  // Adaptive rendering: preserve the full design on capable devices and reduce expensive effects on low-end phones.
  useEffect(()=>{
