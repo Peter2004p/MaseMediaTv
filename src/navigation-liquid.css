@@ -1,0 +1,7 @@
+/* Liquid-drop feedback for navigation controls only */
+.maseLiquidNavTap{position:relative;isolation:isolate;overflow:hidden}
+.maseLiquidNavTap::after{content:"";position:absolute;z-index:0;left:var(--mase-nav-x,50%);top:var(--mase-nav-y,50%);width:12px;height:12px;border-radius:48% 52% 58% 42%;pointer-events:none;opacity:0;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.62),rgba(125,190,255,.25) 42%,rgba(215,183,125,.2) 72%,transparent 74%);filter:blur(.25px);transform:translate(-50%,-50%) scale(.15)}
+.maseLiquidNavTap.maseLiquidNavAnimating::after{animation:maseLiquidDrop .58s cubic-bezier(.2,.72,.24,1) both}
+.maseLiquidNavTap>*{position:relative;z-index:1}
+@keyframes maseLiquidDrop{0%{opacity:0;transform:translate(-50%,-50%) scale(.12,.18);border-radius:42% 58% 55% 45%}18%{opacity:.78;transform:translate(-50%,-50%) scale(2.1,.72);border-radius:58% 42% 44% 56%}48%{opacity:.52;transform:translate(-50%,-50%) scale(5.8,1.7);border-radius:50%}100%{opacity:0;transform:translate(-50%,-50%) scale(15,4);border-radius:50%}}
+@media(prefers-reduced-motion:reduce){.maseLiquidNavTap.maseLiquidNavAnimating::after{animation:none!important}}
