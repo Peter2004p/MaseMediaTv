@@ -38,7 +38,7 @@ html:has(.app.theme-dark),body:has(.app.theme-dark),#root:has(.app.theme-dark){
 .app.theme-light :where(.page,.iqHome,.content,.mainContent,.pageContent,.settingsPage,.adminPage){
   background:transparent!important;color:#17271f!important;
 }
-.app.theme-light :where(.settings,.side,.profile,.adminCard,.broadcastExisting,.notificationList,.notificationItem,.searchDock,.searchDockResults,.searchDockNoResults,.tabbar,.episodeListItem,.layoutRow,.adminItem,.bulk,.formGrid,.aiPanel,.aiHeader,.aiComposer,.maseCustomizeSettings,.maseAppInstallGuide,.maseAppDownloadHero,.maseAppPromo,.maseAppSafetyNote,.iqCategories,.iqFilterControls,.detailHero,.adminSection,.adminToolbar,.adminTable,.settingsSection,.settingsGroup,.modal,.dialog,.sheet,.glass){
+.app.theme-light :where(.settings,.side,.profile,.adminCard,.broadcastExisting,.notificationList,.notificationItem,.searchDock,.searchDockResults,.searchDockNoResults,.tabbar,.episodeListItem,.layoutRow,.adminItem,.bulk,.formGrid,.aiPanel,.aiHeader,.aiComposer,.maseCustomizeSettings,.maseAppInstallGuide,.maseAppDownloadHero,.maseAppPromo,.maseAppSafetyNote,.iqCategories,.iqFilterControls,.detailHero,.adminSection,.adminToolbar,.adminTable,.settingsSection,.settingsGroup,.modal,.dialog,.sheet){
   background-color:rgba(255,255,255,.9)!important;color:#17271f!important;
   border-color:rgba(33,78,55,.14)!important;
   box-shadow:0 12px 34px rgba(32,68,47,.085),inset 0 1px 0 rgba(255,255,255,.96)!important;
