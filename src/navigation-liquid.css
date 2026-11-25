@@ -1,67 +1,46 @@
-/* iOS-inspired Liquid Glass treatment for navigation controls only.
-   Keeps each control's existing size and shape; does not target player controls. */
+/* Shader-assisted Liquid Glass surfaces for site-wide controls and bars.
+   WebGL supplies animated Fresnel/ripple highlights; backdrop-filter bends and softens
+   the live page behind the control where supported. This is a web approximation,
+   not Apple's private native Liquid Glass compositor. */
+:root{--mase-glass-edge:rgba(255,255,255,.22);--mase-glass-hi:rgba(255,255,255,.2)}
 .maseLiquidNavTap{
-  position:relative;
-  isolation:isolate;
-  overflow:hidden;
-  -webkit-backdrop-filter:blur(22px) saturate(180%);
-  backdrop-filter:blur(22px) saturate(180%);
-  border-color:rgba(255,255,255,.22);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.34),inset 0 -1px 0 rgba(15,25,45,.08),0 5px 18px rgba(10,20,40,.12);
-  transition:box-shadow .24s ease,filter .24s ease,transform .24s cubic-bezier(.2,.8,.2,1);
+ position:relative;isolation:isolate;overflow:hidden;
+ -webkit-backdrop-filter:blur(24px) saturate(185%);
+ backdrop-filter:blur(24px) saturate(185%);
+ border-color:var(--mase-glass-edge);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(15,25,45,.1),0 6px 22px rgba(0,0,0,.16);
+ transition:box-shadow .24s ease,filter .24s ease,transform .24s cubic-bezier(.2,.8,.2,1),background-color .24s ease;
 }
 .maseLiquidNavTap::before{
-  content:"";
-  position:absolute;
-  z-index:0;
-  inset:0;
-  border-radius:inherit;
-  pointer-events:none;
-  background:linear-gradient(145deg,rgba(255,255,255,.32) 0%,rgba(255,255,255,.09) 28%,transparent 52%,rgba(130,180,255,.08) 100%);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
-  opacity:.78;
+ content:"";position:absolute;z-index:0;inset:0;border-radius:inherit;pointer-events:none;
+ background:linear-gradient(145deg,rgba(255,255,255,.26),rgba(255,255,255,.07) 27%,transparent 54%,rgba(130,180,255,.08));
+ box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);opacity:.8;
 }
 .maseLiquidNavTap::after{
-  content:"";
-  position:absolute;
-  z-index:0;
-  left:var(--mase-nav-x,50%);
-  top:var(--mase-nav-y,50%);
-  width:20px;
-  height:20px;
-  border-radius:48% 52% 58% 42%;
-  pointer-events:none;
-  opacity:0;
-  background:radial-gradient(ellipse at 35% 28%,rgba(255,255,255,.9) 0%,rgba(225,242,255,.55) 18%,rgba(125,190,255,.28) 48%,rgba(215,183,125,.15) 68%,transparent 74%);
-  filter:blur(.4px);
-  transform:translate(-50%,-50%) scale(.12,.18);
-  box-shadow:0 0 18px rgba(155,205,255,.22);
+ content:"";position:absolute;z-index:0;left:var(--mase-nav-x,50%);top:var(--mase-nav-y,50%);
+ width:22px;height:22px;border-radius:48% 52% 58% 42%;pointer-events:none;opacity:0;
+ background:radial-gradient(ellipse at 35% 28%,rgba(255,255,255,.92),rgba(225,242,255,.48) 23%,rgba(125,190,255,.24) 52%,rgba(215,183,125,.12) 70%,transparent 74%);
+ filter:blur(.45px);transform:translate(-50%,-50%) scale(.12,.18);
 }
 .maseLiquidNavTap.maseLiquidNavAnimating::after{animation:maseLiquidDrop .72s cubic-bezier(.16,.78,.22,1) both}
 .maseLiquidNavTap.maseLiquidNavAnimating::before{animation:maseGlassSheen .72s ease-out both}
-.maseLiquidNavTap:active{
-  transform:scale(.965);
-  filter:brightness(1.08);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.48),0 2px 10px rgba(10,20,40,.16);
-}
+.maseLiquidNavTap:active{transform:scale(.975);filter:brightness(1.08)}
 .maseLiquidNavTap:focus-visible{outline:2px solid rgba(145,198,255,.9);outline-offset:3px}
 .maseLiquidNavTap>*{position:relative;z-index:1}
+.maseLiquidShaderOverlay{position:fixed;inset:0;z-index:9998;pointer-events:none;mix-blend-mode:screen}
 @keyframes maseLiquidDrop{
-  0%{opacity:0;transform:translate(-50%,-50%) scale(.12,.18);border-radius:42% 58% 55% 45%}
-  16%{opacity:.82;transform:translate(-50%,-50%) scale(1.8,.82);border-radius:58% 42% 44% 56%}
-  42%{opacity:.56;transform:translate(-50%,-50%) scale(5.2,2.15);border-radius:46% 54% 52% 48%}
-  72%{opacity:.22;transform:translate(-50%,-50%) scale(8.2,3.4);border-radius:50%}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(10,4.2);border-radius:50%}
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.12,.18);border-radius:42% 58% 55% 45%}
+ 16%{opacity:.72;transform:translate(-50%,-50%) scale(1.8,.82);border-radius:58% 42% 44% 56%}
+ 42%{opacity:.44;transform:translate(-50%,-50%) scale(5.2,2.15);border-radius:46% 54% 52% 48%}
+ 72%{opacity:.16;transform:translate(-50%,-50%) scale(8.2,3.4);border-radius:50%}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(10,4.2);border-radius:50%}
 }
-@keyframes maseGlassSheen{
-  0%{opacity:.55;filter:brightness(1)}
-  24%{opacity:1;filter:brightness(1.22)}
-  100%{opacity:.78;filter:brightness(1)}
-}
+@keyframes maseGlassSheen{0%{opacity:.55;filter:brightness(1)}24%{opacity:1;filter:brightness(1.2)}100%{opacity:.78;filter:brightness(1)}}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .maseLiquidNavTap{background-image:linear-gradient(145deg,rgba(255,255,255,.22),rgba(120,160,220,.12))}
+ .maseLiquidNavTap{background-image:linear-gradient(145deg,rgba(255,255,255,.22),rgba(120,160,220,.12))}
 }
 @media(prefers-reduced-motion:reduce){
-  .maseLiquidNavTap,.maseLiquidNavTap:active{transition:none;transform:none}
-  .maseLiquidNavTap.maseLiquidNavAnimating::after,.maseLiquidNavTap.maseLiquidNavAnimating::before{animation:none!important}
+ .maseLiquidNavTap,.maseLiquidNavTap:active{transition:none;transform:none}
+ .maseLiquidNavTap.maseLiquidNavAnimating::after,.maseLiquidNavTap.maseLiquidNavAnimating::before{animation:none!important}
+ .maseLiquidShaderOverlay{display:none}
 }
