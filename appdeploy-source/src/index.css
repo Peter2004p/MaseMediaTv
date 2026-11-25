@@ -357,6 +357,8 @@ button{transition:transform .22s cubic-bezier(.22,1,.36,1),opacity .22s ease,bac
  .app .liquidBottomNav button.active{color:#fff!important;transform:scale(1.04)!important}
  .app .liquidBottomNav button.active svg{filter:drop-shadow(0 1px 5px rgba(255,255,255,.7))!important;stroke-width:2.1!important}
  .app .liquidBottomNav button:active{transform:scale(.88)!important}
+ .app .liquidBottomNav button:last-child{position:relative!important}
+ .app .liquidBottomNav button:last-child:after{content:"1";position:absolute;top:7px;right:calc(50% - 19px);min-width:15px;height:15px;padding:0 2px;display:grid;place-items:center;border-radius:999px;background:#ef5368;color:#fff;font-size:9px;font-weight:800;line-height:1;box-shadow:0 1px 5px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.5)}
  .app main{padding-top:calc(72px + env(safe-area-inset-top))!important;padding-bottom:calc(112px + env(safe-area-inset-bottom))!important}
  .app .aiDock{bottom:calc(105px + env(safe-area-inset-bottom))!important}
  .app .telegram{bottom:calc(105px + env(safe-area-inset-bottom))!important}
