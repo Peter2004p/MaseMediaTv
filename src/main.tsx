@@ -77,3 +77,4 @@ if ('serviceWorker' in navigator && !Capacitor.isNativePlatform() && !telegramAp
     });
   }, { once: true });
 }
+import './liquid-navbar-redesign.css';

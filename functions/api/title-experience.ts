@@ -2,6 +2,7 @@ import { Env, json, cookie, sha256, currentAdmin, requireAdmin } from "./auth/_s
 
 type ExperienceEnv = Env;
 const validId = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_-]{1,180}$/.test(v);
+const validEpisodeKey = (v: unknown): v is string => typeof v === "string" && /^S\d{1,3}E\d{1,4}$/.test(v);
 const cleanList = (v: unknown, max = 20) => Array.isArray(v)
   ? [...new Set(v.filter((x): x is string => typeof x === "string").map(x => x.trim().slice(0,60)).filter(Boolean))].slice(0,max)
   : [];
@@ -48,6 +49,8 @@ async function ensureTables(db: D1Database) {
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_discussion_title ON title_discussion_comments(title_id,created_at DESC)").run();
   await db.prepare("ALTER TABLE title_discussion_comments ADD COLUMN status TEXT NOT NULL DEFAULT 'published'").run().catch(()=>{});
   await db.prepare("ALTER TABLE title_discussion_comments ADD COLUMN parent_id TEXT").run().catch(()=>{});
+  await db.prepare("ALTER TABLE title_discussion_comments ADD COLUMN episode_key TEXT").run().catch(()=>{});
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_discussion_episode ON title_discussion_comments(title_id,episode_key,created_at DESC)").run();
   await db.prepare(`CREATE TABLE IF NOT EXISTS title_comment_reports (
     id TEXT PRIMARY KEY,comment_id TEXT NOT NULL,user_id TEXT NOT NULL,
     reason TEXT NOT NULL,details TEXT NOT NULL DEFAULT '',
@@ -111,6 +114,8 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
     const preferences=userId ? await env.DB.prepare("SELECT languages_json,genres_json FROM user_title_preferences WHERE user_id=?").bind(userId).first<{languages_json:string;genres_json:string}>():null;
     if (titleId) {
       if (!validId(titleId)) return json({error:"Invalid title ID."},400);
+      const episodeKey=url.searchParams.get("episodeKey") || "";
+      if (episodeKey && !validEpisodeKey(episodeKey)) return json({error:"Invalid episode key."},400);
       const [reviews,summary]=await Promise.all([
         env.DB.prepare(`SELECT r.id,r.rating,r.body,r.created_at AS createdAt,
           (SELECT COUNT(*) FROM title_review_votes v WHERE v.review_id=r.id) AS helpfulCount,
@@ -121,7 +126,7 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
       const comments=await env.DB.prepare(`SELECT c.id,c.body,c.parent_id AS parentId,c.created_at AS createdAt,
         (SELECT COUNT(*) FROM title_comment_reactions v WHERE v.comment_id=c.id) AS reactionCount,
         EXISTS(SELECT 1 FROM title_comment_reactions v WHERE v.comment_id=c.id AND v.user_id=?) AS reactedByMe
-        FROM title_discussion_comments c WHERE c.title_id=? AND c.status='published' ORDER BY c.created_at DESC LIMIT 100`).bind(userId||"",titleId).all<{id:string;body:string;parentId:string|null;createdAt:string;reactionCount:number;reactedByMe:number}>();
+        FROM title_discussion_comments c WHERE c.title_id=? AND c.status='published' AND ((?='' AND c.episode_key IS NULL) OR c.episode_key=?) ORDER BY c.created_at DESC LIMIT 100`).bind(userId||"",titleId,episodeKey,episodeKey).all<{id:string;body:string;parentId:string|null;createdAt:string;reactionCount:number;reactedByMe:number}>();
       return json({reviews:reviews.results||[],comments:comments.results||[],reviewCount:Number(summary?.count||0),averageRating:summary?.average||null,preferences:preferences?{languages:JSON.parse(preferences.languages_json||"[]"),genres:JSON.parse(preferences.genres_json||"[]")}:{languages:[],genres:[]}});
     }
     if (!userId) return json({error:"Sign in to get recommendations based on your viewing activity."},401);
@@ -180,13 +185,15 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
       if(!comment||comment.length>500) return json({error:"Write a comment between 1 and 500 characters."},400);
       const title=await env.DB.prepare("SELECT id FROM titles WHERE id=?").bind(body.titleId).first<{id:string}>();
       if(!title) return json({error:"That title is no longer in the library."},404);
+      const episodeKey=body.episodeKey==null||body.episodeKey===""?"":String(body.episodeKey);
+      if(episodeKey && !validEpisodeKey(episodeKey)) return json({error:"Invalid episode key."},400);
       const parentId=body.parentId==null||body.parentId===""?null:String(body.parentId);
       let parentOwner:string|null=null;
-      if(parentId){if(!validId(parentId)) return json({error:"Invalid reply target."},400);const parent=await env.DB.prepare("SELECT id,user_id FROM title_discussion_comments WHERE id=? AND title_id=? AND status='published' AND parent_id IS NULL").bind(parentId,body.titleId).first<{id:string;user_id:string}>();if(!parent)return json({error:"This comment cannot be replied to."},404);parentOwner=parent.user_id;}
+      if(parentId){if(!validId(parentId)) return json({error:"Invalid reply target."},400);const parent=await env.DB.prepare("SELECT id,user_id FROM title_discussion_comments WHERE id=? AND title_id=? AND status='published' AND parent_id IS NULL AND ((?='' AND episode_key IS NULL) OR episode_key=?)").bind(parentId,body.titleId,episodeKey,episodeKey).first<{id:string;user_id:string}>();if(!parent)return json({error:"This comment cannot be replied to."},404);parentOwner=parent.user_id;}
       const recent=await env.DB.prepare("SELECT COUNT(*) AS count FROM title_discussion_comments WHERE user_id=? AND created_at>=datetime('now','-1 minute')").bind(userId).first<{count:number}>();
       if(Number(recent?.count||0)>=5) return json({error:"Please wait a minute before posting another comment."},429);
       const id=crypto.randomUUID();
-      await env.DB.prepare("INSERT INTO title_discussion_comments(id,title_id,user_id,body,status,parent_id) VALUES(?,?,?,?,'published',?)").bind(id,body.titleId,userId,comment,parentId).run();
+      await env.DB.prepare("INSERT INTO title_discussion_comments(id,title_id,user_id,body,status,parent_id,episode_key) VALUES(?,?,?,?,'published',?,?)").bind(id,body.titleId,userId,comment,parentId,episodeKey||null).run();
       if(parentId&&parentOwner&&parentOwner!==userId){
         const titleName=await env.DB.prepare("SELECT name FROM titles WHERE id=?").bind(body.titleId).first<{name:string}>();
         await env.DB.prepare("INSERT INTO user_notifications(id,user_id,title_id,title,description,kind,target) VALUES(?,?,?,?,?,'reply',?)")
@@ -198,7 +205,7 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
             const owner=await env.DB.prepare("SELECT email FROM site_users WHERE id=?").bind(parentOwner).first<{email:string}>();
             const match=owner?.email.match(/^telegram-(\d+)@telegram\.local$/i);
             if(match){
-              const appLink="https://t.me/MaseTv_Bot?startapp="+encodeURIComponent("title_"+String(body.titleId));
+              const appLink="https://t.me/MaseTv_Bot?startapp="+encodeURIComponent(episodeKey?"episode_"+String(body.titleId)+"_"+episodeKey:"title_"+String(body.titleId));
               const telegramResponse=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:match[1],text:"💬 Someone replied to your comment on "+(titleName?.name||"MaseNet")+".\n\n"+comment.slice(0,500)+"\n\nOpen the discussion: "+appLink,disable_web_page_preview:true})});
             const telegramResult=await telegramResponse.json() as {ok?:boolean;description?:string};
             if(!telegramResponse.ok||!telegramResult.ok) console.error("MaseNet reply Telegram notification rejected:",telegramResult.description||("HTTP "+telegramResponse.status));

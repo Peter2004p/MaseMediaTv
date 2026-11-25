@@ -1,0 +1,111 @@
+/* Shader-assisted Liquid Glass surfaces for site-wide controls and bars.
+   WebGL supplies animated Fresnel/ripple highlights; backdrop-filter bends and softens
+   the live page behind the control where supported. This is a web approximation,
+   not Apple's private native Liquid Glass compositor. */
+:root{--mase-glass-edge:rgba(255,255,255,.22);--mase-glass-hi:rgba(255,255,255,.2)}
+.maseLiquidNavTap{
+ position:relative;isolation:isolate;overflow:hidden;
+ -webkit-backdrop-filter:blur(24px) saturate(185%);
+ backdrop-filter:blur(24px) saturate(185%);
+ border-color:var(--mase-glass-edge);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(15,25,45,.1),0 6px 22px rgba(0,0,0,.16);
+ transition:box-shadow .24s ease,filter .24s ease,transform .24s cubic-bezier(.2,.8,.2,1),background-color .24s ease;
+}
+.maseLiquidNavTap::before{
+ content:"";position:absolute;z-index:0;inset:0;border-radius:inherit;pointer-events:none;
+ background:linear-gradient(145deg,rgba(255,255,255,.26),rgba(255,255,255,.07) 27%,transparent 54%,rgba(130,180,255,.08));
+ box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);opacity:.8;
+}
+.maseLiquidNavTap::after{
+ content:"";position:absolute;z-index:0;left:var(--mase-nav-x,50%);top:var(--mase-nav-y,50%);
+ width:22px;height:22px;border-radius:48% 52% 58% 42%;pointer-events:none;opacity:0;
+ background:radial-gradient(ellipse at 35% 28%,rgba(255,255,255,.92),rgba(225,242,255,.48) 23%,rgba(125,190,255,.24) 52%,rgba(215,183,125,.12) 70%,transparent 74%);
+ filter:blur(.45px);transform:translate(-50%,-50%) scale(.12,.18);
+}
+.maseLiquidNavTap.maseLiquidNavAnimating::after{animation:maseLiquidDrop .72s cubic-bezier(.16,.78,.22,1) both}
+.maseLiquidNavTap.maseLiquidNavAnimating::before{animation:maseGlassSheen .72s ease-out both}
+.maseLiquidNavTap:active{transform:scale(.975);filter:brightness(1.08)}
+.maseLiquidNavTap:focus-visible{outline:2px solid rgba(145,198,255,.9);outline-offset:3px}
+.maseLiquidNavTap>*{position:relative;z-index:1}
+.maseLiquidShaderOverlay{position:fixed;inset:0;z-index:9998;pointer-events:none;mix-blend-mode:screen}
+@keyframes maseLiquidDrop{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.12,.18);border-radius:42% 58% 55% 45%}
+ 16%{opacity:.72;transform:translate(-50%,-50%) scale(1.8,.82);border-radius:58% 42% 44% 56%}
+ 42%{opacity:.44;transform:translate(-50%,-50%) scale(5.2,2.15);border-radius:46% 54% 52% 48%}
+ 72%{opacity:.16;transform:translate(-50%,-50%) scale(8.2,3.4);border-radius:50%}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(10,4.2);border-radius:50%}
+}
+@keyframes maseGlassSheen{0%{opacity:.55;filter:brightness(1)}24%{opacity:1;filter:brightness(1.2)}100%{opacity:.78;filter:brightness(1)}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+ .maseLiquidNavTap{background-image:linear-gradient(145deg,rgba(255,255,255,.22),rgba(120,160,220,.12))}
+}
+@media(prefers-reduced-motion:reduce){
+ .maseLiquidNavTap,.maseLiquidNavTap:active{transition:none;transform:none}
+ .maseLiquidNavTap.maseLiquidNavAnimating::after,.maseLiquidNavTap.maseLiquidNavAnimating::before{animation:none!important}
+ .maseLiquidShaderOverlay{display:none}
+}
+
+/* Persistent Liquid Glass treatment — visible at rest, not only during taps.
+   Deliberately excludes the entire video-player subtree. */
+:root{
+ --mase-liquid-surface:rgba(225,239,255,.075);
+ --mase-liquid-surface-strong:rgba(225,239,255,.115);
+ --mase-liquid-border:rgba(230,244,255,.24);
+ --mase-liquid-highlight:rgba(255,255,255,.34);
+ --mase-liquid-shadow:0 12px 34px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.24),inset 0 -1px 0 rgba(125,170,220,.12);
+}
+.app :where(
+ .nav,.tabbar,.searchDock,.telegram,.aiDock,.side,.adminCard,
+ .seasonTabs,.episodeGrid,.actions,.profileActions,.backdrop
+):not(.vlcPlayer *):not(.player *){
+ background-color:var(--mase-liquid-surface)!important;
+ background-image:linear-gradient(145deg,rgba(255,255,255,.17),rgba(255,255,255,.035) 38%,rgba(135,180,235,.065))!important;
+ border:1px solid var(--mase-liquid-border)!important;
+ -webkit-backdrop-filter:blur(30px) saturate(190%)!important;
+ backdrop-filter:blur(30px) saturate(190%)!important;
+ box-shadow:var(--mase-liquid-shadow)!important;
+}
+.app :where(.nav,.tabbar,.searchDock,.telegram,.aiDock,.side,.adminCard,.seasonTabs,.episodeGrid,.actions,.profileActions):not(.vlcPlayer *):not(.player *){
+ position:relative;
+}
+.app :where(button,a,[role="button"],[role="link"],[role="tab"],input,select,textarea):not(.vlcPlayer *):not(.player *):not(.videoStage *):not(.masePlayerVideo *){
+ border-color:rgba(226,241,255,.25)!important;
+ background-image:linear-gradient(145deg,rgba(255,255,255,.19),rgba(255,255,255,.045) 48%,rgba(145,190,245,.085))!important;
+ -webkit-backdrop-filter:blur(22px) saturate(185%)!important;
+ backdrop-filter:blur(22px) saturate(185%)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.27),inset 0 -1px 0 rgba(110,155,210,.12),0 5px 18px rgba(0,0,0,.18)!important;
+ transition:background-color .28s ease,border-color .28s ease,box-shadow .28s ease,transform .28s cubic-bezier(.2,.8,.2,1),filter .28s ease!important;
+}
+.app :where(button,a,[role="button"],[role="link"],[role="tab"]):not(.vlcPlayer *):not(.player *):not(.videoStage *):not(.masePlayerVideo *){
+ border-radius:14px;
+}
+.app :where(button,a,[role="button"],[role="link"],[role="tab"]):not(.vlcPlayer *):not(.player *):not(.videoStage *):not(.masePlayerVideo *):hover{
+ border-color:rgba(235,247,255,.43)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 8px 25px rgba(0,0,0,.24),0 0 18px rgba(145,195,255,.09)!important;
+ filter:brightness(1.1);
+}
+.app :where(button,a,[role="button"],[role="link"],[role="tab"]):not(.vlcPlayer *):not(.player *):not(.videoStage *):not(.masePlayerVideo *):active{
+ transform:scale(.975);
+ background-color:var(--mase-liquid-surface-strong)!important;
+}
+.app .nav,.app .tabbar,.app .seasonTabs,.app .searchDock,.app .telegram,.app .aiDock{
+ border-radius:22px!important;
+}
+.app .nav nav button,.app .navActions button,.app .tabbar button,.app .seasonTabs button{
+ background-color:rgba(220,238,255,.075)!important;
+ color:inherit;
+}
+.app .primary,.app .iqHome .iqHeroActions .primary{
+ background-color:rgba(0,204,120,.72)!important;
+ background-image:linear-gradient(145deg,rgba(255,255,255,.32),rgba(255,255,255,.06) 45%,rgba(0,0,0,.08))!important;
+ border-color:rgba(155,255,210,.55)!important;
+ color:#f5fff9!important;
+}
+.app .secondary{
+ background-color:rgba(225,239,255,.09)!important;
+ color:#f4f8ff!important;
+}
+.app .maseLiquidNavTap{isolation:isolate}
+@media(prefers-reduced-motion:reduce){
+ .app :where(button,a,[role="button"],[role="link"],[role="tab"]):not(.vlcPlayer *):not(.player *):not(.videoStage *):not(.masePlayerVideo *){transition:none!important}
+}
