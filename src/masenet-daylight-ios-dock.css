@@ -1,262 +1,189 @@
-/* MaseNet final theme + iOS-style liquid dock layer.
-   Loaded last intentionally so legacy styles cannot repaint Light mode dark.
-   Player markup and player controls are excluded from this layer. */
-:root:has(.app.theme-light){
-  color-scheme:light!important;
-  --bg:#f4f8f5!important;--text:#17271f!important;--muted:#66786d!important;
-}
-html:has(.app.theme-light),body:has(.app.theme-light),#root:has(.app.theme-light){
-  background:#f4f8f5!important;color:#17271f!important;
-}
-html:has(.app.theme-dark),body:has(.app.theme-dark),#root:has(.app.theme-dark){
-  background:#08110e!important;color:#f1f8f4!important;
-}
+/* MaseNet visual redesign — explicit two-theme system + native-feeling Liquid Glass dock.
+   This file is imported last. The video player and its descendants are deliberately untouched. */
+
+/* THEME TOKENS */
 .app.theme-light{
   color-scheme:light!important;
-  --accent:#149b6e!important;--accentText:#fff!important;
-  --bg:#f4f8f5!important;--text:#17271f!important;--muted:#66786d!important;
-  --glass:rgba(255,255,255,.78)!important;--glassStrong:rgba(255,255,255,.94)!important;
-  --border:rgba(33,78,55,.14)!important;
-  --mn-accent:#149b6e!important;--mn-accent-strong:#087c57!important;
-  --mn-accent-soft:rgba(20,155,110,.11)!important;--mn-bg:#f4f8f5!important;
-  --mn-bg-elevated:#eaf2ed!important;--mn-surface:#fff!important;
-  --mn-surface-solid:#fff!important;--mn-surface-glass:rgba(255,255,255,.88)!important;
-  --mn-surface-soft:rgba(255,255,255,.76)!important;--mn-text:#17271f!important;
-  --mn-muted:#66786d!important;--mn-line:rgba(33,78,55,.14)!important;
-  --mn-shadow:0 12px 34px rgba(32,68,47,.09)!important;
-  background:#f4f8f5!important;color:#17271f!important;
+  --mn-page:#f4f7f5;--mn-page-2:#edf3ef;--mn-panel:#ffffff;--mn-panel-2:#f8fbf9;
+  --mn-ink:#17251d;--mn-ink-2:#405247;--mn-muted:#6e7d73;--mn-line:rgba(26,65,43,.13);
+  --mn-accent:#087f58;--mn-accent-soft:rgba(8,127,88,.10);--mn-elev:0 12px 32px rgba(25,58,39,.08);
+  background:linear-gradient(180deg,#f7faf8 0%,#f0f5f2 48%,#f4f7f5 100%)!important;
+  color:var(--mn-ink)!important;
 }
 .app.theme-dark{
   color-scheme:dark!important;
-  --mn-accent:#28d49a!important;--mn-accent-strong:#0ca978!important;
-  --mn-accent-soft:rgba(40,212,154,.14)!important;--mn-bg:#08110e!important;
-  --mn-surface:#14221b!important;--mn-surface-solid:#14221b!important;
-  --mn-surface-glass:rgba(18,31,25,.88)!important;--mn-surface-soft:rgba(255,255,255,.055)!important;
-  --mn-text:#f1f8f4!important;--mn-muted:#a1b2a8!important;
-  --mn-line:rgba(220,245,232,.14)!important;--mn-shadow:0 16px 42px rgba(0,0,0,.24)!important;
+  --mn-page:#080e0b;--mn-page-2:#0d1711;--mn-panel:#111d16;--mn-panel-2:#17251c;
+  --mn-ink:#edf5ef;--mn-ink-2:#c0cec4;--mn-muted:#91a197;--mn-line:rgba(224,244,231,.12);
+  --mn-accent:#39d69c;--mn-accent-soft:rgba(57,214,156,.13);--mn-elev:0 14px 36px rgba(0,0,0,.25);
+  background:linear-gradient(180deg,#080e0b 0%,#0b130f 54%,#080e0b 100%)!important;
+  color:var(--mn-ink)!important;
 }
-.app.theme-light :where(.page,.iqHome,.content,.mainContent,.pageContent,.settingsPage,.adminPage){
-  background:transparent!important;color:#17271f!important;
-}
-.app.theme-light :where(.settings,.side,.profile,.adminCard,.broadcastExisting,.notificationList,.notificationItem,.searchDock,.searchDockResults,.searchDockNoResults,.tabbar,.episodeListItem,.layoutRow,.adminItem,.bulk,.formGrid,.aiPanel,.aiHeader,.aiComposer,.maseCustomizeSettings,.maseAppInstallGuide,.maseAppDownloadHero,.maseAppPromo,.maseAppSafetyNote,.iqCategories,.iqFilterControls,.detailHero,.adminSection,.adminToolbar,.adminTable,.settingsSection,.settingsGroup,.modal,.dialog,.sheet){
-  background-color:rgba(255,255,255,.9)!important;color:#17271f!important;
-  border-color:rgba(33,78,55,.14)!important;
-  box-shadow:0 12px 34px rgba(32,68,47,.085),inset 0 1px 0 rgba(255,255,255,.96)!important;
-}
-.app.theme-light :where(h1,h2,h3,h4,h5,label,b,strong,.title,.heading,.adminHead,.adminSectionHead,.rowHead,.iqRowHead,.sideHead){
-  color:#17271f!important;
-}
-.app.theme-light :where(p,small,.muted,.description,.subtle,.helper,.secondaryText,.adminHead p,.adminSectionHead p,.settings p){
-  color:#66786d!important;
-}
-.app.theme-light :where(input,textarea,select){
-  color:#17271f!important;background:#f7faf8!important;border-color:rgba(33,78,55,.17)!important;
-}
-.app.theme-light :where(input,textarea,select)::placeholder{color:#829188!important;opacity:1!important}
-.app.theme-light :where(.secondary,.settings button,.tabbar button,.heroMini,.rowMore,.detail>.back,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle){
-  color:#263b30!important;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(239,246,241,.9))!important;
-  border-color:rgba(33,78,55,.15)!important;box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(31,67,46,.06)!important;
-}
-.app.theme-light :where(.primary,.aiSend,.playBig,.iqPlay,.iqCategories button.active,.seasonTabs button.activeTab){
-  color:#fff!important;background:linear-gradient(135deg,#1ab783,#087c57)!important;border-color:rgba(8,124,87,.42)!important;
-}
-.app.theme-light :where(.tabbar .tabActive,.settings .chosen,.themeGrid button.chosen,.episodeGrid .episode.selected){
-  color:#087c57!important;background:rgba(20,155,110,.12)!important;border-color:rgba(20,155,110,.42)!important;
-}
-.app.theme-light .iqHome{background:transparent!important;color:#17271f!important}
-.app.theme-light .iqHome .iqHeroShade{
-  background:linear-gradient(90deg,rgba(244,249,246,.94),rgba(244,249,246,.72),rgba(244,249,246,.12))!important;
-}
-.app.theme-light .iqHome .iqHero h1,.app.theme-light .iqHome .iqHero p,
-.app.theme-light .iqHome .iqRowHead h2,.app.theme-light .iqHome .iqCard>b{color:#17271f!important}
-.app.theme-light .iqHome .iqHero p,.app.theme-light .iqHome .iqCard>small{color:#66786d!important}
-.app.theme-light .aiBubble.assistant{background:#edf4ef!important;color:#17271f!important}
-.app.theme-light .aiBubble.user{color:#fff!important}
-.app.theme-light .backdrop{background:rgba(25,43,33,.24)!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important}
+html[data-mase-theme="light"],html[data-mase-theme="light"] body,html[data-mase-theme="light"] #root{color-scheme:light!important;background:#f4f7f5!important;color:#17251d!important}
+html[data-mase-theme="dark"],html[data-mase-theme="dark"] body,html[data-mase-theme="dark"] #root{color-scheme:dark!important;background:#080e0b!important;color:#edf5ef!important}
+html:has(.app.theme-light),body:has(.app.theme-light),#root:has(.app.theme-light){background:#f4f7f5!important;color:#17251d!important}
+html:has(.app.theme-dark),body:has(.app.theme-dark),#root:has(.app.theme-dark){background:#080e0b!important;color:#edf5ef!important}
+body:has(.app.theme-light){color-scheme:light!important}
+body:has(.app.theme-dark){color-scheme:dark!important}
 
-/* Floating iOS liquid-glass dock: separate glass chassis and individual glass keys. */
+/* PAGE CANVAS + TYPOGRAPHY */
+.app.theme-light :where(.page,.iqHome,.content,.mainContent,.pageContent,.settingsPage,.adminPage,.detail){background:transparent!important;color:var(--mn-ink)!important}
+.app.theme-dark :where(.page,.iqHome,.content,.mainContent,.pageContent,.settingsPage,.adminPage,.detail){background:transparent!important;color:var(--mn-ink)!important}
+.app.theme-light :where(h1,h2,h3,h4,h5,h6,.rowHead h2,.iqRowHead h2,.adminHead h1,.adminSectionHead h2,.detail h1,.hero h1){color:#17251d!important}
+.app.theme-dark :where(h1,h2,h3,h4,h5,h6,.rowHead h2,.iqRowHead h2,.adminHead h1,.adminSectionHead h2,.detail h1,.hero h1){color:#edf5ef!important}
+.app.theme-light :where(p,.hero p,.detail p,.adminHead p,.rowHead>span,.card>small,.iqRowHead small,.description,.muted,.subtle,.helper,.secondaryText,.settings label,.settings small,.formGrid label){color:#68796e!important}
+.app.theme-dark :where(p,.hero p,.detail p,.adminHead p,.rowHead>span,.card>small,.iqRowHead small,.description,.muted,.subtle,.helper,.secondaryText,.settings label,.settings small,.formGrid label){color:#9caca1!important}
+.app.theme-light :where(.eyebrow,.rowHead small,.playerTop small){color:#087f58!important}
+.app.theme-dark :where(.eyebrow,.rowHead small){color:#65dcae!important}
+
+/* CONTENT SURFACES — intentionally excludes .player and every player control. */
+.app.theme-light :where(.iqHero,.iqCategories,.iqFilterControls,.iqSearchPanel,.iqSearchResults,.iqEmptyState,.iqInfoCard,.adminCard,.broadcastExisting,.notificationList,.notificationItem,.searchDock,.searchDockResults,.searchDockNoResults,.tabbar,.layoutRow,.adminItem,.bulk,.formGrid,.settings,.side,.profile,.modal,.dialog,.sheet,.profileProStatusCard,.profileProBadges,.assistantStudioHero,.customizeToggleRow,.experienceChoice,.adminSection,.adminPanel,.adminTableWrap){
+  background-color:rgba(255,255,255,.91)!important;color:#17251d!important;border-color:rgba(27,70,45,.13)!important;
+  box-shadow:0 10px 28px rgba(24,58,38,.065),inset 0 1px 0 rgba(255,255,255,.95)!important;
+}
+.app.theme-dark :where(.iqHero,.iqCategories,.iqFilterControls,.iqSearchPanel,.iqSearchResults,.iqEmptyState,.iqInfoCard,.adminCard,.broadcastExisting,.notificationList,.notificationItem,.searchDock,.searchDockResults,.searchDockNoResults,.tabbar,.layoutRow,.adminItem,.bulk,.formGrid,.settings,.side,.profile,.modal,.dialog,.sheet,.profileProStatusCard,.profileProBadges,.assistantStudioHero,.customizeToggleRow,.experienceChoice,.adminSection,.adminPanel,.adminTableWrap){
+  background-color:rgba(18,31,23,.88)!important;color:#edf5ef!important;border-color:rgba(222,244,229,.12)!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.045)!important;
+}
+.app.theme-light .iqHero{background:radial-gradient(ellipse at 82% 0%,rgba(35,173,117,.10),transparent 43%),linear-gradient(125deg,#fff,#edf6f0)!important}
+.app.theme-dark .iqHero{background:radial-gradient(ellipse at 82% 0%,rgba(35,173,117,.13),transparent 43%),linear-gradient(125deg,#17231b,#0d1510)!important}
+.app.theme-light :where(.iqRow,.iqSection,.row,.adminGrid2,.profileProSignedIn){background:transparent!important}
+.app.theme-dark :where(.iqRow,.iqSection,.row,.adminGrid2,.profileProSignedIn){background:transparent!important}
+.app.theme-light :where(.iqCard,.iqMediaCard,.iqTitleCard,.adminCard,.adminPanel){border-color:var(--mn-line)!important}
+.app.theme-dark :where(.iqCard,.iqMediaCard,.iqTitleCard,.adminCard,.adminPanel){border-color:var(--mn-line)!important}
+
+/* LIGHT + DARK HEADER GLASS */
+.app.theme-light .maseReferenceHeader{
+  color:#17251d!important;border:1px solid rgba(255,255,255,.92)!important;
+  background:linear-gradient(120deg,rgba(255,255,255,.92),rgba(244,250,246,.84))!important;
+  box-shadow:0 8px 28px rgba(26,64,43,.10),inset 0 1px 0 #fff!important;
+}
+.app.theme-light .maseReferenceHeader .brand,.app.theme-light .maseReferenceHeader .brandName{color:#17251d!important}
+.app.theme-light .maseReferenceHeader .maseSearchToggle,.app.theme-light .maseReferenceHeader .navActions>button,.app.theme-light .maseReferenceHeader .maseHeaderSearch{
+  color:#34483b!important;background:rgba(238,246,240,.86)!important;border-color:rgba(26,65,43,.13)!important;box-shadow:inset 0 1px 0 #fff,0 3px 10px rgba(30,65,44,.06)!important;
+}
+.app.theme-dark .maseReferenceHeader{background:linear-gradient(120deg,rgba(31,48,38,.88),rgba(12,21,16,.86))!important;border-color:rgba(220,242,227,.17)!important}
+.app.theme-dark .maseReferenceHeader .brand,.app.theme-dark .maseReferenceHeader .brandName{color:#edf5ef!important}
+
+/* FORM FIELDS */
+.app.theme-light :where(input,textarea,select,.formGrid input,.formGrid select,.formGrid textarea,.bulk input,.bulk textarea){
+  color:#17251d!important;background:#f8fbf9!important;border:1px solid rgba(28,70,46,.17)!important;box-shadow:inset 0 1px 2px rgba(20,54,34,.035)!important;
+}
+.app.theme-dark :where(input,textarea,select,.formGrid input,.formGrid select,.formGrid textarea,.bulk input,.bulk textarea){
+  color:#edf5ef!important;background:#0a130e!important;border:1px solid rgba(222,244,229,.13)!important;
+}
+.app.theme-light input::placeholder,.app.theme-light textarea::placeholder{color:#91a096!important}
+.app.theme-dark input::placeholder,.app.theme-dark textarea::placeholder{color:#74867a!important}
+.app :where(input,textarea,select):focus-visible{outline:2px solid var(--mn-accent)!important;outline-offset:2px!important}
+
+/* BUTTON SYSTEM — content buttons only; never select player controls. */
+.app.theme-light :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle,.heroMini,.rowMore,.icon,.customizeWeather,.customizeFooterActions button,.profileProAction,.adminAction){
+  color:#24382b!important;border-color:rgba(28,75,48,.14)!important;background:linear-gradient(180deg,#fff,#edf4ef)!important;box-shadow:inset 0 1px 0 #fff,0 4px 13px rgba(24,62,39,.07)!important;
+}
+.app.theme-dark :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle,.heroMini,.rowMore,.icon,.customizeWeather,.customizeFooterActions button,.profileProAction,.adminAction){
+  color:#e5f0e8!important;border-color:rgba(224,244,231,.13)!important;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 5px 14px rgba(0,0,0,.13)!important;
+}
+.app.theme-light :where(.primary,.customizeFooterActions .primary){color:#fff!important;background:linear-gradient(180deg,#159b6c,#087d55)!important;border-color:#087d55!important}
+.app.theme-dark :where(.primary,.customizeFooterActions .primary){color:#041b11!important;background:linear-gradient(180deg,#5ce4ad,#25bf84)!important;border-color:#4bd8a0!important}
+.app.theme-light :where(.settings .chosen,.themeGrid .chosen,.tabbar .tabActive,.seasonTabs .activeTab,.experienceChoice.selected){color:#087f58!important;background:linear-gradient(180deg,#e7f7ee,#d8f0e2)!important;border-color:rgba(8,127,88,.32)!important}
+.app.theme-dark :where(.settings .chosen,.themeGrid .chosen,.tabbar .tabActive,.seasonTabs .activeTab,.experienceChoice.selected){color:#7ce8ba!important;background:linear-gradient(180deg,rgba(42,198,136,.20),rgba(42,198,136,.09))!important;border-color:rgba(84,223,163,.34)!important}
+.app :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle,.heroMini,.rowMore,.icon){
+  border-radius:15px!important;transition:transform .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease!important;
+}
+.app :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle,.heroMini,.rowMore,.icon):active{transform:scale(.975)!important}
+
+/* TWO LARGE THEME PREVIEW CARDS */
+.app .appearanceThemePicker{margin:17px 0 22px;padding:17px;border:1px solid var(--mn-line);border-radius:23px;background:var(--mn-panel-2);box-shadow:var(--mn-elev)}
+.app .appearanceThemeHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.app .appearanceThemeHeading>span:first-child{display:flex;flex-direction:column;gap:4px}
+.app .appearanceThemeHeading b{font-size:15px;letter-spacing:-.02em}
+.app .appearanceThemeHeading small{font-size:11px;color:var(--mn-muted)}
+.app .appearanceThemeCurrent{padding:6px 9px;border-radius:999px;background:var(--mn-accent-soft);color:var(--mn-accent)!important;font-size:9px;font-weight:850;letter-spacing:.09em}
+.app .appearanceThemeChoices{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.app .appearanceThemeChoice{position:relative;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:10px!important;min-width:0;width:100%;padding:9px!important;border:1px solid var(--mn-line)!important;border-radius:19px!important;background:var(--mn-panel)!important;text-align:left!important;box-shadow:0 4px 14px rgba(0,0,0,.045)!important}
+.app .appearanceThemeChoice.chosen{border:2px solid var(--mn-accent)!important;padding:8px!important;box-shadow:0 0 0 3px var(--mn-accent-soft),0 7px 18px rgba(0,0,0,.06)!important}
+.app .appearanceThemePreview{height:74px;display:grid;grid-template-columns:17px 1fr;grid-template-rows:repeat(3,1fr);gap:5px;padding:9px;border-radius:12px;overflow:hidden}
+.app .appearanceThemePreview i{grid-column:2;border-radius:4px;background:rgba(80,110,91,.18)}
+.app .appearanceThemePreview i:first-child{grid-row:1}
+.app .appearanceThemePreview i:nth-child(2){grid-row:2;width:78%}
+.app .appearanceThemePreview i:nth-child(3){grid-row:3;width:58%}
+.app .appearanceThemePreview em{grid-column:1;grid-row:1/4;border-radius:5px;background:rgba(70,150,108,.34)}
+.app .appearanceThemeChoice.light .appearanceThemePreview{background:linear-gradient(145deg,#fff,#e8f2eb);border:1px solid #dce9df}
+.app .appearanceThemeChoice.dark .appearanceThemePreview{background:linear-gradient(145deg,#1b2920,#09120d);border:1px solid #31463a}
+.app .appearanceThemeChoice.dark .appearanceThemePreview i{background:rgba(240,250,243,.23)}
+.app .appearanceThemeChoice.dark .appearanceThemePreview em{background:rgba(71,213,151,.5)}
+.app .appearanceThemeChoiceCopy{display:flex;flex-direction:column;gap:4px}
+.app .appearanceThemeChoiceCopy b{font-size:13px;color:var(--mn-ink)!important}
+.app .appearanceThemeChoiceCopy small{font-size:10px;line-height:1.35;color:var(--mn-muted)!important}
+.app .appearanceThemeCheck{position:absolute;right:13px;bottom:13px;width:23px;height:23px;display:grid;place-items:center;border-radius:50%;background:var(--mn-accent);color:#fff}
+.app .appearanceThemeChoice:not(.chosen) .appearanceThemeCheck{opacity:0}
+.app.theme-light .appearanceThemePicker{background:#fff!important;border-color:rgba(28,70,46,.12)!important}
+.app.theme-dark .appearanceThemePicker{background:#111d16!important;border-color:rgba(224,244,231,.12)!important}
+@media(max-width:420px){.app .appearanceThemePicker{padding:13px}.app .appearanceThemeChoices{gap:8px}.app .appearanceThemeChoice{padding:7px!important}.app .appearanceThemePreview{height:62px}.app .appearanceThemeChoiceCopy small{font-size:9px}}
+
+/* iOS-INSPIRED LIQUID GLASS DOCK — redesigned DOM, no perpetual shimmer. */
 .app .masenetLiquidDock{
-  position:fixed!important;left:50%!important;bottom:max(12px,env(safe-area-inset-bottom,0px))!important;
-  transform:translateX(-50%)!important;z-index:1200!important;isolation:isolate!important;
-  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;align-items:center!important;
-  width:min(540px,calc(100% - 26px))!important;min-height:74px!important;padding:7px!important;gap:5px!important;
-  overflow:visible!important;border:1px solid rgba(255,255,255,.24)!important;border-radius:28px!important;
-  background:
-    radial-gradient(130% 150% at 12% -45%,rgba(255,255,255,.42),transparent 58%),
-    linear-gradient(135deg,rgba(32,48,58,.76),rgba(13,23,32,.72) 52%,rgba(38,34,52,.72))!important;
-  -webkit-backdrop-filter:blur(28px) saturate(190%)!important;backdrop-filter:blur(28px) saturate(190%)!important;
-  box-shadow:0 18px 48px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.42),inset 0 -1px 0 rgba(255,255,255,.08)!important;
-  transition:background .28s ease,border-color .28s ease,box-shadow .28s ease!important;
+  position:fixed!important;z-index:1200!important;left:50%!important;bottom:max(13px,env(safe-area-inset-bottom,0px))!important;
+  transform:translateX(-50%)!important;width:min(570px,calc(100% - 28px))!important;max-width:570px!important;
+  min-height:82px!important;padding:9px!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;align-items:center!important;gap:7px!important;
+  border:1px solid rgba(255,255,255,.34)!important;border-radius:29px!important;
+  background:linear-gradient(135deg,rgba(245,250,255,.28),rgba(160,183,204,.12) 48%,rgba(245,245,255,.19))!important;
+  -webkit-backdrop-filter:blur(34px) saturate(185%)!important;backdrop-filter:blur(34px) saturate(185%)!important;
+  box-shadow:0 18px 48px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.65),inset 0 -1px 0 rgba(255,255,255,.12)!important;
 }
 .app.theme-light .masenetLiquidDock{
-  border-color:rgba(255,255,255,.92)!important;
-  background:
-    radial-gradient(130% 150% at 12% -45%,rgba(255,255,255,.98),transparent 58%),
-    linear-gradient(135deg,rgba(255,255,255,.88),rgba(240,248,243,.78) 52%,rgba(232,243,237,.84))!important;
-  box-shadow:0 16px 42px rgba(31,73,48,.17),inset 0 1px 0 #fff,inset 0 -1px 0 rgba(32,84,56,.06)!important;
-}
-.app .masenetLiquidDock:before{
-  content:""!important;position:absolute!important;inset:1px!important;border-radius:inherit!important;pointer-events:none!important;z-index:0!important;
-  background:linear-gradient(115deg,rgba(255,255,255,.26),transparent 35%,rgba(255,255,255,.08) 70%,transparent)!important;
-  opacity:1!important;animation:none!important;
-}
-.app .masenetLiquidDock:after{pointer-events:none!important;z-index:0!important}
-.app .masenetLiquidDock>button{
-  position:relative!important;isolation:isolate!important;overflow:hidden!important;z-index:1!important;
-  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
-  min-width:0!important;min-height:58px!important;height:58px!important;padding:5px 2px!important;gap:4px!important;
-  border:1px solid transparent!important;border-radius:19px!important;background:transparent!important;
-  color:rgba(246,251,255,.78)!important;box-shadow:none!important;text-shadow:none!important;
-  font-size:10px!important;font-weight:700!important;line-height:1!important;
-  transition:background .22s ease,color .22s ease,border-color .22s ease,transform .22s cubic-bezier(.2,.8,.2,1)!important;
-  -webkit-tap-highlight-color:transparent!important;
-}
-.app.theme-light .masenetLiquidDock>button{color:#4e6658!important}
-.app .masenetLiquidDock>button:before{
-  content:""!important;position:absolute!important;inset:0!important;z-index:-1!important;border-radius:inherit!important;
-  border:1px solid rgba(255,255,255,.2)!important;
-  background:linear-gradient(145deg,rgba(255,255,255,.25),rgba(255,255,255,.035) 55%,rgba(140,205,255,.12))!important;
-  opacity:0!important;transform:scale(.82)!important;filter:none!important;
-  transition:opacity .22s ease,transform .25s cubic-bezier(.2,.8,.2,1)!important;
-}
-.app.theme-light .masenetLiquidDock>button:before{
-  border-color:rgba(255,255,255,.92)!important;
-  background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(223,241,230,.68) 62%,rgba(255,255,255,.52))!important;
-}
-.app .masenetLiquidDock>button.active{color:#fff!important;border-color:rgba(255,255,255,.38)!important}
-.app .masenetLiquidDock>button.active:before{
-  opacity:1!important;transform:scale(1)!important;
-  background:linear-gradient(145deg,rgba(255,255,255,.34),rgba(111,194,245,.23) 52%,rgba(255,255,255,.08))!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.48),0 5px 16px rgba(0,0,0,.13)!important;
-}
-.app.theme-light .masenetLiquidDock>button.active{color:#087c57!important;border-color:rgba(20,155,110,.25)!important}
-.app.theme-light .masenetLiquidDock>button.active:before{
-  background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(194,235,211,.82) 58%,rgba(255,255,255,.76))!important;
-  box-shadow:inset 0 1px 0 #fff,0 5px 16px rgba(26,91,56,.11)!important;
-}
-.app .masenetLiquidDock>button:after{
-  content:""!important;position:absolute!important;left:50%!important;top:3px!important;width:30%!important;height:2px!important;
-  border-radius:99px!important;transform:translateX(-50%) scaleX(.2)!important;opacity:0!important;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent)!important;transition:opacity .2s,transform .2s!important;
-}
-.app .masenetLiquidDock>button.active:after{opacity:.9!important;transform:translateX(-50%) scaleX(1)!important}
-.app .masenetLiquidDock>button>svg{width:21px!important;height:21px!important;filter:drop-shadow(0 2px 5px rgba(0,0,0,.12))!important;transition:transform .22s ease!important}
-.app .masenetLiquidDock>button>span{font-size:9px!important;font-weight:760!important;letter-spacing:.015em!important}
-.app .masenetLiquidDock>button:active{transform:scale(.92)!important}
-.app .masenetLiquidDock>button:hover>svg{transform:translateY(-2px)!important}
-.app.theme-light .masenetLiquidDock .dockHomeLogo{filter:drop-shadow(0 2px 5px rgba(24,83,51,.12))!important}
-.app .masenetLiquidDock .dockNotificationBadge{z-index:4!important}
-.app .masenetLiquidDock .dockYouTube .dockYoutubeMark{width:25px!important;height:25px!important}
-.app .masenetLiquidDock .dockYouTube .dockYoutubeMark img{width:100%!important;height:100%!important;object-fit:contain!important}
-
-/* Consistent iOS-like tactile buttons outside the playback controls. */
-.app :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle,.heroMini,.rowMore){
-  min-height:40px;border-radius:16px!important;
-  transition:transform .2s cubic-bezier(.2,.8,.2,1),background .2s ease,border-color .2s ease,box-shadow .2s ease!important;
-}
-.app :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle,.heroMini,.rowMore):active{transform:scale(.97)!important}
-@media(max-width:760px){
-  .app .masenetLiquidDock{width:calc(100% - 22px)!important;min-height:70px!important;padding:6px!important;gap:3px!important;border-radius:26px!important;bottom:max(8px,env(safe-area-inset-bottom,0px))!important}
-  .app .masenetLiquidDock>button{height:55px!important;min-height:55px!important;border-radius:17px!important;gap:4px!important}
-  .app .masenetLiquidDock>button>svg{width:20px!important;height:20px!important}
-  .app .masenetLiquidDock>button>span{font-size:8.5px!important}
-  .app .page{padding-bottom:calc(118px + env(safe-area-inset-bottom))!important}
-}
-@media(prefers-reduced-motion:reduce){
-  .app .masenetLiquidDock,.app .masenetLiquidDock>button,.app :where(.primary,.secondary,.settings button,.tabbar button){transition:none!important}
-}
-
-
-/* Final authority layer: loaded after every legacy stylesheet. */
-html[data-mase-theme="light"],html[data-mase-theme="light"] body,
-html[data-mase-theme="light"] #root{
-  color-scheme:light!important;background:#f4f8f5!important;color:#17271f!important;
-}
-html[data-mase-theme="dark"],html[data-mase-theme="dark"] body,
-html[data-mase-theme="dark"] #root{
-  color-scheme:dark!important;background:#08110e!important;color:#f1f8f4!important;
-}
-.app.theme-light{
-  color-scheme:light!important;background:#f4f8f5!important;color:#17271f!important;
-  --bg:#f4f8f5!important;--text:#17271f!important;--muted:#66786d!important;
-  --mn-bg:#f4f8f5!important;--mn-text:#17271f!important;--mn-muted:#66786d!important;
-  --mn-surface:#fff!important;--mn-surface-solid:#fff!important;--mn-surface-soft:rgba(255,255,255,.82)!important;
-  --mn-line:rgba(33,78,55,.15)!important;--mn-shadow:0 12px 34px rgba(32,68,47,.09)!important;
-}
-.app.theme-dark{
-  color-scheme:dark!important;background:#08110e!important;color:#f1f8f4!important;
-  --bg:#08110e!important;--text:#f1f8f4!important;--muted:#a1b2a8!important;
-  --mn-bg:#08110e!important;--mn-text:#f1f8f4!important;--mn-muted:#a1b2a8!important;
-  --mn-surface:#14221b!important;--mn-surface-solid:#14221b!important;--mn-surface-soft:rgba(255,255,255,.06)!important;
-  --mn-line:rgba(220,245,232,.15)!important;--mn-shadow:0 16px 42px rgba(0,0,0,.24)!important;
-}
-.app.theme-light :where(.page,.iqHome,.content,.mainContent,.pageContent,.settingsPage,.adminPage){
-  background-color:transparent!important;color:#17271f!important;
-}
-.app.theme-light :where(h1,h2,h3,h4,h5,h6,label,b,strong,.title,.heading,.adminHead,.adminSectionHead,.rowHead,.iqRowHead,.sideHead){
-  color:#17271f!important;
-}
-.app.theme-light :where(p,small,.muted,.description,.subtle,.helper,.secondaryText){color:#66786d!important}
-.app.theme-light :where(.settings,.side,.profile,.adminCard,.broadcastExisting,.notificationList,.notificationItem,.searchDock,.searchDockResults,.searchDockNoResults,.tabbar,.layoutRow,.adminItem,.bulk,.formGrid,.aiPanel,.aiHeader,.aiComposer,.maseCustomizeSettings,.iqCategories,.iqFilterControls,.modal,.dialog,.sheet){
-  background-color:rgba(255,255,255,.92)!important;color:#17271f!important;border-color:rgba(33,78,55,.15)!important;
-  box-shadow:0 12px 34px rgba(32,68,47,.085),inset 0 1px 0 #fff!important;
-}
-.app.theme-light :where(input,textarea,select){
-  color:#17271f!important;background:#f7faf8!important;border-color:rgba(33,78,55,.17)!important;
-}
-.app.theme-light :where(.secondary,.settings button,.tabbar button,.themeGrid button,.seasonTabs button,.episodeGrid .episode,.navActions>button,.maseSearchToggle,.heroMini,.rowMore){
-  color:#263b30!important;background:linear-gradient(180deg,#fff,#eff6f1)!important;border-color:rgba(33,78,55,.16)!important;
-  box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(31,67,46,.07)!important;
-}
-.app.theme-light .masenetLiquidDock{
-  border:1px solid rgba(255,255,255,.94)!important;
-  background:
-    radial-gradient(140% 170% at 12% -55%,rgba(255,255,255,.99),transparent 58%),
-    linear-gradient(135deg,rgba(255,255,255,.91),rgba(237,247,241,.84) 52%,rgba(226,241,232,.88))!important;
-  box-shadow:0 18px 46px rgba(30,72,48,.18),inset 0 1px 0 #fff,inset 0 -1px 0 rgba(32,84,56,.08)!important;
+  border-color:rgba(255,255,255,.94)!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.88),rgba(239,247,242,.80) 48%,rgba(224,238,230,.78))!important;
+  box-shadow:0 16px 42px rgba(28,65,43,.17),inset 0 1px 0 #fff,inset 0 -1px 0 rgba(30,78,49,.08)!important;
 }
 .app.theme-dark .masenetLiquidDock{
-  border:1px solid rgba(220,239,255,.28)!important;
-  background:
-    radial-gradient(140% 170% at 12% -55%,rgba(255,255,255,.20),transparent 58%),
-    linear-gradient(135deg,rgba(34,49,61,.88),rgba(12,21,31,.88) 52%,rgba(34,31,48,.86))!important;
-  box-shadow:0 20px 52px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.30),inset 0 -1px 0 rgba(255,255,255,.06)!important;
+  border-color:rgba(230,244,255,.25)!important;
+  background:linear-gradient(135deg,rgba(56,76,91,.72),rgba(17,27,39,.79) 50%,rgba(47,39,62,.70))!important;
+  box-shadow:0 20px 52px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(255,255,255,.07)!important;
 }
-.app .masenetLiquidDock{
-  isolation:isolate!important;overflow:visible!important;border-radius:29px!important;
-  -webkit-backdrop-filter:blur(30px) saturate(190%)!important;backdrop-filter:blur(30px) saturate(190%)!important;
+.app .masenetLiquidDock:before,.app .masenetLiquidDock:after{content:none!important;animation:none!important}
+.app .masenetLiquidDock>.dockItem{
+  position:relative!important;isolation:isolate!important;overflow:visible!important;min-width:0!important;height:62px!important;min-height:62px!important;
+  padding:4px 2px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;
+  border:1px solid transparent!important;border-radius:21px!important;background:transparent!important;color:rgba(241,248,255,.82)!important;
+  box-shadow:none!important;text-shadow:none!important;line-height:1!important;-webkit-tap-highlight-color:transparent!important;
+  transition:transform .16s ease,color .16s ease,background .16s ease,border-color .16s ease!important;
 }
-.app .masenetLiquidDock>button{
-  border:1px solid transparent!important;border-radius:20px!important;
-  background:transparent!important;box-shadow:none!important;
-  transition:transform .18s ease,background-color .18s ease,color .18s ease,border-color .18s ease!important;
+.app.theme-light .masenetLiquidDock>.dockItem{color:#52685a!important}
+.app.theme-dark .masenetLiquidDock>.dockItem{color:rgba(241,248,255,.82)!important}
+.app .masenetLiquidDock>.dockItem:before,.app .masenetLiquidDock>.dockItem:after{content:none!important}
+.app .masenetLiquidDock .dockIconShell{
+  position:relative;width:39px;height:36px;display:grid;place-items:center;border-radius:14px;
+  color:inherit;background:transparent;border:1px solid transparent;
+  transition:background .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease;
 }
-.app.theme-dark .masenetLiquidDock>button{color:rgba(244,249,255,.78)!important}
-.app.theme-light .masenetLiquidDock>button{color:#52685b!important}
-.app.theme-dark .masenetLiquidDock>button.active{
-  color:#fff!important;border-color:rgba(255,255,255,.38)!important;
-}
-.app.theme-light .masenetLiquidDock>button.active{
-  color:#087c57!important;border-color:rgba(20,155,110,.30)!important;
-}
-.app.theme-dark .masenetLiquidDock>button.active:before{
-  opacity:1!important;transform:scale(1)!important;
-  background:linear-gradient(145deg,rgba(255,255,255,.34),rgba(100,174,220,.24) 55%,rgba(255,255,255,.08))!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 6px 18px rgba(0,0,0,.18)!important;
-}
-.app.theme-light .masenetLiquidDock>button.active:before{
-  opacity:1!important;transform:scale(1)!important;
-  background:linear-gradient(145deg,rgba(255,255,255,.99),rgba(194,235,211,.88) 58%,rgba(255,255,255,.78))!important;
-  box-shadow:inset 0 1px 0 #fff,0 6px 18px rgba(26,91,56,.13)!important;
-}
-.app .masenetLiquidDock>button:active{transform:scale(.94)!important}
-.app .masenetLiquidDock>button>svg{filter:drop-shadow(0 2px 5px rgba(0,0,0,.12))!important}
-.app.theme-light .masenetLiquidDock>button>span{color:#52685b!important}
-.app.theme-light .masenetLiquidDock>button.active>span{color:#087c57!important}
+.app .masenetLiquidDock .dockIconShell>svg{width:21px!important;height:21px!important;filter:drop-shadow(0 1px 3px rgba(0,0,0,.10))!important}
+.app .masenetLiquidDock .dockLabel{display:block!important;position:relative;z-index:2;font-size:9px!important;font-weight:720!important;letter-spacing:.01em!important;line-height:1.05!important;color:inherit!important;white-space:nowrap}
+.app .masenetLiquidDock>.dockItem.active{color:#fff!important;background:linear-gradient(145deg,rgba(255,255,255,.19),rgba(255,255,255,.07))!important;border-color:rgba(255,255,255,.25)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.33),0 5px 15px rgba(0,0,0,.09)!important}
+.app.theme-light .masenetLiquidDock>.dockItem.active{color:#087d55!important;background:linear-gradient(145deg,rgba(255,255,255,.97),rgba(212,238,222,.88))!important;border-color:rgba(8,127,88,.20)!important;box-shadow:inset 0 1px 0 #fff,0 5px 15px rgba(22,86,49,.12)!important}
+.app.theme-dark .masenetLiquidDock>.dockItem.active{color:#fff!important;background:linear-gradient(145deg,rgba(255,255,255,.24),rgba(116,177,215,.12))!important;border-color:rgba(255,255,255,.28)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.42),0 5px 18px rgba(0,0,0,.20)!important}
+.app .masenetLiquidDock>.dockItem.active .dockIconShell{background:linear-gradient(145deg,rgba(255,255,255,.29),rgba(255,255,255,.10));border-color:rgba(255,255,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 3px 9px rgba(0,0,0,.08)}
+.app.theme-light .masenetLiquidDock>.dockItem.active .dockIconShell{background:linear-gradient(145deg,#fff,#e3f5e9);border-color:rgba(8,127,88,.15);box-shadow:inset 0 1px 0 #fff,0 3px 9px rgba(20,80,45,.09)}
+.app .masenetLiquidDock>.dockItem:active{transform:scale(.94)!important}
+.app .masenetLiquidDock>.dockItem:focus-visible{outline:2px solid var(--mn-accent)!important;outline-offset:2px!important}
+.app .masenetLiquidDock .dockHomeLogo{width:23px!important;height:23px!important;object-fit:contain!important;filter:drop-shadow(0 1px 4px rgba(0,0,0,.12))!important}
+.app .masenetLiquidDock .dockYoutubeMark{position:relative;width:25px;height:25px;display:grid;place-items:center}
+.app .masenetLiquidDock .dockYoutubeMark img{width:100%;height:100%;object-fit:contain}
+.app .masenetLiquidDock .dockYoutubeMark i{position:absolute;right:-3px;bottom:-2px;width:14px;height:14px;display:grid;place-items:center;border-radius:50%;background:#ef4444;color:#fff;border:1px solid rgba(255,255,255,.85)}
+.app .masenetLiquidDock .dockNotificationBadge{position:absolute;top:-5px;right:-7px;z-index:4;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;border-radius:999px;background:#f04452;color:#fff!important;border:1px solid rgba(255,255,255,.8);font-size:9px;font-style:normal;font-weight:800}
 @media(max-width:760px){
-  .app .masenetLiquidDock{width:calc(100% - 22px)!important;min-height:72px!important;bottom:max(9px,env(safe-area-inset-bottom,0px))!important}
-  .app .masenetLiquidDock>button{height:56px!important;min-height:56px!important;border-radius:18px!important}
+ .app .masenetLiquidDock{width:calc(100% - 20px)!important;min-height:78px!important;padding:7px!important;gap:4px!important;bottom:max(8px,env(safe-area-inset-bottom,0px))!important;border-radius:26px!important}
+ .app .masenetLiquidDock>.dockItem{height:61px!important;min-height:61px!important;border-radius:18px!important;gap:3px!important}
+ .app .masenetLiquidDock .dockIconShell{width:36px;height:34px;border-radius:12px}
+ .app .masenetLiquidDock .dockIconShell>svg{width:20px!important;height:20px!important}
+ .app .masenetLiquidDock .dockLabel{font-size:8.5px!important}
+ .app .page,.app .iqHome{padding-bottom:calc(122px + env(safe-area-inset-bottom))!important}
+}
+@media(max-width:370px){
+ .app .masenetLiquidDock{gap:2px!important;padding:6px!important}
+ .app .masenetLiquidDock>.dockItem{padding-inline:0!important}
+ .app .masenetLiquidDock .dockLabel{font-size:8px!important}
 }
 @media(prefers-reduced-motion:reduce){
-  .app .masenetLiquidDock,.app .masenetLiquidDock>button{transition:none!important}
+ .app .masenetLiquidDock,.app .masenetLiquidDock>.dockItem,.app .masenetLiquidDock .dockIconShell,
+ .app :where(.primary,.secondary,.settings button,.tabbar button,.themeGrid button){transition:none!important}
 }
