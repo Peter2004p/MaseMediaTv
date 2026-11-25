@@ -1,6 +1,6 @@
 import { json, requireAdmin, type Env } from "./auth/_shared";
 
-type SourceInput = { id?: unknown; url?: unknown; title?: unknown; episode?: unknown };
+type SourceInput = { id?: unknown; url?: unknown; title?: unknown; episode?: unknown; source?: 'catalogue' | 'stream_manager' };
 
 const isPrivateIpv4 = (host: string) => {
   const parts = host.split(".");
@@ -29,19 +29,58 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const gate = await requireAdmin(request, env);
   if (gate.response) return gate.response;
 
-  let body: { sources?: SourceInput[] };
-  try { body = await request.json() as { sources?: SourceInput[] }; }
+  let body: { sources?: SourceInput[]; includeStreamManager?: boolean };
+  try { body = await request.json() as { sources?: SourceInput[]; includeStreamManager?: boolean }; }
   catch { return json({ error: "Send a valid JSON source list." }, 400); }
 
-  if (!Array.isArray(body.sources) || body.sources.length < 1 || body.sources.length > 30) {
-    return json({ error: "Check between 1 and 30 sources at a time." }, 400);
+  if (body.sources !== undefined && (!Array.isArray(body.sources) || body.sources.length > 30)) {
+    return json({ error: "Send no more than 30 catalogue sources at a time." }, 400);
   }
 
-  const results = await Promise.all(body.sources.map(async (source, index) => {
+  const catalogueSources = (body.sources || []).map(source => ({ ...source, source: "catalogue" as const }));
+  const streamManagerSources: SourceInput[] = [];
+  let streamManagerHistory: "checked" | "unavailable" | "not_requested" = "not_requested";
+  if (body.includeStreamManager === true) {
+    try {
+      const rows = await env.DB.prepare(
+        "SELECT id,stream_url,title,season,episode,quality FROM stream_manager_pending WHERE status IN ('applied','pending') ORDER BY received_at DESC LIMIT 30"
+      ).all<{ id: string; stream_url: string; title: string; season: number; episode: number; quality: string }>();
+      for (const row of rows.results || []) {
+        streamManagerSources.push({
+          id: "stream-manager-" + row.id,
+          url: row.stream_url,
+          title: row.title,
+          episode: "S" + String(row.season || 1) + " E" + String(row.episode || 1) + " · " + String(row.quality || "Source") + " · Stream Manager",
+          source: "stream_manager"
+        });
+      }
+      streamManagerHistory = "checked";
+    } catch {
+      streamManagerHistory = "unavailable";
+    }
+  }
+
+  const combinedSources: SourceInput[] = [];
+  const seenUrls = new Set<string>();
+  for (const source of [...catalogueSources, ...streamManagerSources]) {
+    const key = typeof source.url === "string" ? source.url.trim() : "";
+    if (!key || seenUrls.has(key)) continue;
+    seenUrls.add(key);
+    combinedSources.push(source);
+    if (combinedSources.length >= 30) break;
+  }
+  if (!combinedSources.length) {
+    return json({ error: body.includeStreamManager
+      ? "No external streaming URLs were found in the catalogue or Stream Manager history."
+      : "No external streaming URLs were supplied. Choose at least one source to check." }, 400);
+  }
+
+  const results = await Promise.all(combinedSources.map(async (source, index) => {
     const url = safeExternalUrl(source.url);
     const base = {
       id: String(source.id ?? index).slice(0, 120),
       title: String(source.title ?? "Untitled").slice(0, 160),
+      source: source.source === "stream_manager" ? "stream_manager" : "catalogue",
       episode: String(source.episode ?? "").slice(0, 60),
       host: url?.hostname ?? "Invalid URL"
     };
@@ -111,5 +150,17 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return out;
   }, {} as Record<string, number>);
 
-  return json({ ok: true, checkedAt: new Date().toISOString(), method: "HEAD with one-byte Range GET fallback", note: "The checker cancels each Range GET response immediately after headers. It does not intentionally consume video bytes or follow redirects.", counts, results });
+  return json({
+    ok: true,
+    checkedAt: new Date().toISOString(),
+    method: "HEAD with one-byte Range GET fallback",
+    sourcesChecked: {
+      catalogue: results.filter(item => item.source === "catalogue").length,
+      streamManager: results.filter(item => item.source === "stream_manager").length,
+      streamManagerHistory: streamManagerHistory
+    },
+    note: "The checker cancels each Range GET response immediately after headers. It does not intentionally consume video bytes or follow redirects. A reachable response does not confirm playback.",
+    counts,
+    results
+  });
 };
