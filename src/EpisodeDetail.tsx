@@ -44,7 +44,7 @@ export default function EpisodeDetail({title,seasonNumber,episodeNumber,go,profi
 function EpisodeComments({titleId,episodeKey}:{titleId:string;episodeKey:string}){
  const [comments,setComments]=useState<any[]>([]),[draft,setDraft]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const refresh=async()=>{try{const r=await api.get('/api/title-experience',{titleId,episodeKey});setComments(Array.isArray(r.data?.comments)?r.data.comments:[])}catch{setError('Comments are temporarily unavailable.') }};
- useEffect(()=>{void refresh()},[titleId]);
+ useEffect(()=>{setComments([]);setError('');void refresh()},[titleId,episodeKey]);
  const post=async()=>{if(!draft.trim()||busy)return;setBusy(true);setError('');try{await api.post('/api/title-experience',{action:'discussionComment',titleId,episodeKey,body:draft.trim()});setDraft('');await refresh()}catch(e){setError((e as any)?.response?.data?.error||'Sign in to join this discussion.')}finally{setBusy(false)}};
  return <div className="episodeCommentList"><textarea value={draft} onChange={e=>setDraft(e.target.value)} maxLength={500} placeholder="Write a comment about this episode…" aria-label="Write a comment"/><button className="episodeDownloadAction" onClick={()=>void post()} disabled={busy||!draft.trim()}>{busy?'Posting…':'Post comment'}</button>{error&&<p className="error">{error}</p>}{comments.length?comments.filter(c=>!c.parentId).map(c=><article key={c.id}><time>{new Date(c.createdAt).toLocaleString()}</time><p>{c.body}</p></article>):<p>No comments yet. Start the conversation.</p>}</div>;
 }
