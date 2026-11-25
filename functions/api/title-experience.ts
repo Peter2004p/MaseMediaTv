@@ -189,7 +189,7 @@ export const onRequestPost: PagesFunction<ExperienceEnv> = async ({request,env})
       if(episodeKey && !validEpisodeKey(episodeKey)) return json({error:"Invalid episode key."},400);
       const parentId=body.parentId==null||body.parentId===""?null:String(body.parentId);
       let parentOwner:string|null=null;
-      if(parentId){if(!validId(parentId)) return json({error:"Invalid reply target."},400);const parent=await env.DB.prepare("SELECT id,user_id FROM title_discussion_comments WHERE id=? AND title_id=? AND status='published' AND parent_id IS NULL AND ((?='' AND episode_key IS NULL) OR episode_key=?)).bind(parentId,body.titleId,episodeKey,episodeKey).first<{id:string;user_id:string}>();if(!parent)return json({error:"This comment cannot be replied to."},404);parentOwner=parent.user_id;}
+      if(parentId){if(!validId(parentId)) return json({error:"Invalid reply target."},400);const parent=await env.DB.prepare("SELECT id,user_id FROM title_discussion_comments WHERE id=? AND title_id=? AND status='published' AND parent_id IS NULL AND ((?='' AND episode_key IS NULL) OR episode_key=?)").bind(parentId,body.titleId,episodeKey,episodeKey).first<{id:string;user_id:string}>();if(!parent)return json({error:"This comment cannot be replied to."},404);parentOwner=parent.user_id;}
       const recent=await env.DB.prepare("SELECT COUNT(*) AS count FROM title_discussion_comments WHERE user_id=? AND created_at>=datetime('now','-1 minute')").bind(userId).first<{count:number}>();
       if(Number(recent?.count||0)>=5) return json({error:"Please wait a minute before posting another comment."},429);
       const id=crypto.randomUUID();
