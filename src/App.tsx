@@ -56,7 +56,7 @@ function Poster({title,small=false}:{title:Title;small?:boolean}){const [src,set
 
 export default function App(){
  useEffect(()=>{
-  const selector='nav button, header.nav button, .maseBackButton, .back, .episodePrevNext button, .maseShortsBrand';
+  const selector='nav button, nav a, nav [role="button"], nav [role="link"], header.nav button, header.nav a, .maseBackButton, .back, .episodePrevNext button, .maseShortsBrand';
   const onNavigationClick=(event:MouseEvent)=>{
    const origin=event.target;
    if(!(origin instanceof Element))return;
