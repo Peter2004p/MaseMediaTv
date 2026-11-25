@@ -55,6 +55,25 @@ function groupLegacyTitles(items:Title[]):Title[]{
 function Poster({title,small=false}:{title:Title;small?:boolean}){const [src,setSrc]=useState(title.posterUrl||'');const [failed,setFailed]=useState(false);const [retried,setRetried]=useState(false);const initials=title.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('');const refresh=()=>{if(!title.posterPath||retried)return;setRetried(true);api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(r.data?.url){setFailed(false);setSrc(String(r.data.url))}}).catch(()=>{})};useEffect(()=>{let alive=true;setFailed(false);setRetried(false);setSrc(title.posterUrl||'');if(title.posterPath)api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(alive&&r.data?.url)setSrc(String(r.data.url))}).catch(()=>{});return()=>{alive=false}},[title.posterUrl,title.posterPath]);return <div className={`poster ${small?'smallPoster':''}`}>{src&&!failed?<img className="posterImage" src={src} alt={`${title.name} poster`} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>{setFailed(true);refresh()}}/>:<><div className="posterAura"/><b>{initials}</b><small>{title.type}</small></>}<i/><span>{title.quality}</span></div>;}
 
 export default function App(){
+ useEffect(()=>{
+  const selector='nav button, header.nav button, .maseBackButton, .back, .episodePrevNext button, .maseShortsBrand';
+  const onNavigationClick=(event:MouseEvent)=>{
+   const origin=event.target;
+   if(!(origin instanceof Element))return;
+   const button=origin.closest<HTMLElement>(selector);
+   if(!button)return;
+   const rect=button.getBoundingClientRect();
+   button.style.setProperty('--mase-nav-x',Math.max(0,Math.min(rect.width,event.clientX-rect.left))+'px');
+   button.style.setProperty('--mase-nav-y',Math.max(0,Math.min(rect.height,event.clientY-rect.top))+'px');
+   button.classList.remove('maseLiquidNavAnimating');
+   void button.offsetWidth;
+   button.classList.add('maseLiquidNavTap','maseLiquidNavAnimating');
+  };
+  const cleanup=(event:AnimationEvent)=>{if(event.animationName==='maseLiquidDrop'&&event.target instanceof HTMLElement)event.target.classList.remove('maseLiquidNavAnimating')};
+  document.addEventListener('click',onNavigationClick,true);
+  document.addEventListener('animationend',cleanup,true);
+  return()=>{document.removeEventListener('click',onNavigationClick,true);document.removeEventListener('animationend',cleanup,true)};
+ },[]);
  // Adaptive rendering: preserve the full design on capable devices and reduce expensive effects on low-end phones.
  useEffect(()=>{
   const nav=navigator as Navigator & {deviceMemory?:number;connection?:{saveData?:boolean;effectiveType?:string}};
