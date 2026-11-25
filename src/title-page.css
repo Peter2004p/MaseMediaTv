@@ -90,3 +90,24 @@
 
 /* iOS-like episode navigation */
 .episodePrevNext{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0 26px}.episodePrevNext button{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-width:0;padding:14px;border:1px solid rgba(255,255,255,.11);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025));color:#f7f8fc;text-align:left;transition:transform .2s,background .2s}.episodePrevNext button:last-child{align-items:flex-end;text-align:right}.episodePrevNext button:active:not(:disabled){transform:scale(.97)}.episodePrevNext button:disabled{opacity:.4}.episodePrevNext button span{color:#91baf0;font-size:9px;font-weight:850;letter-spacing:.13em}.episodePrevNext button b{font-size:13px;font-weight:750}@media(max-width:420px){.episodePrevNext{gap:8px}.episodePrevNext button{padding:12px;border-radius:14px}.episodePrevNext button b{font-size:11px}}
+ 
+/* Simple season selector and three-column episode buttons */
+.detail .seasonTabs{gap:7px;padding:2px 0 9px;margin-bottom:7px;scrollbar-width:none}
+.detail .seasonTabs::-webkit-scrollbar{display:none}
+.detail .seasonTabs button{min-height:34px;padding:0 13px;border-radius:10px;background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.1);font-size:11px;font-weight:700}
+.detail .seasonTabs button.activeTab{border-color:rgba(215,183,125,.55);background:rgba(215,183,125,.16);color:#f3d9a7;box-shadow:none}
+.detail .episodeTileGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding:4px 0 10px!important}
+.detail .episodeTile{display:grid!important;place-items:center!important;min-height:45px!important;padding:6px 4px!important;border:1px solid rgba(255,255,255,.11)!important;border-radius:11px!important;background:rgba(255,255,255,.045)!important;box-shadow:none!important;text-align:center!important}
+.detail .episodeTileNumber{font-size:12px!important;font-weight:750!important;letter-spacing:0!important;color:var(--text,#f6f7fb)!important}
+.detail .episodeTile small,.detail .episodeTileArrow{display:none!important}
+.detail .episodeTile:active{transform:scale(.96)!important}
+.detail .episodeTile:focus-visible{outline:2px solid #e6c783!important;outline-offset:2px!important}
+
+/* Circular light/dark theme reveal using the View Transitions API */
+::view-transition-old(root){animation:none!important;mix-blend-mode:normal!important;z-index:1}
+::view-transition-new(root){animation:masenet-theme-circle-wipe 650ms cubic-bezier(.45,0,.2,1) both!important;mix-blend-mode:normal!important;z-index:2}
+@keyframes masenet-theme-circle-wipe{
+ from{clip-path:circle(0px at var(--mase-theme-wipe-x,50vw) var(--mase-theme-wipe-y,50vh))}
+ to{clip-path:circle(var(--mase-theme-wipe-radius,150vmax) at var(--mase-theme-wipe-x,50vw) var(--mase-theme-wipe-y,50vh))}
+}
+@media(prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation:none!important}}
