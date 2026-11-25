@@ -12,7 +12,6 @@ import './mobile-experience.css';
 import './design-refinement.css';
 import './ios-liquid-glass-quality.css';
 import './liquid-navbar-redesign.css';
-import './masenet-daylight-ios-dock.css';
 import './masenet-visual-system.css';
 import './masenet-liquid-glass-fixes.css';
 
@@ -81,3 +80,4 @@ if ('serviceWorker' in navigator && !Capacitor.isNativePlatform() && !telegramAp
   }, { once: true });
 }
 import './liquid-navbar-redesign.css';
+import './masenet-daylight-ios-dock.css';
