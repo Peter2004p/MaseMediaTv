@@ -126,7 +126,7 @@ export const onRequestGet: PagesFunction<ExperienceEnv> = async ({request,env}) 
       const comments=await env.DB.prepare(`SELECT c.id,c.body,c.parent_id AS parentId,c.created_at AS createdAt,
         (SELECT COUNT(*) FROM title_comment_reactions v WHERE v.comment_id=c.id) AS reactionCount,
         EXISTS(SELECT 1 FROM title_comment_reactions v WHERE v.comment_id=c.id AND v.user_id=?) AS reactedByMe
-        FROM title_discussion_comments c WHERE c.title_id=? AND c.status='published' AND ((?='' AND c.episode_key IS NULL) OR c.episode_key=?) ORDER BY c.created_at DESC LIMIT 100`.bind(userId||"",titleId,episodeKey,episodeKey).all<{id:string;body:string;parentId:string|null;createdAt:string;reactionCount:number;reactedByMe:number}>();
+        FROM title_discussion_comments c WHERE c.title_id=? AND c.status='published' AND ((?='' AND c.episode_key IS NULL) OR c.episode_key=?) ORDER BY c.created_at DESC LIMIT 100`).bind(userId||"",titleId,episodeKey,episodeKey).all<{id:string;body:string;parentId:string|null;createdAt:string;reactionCount:number;reactedByMe:number}>();
       return json({reviews:reviews.results||[],comments:comments.results||[],reviewCount:Number(summary?.count||0),averageRating:summary?.average||null,preferences:preferences?{languages:JSON.parse(preferences.languages_json||"[]"),genres:JSON.parse(preferences.genres_json||"[]")}:{languages:[],genres:[]}});
     }
     if (!userId) return json({error:"Sign in to get recommendations based on your viewing activity."},401);
