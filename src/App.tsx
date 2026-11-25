@@ -1,6 +1,7 @@
 import EpisodeDetail from './EpisodeDetail';
 import './telegram-verification.css';
 import './welcome.css';
+import './navigation-liquid.css';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { api, auth, image } from './cloudflare-client';
