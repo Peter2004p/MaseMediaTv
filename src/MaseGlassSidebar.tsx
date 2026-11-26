@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { House, Search, Film, Bookmark, Bell, UserRound, ChevronLeft, ChevronRight, Clapperboard, HardDrive, SlidersHorizontal } from 'lucide-react';
+import { House, Search, Film, Bookmark, Bell, UserRound, ChevronLeft, ChevronRight, Clapperboard, HardDrive, Menu } from 'lucide-react';
 
 type Item = { label: string; icon: typeof House; action: () => void; tone?: string };
 
@@ -69,7 +69,7 @@ export default function MaseGlassSidebar() {
   const sidebarStyle = { '--mase-sidebar-width': `${sidebarWidth}px` } as CSSProperties;
 
   return <>
-    <button type="button" className="maseSidebarMobileTrigger" aria-label="Open MaseNet navigation" onClick={() => setDrawerOpen(true)}><SlidersHorizontal size={19}/></button>
+    <button type="button" className="maseSidebarMobileTrigger" aria-label="Open MaseNet navigation" onClick={() => setDrawerOpen(true)}><Menu size={19}/></button>
     {drawerOpen && <button type="button" className="maseSidebarScrim" aria-label="Close navigation drawer" onClick={() => setDrawerOpen(false)} />}
     <button
       type="button"
