@@ -403,26 +403,41 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       return json({ok:false,error:"Could not register this channel."},500);
     }
   }
-  const ensureAccessTable = async () => env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (
-    chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0,
-    youtube_provisional INTEGER NOT NULL DEFAULT 0,
-    masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )`).run();
-  try { await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN youtube_provisional INTEGER NOT NULL DEFAULT 0").run(); } catch { /* Column already exists. */ }
+  const ensureAccessTable = async () => {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_verification (
+      chat_id TEXT PRIMARY KEY, youtube_ok INTEGER NOT NULL DEFAULT 0,
+      youtube_provisional INTEGER NOT NULL DEFAULT 0,
+      masemedia_ok INTEGER NOT NULL DEFAULT 0, moondramac_ok INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`).run();
+    try { await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN youtube_provisional INTEGER NOT NULL DEFAULT 0").run(); } catch { /* Column already exists. */ }
+    try { await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN membership_checked_at TEXT").run(); } catch { /* Column already exists. */ }
+  };
   const checkTelegramMembership = async () => {
-    const result = { masemedia: false, moondramac: false };
+    await ensureAccessTable();
+    const saved = await env.DB.prepare("SELECT masemedia_ok,moondramac_ok FROM telegram_access_verification WHERE chat_id=?")
+      .bind(String(chatId)).first<{masemedia_ok:number;moondramac_ok:number}>();
+    const result = { masemedia: !!saved?.masemedia_ok, moondramac: !!saved?.moondramac_ok };
+    let allChecksSuccessful = true;
     for (const [channel, key] of [["@MaseMediaTv","masemedia"],["@MoonDramaC","moondramac"]] as const) {
       try {
         const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/getChatMember?chat_id=" + encodeURIComponent(channel) + "&user_id=" + encodeURIComponent(String(chatId)));
-        const data = await response.json().catch(() => ({})) as {ok?:boolean;result?:{status?:string}};
-        result[key] = !!response.ok && !!data.ok && ["member","administrator","creator"].includes(String(data.result?.status || ""));
-      } catch {
-        result[key] = false;
+        const data = await response.json().catch(() => ({})) as {ok?:boolean;result?:{status?:string;is_member?:boolean};description?:string};
+        if (response.ok && data.ok && data.result) {
+          const status = String(data.result.status || "");
+          result[key] = ["member","administrator","creator"].includes(status) || (status === "restricted" && data.result.is_member === true);
+        } else {
+          // An API error is not proof that the user left. Keep the last confirmed state.
+          allChecksSuccessful = false;
+          console.error("MaseNet membership lookup unavailable:", channel, data.description || response.status);
+        }
+      } catch (error) {
+        allChecksSuccessful = false;
+        console.error("MaseNet membership lookup failed:", channel, error instanceof Error ? error.message : String(error));
       }
     }
-    await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,updated_at) VALUES (?,?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,updated_at=datetime('now')")
-      .bind(String(chatId), result.masemedia ? 1 : 0, result.moondramac ? 1 : 0).run();
+    await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,membership_checked_at,updated_at) VALUES (?,?,?,CASE WHEN ?=1 THEN datetime('now') ELSE NULL END,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,membership_checked_at=CASE WHEN ?=1 THEN datetime('now') ELSE telegram_access_verification.membership_checked_at END,updated_at=datetime('now')")
+      .bind(String(chatId), result.masemedia ? 1 : 0, result.moondramac ? 1 : 0, allChecksSuccessful ? 1 : 0, allChecksSuccessful ? 1 : 0).run();
     return result;
   };
   if (chatType === "private" && command === "/start" && /^dl_[a-f0-9]{48}$/i.test(commandText)) {

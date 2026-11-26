@@ -26,6 +26,7 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
  try{await env.DB.prepare("ALTER TABLE telegram_access_verification ADD COLUMN membership_checked_at TEXT").run()}catch{/* already exists */}
  const saved=await env.DB.prepare("SELECT youtube_ok,youtube_provisional,masemedia_ok,moondramac_ok,membership_checked_at FROM telegram_access_verification WHERE chat_id=?").bind(chatId).first<{youtube_ok:number;youtube_provisional:number;masemedia_ok:number;moondramac_ok:number;membership_checked_at:string|null}>();
  const membership={masemedia:!!saved?.masemedia_ok,moondramac:!!saved?.moondramac_ok};
+ const membershipCheckErrors:Partial<Record<"masemedia"|"moondramac",string>>={};
  const checkedAt=saved?.membership_checked_at?Date.parse(saved.membership_checked_at.replace(" ","T")+"Z"):0;
  const membershipFresh=Number.isFinite(checkedAt)&&Date.now()-checkedAt<30000;
  if(!membershipFresh){
@@ -34,9 +35,9 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
    try{
     const r=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/getChatMember?chat_id="+encodeURIComponent(channel)+"&user_id="+encodeURIComponent(chatId));
     const d=await r.json().catch(()=>({})) as {ok?:boolean;result?:{status?:string};description?:string};
-    if(r.ok&&d.ok)membership[key]=["member","administrator","creator"].includes(String(d.result?.status||""));
-    else{allMembershipChecksSuccessful=false;membership[key]=!!saved?.[savedField];}
-   }catch{allMembershipChecksSuccessful=false;membership[key]=!!saved?.[savedField];}
+    if(r.ok&&d.ok){const status=String(d.result?.status||"");membership[key]=["member","administrator","creator"].includes(status)||(status==="restricted"&&(d.result as {is_member?:boolean})?.is_member===true);}
+    else{allMembershipChecksSuccessful=false;membership[key]=!!saved?.[savedField];membershipCheckErrors[key]=String(d.description||"Telegram could not confirm this channel membership.");}
+   }catch{allMembershipChecksSuccessful=false;membership[key]=!!saved?.[savedField];membershipCheckErrors[key]="Telegram membership check is temporarily unavailable."; }
   }
   // Temporary Telegram API failures must not erase previously confirmed channel membership.
   await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,membership_checked_at,updated_at) VALUES (?,?,?,CASE WHEN ?=1 THEN datetime('now') ELSE NULL END,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,membership_checked_at=CASE WHEN ?=1 THEN datetime('now') ELSE telegram_access_verification.membership_checked_at END,updated_at=datetime('now')").bind(chatId,membership.masemedia?1:0,membership.moondramac?1:0,allMembershipChecksSuccessful?1:0,allMembershipChecksSuccessful?1:0).run();
@@ -53,5 +54,5 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
  const provisionalAccess=!youtubeVerified&&!reviewRestricted&&!!saved?.youtube_provisional;
  const youtubeEligible=youtubeVerified||provisionalAccess;
  const latestSubmission=await env.DB.prepare("SELECT status,ai_verdict,ai_reason FROM telegram_access_submissions WHERE chat_id=? ORDER BY submitted_at DESC LIMIT 1").bind(chatId).first<{status:string;ai_verdict:string|null;ai_reason:string|null}>();
- return json({ok:true,youtubeVerified,provisionalAccess,latestSubmission:latestSubmission||null,membership,review:reviewActive?{status:review?.status,reason:review?.reason,deadlineAt:review?.deadline_at}:null,accessGranted:youtubeEligible&&membership.masemedia&&membership.moondramac,missing:[!youtubeEligible?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)});
+ return json({ok:true,youtubeVerified,provisionalAccess,latestSubmission:latestSubmission||null,membership,review:reviewActive?{status:review?.status,reason:review?.reason,deadlineAt:review?.deadline_at}:null,accessGranted:youtubeEligible&&membership.masemedia&&membership.moondramac,membershipCheckErrors,missing:[!youtubeEligible?"youtube":null,!membership.masemedia?"masemedia":null,!membership.moondramac?"moondramac":null].filter(Boolean)});
 };
