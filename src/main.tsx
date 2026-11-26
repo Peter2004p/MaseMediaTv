@@ -6,17 +6,7 @@ import App from './App';
 import PWAInstallPrompt from './PWAInstallPrompt';
 import './index.css';
 import './title-page.css';
-import './premium-ui.css';
-import './ultra-polish.css';
-import './mobile-experience.css';
-import './design-refinement.css';
-import './ios-liquid-glass-quality.css';
-import './liquid-navbar-redesign.css';
-import './masenet-visual-system.css';
-import './masenet-liquid-glass-fixes.css';
-import './liquid-navbar-redesign.css';
-import './masenet-daylight-ios-dock.css';
-import './masenet-ios27-liquid-upgrade.css';
+import './masenet-full-rebuild.css';
 import MaseGlassSidebar from './MaseGlassSidebar';
 
 type ErrorBoundaryState = { hasError: boolean; message: string };
