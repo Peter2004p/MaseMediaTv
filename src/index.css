@@ -4743,8 +4743,8 @@ body:has(.app.theme-light),
 
 /* MaseNet mobile interaction refinements — movable AI, compact timed hint, Dynamic Island panels. */
 .app .aiDock {
-  right:auto!important;
-  bottom:auto!important;
+  right:12px!important;
+  bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
   touch-action:none!important;
   cursor:grab!important;
   user-select:none!important;
@@ -4807,3 +4807,5 @@ body:has(.app.theme-light),
 .app .maseSidebarLive .maseLiveDot{display:block;width:9px;height:9px;border-radius:50%;background:#20c98b;box-shadow:0 0 0 4px rgba(32,201,139,.13),0 0 14px rgba(32,201,139,.65);animation:maseLivePulse 1.8s ease-in-out infinite}
 @keyframes maseLivePulse{50%{box-shadow:0 0 0 7px rgba(32,201,139,.04),0 0 18px rgba(32,201,139,.85)}}
 @media(prefers-reduced-motion:reduce){.app .maseMenuMorphIcon svg,.app .maseSidebarMobileTrigger,.app .settingsIslandSide,.app .maseSidebarScrim{animation:none!important;transition:none!important}}
+
+.app .aiDock.isUserPositioned{right:auto!important;bottom:auto!important}
