@@ -4440,3 +4440,25 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
  .app .iqHome .maseCinematicHero .iqHeroDots{margin-top:13px!important;justify-content:center!important}
 }
 @media(prefers-reduced-motion:reduce){.app .iqHome .maseCinematicHero .iqHeroPoster{animation:none!important}}
+
+
+/* Exact mobile reference corrections: remove promo lead-ins and duplicate sidebar toggles. */
+@media(max-width:760px){
+  .maseSidebarMobileTrigger,.maseSidebarEdgeToggle{display:none!important}
+  .app .maseReferenceHeader .maseProfileButton{display:none!important}
+}
+.app .maseReferenceCopyButton{min-height:39px!important;padding:0 15px!important;border-radius:999px!important;font-size:11px!important;white-space:nowrap}
+.app .maseReferenceHeader .masePreviewControls{display:none!important}
+.app .iqHome .maseCinematicHero{position:relative!important;isolation:isolate!important;overflow:hidden!important}
+.app .iqHome .maseCinematicHero .iqHeroShade{
+ background:linear-gradient(180deg,rgba(5,7,10,.03) 0%,rgba(5,7,10,.02) 28%,rgba(5,7,10,.16) 48%,rgba(5,7,10,.78) 76%,#05070a 100%),linear-gradient(90deg,rgba(5,7,10,.22),transparent 80%)!important;
+}
+.app .maseHeroPreviewBadge{position:absolute;z-index:8;top:22px;right:22px;display:flex;align-items:center;gap:8px;padding:7px 9px 7px 13px;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:rgba(220,232,232,.24);color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.12),inset 0 1px rgba(255,255,255,.25);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%)}
+.app .maseHeroPreviewBadge>button:first-child{display:flex;align-items:center;gap:9px;border:0;background:transparent;color:inherit;font-size:12px;font-weight:700}
+.app .maseHeroPreviewBadge>button:first-child i{width:8px;height:8px;border-radius:50%;background:#f2d38a;box-shadow:0 0 12px #f2d38a}
+.app .maseHeroPreviewBadge .maseHeroPreviewMute{width:27px;height:27px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:rgba(255,255,255,.12);color:#fff}
+@media(max-width:680px){
+ .app .maseReferenceHeader .maseReferenceCopyButton{min-height:33px!important;padding:0 10px!important;font-size:10px!important}
+ .app .maseHeroPreviewBadge{top:14px;right:13px;padding:6px 7px 6px 10px}
+ .app .maseHeroPreviewBadge>button:first-child{font-size:10px}
+}
