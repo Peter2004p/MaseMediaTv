@@ -88,8 +88,10 @@ async function deliverVaultDownload(env: Env, chatId: string | number, rawToken:
       ? (String(Number((bytes / Math.pow(1024, unitIndex)).toFixed(unitIndex === 0 ? 0 : 2))) + " " + units[unitIndex])
       : "Not available";
     const isDrama = String(asset.media_kind || "").toLowerCase() === "drama";
+    // Remove the uploader handle when it has been prepended to the catalogue title.
+    const displayTitle = String(asset.title || "Untitled").replace(/^\\s*@KLandd\\s*[-–—_:|]*\\s*/i, "").trim() || "Untitled";
     const details = [
-      "🎬 Title: " + String(asset.title || "Untitled"),
+      "🎬 Title: " + displayTitle,
       ...(isDrama ? [
         "📺 Season: " + String(asset.season || 1).padStart(2, "0"),
         "🎞 Episode: " + String(asset.episode || 1).padStart(2, "0") + (asset.episode_title ? " — " + asset.episode_title : "")
