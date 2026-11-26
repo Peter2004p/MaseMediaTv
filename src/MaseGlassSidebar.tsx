@@ -49,7 +49,7 @@ export default function MaseGlassSidebar() {
     };
   }, []);
 
-  if (route !== '#/home' && route !== '#/' && route !== '') return null;
+  if (route.startsWith('#/admin') || route.startsWith('#/episode/')) return null;
 
   const invoke = (action: () => void) => { action(); setDrawerOpen(false); };
   const toggleSidebar = () => {
