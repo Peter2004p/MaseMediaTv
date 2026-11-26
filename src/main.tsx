@@ -14,6 +14,8 @@ import './ios-liquid-glass-quality.css';
 import './liquid-navbar-redesign.css';
 import './masenet-visual-system.css';
 import './masenet-liquid-glass-fixes.css';
+import './masenet-ios27-liquid-upgrade.css';
+import MaseGlassSidebar from './MaseGlassSidebar';
 
 type ErrorBoundaryState = { hasError: boolean; message: string };
 
@@ -53,6 +55,7 @@ if (root) {
     <StrictMode>
       <AppErrorBoundary><App /></AppErrorBoundary>
       <MaseGlassSidebar />
+      <MaseGlassSidebar />
       {!Capacitor.isNativePlatform() && <PWAInstallPrompt />}
     </StrictMode>
   );
@@ -80,7 +83,3 @@ if ('serviceWorker' in navigator && !Capacitor.isNativePlatform() && !telegramAp
     });
   }, { once: true });
 }
-import './liquid-navbar-redesign.css';
-import './masenet-daylight-ios-dock.css';
-import './masenet-ios27-liquid-upgrade.css';
-import MaseGlassSidebar from './MaseGlassSidebar';
