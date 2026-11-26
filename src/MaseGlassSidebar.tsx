@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { House, Search, Film, Bookmark, Bell, UserRound, ChevronLeft, ChevronRight, Clapperboard, HardDrive, Menu } from 'lucide-react';
+import { House, Search, Film, Bookmark, Bell, UserRound, ChevronLeft, ChevronRight, Clapperboard, HardDrive, Menu, Settings2 } from 'lucide-react';
 
 type Item = { label: string; icon: typeof House; action: () => void; tone?: string };
 
@@ -69,7 +69,8 @@ export default function MaseGlassSidebar() {
     { label: 'Chinese Drama', icon: Film, action: () => clickCategory(/chinese drama|drama/i), tone: 'drama' },
     { label: 'Watchlist', icon: Bookmark, action: () => { window.location.hash = '#/my-list'; }, tone: 'watchlist' },
     { label: 'Alerts', icon: Bell, action: () => { (document.querySelector('.dockNotifications') as HTMLButtonElement | null)?.click(); }, tone: 'alerts' },
-    { label: 'Profile', icon: UserRound, action: () => { (document.querySelector('.maseProfileButton') as HTMLButtonElement | null)?.click(); }, tone: 'profile' }
+    { label: 'Profile', icon: UserRound, action: () => { (document.querySelector('.maseProfileButton') as HTMLButtonElement | null)?.click(); }, tone: 'profile' },
+    { label: 'Settings', icon: Settings2, action: () => { window.dispatchEvent(new CustomEvent('masenet:open-settings')); }, tone: 'settings' }
   ];
   const sidebarStyle = { '--mase-sidebar-width': `${sidebarWidth}px` } as CSSProperties;
 
