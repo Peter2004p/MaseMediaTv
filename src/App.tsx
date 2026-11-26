@@ -72,6 +72,7 @@ export default function App(){
 
  // Global pointer-following jelly physics for interface actions; media-player transport controls remain untouched.
  useEffect(()=>{
+  let pressedButton:HTMLButtonElement|null=null;
   const eligible=(target:EventTarget|null):HTMLButtonElement|null=>{
    const node=target instanceof Element?target.closest('button:not([data-no-jelly])'):null;
    if(!(node instanceof HTMLButtonElement)||node.closest('.maseNetPlayerV3,.masePlayer,.player,.video-player,.playerShell,.maseVideoPlayer'))return null;
@@ -85,12 +86,12 @@ export default function App(){
   };
   const down=(event:PointerEvent)=>{
    const button=eligible(event.target);if(!button)return;
-   button.classList.add('maseJellyPressed','maseJellyTarget');
+   pressedButton=button;button.classList.add('maseJellyPressed','maseJellyTarget');
    const rect=button.getBoundingClientRect();const ripple=document.createElement('span');ripple.className='maseJellyRipple';ripple.setAttribute('aria-hidden','true');
    ripple.style.left=(event.clientX-rect.left)+'px';ripple.style.top=(event.clientY-rect.top)+'px';button.append(ripple);
    window.setTimeout(()=>ripple.remove(),720);
   };
-  const up=(event:PointerEvent)=>{const button=eligible(event.target);if(button){button.classList.remove('maseJellyPressed');button.classList.add('maseJellyRebound');window.setTimeout(()=>button.classList.remove('maseJellyRebound'),360);}};
+  const up=(event:PointerEvent)=>{const button=pressedButton||eligible(event.target);pressedButton=null;if(button){button.classList.remove('maseJellyPressed');button.classList.add('maseJellyRebound');window.setTimeout(()=>button.classList.remove('maseJellyRebound'),360);}};
   document.addEventListener('pointermove',move,{passive:true});document.addEventListener('pointerdown',down,{passive:true});document.addEventListener('pointerup',up,{passive:true});document.addEventListener('pointercancel',up,{passive:true});
   document.documentElement.classList.add('maseJellyEnabled');
   return()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerdown',down);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);document.documentElement.classList.remove('maseJellyEnabled');};
