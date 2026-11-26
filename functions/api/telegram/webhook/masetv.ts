@@ -74,13 +74,37 @@ async function deliverVaultDownload(env: Env, chatId: string | number, rawToken:
   `).bind(tokenHash).first<{media_asset_id:string}>();
   if (!claim?.media_asset_id) return "invalid";
   const asset = await env.DB.prepare(
-    "SELECT vault_chat_id,vault_message_id FROM telegram_media_assets WHERE id=? AND status='published' AND rights_confirmed=1"
-  ).bind(claim.media_asset_id).first<{vault_chat_id:string;vault_message_id:number}>();
+    "SELECT vault_chat_id,vault_message_id,title,media_kind,season,episode,episode_title,quality,file_size FROM telegram_media_assets WHERE id=? AND status='published' AND rights_confirmed=1"
+  ).bind(claim.media_asset_id).first<{vault_chat_id:string;vault_message_id:number;title:string;media_kind:string;season:number|null;episode:number|null;episode_title:string|null;quality:string;file_size:number|null}>();
   if (!asset?.vault_chat_id || !asset.vault_message_id) {
     await env.DB.prepare("UPDATE telegram_media_delivery_tokens SET used_at=NULL WHERE token_hash=?").bind(tokenHash).run();
     return "failed";
   }
   try {
+    const bytes = Number(asset.file_size || 0);
+    const units = ["B","KB","MB","GB","TB"];
+    const unitIndex = bytes > 0 ? Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1) : -1;
+    const fileSize = unitIndex >= 0
+      ? ((bytes / Math.pow(1024, unitIndex)).toFixed(unitIndex === 0 ? 0 : 2).replace(/\\.?0+$/, "") + " " + units[unitIndex])
+      : "Not available";
+    const isDrama = String(asset.media_kind || "").toLowerCase() === "drama";
+    const details = [
+      "🎬 Title: " + String(asset.title || "Untitled"),
+      ...(isDrama ? [
+        "📺 Season: " + String(asset.season || 1).padStart(2, "0"),
+        "🎞 Episode: " + String(asset.episode || 1).padStart(2, "0") + (asset.episode_title ? " — " + asset.episode_title : "")
+      ] : []),
+      "🎥 Quality: " + String(asset.quality || "Unknown").toUpperCase(),
+      "📦 File size: " + fileSize,
+      "",
+      "@MaseMediaTv 🚀"
+    ].join("\\n");
+    const caption = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+      method:"POST", headers:{"content-type":"application/json"},
+      body:JSON.stringify({chat_id:chatId,text:details,disable_web_page_preview:true})
+    });
+    const captionResult = await caption.json().catch(() => ({})) as {ok?:boolean;description?:string};
+    if (!caption.ok || !captionResult.ok) throw new Error(captionResult.description || "Telegram could not send the file details.");
     const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/copyMessage", {
       method:"POST", headers:{"content-type":"application/json"},
       body:JSON.stringify({chat_id:chatId,from_chat_id:asset.vault_chat_id,message_id:asset.vault_message_id})
