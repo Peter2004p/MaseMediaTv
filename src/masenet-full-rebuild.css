@@ -731,3 +731,73 @@ html[data-mase-theme="light"] .app .masenetLiquidDock{background:rgba(255,255,25
  .app .appearanceThemeChoices{gap:6px!important}
  .app .appearanceThemeChoice{padding:8px!important}
 }
+
+
+/* Reference recording refinement: top-bar preview switch and seamless hero media cross-fade */
+.maseReferenceHeader{position:sticky!important;top:0!important;z-index:110!important;display:flex!important;align-items:center!important;gap:clamp(8px,1.5vw,18px)!important;min-height:68px!important;padding:9px clamp(12px,2.4vw,28px)!important;border:1px solid rgba(235,248,240,.12)!important;border-radius:0 0 22px 22px!important;background:rgba(8,13,10,.78)!important;-webkit-backdrop-filter:blur(22px) saturate(155%)!important;backdrop-filter:blur(22px) saturate(155%)!important;box-shadow:0 10px 34px rgba(0,0,0,.18)!important}
+.maseReferenceHeader .brand{display:flex!important;align-items:center!important;gap:10px!important;flex:0 0 auto!important;min-width:0!important}
+.maseReferenceHeader .brandLogo{width:36px!important;height:36px!important;object-fit:contain!important}
+.maseReferenceHeader .brandName{font-size:clamp(13px,1.3vw,17px)!important;letter-spacing:-.035em!important;white-space:nowrap!important}
+.masePreviewControls{display:flex;align-items:center;justify-content:flex-end;gap:9px;min-width:0;margin-left:auto;padding:5px 7px 5px 11px;border:1px solid rgba(232,245,237,.14);border-radius:999px;background:rgba(19,27,22,.72);box-shadow:inset 0 1px rgba(255,255,255,.08),0 7px 22px rgba(0,0,0,.2);-webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%)}
+.masePreviewStatus{display:flex;align-items:center;gap:6px;color:#b8c8bd;font-size:8px;font-weight:900;letter-spacing:.11em;white-space:nowrap}
+.masePreviewStatus i{width:6px;height:6px;border-radius:50%;background:#55e5a5;box-shadow:0 0 0 4px rgba(85,229,165,.1),0 0 13px rgba(85,229,165,.7);animation:masePreviewPulse 2.1s ease-in-out infinite}
+.masePreviewSwitch{display:flex;align-items:center;gap:3px;padding:3px;border-radius:999px;background:rgba(0,0,0,.28)}
+.masePreviewSwitch button{min-height:29px;padding:0 10px;border:0;border-radius:999px;background:transparent;color:#91a198;font-size:10px;font-weight:800;white-space:nowrap;transition:background .24s ease,color .24s ease,box-shadow .24s ease}
+.masePreviewSwitch button.active{background:linear-gradient(135deg,rgba(231,196,126,.22),rgba(56,230,160,.12));color:#f6e8c8;box-shadow:inset 0 0 0 1px rgba(231,196,126,.2),0 3px 12px rgba(0,0,0,.18)}
+.masePreviewSound{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border:1px solid rgba(232,245,237,.12);border-radius:50%;background:rgba(255,255,255,.055);color:#e8d7b2}
+@keyframes masePreviewPulse{50%{opacity:.48;box-shadow:0 0 0 6px rgba(85,229,165,.06),0 0 5px rgba(85,229,165,.35)}}
+.app .iqHome .iqHeroPoster{transition:opacity .45s ease,filter .45s ease!important}
+.app .iqHome .maseHeroPosterArtwork{position:absolute;inset:0;z-index:1;opacity:1;transition:opacity .62s ease,transform 1.2s ease}
+.app .iqHome .maseHeroPreviewVideo{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:cover;object-position:center 35%;opacity:0;transition:opacity .72s ease;pointer-events:none}
+.app .iqHome .iqHero.masePreviewLive .maseHeroPreviewVideo{opacity:1}
+.app .iqHome .iqHero.masePreviewPoster .maseHeroPreviewVideo{opacity:0}
+.app .iqHome .iqHero.masePreviewPoster .maseHeroPosterArtwork{opacity:1;transform:scale(1)}
+.app .iqHome .iqHero.masePreviewLive .maseHeroPosterArtwork{transform:scale(1.035)}
+.app .iqHome .iqHeroCopy{z-index:4!important}
+.app .iqHome .maseHeroAtmosphere{z-index:3!important;pointer-events:none!important}
+.app .iqHome .iqHeroShade{z-index:3!important}
+.app .iqHome .iqHero:before,.app .iqHome .iqHero:after{z-index:3!important}
+@media(max-width:760px){
+ .maseReferenceHeader{gap:7px!important;min-height:60px!important;padding:7px 10px!important}
+ .maseReferenceHeader .brandLogo{width:31px!important;height:31px!important}
+ .maseReferenceHeader .brandName{font-size:12px!important}
+ .masePreviewControls{gap:5px;padding:4px 5px 4px 8px}
+ .masePreviewStatus{display:none}
+ .masePreviewSwitch button{min-height:27px;padding:0 7px;font-size:9px}
+ .masePreviewSound{width:27px;height:27px;flex-basis:27px}
+}
+@media(max-width:430px){
+ .maseReferenceHeader .brand{gap:6px}
+ .maseReferenceHeader .brandName{max-width:90px;overflow:hidden;text-overflow:ellipsis}
+ .masePreviewSwitch button{padding:0 6px;font-size:8px}
+ .masePreviewControls{margin-left:auto}
+}
+@media(prefers-reduced-motion:reduce){
+ .masePreviewStatus i{animation:none}
+ .masePreviewSwitch button,.maseHeroPreviewVideo,.maseHeroPosterArtwork{transition:none!important}
+}
+
+
+/* Sidebar membership card and offline-cache capacity readout */
+.maseSidebarOffline{padding:10px 9px!important;border:1px solid rgba(232,245,237,.1)!important;border-radius:15px!important;background:rgba(255,255,255,.035)!important}
+.maseSidebarOfflineHeading{display:flex!important;align-items:center!important;gap:6px!important;min-width:0!important}
+.maseSidebarOfflineHeading span{flex:1!important;min-width:0!important;white-space:nowrap!important}
+.maseSidebarOffline>small{display:block!important;margin-top:6px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:8px!important}
+.maseSidebarVip{display:flex!important;align-items:center!important;gap:9px!important;min-height:48px!important;padding:8px!important;border:1px solid rgba(231,196,126,.22)!important;border-radius:15px!important;background:linear-gradient(125deg,rgba(115,82,34,.24),rgba(24,37,28,.58))!important;box-shadow:inset 0 1px rgba(255,255,255,.07)!important;overflow:hidden!important}
+.maseSidebarVipMark{display:grid!important;place-items:center!important;width:30px!important;height:30px!important;flex:0 0 30px!important;border-radius:10px!important;background:linear-gradient(145deg,rgba(231,196,126,.28),rgba(231,196,126,.08))!important;color:#f1d39a!important;font-size:16px!important}
+.maseSidebarVipCopy{display:none!important;min-width:0!important;flex-direction:column!important;gap:4px!important;white-space:nowrap!important}
+.maseGlassSidebar.isExpanded .maseSidebarVipCopy,.maseGlassSidebar.isDrawerOpen .maseSidebarVipCopy{display:flex!important}
+.maseSidebarVipCopy b{display:flex!important;align-items:center!important;gap:8px!important;color:#f1e3c5!important;font-size:11px!important}
+.maseSidebarVipCopy b i{color:#a8b6ad!important;font-size:9px!important;font-style:normal!important;font-weight:700!important}
+.maseSidebarVipCopy small{color:#9a927d!important;font-size:7px!important;font-weight:900!important;letter-spacing:.13em!important}
+@media(max-width:760px){
+ .maseGlassSidebar.isDrawerOpen .maseSidebarOffline,.maseGlassSidebar.isDrawerOpen .maseSidebarVip{margin-inline:2px}
+}
+
+.app .iqHome .maseHeroPreviewVideo.hasError{opacity:0!important}
+@media(max-width:380px){
+ .maseReferenceHeader .navActions{display:none!important}
+ .maseReferenceHeader .brandName{max-width:76px!important}
+ .masePreviewSwitch button{padding:0 5px;font-size:8px}
+ .masePreviewControls{gap:4px;padding-inline:6px}
+}
