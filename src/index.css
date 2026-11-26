@@ -4368,3 +4368,75 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
 .page.detail .episodes .episodeDownloadButton{width:100%;min-height:43px;justify-content:center;display:flex;align-items:center;gap:8px;border-radius:12px;font-size:12px;font-weight:700}
 .page.detail .episodes .episodeDownloadPending{display:flex;align-items:center;justify-content:center;gap:7px;min-height:39px;border:1px dashed rgba(255,255,255,.16);border-radius:11px;color:#a9a9b2;font-size:11px}
 @media(max-width:640px){.page.detail .maseTrailerPlayer .maseTrailerFrame{min-height:clamp(230px,62vw,420px);border-radius:13px}.page.detail .episodes .episodeListItem{padding:9px;border-radius:14px}}
+
+
+/* Reference-matched spotlight + floating glass navigation (Nov 2026).
+   Visual-only overrides: all catalogue, hero settings, playback and Telegram logic remain untouched. */
+.app .maseReferenceHeader{
+  position:sticky!important;top:8px!important;z-index:1000!important;
+  width:min(100% - 28px,1380px)!important;min-height:58px!important;
+  display:flex!important;align-items:center!important;gap:clamp(8px,1.6vw,18px)!important;
+  margin:9px auto 0!important;padding:7px 10px!important;border-radius:999px!important;
+  background:linear-gradient(110deg,rgba(31,27,43,.88),rgba(17,20,31,.82) 58%,rgba(32,25,42,.88))!important;
+  border:1px solid rgba(231,215,255,.19)!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.16)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(185%)!important;backdrop-filter:blur(28px) saturate(185%)!important;
+}
+.app .maseReferenceMenuButton,.app .maseReferenceCopyButton{
+  flex:0 0 auto;min-height:39px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  border:1px solid rgba(255,255,255,.16);color:#f6f1ff;
+  background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.045));
+  box-shadow:inset 0 1px rgba(255,255,255,.16),0 4px 12px #0003;
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+}
+.app .maseReferenceMenuButton{width:40px;border-radius:50%;padding:0}
+.app .maseReferenceCopyButton{padding:0 13px;border-radius:999px;font-size:10px;font-weight:750;letter-spacing:.02em}
+.app .maseReferenceHeader .brand{flex:1;justify-content:center;min-width:0;gap:8px}
+.app .maseReferenceHeader .brandLogo{width:30px!important;height:30px!important}
+.app .maseReferenceHeader .brandName{font-size:clamp(13px,1.6vw,17px)!important}
+.app .maseReferenceHeader .navActions{margin-left:auto;gap:5px}
+.app .maseReferenceHeader .navActions .icon{width:39px;height:39px;justify-content:center;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);border-radius:50%}
+.app .maseReferenceHeader .masePreviewControls{position:absolute;right:12px;top:calc(100% + 9px);z-index:5;display:flex;align-items:center;gap:7px;padding:5px 7px;border:1px solid rgba(255,255,255,.15);border-radius:999px;background:rgba(22,24,32,.66);box-shadow:0 8px 24px #0003;-webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%)}
+.app .maseReferenceHeader .masePreviewStatus{font-size:8px;letter-spacing:.08em;color:#f4e5c5;white-space:nowrap}
+.app .maseReferenceHeader .masePreviewSwitch button{font-size:9px;padding:6px 9px;border-radius:999px}
+.app .maseReferenceHeader .masePreviewSound{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:1px solid #ffffff20;background:#ffffff10;color:#fff}
+.app .iqHome .maseCinematicHero{
+  min-height:clamp(530px,61vw,690px)!important;height:clamp(530px,61vw,690px)!important;
+  margin-top:12px!important;border-radius:25px!important;
+}
+.app .iqHome .maseCinematicHero .iqHeroPoster{animation:maseReferenceHeroEnter .9s cubic-bezier(.2,.7,.2,1) both,maseHeroKenBurns 26s ease-in-out .9s infinite!important}
+.app .iqHome .maseCinematicHero .iqHeroShade{
+  background:linear-gradient(180deg,rgba(5,7,10,.20) 0%,rgba(5,7,10,.02) 28%,rgba(5,7,10,.18) 48%,rgba(5,7,10,.84) 75%,#05070a 100%),
+  linear-gradient(90deg,rgba(5,7,10,.42),transparent 78%)!important;
+}
+.app .iqHome .maseCinematicHero .iqHeroCopy{max-width:min(760px,82%)!important}
+.app .iqHome .maseCinematicHero .maseHeroBrandline{font-size:9px!important}
+.app .iqHome .maseCinematicHero .iqHeroCopy>p{font-size:clamp(12px,1.15vw,14px)!important;max-width:580px!important}
+.app .iqHome .maseCinematicHero .iqHeroActions .primary{background:linear-gradient(110deg,#fff0ca,#e7c17f)!important;color:#19130a!important;border-color:#fff1d4!important;box-shadow:0 8px 24px #e9c98a3d!important}
+.app .iqHome .maseCinematicHero .iqHeroActions .secondary{background:rgba(255,255,255,.13)!important;border-color:rgba(255,255,255,.25)!important}
+@keyframes maseReferenceHeroEnter{from{opacity:.35;transform:scale(1.055)}to{opacity:1;transform:scale(1.01)}}
+@media(max-width:680px){
+ .app .maseReferenceHeader{width:calc(100% - 16px)!important;top:5px!important;min-height:48px!important;margin:6px 8px 0!important;padding:5px 7px!important;gap:6px!important}
+ .app .maseReferenceMenuButton{width:34px;min-height:34px}
+ .app .maseReferenceCopyButton{min-height:32px;padding:0 9px;font-size:9px}
+ .app .maseReferenceHeader .brand{justify-content:flex-start;flex:1;gap:5px}
+ .app .maseReferenceHeader .brandLogo{width:26px!important;height:26px!important}
+ .app .maseReferenceHeader .brandName{font-size:13px!important}
+ .app .maseReferenceHeader .navActions{gap:3px}
+ .app .maseReferenceHeader .navActions .icon{width:33px;height:33px;padding:6px}
+ .app .maseReferenceHeader .masePreviewControls{right:5px;top:calc(100% + 6px);gap:4px;padding:4px 5px}
+ .app .maseReferenceHeader .masePreviewStatus{display:none}
+ .app .maseReferenceHeader .masePreviewSwitch button{font-size:8px;padding:5px 7px}
+ .app .iqHome .maseCinematicHero{min-height:clamp(590px,158vw,720px)!important;height:clamp(590px,158vw,720px)!important;margin-top:8px!important;padding:18px 15px 16px!important;border-radius:20px!important}
+ .app .iqHome .maseCinematicHero .iqHeroPoster{opacity:1!important}
+ .app .iqHome .maseCinematicHero .iqHeroPoster .posterImage,.app .iqHome .maseCinematicHero .iqHeroPoster>.heroCustomImage{object-position:center 30%!important}
+ .app .iqHome .maseCinematicHero .iqHeroShade{background:linear-gradient(180deg,rgba(4,6,9,.04) 0%,rgba(4,6,9,.03) 28%,rgba(4,6,9,.28) 47%,rgba(4,6,9,.91) 72%,#040609 100%)!important}
+ .app .iqHome .maseCinematicHero .iqHeroCopy{max-width:100%!important;padding-bottom:3px!important}
+ .app .iqHome .maseCinematicHero h1{font-size:clamp(32px,9vw,43px)!important;line-height:1.02!important}
+ .app .iqHome .maseCinematicHero .iqHeroCopy>p{-webkit-line-clamp:3!important;font-size:12px!important;line-height:1.48!important}
+ .app .iqHome .maseCinematicHero .iqHeroFacts{gap:6px!important}
+ .app .iqHome .maseCinematicHero .iqHeroActions{gap:8px!important;margin-top:14px!important}
+ .app .iqHome .maseCinematicHero .iqHeroActions button{min-height:43px!important;padding:0 15px!important;border-radius:999px!important}
+ .app .iqHome .maseCinematicHero .iqHeroDots{margin-top:13px!important;justify-content:center!important}
+}
+@media(prefers-reduced-motion:reduce){.app .iqHome .maseCinematicHero .iqHeroPoster{animation:none!important}}
