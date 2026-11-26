@@ -750,7 +750,6 @@ html[data-mase-theme="light"] .app .masenetLiquidDock{background:rgba(255,255,25
 .app .iqHome .maseHeroPosterArtwork{position:absolute;inset:0;z-index:1;opacity:1;transition:opacity .62s ease,transform 1.2s ease}
 .app .iqHome .maseHeroPreviewVideo{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:cover;object-position:center 35%;opacity:0;transition:opacity .72s ease;pointer-events:none}
 .app .iqHome .iqHero.masePreviewLive .maseHeroPreviewVideo{opacity:1}
-.app .iqHome .iqHero.masePreviewLive:has(.maseHeroPreviewVideo) .maseHeroPosterArtwork{opacity:.12}
 .app .iqHome .iqHero.masePreviewPoster .maseHeroPreviewVideo{opacity:0}
 .app .iqHome .iqHero.masePreviewPoster .maseHeroPosterArtwork{opacity:1;transform:scale(1)}
 .app .iqHome .iqHero.masePreviewLive .maseHeroPosterArtwork{transform:scale(1.035)}
@@ -793,4 +792,12 @@ html[data-mase-theme="light"] .app .masenetLiquidDock{background:rgba(255,255,25
 .maseSidebarVipCopy small{color:#9a927d!important;font-size:7px!important;font-weight:900!important;letter-spacing:.13em!important}
 @media(max-width:760px){
  .maseGlassSidebar.isDrawerOpen .maseSidebarOffline,.maseGlassSidebar.isDrawerOpen .maseSidebarVip{margin-inline:2px}
+}
+
+.app .iqHome .maseHeroPreviewVideo.hasError{opacity:0!important}
+@media(max-width:380px){
+ .maseReferenceHeader .navActions{display:none!important}
+ .maseReferenceHeader .brandName{max-width:76px!important}
+ .masePreviewSwitch button{padding:0 5px;font-size:8px}
+ .masePreviewControls{gap:4px;padding-inline:6px}
 }
