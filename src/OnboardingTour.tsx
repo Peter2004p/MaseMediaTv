@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type TouchEvent, type MouseEvent } from 'react';
-import { ArrowLeft, ArrowRight, BellRing, Check, Clapperboard, Download, Film, Languages, Moon, Play, RotateCcw, Sparkles, Sun, Tv2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BellRing, Bot, Check, Clapperboard, Chrome, Download, Film, Languages, LoaderCircle, Mail, Moon, RotateCcw, Sparkles, Sun, Tv2 } from 'lucide-react';
 import './onboarding-liquid-glass.css';
 
-type Props = { open: boolean; onClose: () => void; onReopen: () => void };
+type Props = { open: boolean; onClose: () => void; onReopen: () => void; onGoogleLogin: () => Promise<boolean>; onTelegramLogin: () => Promise<boolean>; onEmailVerified: (user: {userId:string;name?:string;email?:string;picture?:string}) => void };
 type ThemeChoice = 'light' | 'dark' | 'system';
 
 const genres = ['C-Drama & K-Drama', 'Action & Thriller', 'Romance', 'Historical & Wuxia', 'Mystery & Horror', 'Anime & Cartoons'];
@@ -12,7 +12,7 @@ const featureCards = [
   { icon: <Download size={19}/>, title: 'Fast Direct Downloads', copy: 'Choose a convenient quality when a download is available.', detail: 'Available source qualities can include 480p, 576p, 720p, 1080p and 4K. The choices shown depend on the title and its uploaded files.' }
 ];
 
-export default function OnboardingTour({ open, onClose, onReopen }: Props) {
+export default function OnboardingTour({ open, onClose, onReopen, onGoogleLogin, onTelegramLogin, onEmailVerified }: Props) {
   const [step, setStep] = useState(0);
   const [themeChoice, setThemeChoice] = useState<ThemeChoice>(() => {
     try { return (localStorage.getItem('masenet-onboarding-theme') as ThemeChoice) || 'system'; } catch { return 'system'; }
@@ -20,7 +20,7 @@ export default function OnboardingTour({ open, onClose, onReopen }: Props) {
   const [selectedGenres, setSelectedGenres] = useState<string[]>(() => {
     try { const saved = JSON.parse(localStorage.getItem('masenet-onboarding-genres') || '[]'); return Array.isArray(saved) ? saved.filter((x): x is string => genres.includes(x)) : []; } catch { return []; }
   });
-  const [expandedFeature, setExpandedFeature] = useState<number | null>(0);
+  const [expandedFeature, setExpandedFeature] = useState<number | null>(0);\n  const [email,setEmail]=useState('');\n  const [otp,setOtp]=useState('');\n  const [emailStage,setEmailStage]=useState<'email'|'code'>('email');\n  const [emailBusy,setEmailBusy]=useState(false);\n  const [emailMessage,setEmailMessage]=useState('');\n  const [authBusy,setAuthBusy]=useState<'google'|'telegram'|null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchStart = useRef<{x:number;y:number}|null>(null);
@@ -85,7 +85,7 @@ export default function OnboardingTour({ open, onClose, onReopen }: Props) {
   const close = () => onClose();
   const replay = () => { setStep(0); setExpandedFeature(0); };
   const toggleGenre = (genre: string) => setSelectedGenres(current => current.includes(genre) ? current.filter(item => item !== genre) : [...current, genre]);
-  const next = () => setStep(current => Math.min(3, current + 1));
+  const next = () => setStep(current => Math.min(3, current + 1));\n  const handleGoogle=async()=>{setAuthBusy('google');try{if(await onGoogleLogin())onClose()}finally{setAuthBusy(null)}};\n  const handleTelegram=async()=>{setAuthBusy('telegram');try{if(await onTelegramLogin())onClose()}finally{setAuthBusy(null)}};\n  const sendEmailCode=async()=>{if(emailBusy)return;setEmailBusy(true);setEmailMessage('');try{const response=await fetch('/api/auth/email/send',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({email})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Could not send your sign-in code.');setEmailStage('code');setEmailMessage('A six-digit sign-in code has been sent if this address is eligible. Check your inbox.')}catch(error){setEmailMessage(error instanceof Error?error.message:'Email sign-in is temporarily unavailable.')}finally{setEmailBusy(false)}};\n  const verifyEmailCode=async()=>{if(emailBusy)return;setEmailBusy(true);setEmailMessage('');try{const response=await fetch('/api/auth/email/verify',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({email,code:otp})});const data=await response.json().catch(()=>({}));if(!response.ok||!data.user)throw new Error(data.error||'That code could not be verified.');onEmailVerified(data.user)}catch(error){setEmailMessage(error instanceof Error?error.message:'Email verification failed.')}finally{setEmailBusy(false)}};
   const previous = () => setStep(current => Math.max(0, current - 1));
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => { const touch = event.changedTouches[0]; touchStart.current = {x: touch.clientX, y: touch.clientY}; };
   const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
@@ -162,7 +162,15 @@ export default function OnboardingTour({ open, onClose, onReopen }: Props) {
             <h2>Ready when you are.</h2>
             <p>Your MaseNet experience is ready to explore.</p>
             <div className="mnTourSelected"><b>Your genres</b>{selectedGenres.length ? selectedGenres.map(genre => <span key={genre}>{genre}</span>) : <small>No genres selected yet — you can personalise this anytime.</small>}</div>
-            <div className="mnTourReadyActions"><button type="button" className="mnTourReplay" onClick={replay}><RotateCcw size={15}/> Replay tour</button><button type="button" className="mnTourStart" onClick={close}>Start Watching <Play size={15} fill="currentColor"/></button></div>
+            <div className="mnTourAuth">
+              <div className="mnTourAuthTitle"><b>Sign in to MaseNet</b><small>Choose how you want to access your account.</small></div>
+              <button type="button" className="mnTourAuthProvider mnTourGoogle" onClick={()=>void handleGoogle()} disabled={!!authBusy}><Chrome size={18}/><span>{authBusy==='google'?'Connecting…':'Continue with Google'}</span>{authBusy==='google'?<LoaderCircle size={16} className="mnTourSpin"/>:<ArrowRight size={16}/>}</button>
+              <button type="button" className="mnTourAuthProvider mnTourTelegram" onClick={()=>void handleTelegram()} disabled={!!authBusy}><Bot size={18}/><span>{authBusy==='telegram'?'Connecting…':'Continue with Telegram'}</span>{authBusy==='telegram'?<LoaderCircle size={16} className="mnTourSpin"/>:<ArrowRight size={16}/>}</button>
+              <div className="mnTourAuthDivider"><i/> <span>OR USE EMAIL</span> <i/></div>
+              {emailStage==='email'?<form className="mnTourEmailForm" onSubmit={event=>{event.preventDefault();void sendEmailCode()}}><label htmlFor="mn-tour-email">Email address</label><div><Mail size={17}/><input id="mn-tour-email" type="email" autoComplete="email" required maxLength={254} placeholder="you@example.com" value={email} onChange={event=>setEmail(event.target.value)}/></div><button type="submit" disabled={emailBusy||!email.trim()}>{emailBusy?<><LoaderCircle size={16} className="mnTourSpin"/> Sending code…</>:<>Send email code <ArrowRight size={16}/></>}</button></form>:<form className="mnTourEmailForm" onSubmit={event=>{event.preventDefault();void verifyEmailCode()}}><label htmlFor="mn-tour-code">Six-digit verification code</label><div><Mail size={17}/><input id="mn-tour-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" value={otp} onChange={event=>setOtp(event.target.value.replace(/\\D/g,'').slice(0,6))}/></div><button type="submit" disabled={emailBusy||otp.length!==6}>{emailBusy?<><LoaderCircle size={16} className="mnTourSpin"/> Verifying…</>:<>Verify & sign in <ArrowRight size={16}/></>}</button><button type="button" className="mnTourEmailBack" onClick={()=>{setEmailStage('email');setOtp('');setEmailMessage('')}}>Use a different email</button></form>}
+              {emailMessage&&<p className="mnTourAuthMessage" role="status">{emailMessage}</p>}
+              <button type="button" className="mnTourReplay" onClick={replay}><RotateCcw size={15}/> Replay tour</button>
+            </div>
           </div>}
         </div>
         <footer className="mnTourFooter">
