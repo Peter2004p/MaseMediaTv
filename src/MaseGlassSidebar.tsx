@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { House, Search, Film, Bookmark, Bell, UserRound, ChevronLeft, ChevronRight, Clapperboard, Menu, Settings2, X } from 'lucide-react';
+import { House, Search, Film, Bookmark, Bell, UserRound, ChevronLeft, ChevronRight, Clapperboard, Menu, Settings2 } from 'lucide-react';
 
 type Item = { label: string; icon: typeof House; action: () => void; tone?: string };
 
@@ -65,7 +65,7 @@ export default function MaseGlassSidebar() {
   const sidebarStyle = { '--mase-sidebar-width': `${sidebarWidth}px` } as CSSProperties;
 
   return <>
-    <button type="button" className={`maseSidebarMobileTrigger ${drawerOpen ? 'isOpen' : ''}`} aria-label={drawerOpen ? "Close MaseNet navigation" : "Open MaseNet navigation"} aria-expanded={drawerOpen} onClick={() => setDrawerOpen(value => !value)}><span className="maseMenuMorphIcon"><Menu size={19}/><X size={19}/></span></button>
+    <button type="button" className={`maseSidebarMobileTrigger ${drawerOpen ? 'isOpen' : ''}`} aria-label={drawerOpen ? "Close MaseNet navigation" : "Open MaseNet navigation"} aria-expanded={drawerOpen} onClick={() => setDrawerOpen(value => !value)}><span className="maseMenuMorphIcon"><Menu size={19}/></span></button>
     {drawerOpen && <button type="button" className="maseSidebarScrim" aria-label="Close navigation drawer" onClick={() => setDrawerOpen(false)} />}
     <button
       type="button"
