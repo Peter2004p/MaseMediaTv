@@ -8,7 +8,7 @@ type ThemeChoice = 'light' | 'dark' | 'system';
 const genres = ['C-Drama & K-Drama', 'Action & Thriller', 'Romance', 'Historical & Wuxia', 'Mystery & Horror', 'Anime & Cartoons'];
 const featureCards = [
   { icon: <Tv2 size={19}/>, title: 'Multi-Format & HLS Playback', copy: 'A flexible player for MP4, MKV and adaptive HLS (.m3u8) sources.', detail: 'Use the built-in player with available playback options. Multi-language WebVTT subtitle tracks appear when they are supplied with the title and supported by the source.' },
-  { icon: <BellRing size={19}/>, title: 'Episode Alerts & Watchlist', copy: 'Keep titles close and follow updates for the dramas you love.', detail: 'Save titles to your watchlist and check MaseNet announcements for new episode drops. Signed-in progress and alerts depend on the account and title data available.' },
+  { icon: <BellRing size={19}/>, title: 'Instant Episode Alerts & Watchlist', copy: 'Keep titles close and follow updates for the dramas you love.', detail: 'Save titles to your watchlist and check MaseNet announcements for new episode drops. Signed-in progress and alerts depend on the account and title data available.' },
   { icon: <Download size={19}/>, title: 'Fast Direct Downloads', copy: 'Choose a convenient quality when a download is available.', detail: 'Available source qualities can include 480p, 576p, 720p, 1080p and 4K. The choices shown depend on the title and its uploaded files.' }
 ];
 
@@ -136,7 +136,7 @@ export default function OnboardingTour({ open, onClose, onReopen }: Props) {
                 <div className="mnTourPoster mnTourPosterA"><span>ASIAN DRAMAS</span><b>Stories<br/>that stay.</b><i>✦</i></div>
                 <div className="mnTourPoster mnTourPosterB"><span>4K MOVIES</span><b>Big screen<br/>feeling.</b><i>◈</i></div>
                 <div className="mnTourPoster mnTourPosterC"><span>SUBTITLES & DUBS</span><b>Your language.<br/>Your choice.</b><i>CC</i></div>
-                <div className="mnTourPoster mnTourPosterD"><span>DOWNLOADS</span><b>Take it<br/>with you.</b><i>↓</i></div>
+                <div className="mnTourPoster mnTourPosterD"><span>OFFLINE DOWNLOADS</span><b>Take it<br/>with you.</b><i>↓</i></div>
               </div>
               <span className="mnTourStageCaption">DISCOVER · WATCH · SAVE</span>
             </div>
