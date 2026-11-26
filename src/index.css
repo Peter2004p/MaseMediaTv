@@ -4462,3 +4462,45 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
  .app .maseHeroPreviewBadge{top:14px;right:13px;padding:6px 7px 6px 10px}
  .app .maseHeroPreviewBadge>button:first-child{font-size:10px}
 }
+
+
+/* Reference-match correction: one menu trigger, Get App at the trailing edge, and a brighter cinematic hero. */
+.app header.nav.maseReferenceHeader{
+  display:flex!important;align-items:center!important;gap:14px!important;
+  min-height:76px!important;padding:10px 16px!important;
+}
+.app header.nav.maseReferenceHeader>.brand{flex:1 1 auto!important;min-width:0!important;justify-content:flex-start!important}
+.app header.nav.maseReferenceHeader>.maseReferenceCopyButton,
+.app header.nav.maseReferenceHeader>.maseReferenceMenuButton{display:none!important}
+.app header.nav.maseReferenceHeader>.maseSearchToggle{flex:0 0 46px!important;width:46px!important;height:46px!important}
+.app header.nav.maseReferenceHeader>.navActions{display:flex!important;align-items:center!important;gap:8px!important;margin-left:0!important;flex:0 0 auto!important}
+.app header.nav.maseReferenceHeader .maseProfileButton{display:none!important}
+.app header.nav.maseReferenceHeader .maseGetAppButton{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+  min-height:46px!important;padding:0 19px!important;border:1px solid rgba(255,224,165,.55)!important;
+  border-radius:999px!important;background:linear-gradient(135deg,#ffe5a8,#d6ad61)!important;
+  color:#211808!important;font-size:14px!important;font-weight:850!important;white-space:nowrap!important;
+  box-shadow:0 5px 20px rgba(218,174,94,.22),inset 0 1px rgba(255,255,255,.6)!important;
+}
+.app header.nav.maseReferenceHeader .maseGetAppButton:active{transform:scale(.97)}
+/* Keep the sidebar's single mobile trigger; hide the obsolete extra header hamburger. */
+.app .maseSidebarMobileTrigger{z-index:80!important}
+.app .maseSidebarEdgeToggle{display:none!important}
+/* The reference hero uses a clear poster image and reserves the darker gradient for its copy at the bottom. */
+.app .iqHome .iqHeroShade{
+  background:linear-gradient(0deg,rgba(3,7,8,.88) 0%,rgba(3,7,8,.56) 28%,rgba(3,7,8,.16) 58%,rgba(3,7,8,.035) 100%)!important;
+  opacity:1!important;mix-blend-mode:normal!important;
+}
+.app .iqHome .maseHeroPosterArtwork img,
+.app .iqHome .maseHeroPosterArtwork .heroCustomImage,
+.app .iqHome .iqHeroPoster img{filter:brightness(1.12) saturate(1.06)!important}
+.app .iqHome .maseHeroEditorial{z-index:4!important}
+.app .iqHome .maseHeroEditorial h1{color:#fff!important;text-shadow:0 2px 20px rgba(0,0,0,.38)!important}
+.app .iqHome .maseHeroEditorial>p{color:rgba(255,255,255,.92)!important;text-shadow:0 1px 12px rgba(0,0,0,.55)!important}
+@media(max-width:560px){
+ .app header.nav.maseReferenceHeader{min-height:66px!important;padding:8px 11px!important;gap:9px!important}
+ .app header.nav.maseReferenceHeader>.brand .brandName{font-size:15px!important}
+ .app header.nav.maseReferenceHeader>.maseSearchToggle{width:39px!important;height:39px!important;flex-basis:39px!important}
+ .app header.nav.maseReferenceHeader .maseGetAppButton{min-height:39px!important;padding:0 12px!important;font-size:12px!important;gap:6px!important}
+ .app header.nav.maseReferenceHeader .maseGetAppButton svg{width:14px!important;height:14px!important}
+}
