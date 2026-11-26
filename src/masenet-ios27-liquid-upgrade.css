@@ -196,3 +196,12 @@ body:has(.maseGlassSidebar.isExpanded) .maseSidebarEdgeToggle{left:calc(var(--ma
  .maseJellyEnabled .app button.maseJellyTarget,.maseJellyEnabled .app button.maseJellyTarget:active{transition:none!important;animation:none!important}
  .app .iqHome .iqHero.maseCinematicHero:before,.app .iqHome .iqHero.maseCinematicHero:after,.app .iqHome .iqHero.maseCinematicHero .iqHeroPoster .posterImage,.app .iqHome .iqHero.maseCinematicHero .iqHeroPoster .heroCustomImage{animation:none!important}
 }
+
+/* Jelly target styles also cover the fixed sidebar and drawer controls outside .app. */
+html.maseJellyEnabled button.maseJellyTarget:not([data-no-jelly]){position:relative;isolation:isolate;overflow:hidden;transform-origin:center;transition:transform .34s var(--mase-spring),box-shadow .28s ease,filter .28s ease}
+html.maseJellyEnabled button.maseJellyTarget>.maseJellySpotlight{position:absolute;z-index:0;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(115px circle at var(--spot-x,50%) var(--spot-y,50%),rgba(255,255,255,.28),rgba(255,255,255,.08) 35%,transparent 72%);opacity:.8;mix-blend-mode:screen}
+html.maseJellyEnabled button.maseJellyTarget>.maseJellyRipple{position:absolute;z-index:0;width:14px;height:14px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,255,255,.55),rgba(243,213,155,.32) 42%,transparent 72%);transform:translate(-50%,-50%) scale(.15);animation:maseJellyRipple .68s cubic-bezier(.16,.8,.25,1) forwards}
+html.maseJellyEnabled button.maseJellyTarget>*:not(.maseJellySpotlight):not(.maseJellyRipple){position:relative;z-index:1}
+html.maseJellyEnabled button.maseJellyPressed:not([data-no-jelly]){transform:scaleX(1.09) scaleY(.89)!important;filter:saturate(1.18);box-shadow:0 0 0 1px rgba(255,255,255,.16),0 9px 26px rgba(0,0,0,.2)}
+html.maseJellyEnabled button.maseJellyRebound:not([data-no-jelly]){animation:maseJellyRebound .34s var(--mase-spring) both}
+@media(prefers-reduced-motion:reduce){html.maseJellyEnabled button.maseJellyTarget{transition:none!important;animation:none!important}}
