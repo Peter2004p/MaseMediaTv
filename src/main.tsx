@@ -14,6 +14,8 @@ import './ios-liquid-glass-quality.css';
 import './liquid-navbar-redesign.css';
 import './masenet-visual-system.css';
 import './masenet-liquid-glass-fixes.css';
+import './liquid-navbar-redesign.css';
+import './masenet-daylight-ios-dock.css';
 import './masenet-ios27-liquid-upgrade.css';
 import MaseGlassSidebar from './MaseGlassSidebar';
 
@@ -54,7 +56,6 @@ if (root) {
   createRoot(root).render(
     <StrictMode>
       <AppErrorBoundary><App /></AppErrorBoundary>
-      <MaseGlassSidebar />
       <MaseGlassSidebar />
       {!Capacitor.isNativePlatform() && <PWAInstallPrompt />}
     </StrictMode>
