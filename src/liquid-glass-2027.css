@@ -39,3 +39,185 @@ html{scroll-behavior:smooth}
 @media(max-width:760px){.app{padding-left:0!important;padding-bottom:calc(100px + env(safe-area-inset-bottom))!important}.maseSidebarV15{left:10px;top:10px;bottom:10px;width:min(290px,calc(100vw - 48px))!important;transform:translateX(calc(-100% - 20px));z-index:1100}.maseSidebarV15.is-mobile-open{transform:translateX(0)}.maseSidebarV15 .maseSidebarEdge{display:none}.maseSidebarScrim.is-open{display:block;position:fixed;inset:0;z-index:1050;background:rgba(0,0,0,.64);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px)}.maseMobileSidebarToggle{display:grid}.app>.nav.maseReferenceHeader{width:calc(100% - 16px)!important;margin:8px!important;padding:7px 9px!important;gap:7px!important;min-height:56px!important}.app>.nav .brand{gap:7px}.app>.nav .brandLogo{width:31px;height:31px}.app>.nav .brandName{font-size:13px}.app>.nav .navActions{gap:3px}.app>.nav .navActions>button{min-width:38px;min-height:38px}.app>.nav .maseSearchToggle{min-width:38px;min-height:38px}.iqHome{padding:8px 8px 34px!important}.iqHome .iqHero.maseCinematicHero{min-height:clamp(500px,145vw,680px);padding:18px 15px 17px;border-radius:24px;justify-content:flex-end}.iqHome .iqHeroPoster{inset:-2% -3%!important}.iqHome .iqHeroPoster .posterImage,.iqHome .iqHeroPoster .heroCustomImage{object-position:center 22%}.iqHome .iqHeroShade{background:linear-gradient(to top,#080a09 12%,rgba(8,10,9,.72) 48%,transparent 100%)!important}.iqHome .iqHeroCopy.maseHeroEditorial{padding-top:180px}.iqHome .maseHeroEditorial h1{font-size:clamp(38px,10vw,57px);line-height:.96}.iqHome .maseHeroEditorial>p{font-size:12px;line-height:1.55}.iqHome .maseHeroFacts{font-size:8px;gap:7px 11px}.iqHome .iqHeroActions{margin-top:16px}.iqHome .iqHeroActions button{min-height:44px;padding:0 15px;font-size:11px}.iqHome .iqHeroDots{margin-top:15px}.masenetLiquidDock.maseGooeyDock{width:min(430px,calc(100% - 22px))!important;min-height:70px!important;bottom:max(9px,env(safe-area-inset-bottom))!important;padding:6px!important;gap:1px!important}.maseGooeyDock>.dockItem{min-height:54px}.maseGooeyDock>.dockItem .dockIconShell{height:34px}.maseGooeyDock>.dockItem svg{width:20px;height:20px}.maseGooeyDock .dockLabel{font-size:8px!important}}
 @media(max-width:380px){.app>.nav .brandName{font-size:12px}.iqHome .iqHero.maseCinematicHero{min-height:510px}.iqHome .iqHeroActions{gap:7px}.iqHome .iqHeroActions button{padding:0 12px;font-size:10px}.maseGooeyDock .dockLabel{font-size:7px!important}}
 @media(prefers-reduced-motion:reduce){.iqHome .iqHeroPoster,.iqHome .maseHeroBrandline,.iqHome .iqTags,.iqHome .maseHeroEditorial h1,.iqHome .maseHeroEditorial>p,.iqHome .maseHeroFacts,.iqHome .iqHeroActions,.iqHome .maseHeroEditorial .heroBroadcastCompact,.iqHome .iqHeroDots button.active:after,.iqHome .iqHeroActions .primary:after{animation:none!important}.maseSidebarV15,.maseSidebarItem,.maseGooeyDock>.dockItem{transition:none!important}}
+
+
+/* Supplied MaseMediaTv reference — mobile-first cinematic streaming layout */
+.app{
+  --mase-sidebar-offset:0px!important;
+  min-height:100dvh!important;
+  padding-left:0!important;
+  padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;
+  color:#f5f4fa!important;
+  background:#090710!important;
+  background-image:radial-gradient(ellipse at 50% -12%,rgba(106,58,139,.16),transparent 42%),linear-gradient(180deg,#0a0811 0%,#08070d 100%)!important;
+}
+.app>.nav.maseReferenceHeader{
+  position:sticky!important;top:10px!important;z-index:1004!important;
+  display:flex!important;align-items:center!important;gap:12px!important;
+  width:calc(100% - 28px)!important;max-width:1480px!important;
+  min-height:62px!important;margin:10px auto 14px!important;padding:7px 10px!important;
+  border:1px solid rgba(255,255,255,.12)!important;border-radius:999px!important;
+  background:rgba(24,25,32,.72)!important;
+  -webkit-backdrop-filter:blur(30px) saturate(175%)!important;backdrop-filter:blur(30px) saturate(175%)!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.16)!important;
+}
+.maseMobileSidebarToggle{
+  display:grid!important;place-items:center!important;flex:0 0 42px!important;width:42px!important;height:42px!important;
+  border:1px solid rgba(255,255,255,.12)!important;border-radius:50%!important;
+  background:rgba(255,255,255,.08)!important;color:#e8e8ee!important;
+}
+.app>.nav .brand{display:flex!important;align-items:center!important;gap:10px!important;min-width:0!important}
+.app>.nav .brandLogo{width:39px!important;height:39px!important;object-fit:contain!important}
+.app>.nav .brandName{font-size:15px!important;font-weight:850!important;letter-spacing:-.045em!important;color:#f7f7fa!important}
+.app>.nav .maseSearchToggle{margin-left:auto!important;display:grid!important;place-items:center!important;width:42px!important;height:42px!important;min-width:42px!important;border-radius:50%!important;background:rgba(255,255,255,.055)!important;border:1px solid rgba(255,255,255,.12)!important;color:#f4f4f7!important}
+.app>.nav .navActions{display:none!important}
+.app>.nav .maseHeaderSearch{margin-left:auto!important;max-width:min(520px,58vw)!important}
+.app .page{margin-inline:auto!important}
+.maseSidebarV15{
+  position:fixed!important;left:12px!important;top:12px!important;bottom:12px!important;
+  width:min(420px,calc(100vw - 46px))!important;max-width:420px!important;
+  padding:17px 13px!important;gap:12px!important;
+  border:1px solid rgba(255,255,255,.13)!important;border-radius:29px!important;
+  background:linear-gradient(155deg,rgba(26,26,34,.97),rgba(13,14,19,.96) 58%,rgba(19,13,27,.96))!important;
+  -webkit-backdrop-filter:blur(34px) saturate(155%)!important;backdrop-filter:blur(34px) saturate(155%)!important;
+  box-shadow:0 28px 90px rgba(0,0,0,.68),inset 0 1px 0 rgba(255,255,255,.14)!important;
+  transform:translateX(calc(-100% - 26px))!important;z-index:1200!important;overflow:hidden!important;
+}
+.maseSidebarV15.is-collapsed{width:min(420px,calc(100vw - 46px))!important;padding:17px 13px!important}
+.maseSidebarV15.is-mobile-open{transform:translateX(0)!important}
+.maseSidebarV15 .maseSidebarEdge{display:none!important}
+.maseSidebarV15 .maseSidebarBrand{min-height:58px!important;align-items:center!important;padding:0 5px 14px!important;gap:12px!important}
+.maseSidebarV15 .maseSidebarLogo{width:48px!important;height:48px!important;flex-basis:48px!important;border-radius:17px!important;background:linear-gradient(140deg,#bd79ff,#7240d6 60%,#d49b55)!important;box-shadow:0 0 25px rgba(157,92,244,.42),inset 0 1px rgba(255,255,255,.45)!important}
+.maseSidebarV15 .maseSidebarLogo img{width:32px!important;height:32px!important}
+.maseSidebarV15 .maseSidebarBrandCopy{display:grid!important}
+.maseSidebarV15 .maseSidebarBrandCopy b{font-size:15px!important}
+.maseSidebarV15 .maseSidebarBrandCopy small{font-size:10px!important;letter-spacing:.06em!important;color:#c4b3e6!important}
+.maseSidebarClose{display:grid!important;place-items:center!important;flex:0 0 40px!important;width:40px!important;height:40px!important;margin-left:auto!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:50%!important;background:rgba(255,255,255,.045)!important;color:#e6e5ed!important}
+.maseSidebarV15.is-collapsed .maseSidebarBrandCopy,.maseSidebarV15.is-collapsed .maseSidebarSectionLabel,.maseSidebarV15.is-collapsed .maseSidebarItem>span,.maseSidebarV15.is-collapsed .maseSidebarBadge,.maseSidebarV15.is-collapsed .maseSidebarSectionHead,.maseSidebarV15.is-collapsed .maseSidebarDivider,.maseSidebarV15.is-collapsed .maseCacheCard,.maseSidebarV15.is-collapsed .maseSidebarProfile>span:nth-child(2),.maseSidebarV15.is-collapsed .maseSidebarProfile>svg{display:initial!important}
+.maseSidebarV15.is-collapsed .maseSidebarItem{justify-content:flex-start!important;padding:0 12px!important}
+.maseSidebarV15.is-collapsed .maseSidebarBrand{justify-content:flex-start!important}
+.maseSidebarV15 .maseSidebarScroll{padding:2px 0!important}
+.maseSidebarV15 .maseSidebarSectionLabel{padding:10px 12px 7px!important;color:#a8a4b1!important;font-size:9px!important;letter-spacing:.18em!important}
+.maseSidebarV15 .maseSidebarItem{min-height:49px!important;margin:2px 0!important;padding:0 13px!important;gap:14px!important;border-radius:16px!important;font-size:13px!important;color:#e0dfe6!important}
+.maseSidebarV15 .maseSidebarItem>svg{width:19px!important;height:19px!important;color:#d4d2dc!important}
+.maseSidebarV15 .maseSidebarItem.active{background:linear-gradient(100deg,rgba(143,74,220,.19),rgba(255,255,255,.035))!important;border-color:rgba(177,115,255,.15)!important;box-shadow:0 12px 24px rgba(132,64,204,.15)!important;color:#fff!important}
+.maseSidebarV15 .maseSidebarItem.active>svg{color:#d7b6ff!important}
+.maseSidebarV15 .maseSidebarDivider{margin:12px 7px!important;background:rgba(255,255,255,.09)!important}
+.maseSidebarV15 .maseSidebarSectionHead{padding:0 3px!important}
+.maseSidebarV15 .maseSidebarCollectionItem{min-height:42px!important}
+.maseSidebarV15 .maseSidebarFooter{gap:10px!important}
+.maseSidebarV15 .maseCacheCard{padding:13px!important;border-radius:18px!important;background:rgba(255,255,255,.035)!important}
+.maseSidebarV15 .maseSidebarCacheCard>i>b,.maseSidebarV15 .maseCacheCard>i>b{background:linear-gradient(90deg,#b75bff,#e04db8,#d7a74e)!important}
+.maseSidebarV15 .maseSidebarProfile{min-height:58px!important;border:0!important;background:transparent!important;padding:7px 4px!important}
+.maseSidebarScrim.is-open{display:block!important;position:fixed!important;inset:0!important;z-index:1150!important;background:rgba(3,3,8,.7)!important;-webkit-backdrop-filter:blur(9px)!important;backdrop-filter:blur(9px)!important}
+.iqHome{max-width:1480px!important;padding:10px clamp(12px,2vw,28px) 36px!important;color:#f5f4fa!important;overflow:visible!important}
+.iqHome .iqHero.maseCinematicHero{min-height:clamp(450px,112vw,650px)!important;max-height:720px!important;margin:0 0 18px!important;padding:clamp(20px,4vw,54px)!important;border-radius:29px!important;border:1px solid rgba(255,255,255,.14)!important;background:#09080d!important;box-shadow:0 26px 70px rgba(0,0,0,.52),inset 0 1px rgba(255,255,255,.12)!important}
+.iqHome .iqHeroPoster{inset:-2% 0!important;opacity:.93!important;filter:saturate(.9) contrast(1.03)!important}
+.iqHome .iqHeroShade{background:linear-gradient(180deg,rgba(7,6,12,.08) 0%,rgba(7,6,12,.16) 34%,rgba(7,6,12,.78) 72%,#08070d 100%)!important}
+.iqHome .maseHeroAtmosphere{background:linear-gradient(90deg,rgba(8,7,13,.22),transparent 78%)!important}
+.iqHome .iqHeroCopy.maseHeroEditorial{max-width:820px!important;padding-top:190px!important}
+.iqHome .maseHeroBrandline{font-size:10px!important;letter-spacing:.14em!important;color:#e9d7ae!important}
+.iqHome .iqTags span{border-radius:999px!important;background:rgba(9,8,13,.42)!important;border:1px solid rgba(255,255,255,.16)!important;color:#f1e6d0!important}
+.iqHome .maseHeroEditorial h1{font-family:Georgia,'Times New Roman',serif!important;font-size:clamp(40px,7vw,82px)!important;line-height:.98!important;letter-spacing:-.045em!important;color:#fff!important}
+.iqHome .maseHeroEditorial>p{max-width:680px!important;color:rgba(255,255,255,.84)!important}
+.iqHome .maseHeroFacts{color:#e5d9c2!important}
+.iqHome .iqHeroActions .primary{background:linear-gradient(110deg,#7b5708,#e0b34f)!important;color:#fff8e9!important;border:1px solid rgba(255,224,155,.4)!important;box-shadow:0 8px 26px rgba(202,153,49,.28)!important}
+.iqHome .iqHeroActions .secondary{background:rgba(12,12,17,.45)!important;border-color:rgba(255,255,255,.2)!important}
+.iqHome .iqHeroDots button.active{background:#e4bc6e!important}
+.iqHome .iqCategories{position:relative!important;top:auto!important;z-index:5!important;margin:12px 0 24px!important;padding:6px!important;gap:5px!important;border:1px solid rgba(255,255,255,.08)!important;border-radius:999px!important;background:rgba(18,15,25,.82)!important;box-shadow:none!important}
+.iqHome .iqCategories button{padding:10px 15px!important;border-radius:999px!important;color:#c9c4d0!important;font-size:11px!important}
+.iqHome .iqCategories button.active,.iqHome .iqCategories button:hover{background:linear-gradient(110deg,#00c98c,#19d5a5)!important;color:#06261d!important;box-shadow:0 5px 18px rgba(0,210,151,.18)!important}
+.maseSpotlightLineup{margin:0 0 30px!important}
+.maseSpotlightHeading{display:flex;align-items:center;gap:11px;margin:0 0 13px!important}
+.maseSpotlightMark{width:5px;height:23px;flex:0 0 5px;border-radius:9px;background:#e2b449;box-shadow:0 0 14px rgba(226,180,73,.32)}
+.maseSpotlightHeading h2{margin:0!important;color:#f5f3f8!important;font-size:clamp(18px,2vw,23px)!important;font-weight:800!important;letter-spacing:-.035em!important}
+.maseSpotlightHeading small{margin-left:auto;color:#96919e!important;font-size:10px!important}
+.maseSpotlightList{display:grid!important;gap:9px!important}
+.maseSpotlightItem{display:flex!important;align-items:center!important;gap:13px!important;width:100%!important;min-height:91px!important;padding:10px 13px!important;text-align:left!important;border:1px solid rgba(255,255,255,.085)!important;border-radius:20px!important;background:linear-gradient(110deg,rgba(255,255,255,.035),rgba(255,255,255,.012))!important;color:#fff!important;transition:border-color .2s,transform .2s,background .2s!important}
+.maseSpotlightItem:first-child{border-color:rgba(216,173,80,.26)!important}
+.maseSpotlightItem:active{transform:scale(.99)!important}
+.maseSpotlightPoster{display:block!important;flex:0 0 58px!important;width:58px!important;height:68px!important;overflow:hidden!important;border-radius:13px!important}
+.maseSpotlightPoster .poster{width:100%!important;height:100%!important;border-radius:0!important}
+.maseSpotlightPoster .posterImage{width:100%!important;height:100%!important;object-fit:cover!important}
+.maseSpotlightCopy{display:grid!important;gap:5px!important;min-width:0!important;flex:1!important}
+.maseSpotlightCopy small{font-size:9px!important;font-weight:900!important;letter-spacing:.14em!important;color:#e0bd7c!important}
+.maseSpotlightCopy b{font:600 17px/1.2 Georgia,'Times New Roman',serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.maseSpotlightCopy em{font-style:normal!important;font-size:10px!important;color:#9995a1!important;letter-spacing:.035em!important}
+.maseSpotlightItem>svg{color:#8c8793!important;flex:0 0 auto!important}
+.iqHome .maseMagicDiscovery{display:none!important}
+.iqHome .iqRow{margin-bottom:32px!important}
+.iqHome .iqRowHead{margin-bottom:13px!important}
+.iqHome .iqRowHead h2{font-size:clamp(20px,2.5vw,26px)!important;color:#f5f3f8!important}
+.iqHome .iqKicker{color:#35d8a4!important;letter-spacing:.15em!important}
+.iqHome .rowMore{border:0!important;background:transparent!important;color:#c4bfcb!important;padding:6px 4px!important}
+.iqHome .iqGrid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:16px 12px!important}
+.iqHome .iqCard{border-radius:14px!important}
+.iqHome .iqPoster{border-radius:14px!important;aspect-ratio:2/2.85!important}
+.iqHome .iqCard>b{color:#f2eff7!important;font-size:12px!important}
+.iqHome .iqCard>small{color:#96919e!important}
+.masenetLiquidDock.maseGooeyDock{
+  left:50%!important;bottom:max(12px,env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;
+  width:min(340px,calc(100% - 46px))!important;min-height:68px!important;
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:2px!important;padding:6px!important;
+  border:1px solid rgba(255,255,255,.12)!important;border-radius:999px!important;
+  background:rgba(16,17,23,.82)!important;-webkit-backdrop-filter:blur(28px) saturate(180%)!important;backdrop-filter:blur(28px) saturate(180%)!important;
+  box-shadow:0 14px 42px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.16)!important;
+}
+.maseGooeyDock>.dockItem{min-height:54px!important;gap:0!important;color:rgba(255,255,255,.55)!important}
+.maseGooeyDock>.dockItem .dockIconShell{width:50px!important;height:50px!important}
+.maseGooeyDock>.dockItem svg{width:22px!important;height:22px!important}
+.maseGooeyDock .dockLabel{display:none!important}
+.maseGooeyDock>.dockItem.active .dockIconShell{border-radius:50%!important;background:#35e9bd!important;color:#fff!important;box-shadow:0 0 24px rgba(53,233,189,.55),0 0 0 7px rgba(53,233,189,.08)!important}
+.maseGooeyDock>.dockItem.active svg{color:#fff!important;transform:scale(1.04)!important}
+.maseGooeyOrb{width:50px!important;height:50px!important;margin-top:-25px!important}
+.maseGooeyTrail{width:34px!important;height:34px!important;margin-top:-17px!important}
+@media(min-width:761px){
+  .app{padding-bottom:112px!important}
+  .iqHome{padding:18px clamp(18px,3vw,42px) 45px!important}
+  .iqHome .iqHero.maseCinematicHero{min-height:clamp(510px,52vw,690px)!important}
+  .iqHome .iqGrid{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+}
+@media(max-width:760px){
+  .app{padding-left:0!important;padding-bottom:calc(94px + env(safe-area-inset-bottom))!important}
+  .app>.nav.maseReferenceHeader{width:calc(100% - 20px)!important;min-height:56px!important;margin:8px auto 12px!important;padding:6px 8px!important;gap:8px!important}
+  .app>.nav .brand{gap:8px!important}
+  .app>.nav .brandLogo{width:34px!important;height:34px!important}
+  .app>.nav .brandName{font-size:13px!important}
+  .maseMobileSidebarToggle{width:38px!important;height:38px!important;flex-basis:38px!important}
+  .app>.nav .maseSearchToggle{width:38px!important;height:38px!important;min-width:38px!important}
+  .maseSidebarV15{left:9px!important;top:9px!important;bottom:9px!important;width:min(350px,calc(100vw - 42px))!important;padding:15px 12px!important}
+  .maseSidebarV15.is-collapsed{width:min(350px,calc(100vw - 42px))!important;padding:15px 12px!important}
+  .iqHome{padding:8px 9px 30px!important}
+  .iqHome .iqHero.maseCinematicHero{min-height:clamp(430px,112vw,540px)!important;max-height:none!important;padding:17px 15px 16px!important;border-radius:24px!important}
+  .iqHome .iqHeroPoster .posterImage,.iqHome .iqHeroPoster .heroCustomImage{object-position:center 24%!important}
+  .iqHome .iqHeroCopy.maseHeroEditorial{padding-top:170px!important}
+  .iqHome .maseHeroEditorial h1{font-size:clamp(37px,9.8vw,52px)!important;line-height:.98!important}
+  .iqHome .maseHeroEditorial>p{font-size:12px!important;line-height:1.58!important}
+  .iqHome .maseHeroFacts{font-size:8px!important;gap:7px 11px!important}
+  .iqHome .iqHeroActions{margin-top:15px!important;gap:8px!important}
+  .iqHome .iqHeroActions button{min-height:43px!important;padding:0 14px!important;font-size:11px!important}
+  .iqHome .iqHeroDots{margin-top:13px!important}
+  .iqHome .iqCategories{margin:11px 0 20px!important;padding:5px!important}
+  .iqHome .iqCategories button{padding:9px 13px!important;font-size:10px!important}
+  .maseSpotlightLineup{margin-bottom:25px!important}
+  .maseSpotlightItem{min-height:76px!important;padding:8px 10px!important;border-radius:17px!important}
+  .maseSpotlightPoster{flex-basis:54px!important;width:54px!important;height:62px!important}
+  .maseSpotlightCopy b{font-size:15px!important}
+  .maseSpotlightCopy em{font-size:9px!important}
+  .iqHome .iqGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px 8px!important}
+  .iqHome .iqCard>b{font-size:10px!important;margin:7px 2px 3px!important}
+  .iqHome .iqCard>small{font-size:8px!important;line-height:1.4!important}
+  .iqHome .iqRowHead h2{font-size:20px!important}
+  .masenetLiquidDock.maseGooeyDock{width:min(340px,calc(100% - 54px))!important;min-height:64px!important;bottom:max(8px,env(safe-area-inset-bottom))!important;padding:5px!important}
+  .maseGooeyDock>.dockItem{min-height:52px!important}
+  .maseGooeyDock>.dockItem .dockIconShell{width:48px!important;height:48px!important}
+  .maseGooeyOrb{width:48px!important;height:48px!important;margin-top:-24px!important}
+}
+@media(max-width:380px){
+  .iqHome .iqHero.maseCinematicHero{min-height:430px!important}
+  .maseSpotlightCopy b{font-size:14px!important}
+  .maseSpotlightPoster{flex-basis:48px!important;width:48px!important;height:58px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .maseSidebarV15,.maseGooeyDock>.dockItem,.iqHome .iqHeroPoster{transition:none!important;animation:none!important}
+}
