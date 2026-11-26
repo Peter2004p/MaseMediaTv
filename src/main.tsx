@@ -41,6 +41,14 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
   }
 }
 
+if (Capacitor.isNativePlatform()) document.documentElement.dataset.masenetNative = 'true';
+if (Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
+  // Native app content is served from the live Cloudflare site; remove any older PWA worker/cache
+  // that could otherwise keep the installed app on a stale interface.
+  void navigator.serviceWorker.getRegistrations().then(registrations => Promise.all(registrations.map(registration => registration.unregister()))).catch(() => {});
+  if ('caches' in window) void caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('masenet-shell-')).map(key => caches.delete(key)))).catch(() => {});
+}
+
 const root = document.getElementById('root');
 if (root) {
   createRoot(root).render(
@@ -67,7 +75,7 @@ if (Capacitor.isNativePlatform()) {
 }
 
 const telegramApp = (window as Window & { Telegram?: { WebApp?: { initData?: string; platform?: string } } }).Telegram?.WebApp;
-if ('serviceWorker' in navigator && !telegramApp?.initData && (!telegramApp?.platform || telegramApp.platform === 'unknown')) {
+if ('serviceWorker' in navigator && !Capacitor.isNativePlatform() && !telegramApp?.initData && (!telegramApp?.platform || telegramApp.platform === 'unknown')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(error => {
       console.warn('MaseNet offline app shell could not be registered:', error);
