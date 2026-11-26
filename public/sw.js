@@ -1,4 +1,4 @@
-const CACHE_NAME = 'masenet-shell-v3-brand';
+const CACHE_NAME = 'masenet-shell-v4-update';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/masemediatv-logo.png', '/masenet-app-icon.svg', '/masemediatv-logo.svg', '/masenet-home-mark.svg'];
 const NEVER_CACHE = /(^|\/)(api|media)(\/|$)|\.(m3u8|m3u|ts|m4s|mp4|mkv|mov|webm|mpd|vtt|srt|key)(\?|$)/i;
 
