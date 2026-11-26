@@ -22,7 +22,7 @@
 .maseSidebarFooter{margin-top:auto;display:flex;align-items:center;gap:9px;padding:10px 7px;border-top:1px solid rgba(255,255,255,.08);overflow:hidden}
 .maseSidebarLiveDot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#39d98a;box-shadow:0 0 0 5px rgba(57,217,138,.10)}
 .maseSidebarEdgeToggle{position:fixed;z-index:1192;left:68px;top:50%;width:26px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.2);border-radius:0 13px 13px 0;background:rgba(19,29,24,.9);color:#e9f5ee;box-shadow:0 8px 24px rgba(0,0,0,.28);backdrop-filter:blur(18px);cursor:pointer;transition:left .42s cubic-bezier(.2,1.15,.25,1),background .2s}
-.maseGlassSidebar.isExpanded~.maseSidebarEdgeToggle{left:260px}
+body:has(.maseGlassSidebar.isExpanded) .maseSidebarEdgeToggle{left:260px}
 .maseSidebarScrim{display:none}
 @media(min-width:761px){.app .iqHome{padding-left:clamp(82px,7vw,108px)!important}.app .iqHome .iqHero{border-radius:28px!important}}
 @media(max-width:760px){
