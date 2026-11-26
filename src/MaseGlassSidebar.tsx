@@ -16,6 +16,7 @@ export default function MaseGlassSidebar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unread, setUnread] = useState('');
   const [storageUsed, setStorageUsed] = useState(0);
+  const [storageCapacity, setStorageCapacity] = useState('Checking browser storage…');
   const drag = useRef<{ x: number; width: number } | null>(null);
   const dragged = useRef(false);
 
@@ -25,7 +26,11 @@ export default function MaseGlassSidebar() {
     const syncStorage = async () => {
       try {
         const estimate = await navigator.storage?.estimate?.();
-        if (estimate?.quota && estimate.usage !== undefined) setStorageUsed(Math.min(100, Math.round(estimate.usage / estimate.quota * 100)));
+        if (estimate?.quota && estimate.usage !== undefined) {
+          const formatBytes = (bytes: number) => bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : bytes >= 1024 ** 2 ? `${(bytes / 1024 ** 2).toFixed(0)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+          setStorageUsed(Math.min(100, Math.round(estimate.usage / estimate.quota * 100)));
+          setStorageCapacity(`${formatBytes(estimate.usage)} used · ${formatBytes(estimate.quota)} capacity`);
+        } else setStorageCapacity('Capacity unavailable on this device');
       } catch { /* Storage estimates are optional in embedded browsers. */ }
     };
     const onKey = (event: KeyboardEvent) => {
@@ -97,9 +102,13 @@ export default function MaseGlassSidebar() {
         </button>)}
       </nav>
       <section className="maseSidebarOffline" aria-label="Offline storage estimate">
-        <div className="maseSidebarOfflineHeading"><HardDrive size={14}/><span>Offline storage</span><b>{storageUsed}%</b></div>
+        <div className="maseSidebarOfflineHeading"><HardDrive size={14}/><span>Offline Cache</span><b>{storageUsed}%</b></div>
         <div className="maseSidebarStorageTrack"><i style={{ width: `${storageUsed}%` }}/></div>
-        <small>Device storage used</small>
+        <small>{storageCapacity}</small>
+      </section>
+      <section className="maseSidebarVip" aria-label="MaseNet VIP membership status">
+        <span className="maseSidebarVipMark">✦</span>
+        <span className="maseSidebarVipCopy"><b>VIP <i>2.4k members</i></b><small>MASENET COMMUNITY</small></span>
       </section>
       <button type="button" className="maseSidebarProfileFooter" onClick={() => invoke(items[6].action)}>
         <span className="maseSidebarAvatar"><UserRound size={17}/></span><span className="maseSidebarProfileText"><b>Your profile</b><small>Personalise MaseNet</small></span><ChevronRight size={15}/>
