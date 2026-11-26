@@ -4510,150 +4510,232 @@ html body #root .app .iqHome .iqHeroEmpty.maseCinematicHero{min-height:340px!imp
    Applies only when Light Mode is selected; Dark Mode styling is untouched. */
 :root[data-mase-theme="light"] body,
 :root[data-mase-theme="light"] #root{background:#f6f8f7!important;color:#17231e!important}
-:root[data-mase-theme="light"] .app{
+.app.theme-light{
   --bg:#f6f8f7!important;--text:#17231e!important;--muted:#718078!important;
   color:#17231e!important;background:#f6f8f7!important;
   color-scheme:light!important;
 }
-:root[data-mase-theme="light"] .app .nav.maseReferenceHeader{
+.app.theme-light .nav.maseReferenceHeader{
   background:rgba(255,255,255,.94)!important;color:#18231f!important;
   border:1px solid #e5ebe7!important;box-shadow:0 5px 20px rgba(25,55,42,.08)!important;
   -webkit-backdrop-filter:blur(22px) saturate(150%)!important;backdrop-filter:blur(22px) saturate(150%)!important;
 }
-:root[data-mase-theme="light"] .app .maseReferenceHeader .brandName,
-:root[data-mase-theme="light"] .app .maseReferenceHeader .brand{color:#18231f!important}
-:root[data-mase-theme="light"] .app .maseReferenceHeader .maseSearchToggle,
-:root[data-mase-theme="light"] .app .maseReferenceHeader .navActions .icon{
+.app.theme-light .maseReferenceHeader .brandName,
+.app.theme-light .maseReferenceHeader .brand{color:#18231f!important}
+.app.theme-light .maseReferenceHeader .maseSearchToggle,
+.app.theme-light .maseReferenceHeader .navActions .icon{
   color:#25332c!important;background:#f4f7f5!important;border-color:#e5ebe7!important;box-shadow:none!important;
 }
-:root[data-mase-theme="light"] .app .maseReferenceHeader .maseGetAppButton{
+.app.theme-light .maseReferenceHeader .maseGetAppButton{
   background:#e4f5ee!important;border:1px solid #c5e9da!important;color:#087c5a!important;box-shadow:none!important;
 }
-:root[data-mase-theme="light"] .app .iqHome,
-:root[data-mase-theme="light"] .app .iqHome main,
-:root[data-mase-theme="light"] .app main.ios27PageTransition{
+.app.theme-light .iqHome,
+.app.theme-light .iqHome main,
+.app.theme-light main.ios27PageTransition{
   color:#17231e!important;background:#f6f8f7!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero{
+.app.theme-light .iqHome .maseCinematicHero{
   position:relative!important;display:block!important;isolation:isolate!important;overflow:hidden!important;
   height:clamp(420px,64vw,540px)!important;min-height:420px!important;
   margin:10px auto 18px!important;padding:0!important;border:0!important;border-radius:0 0 22px 22px!important;
   background:#f6f8f7!important;box-shadow:none!important;color:#17231e!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroPoster{
+.app.theme-light .iqHome .maseCinematicHero .iqHeroPoster{
   position:absolute!important;inset:0 0 auto!important;width:100%!important;height:58%!important;
   overflow:hidden!important;opacity:1!important;transform:none!important;animation:none!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .maseHeroPosterArtwork,
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .maseHeroPosterArtwork img,
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .maseHeroPosterArtwork .heroCustomImage,
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroPoster img{
+.app.theme-light .iqHome .maseCinematicHero .maseHeroPosterArtwork,
+.app.theme-light .iqHome .maseCinematicHero .maseHeroPosterArtwork img,
+.app.theme-light .iqHome .maseCinematicHero .maseHeroPosterArtwork .heroCustomImage,
+.app.theme-light .iqHome .maseCinematicHero .iqHeroPoster img{
   width:100%!important;height:100%!important;object-fit:cover!important;object-position:center 28%!important;
   filter:brightness(1.08) saturate(1.04)!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroShade{
+.app.theme-light .iqHome .maseCinematicHero .iqHeroShade{
   position:absolute!important;inset:0!important;z-index:1!important;opacity:1!important;
   background:linear-gradient(180deg,rgba(246,248,247,0) 0%,rgba(246,248,247,0) 35%,rgba(246,248,247,.72) 51%,#f6f8f7 63%,#f6f8f7 100%)!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .maseHeroAtmosphere,
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .maseHeroPosterCard{display:none!important}
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroCopy{
+.app.theme-light .iqHome .maseCinematicHero .maseHeroAtmosphere,
+.app.theme-light .iqHome .maseCinematicHero .maseHeroPosterCard{display:none!important}
+.app.theme-light .iqHome .maseCinematicHero .iqHeroCopy{
   position:absolute!important;z-index:4!important;inset:auto 0 0!important;
   width:100%!important;max-width:none!important;padding:0 18px 17px!important;margin:0!important;
   color:#17231e!important;text-align:left!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .maseHeroBrandline,
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqTags,
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .maseHeroFacts{color:#62756b!important;text-shadow:none!important}
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqTags span{
+.app.theme-light .iqHome .maseCinematicHero .maseHeroBrandline,
+.app.theme-light .iqHome .maseCinematicHero .iqTags,
+.app.theme-light .iqHome .maseCinematicHero .maseHeroFacts{color:#62756b!important;text-shadow:none!important}
+.app.theme-light .iqHome .maseCinematicHero .iqTags span{
   color:#40554a!important;background:rgba(255,255,255,.88)!important;border:1px solid #e2eae5!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero h1{
+.app.theme-light .iqHome .maseCinematicHero h1{
   color:#17231e!important;font-size:clamp(27px,6vw,39px)!important;line-height:1.08!important;
   text-shadow:none!important;letter-spacing:-.035em!important;margin:7px 0 5px!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroCopy>p{
+.app.theme-light .iqHome .maseCinematicHero .iqHeroCopy>p{
   color:#65736c!important;text-shadow:none!important;font-size:12px!important;line-height:1.45!important;
   display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important;overflow:hidden!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .maseHeroFacts span{color:#75847c!important}
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroActions .primary{
+.app.theme-light .iqHome .maseCinematicHero .maseHeroFacts span{color:#75847c!important}
+.app.theme-light .iqHome .maseCinematicHero .iqHeroActions .primary{
   background:#078c68!important;color:#fff!important;border:1px solid #078c68!important;box-shadow:0 4px 12px rgba(7,140,104,.16)!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroActions .secondary{
+.app.theme-light .iqHome .maseCinematicHero .iqHeroActions .secondary{
   background:#fff!important;color:#26372e!important;border:1px solid #e2e9e4!important;box-shadow:none!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroDots button{background:#c9d5ce!important}
-:root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroDots button.active{background:#078c68!important}
-:root[data-mase-theme="light"] .app .maseHeroPreviewBadge{
+.app.theme-light .iqHome .maseCinematicHero .iqHeroDots button{background:#c9d5ce!important}
+.app.theme-light .iqHome .maseCinematicHero .iqHeroDots button.active{background:#078c68!important}
+.app.theme-light .maseHeroPreviewBadge{
   top:13px!important;right:13px!important;background:rgba(255,255,255,.9)!important;
   border:1px solid #e2eae5!important;color:#24352c!important;box-shadow:0 3px 12px rgba(0,0,0,.08)!important;
 }
-:root[data-mase-theme="light"] .app .maseHeroPreviewBadge>button:first-child{color:#24352c!important}
-:root[data-mase-theme="light"] .app .maseHeroPreviewBadge .maseHeroPreviewMute{color:#24352c!important;background:#f1f5f2!important;border-color:#e1e8e3!important}
-:root[data-mase-theme="light"] .app .iqHome .iqCategories,
-:root[data-mase-theme="light"] .app .iqHome .iqRow,
-:root[data-mase-theme="light"] .app .iqHome .maseMagicDiscovery,
-:root[data-mase-theme="light"] .app .iqHome .homepageBroadcasts,
-:root[data-mase-theme="light"] .app .iqHome .siteLegalFooter{color:#17231e!important}
-:root[data-mase-theme="light"] .app .iqHome .iqCategoryPills button,
-:root[data-mase-theme="light"] .app .iqHome .maseMagicChips button{
+.app.theme-light .maseHeroPreviewBadge>button:first-child{color:#24352c!important}
+.app.theme-light .maseHeroPreviewBadge .maseHeroPreviewMute{color:#24352c!important;background:#f1f5f2!important;border-color:#e1e8e3!important}
+.app.theme-light .iqHome .iqCategories,
+.app.theme-light .iqHome .iqRow,
+.app.theme-light .iqHome .maseMagicDiscovery,
+.app.theme-light .iqHome .homepageBroadcasts,
+.app.theme-light .iqHome .siteLegalFooter{color:#17231e!important}
+.app.theme-light .iqHome .iqCategoryPills button,
+.app.theme-light .iqHome .maseMagicChips button{
   color:#34473d!important;background:#fff!important;border:1px solid #e4ebe6!important;box-shadow:none!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .iqCategoryPills button.active{
+.app.theme-light .iqHome .iqCategoryPills button.active{
   color:#087c5a!important;background:#e5f5ee!important;border-color:#bfe5d5!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .iqKicker,
-:root[data-mase-theme="light"] .app .iqHome .iqRowHead p,
-:root[data-mase-theme="light"] .app .iqHome .iqCard small,
-:root[data-mase-theme="light"] .app .iqHome .iqRowHead small{color:#74837a!important}
-:root[data-mase-theme="light"] .app .iqHome .iqRowHead h2,
-:root[data-mase-theme="light"] .app .iqHome .iqCard b,
-:root[data-mase-theme="light"] .app .iqHome .maseFeatureHeading h2{color:#17231e!important}
-:root[data-mase-theme="light"] .app .iqHome .iqCard .iqPoster{
+.app.theme-light .iqHome .iqKicker,
+.app.theme-light .iqHome .iqRowHead p,
+.app.theme-light .iqHome .iqCard small,
+.app.theme-light .iqHome .iqRowHead small{color:#74837a!important}
+.app.theme-light .iqHome .iqRowHead h2,
+.app.theme-light .iqHome .iqCard b,
+.app.theme-light .iqHome .maseFeatureHeading h2{color:#17231e!important}
+.app.theme-light .iqHome .iqCard .iqPoster{
   border:1px solid #e2e9e4!important;box-shadow:0 5px 15px rgba(28,55,42,.08)!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseMagicDiscovery{
+.app.theme-light .iqHome .maseMagicDiscovery{
   background:#e8f6f0!important;border:1px solid #d6eee3!important;border-radius:18px!important;
   box-shadow:none!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseMagicDiscovery p{color:#63776c!important}
-:root[data-mase-theme="light"] .app .iqHome .maseMagicForm input{
+.app.theme-light .iqHome .maseMagicDiscovery p{color:#63776c!important}
+.app.theme-light .iqHome .maseMagicForm input{
   background:#fff!important;color:#17231e!important;border:1px solid #dce9e1!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .maseMagicForm button{
+.app.theme-light .iqHome .maseMagicForm button{
   background:#078c68!important;color:#fff!important;border:0!important;
 }
-:root[data-mase-theme="light"] .app .iqHome .iqRowHead .rowMore{color:#087c5a!important}
-:root[data-mase-theme="light"] .app .siteLegalFooter{color:#738078!important}
-:root[data-mase-theme="light"] .app .masenetLiquidDock{
+.app.theme-light .iqHome .iqRowHead .rowMore{color:#087c5a!important}
+.app.theme-light .siteLegalFooter{color:#738078!important}
+.app.theme-light .masenetLiquidDock{
   background:rgba(255,255,255,.94)!important;border:1px solid #e3eae5!important;
   box-shadow:0 8px 28px rgba(28,55,42,.13)!important;backdrop-filter:blur(22px)!important;
 }
-:root[data-mase-theme="light"] .app .masenetLiquidDock .dockItem{color:#65756c!important}
-:root[data-mase-theme="light"] .app .masenetLiquidDock .dockItem.active{color:#087c5a!important}
-:root[data-mase-theme="light"] .app .masenetLiquidDock .dockGooeyIndicator{opacity:.23!important}
-:root[data-mase-theme="light"] .app .telegram,
-:root[data-mase-theme="light"] .app .homepageBroadcast{
+.app.theme-light .masenetLiquidDock .dockItem{color:#65756c!important}
+.app.theme-light .masenetLiquidDock .dockItem.active{color:#087c5a!important}
+.app.theme-light .masenetLiquidDock .dockGooeyIndicator{opacity:.23!important}
+.app.theme-light .telegram,
+.app.theme-light .homepageBroadcast{
   color:#26382e!important;background:#fff!important;border-color:#e5ece7!important;
   box-shadow:0 4px 14px rgba(28,55,42,.06)!important;
 }
-:root[data-mase-theme="light"] .app .telegram a,
-:root[data-mase-theme="light"] .app .homepageBroadcast a{color:inherit!important}
-:root[data-mase-theme="light"] .app .siteLegalFooter a{filter:none!important}
-:root[data-mase-theme="light"] .app .homeFloat{background:#fff!important;border:1px solid #e1e9e3!important;box-shadow:0 4px 14px #183b2918!important}
+.app.theme-light .telegram a,
+.app.theme-light .homepageBroadcast a{color:inherit!important}
+.app.theme-light .siteLegalFooter a{filter:none!important}
+.app.theme-light .homeFloat{background:#fff!important;border:1px solid #e1e9e3!important;box-shadow:0 4px 14px #183b2918!important}
 @media(max-width:680px){
- :root[data-mase-theme="light"] .app .iqHome .maseCinematicHero{
+ .app.theme-light .iqHome .maseCinematicHero{
   height:clamp(405px,118vw,490px)!important;min-height:405px!important;
   margin:7px 0 13px!important;border-radius:0 0 17px 17px!important;
  }
- :root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroPoster{height:53%!important}
- :root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroShade{
+ .app.theme-light .iqHome .maseCinematicHero .iqHeroPoster{height:53%!important}
+ .app.theme-light .iqHome .maseCinematicHero .iqHeroShade{
   background:linear-gradient(180deg,rgba(246,248,247,0) 0%,rgba(246,248,247,.04) 32%,rgba(246,248,247,.78) 49%,#f6f8f7 62%,#f6f8f7 100%)!important;
  }
- :root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroCopy{padding:0 14px 13px!important}
- :root[data-mase-theme="light"] .app .iqHome .maseCinematicHero h1{font-size:clamp(25px,7.4vw,34px)!important}
- :root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroCopy>p{font-size:10px!important;-webkit-line-clamp:2!important}
- :root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .iqHeroActions button{min-height:35px!important;padding:0 12px!important;font-size:11px!important}
- :root[data-mase-theme="light"] .app .iqHome .maseCinematicHero .maseHeroFacts{font-size:8px!important}
+ .app.theme-light .iqHome .maseCinematicHero .iqHeroCopy{padding:0 14px 13px!important}
+ .app.theme-light .iqHome .maseCinematicHero h1{font-size:clamp(25px,7.4vw,34px)!important}
+ .app.theme-light .iqHome .maseCinematicHero .iqHeroCopy>p{font-size:10px!important;-webkit-line-clamp:2!important}
+ .app.theme-light .iqHome .maseCinematicHero .iqHeroActions button{min-height:35px!important;padding:0 12px!important;font-size:11px!important}
+ .app.theme-light .iqHome .maseCinematicHero .maseHeroFacts{font-size:8px!important}
+}
+
+
+/* Mobile Light Mode repair from screenshots: keep the whole document on one light canvas,
+   reserve the dock area, and keep Smart Assist clear of the bottom navigation. */
+html:has(.app.theme-light),
+body:has(.app.theme-light),
+#root:has(.app.theme-light) {
+  background:#f6f8f7!important;
+  color:#17231e!important;
+  color-scheme:light!important;
+}
+.app.theme-light,
+.app.theme-light main.ios27PageTransition,
+.app.theme-light .iqHome,
+.app.theme-light .iqHome main {
+  background:#f6f8f7!important;
+  color:#17231e!important;
+  min-height:0;
+}
+.app.theme-light main.ios27PageTransition {
+  flex:1 0 auto;
+  padding-bottom:0!important;
+}
+.app.theme-light .siteLegalFooter {
+  position:relative!important;
+  z-index:2!important;
+  margin:18px 0 0!important;
+  padding:22px 16px calc(142px + env(safe-area-inset-bottom,0px))!important;
+  background:#f6f8f7!important;
+  color:#738078!important;
+}
+.app.theme-light .masenetLiquidDock {
+  position:fixed!important;
+  z-index:110!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;
+  transform:translateX(-50%)!important;
+  width:min( min(480px, calc(100vw - 28px)), 480px)!important;
+  max-width:calc(100vw - 28px)!important;
+}
+.app .aiDock {
+  position:fixed!important;
+  z-index:140!important;
+  top:auto!important;
+  right:max(14px,env(safe-area-inset-right,0px))!important;
+  bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
+  left:auto!important;
+  transform:none!important;
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+.app .aiDock.aiDockSuggestionOpen {
+  visibility:hidden!important;
+}
+.app .telegram {
+  position:fixed!important;
+  z-index:125!important;
+  left:max(10px,env(safe-area-inset-left,0px))!important;
+  right:auto!important;
+  bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
+}
+@media(max-width:560px) {
+  .app .aiDock {
+    right:12px!important;
+    bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
+    width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
+  }
+  .app .telegram {
+    left:10px!important;
+    bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
+  }
+  .app .masenetLiquidDock {
+    bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;
+  }
+  .app.theme-light .siteLegalFooter {
+    padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))!important;
+    gap:12px!important;
+  }
 }
