@@ -371,7 +371,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const deliveryStart = startPayload.match(/^dl_([a-f0-9]{48})$/i);
       if (deliveryStart) {
         await ensureMediaDeliveryTables(env);
-      if (deliveryStart) {
         const rawToken = deliveryStart[1].toLowerCase();
         const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawToken));
         const tokenHash = [...new Uint8Array(digest)].map((x) => x.toString(16).padStart(2, "0")).join("");
