@@ -345,7 +345,7 @@ export default function App(){
     <button type="button" className="maseSidebarItem" onClick={()=>{go('#/home');setSidebarOpen(false);window.setTimeout(()=>document.getElementById('iq-library')?.scrollIntoView({behavior:'smooth'}),120)}} title="Discover"><Search size={18}/><span>Discover</span></button>
     <button type="button" className={route==='#/notifications'?'maseSidebarItem active':'maseSidebarItem'} onClick={()=>{go('#/notifications');setSidebarOpen(false)}} title="Inbox"><MessageCircle size={18}/><span>Inbox</span>{unreadNotificationCount>0&&<i className="maseSidebarBadge">3</i>}</button>
     <button type="button" className="maseSidebarItem" onClick={()=>{go('#/home');setSidebarOpen(false);window.setTimeout(()=>document.querySelector('.masePremiereRail')?.scrollIntoView({behavior:'smooth'}),120)}} title="Calendar"><CalendarDays size={18}/><span>Calendar</span><i className="maseSidebarBadge">1</i></button>
-    <button type="button" className="maseSidebarItem" onClick={()=>{go('#/admin-statistics');setSidebarOpen(false)}} title="Analytics"><ChartNoAxesColumn size={18}/><span>Analytics</span></button>
+    <button type="button" className="maseSidebarItem" onClick={()=>{go('#/admin-statistics');setSidebarOpen(false)}} title="Analytics"><BarChart3 size={18}/><span>Analytics</span></button>
     <button type="button" className={route==='#/my-list'?'maseSidebarItem active':'maseSidebarItem'} onClick={()=>{go('#/my-list');setSidebarOpen(false)}} title="My List"><Folder size={18}/><span>My List</span></button>
     <button type="button" className="maseSidebarItem" onClick={()=>{setPanel('customize');setSidebarOpen(false)}} title="Settings"><SlidersHorizontal size={18}/><span>Settings</span></button>
     <div className="maseSidebarDivider"/>
