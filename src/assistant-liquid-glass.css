@@ -244,3 +244,38 @@
  .app .backdrop.aiBackdrop>.aiSide .ai-busy .aiSend,
  .app .backdrop.aiBackdrop>.aiSide .aiBubble{animation:none!important}
 }
+
+
+/* Floating AI dock uses the exact animated face from the Assistant chat header. */
+.app .aiDock .aiDockFace{
+  position:relative!important;display:grid!important;place-items:center!important;overflow:visible!important;
+  width:42px!important;height:42px!important;flex:0 0 42px!important;border-radius:50%!important;
+  background:radial-gradient(circle at 30% 22%,#f0f5ff 0%,#a9c7ff 12%,#718cff 38%,#5146ad 72%,#171b3d 100%)!important;
+  border:1px solid rgba(228,237,255,.52)!important;
+  box-shadow:0 0 0 4px rgba(143,166,255,.1),0 0 26px rgba(128,155,255,.5),inset 0 2px 9px rgba(255,255,255,.7),inset 0 -9px 18px rgba(25,26,80,.55)!important;
+  animation:mnFaceFloat 4s ease-in-out infinite!important;
+}
+.app .aiDock .aiDockFace .aiFaceCore{
+  position:relative!important;z-index:2!important;width:26px!important;height:23px!important;border-radius:45%!important;
+  background:linear-gradient(145deg,#fff,#c4d8ff)!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;
+}
+.app .aiDock .aiDockFace .aiFaceCore i{
+  position:static!important;display:block!important;width:4px!important;height:6px!important;border:0!important;
+  border-radius:50%!important;background:#35417f!important;animation:mnEyeBlink 5s infinite!important;
+}
+.app .aiDock .aiDockFace .aiFaceCore b{
+  position:absolute!important;bottom:4px!important;width:7px!important;height:3px!important;
+  border-bottom:1.5px solid #5967a8!important;border-radius:0 0 8px 8px!important;
+}
+.app .aiDock .aiDockFace .aiAvatarOrbit{
+  position:absolute!important;inset:-5px!important;border:1px solid rgba(188,206,255,.6)!important;
+  border-left-color:transparent!important;border-bottom-color:transparent!important;animation:mnOrbit 7s linear infinite!important;
+}
+.app .aiDock .aiDockFace .aiAvatarHalo{
+  position:absolute!important;inset:-10px!important;background:radial-gradient(circle,rgba(132,160,255,.25),transparent 68%)!important;
+  filter:blur(5px)!important;animation:mnHalo 3s ease-in-out infinite!important;
+}
+.app .aiDock .aiDockOnline{z-index:4!important}
+@media(prefers-reduced-motion:reduce){
+  .app .aiDock .aiDockFace,.app .aiDock .aiDockFace *{animation:none!important}
+}
