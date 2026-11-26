@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties, type TouchEvent } from 'react';
-import { ArrowLeft, ArrowRight, BellRing, Check, Clapperboard, Download, Film, Languages, Moon, Play, RotateCcw, Sparkles, Sun, Subtitles, Tv2, Zap } from 'lucide-react';
+import { useEffect, useRef, useState, type CSSProperties, type TouchEvent, type MouseEvent } from 'react';
+import { ArrowLeft, ArrowRight, BellRing, Check, Clapperboard, Download, Film, Languages, Moon, Play, RotateCcw, Sparkles, Sun, Tv2 } from 'lucide-react';
 import './onboarding-liquid-glass.css';
 
 type Props = { open: boolean; onClose: () => void; onReopen: () => void };
@@ -94,7 +94,7 @@ export default function OnboardingTour({ open, onClose, onReopen }: Props) {
     if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.25) dx < 0 ? next() : previous();
     touchStart.current = null;
   };
-  const tiltStage = (event: React.MouseEvent<HTMLDivElement>) => {
+  const tiltStage = (event: MouseEvent<HTMLDivElement>) => {
     if (!stageRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const rect = stageRef.current.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width - .5;
