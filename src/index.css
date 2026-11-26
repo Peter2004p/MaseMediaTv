@@ -5000,3 +5000,24 @@ body:has(.app.theme-light),
 @media(max-width:760px){
  .app .aiDock{width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important}
 }
+
+
+/* AI launcher visibility repair: retain a viewport-anchored fallback until a saved drag position exists. */
+.app .aiDock:not(.isUserPositioned){
+  top:auto!important;
+  right:12px!important;
+  bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
+  left:auto!important;
+}
+.app .aiDock.isUserPositioned{
+  top:var(--ai-dock-top,auto)!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:var(--ai-dock-left,auto)!important;
+}
+@media(max-width:760px){
+  .app .aiDock:not(.isUserPositioned){
+    right:12px!important;
+    bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
+  }
+}
