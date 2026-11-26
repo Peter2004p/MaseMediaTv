@@ -10,8 +10,14 @@ export const onRequestPost:PagesFunction<EmailEnv>=async({request,env})=>{
  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS email_login_codes(email TEXT PRIMARY KEY,code_hash TEXT NOT NULL,salt TEXT NOT NULL,expires_at TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
  const existing=await env.DB.prepare("SELECT created_at FROM email_login_codes WHERE email=?").bind(email).first<{created_at:string}>();
  if(existing){const age=await env.DB.prepare("SELECT (unixepoch('now')-unixepoch(?)) AS seconds").bind(existing.created_at).first<{seconds:number}>();if(Number(age?.seconds??9999)<60)return json({error:"Please wait a minute before requesting another code."},429);}
- const recent=await env.DB.prepare("SELECT COUNT(*) AS count FROM email_login_codes WHERE email=? AND created_at>datetime('now','-15 minutes')").bind(email).first<{count:number}>();
- if(Number(recent?.count??0)>=5)return json({error:"Too many code requests. Please try again later."},429);
+ await env.DB.prepare("CREATE TABLE IF NOT EXISTS email_login_rate(email TEXT PRIMARY KEY,window_started_at TEXT NOT NULL,count INTEGER NOT NULL DEFAULT 0)").run();
+ const rate=await env.DB.prepare("SELECT window_started_at,count FROM email_login_rate WHERE email=?").bind(email).first<{window_started_at:string;count:number}>();
+ if(rate){
+  const elapsed=await env.DB.prepare("SELECT (unixepoch('now')-unixepoch(?)) AS seconds").bind(rate.window_started_at).first<{seconds:number}>();
+  if(Number(elapsed?.seconds??0)<900&&Number(rate.count)>=5)return json({error:"Too many code requests. Please try again later."},429);
+  if(Number(elapsed?.seconds??0)>=900)await env.DB.prepare("UPDATE email_login_rate SET window_started_at=datetime('now'),count=1 WHERE email=?").bind(email).run();
+  else await env.DB.prepare("UPDATE email_login_rate SET count=count+1 WHERE email=?").bind(email).run();
+ }else await env.DB.prepare("INSERT INTO email_login_rate(email,window_started_at,count) VALUES(?,datetime('now'),1)").bind(email).run();
  const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0"),salt=randomHex();
  const codeHash=await sha256(email+":"+code+":"+salt);
  await env.DB.prepare("INSERT INTO email_login_codes(email,code_hash,salt,expires_at,attempts,created_at) VALUES(?,?,?,datetime('now','+10 minutes'),0,datetime('now')) ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash,salt=excluded.salt,expires_at=excluded.expires_at,attempts=0,created_at=datetime('now')").bind(email,codeHash,salt).run();
