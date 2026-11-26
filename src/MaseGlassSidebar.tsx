@@ -69,7 +69,7 @@ export default function MaseGlassSidebar() {
   const sidebarStyle = { '--mase-sidebar-width': `${sidebarWidth}px` } as CSSProperties;
 
   return <>
-    <button type="button" className="maseSidebarMobileTrigger" aria-label="Open MaseNet navigation" onClick={() => setDrawerOpen(true)}><Menu size={19}/></button>
+    <button type="button" className="maseSidebarMobileTrigger" aria-label={drawerOpen ? "Close MaseNet navigation" : "Open MaseNet navigation"} aria-expanded={drawerOpen} onClick={() => setDrawerOpen(value => !value)}><Menu size={19}/></button>
     {drawerOpen && <button type="button" className="maseSidebarScrim" aria-label="Close navigation drawer" onClick={() => setDrawerOpen(false)} />}
     <button
       type="button"
