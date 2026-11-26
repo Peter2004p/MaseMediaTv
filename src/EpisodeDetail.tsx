@@ -18,7 +18,7 @@ export default function EpisodeDetail({title,seasonNumber,episodeNumber,go,profi
  const matchingAssets=assets.filter(a=>Number(a.season||1)===seasonNumber&&Number(a.episode||1)===episodeNumber);
  const variants=baseEpisode?.qualities?.length?baseEpisode.qualities:[];
  const qualityOptions=[...new Set([...matchingAssets.map(a=>String(a.quality||'').toLowerCase()),...variants.map(v=>String(v.quality||'').toLowerCase()),...(baseEpisode?.quality?[String(baseEpisode.quality).toLowerCase()]:[])].filter(Boolean))];
- const formatFileSize=(value:unknown)=>{const bytes=Number(value);if(!Number.isFinite(bytes)||bytes<=0)return '';const units=['B','KB','MB','GB','TB'];const index=Math.min(Math.floor(Math.log(bytes)/Math.log(1024)),units.length-1);const size=bytes/Math.pow(1024,index);return (size>=10?size.toFixed(1):size.toFixed(2)).replace(/\.?0+$/,'')+' '+units[index]};
+ const formatFileSize=(value:unknown)=>{const bytes=Number(value);if(!Number.isFinite(bytes)||bytes<=0)return '';const units=['B','KB','MB','GB','TB'];const index=Math.min(Math.floor(Math.log(bytes)/Math.log(1024)),units.length-1);const size=bytes/Math.pow(1024,index);return String(Number(size.toFixed(size>=10?1:2)))+' '+units[index]};
  const sizeForQuality=(q:string)=>formatFileSize(matchingAssets.find(a=>String(a.quality||'').toLowerCase()===q)?.file_size);
  const qualityRank=(q:string)=>({ '2160p':1,'1440p':2,'1080p':3,'720p':4,'576p':5,'480p':6 } as Record<string,number>)[q]||99;
  qualityOptions.sort((a,b)=>qualityRank(a)-qualityRank(b));
