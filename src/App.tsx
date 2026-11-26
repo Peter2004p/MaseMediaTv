@@ -325,7 +325,7 @@ export default function App(){
    <span className="profileProEyebrow"><Sparkles size={12}/>{viewer?'YOUR MASENET ACCOUNT':'WELCOME TO MASENET'}</span>
    <h3>{viewer?.name||'Your entertainment, together.'}</h3>
    <p>{viewer?(viewer.email||'Telegram account'):'Sign in to keep your MaseNet experience connected across sessions.'}</p>
-   {viewer&&<div className="profileProBadges"><span><Check size={12}/>{viewer.provider==='google'?'Google connected':'Telegram connected'}</span><span><ShieldCheck size={12}/>Secure session</span></div>}
+   {viewer&&<div className="profileProBadges"><span><Check size={12}/>{viewer.provider==='google'?'Google connected':viewer.provider==='telegram'?'Telegram connected':'Email connected'}</span><span><ShieldCheck size={12}/>Secure session</span></div>}
   </div>
   {viewer?<div className="profileProSignedIn">
    <div className="profileProSectionLabel">ACCOUNT STATUS</div>
