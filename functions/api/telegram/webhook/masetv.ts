@@ -85,7 +85,7 @@ async function deliverVaultDownload(env: Env, chatId: string | number, rawToken:
     const units = ["B","KB","MB","GB","TB"];
     const unitIndex = bytes > 0 ? Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1) : -1;
     const fileSize = unitIndex >= 0
-      ? ((bytes / Math.pow(1024, unitIndex)).toFixed(unitIndex === 0 ? 0 : 2).replace(/\\.?0+$/, "") + " " + units[unitIndex])
+      ? ((bytes / Math.pow(1024, unitIndex)).toFixed(unitIndex === 0 ? 0 : 2).replace(/\.?0+$/, "") + " " + units[unitIndex])
       : "Not available";
     const isDrama = String(asset.media_kind || "").toLowerCase() === "drama";
     const details = [
@@ -98,7 +98,7 @@ async function deliverVaultDownload(env: Env, chatId: string | number, rawToken:
       "📦 File size: " + fileSize,
       "",
       "@MaseMediaTv 🚀"
-    ].join("\\n");
+    ].join("\n");
     const caption = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
       method:"POST", headers:{"content-type":"application/json"},
       body:JSON.stringify({chat_id:chatId,text:details,disable_web_page_preview:true})
