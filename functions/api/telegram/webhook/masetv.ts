@@ -1,5 +1,5 @@
 import { json } from "../../auth/_shared";
-import { indexTelegramChannelPost, searchPublicTelegramChannel, type TelegramChannelPost } from "../../_telegram-channel";
+import { indexTelegramChannelPost } from "../../_telegram-channel";
 
 interface Env { DB: D1Database; AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }; TELEGRAM_BOT_TOKEN?: string; TELEGRAM_WEBHOOK_SECRET?: string; TELEGRAM_MINI_APP_URL?: string; TELEGRAM_WEBAPP_URL?: string; ADMIN_TELEGRAM_CHAT_ID?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; GEMINI_API_KEY?: string; }
 type Episode = { title?: string; season?: number | string; episode?: number | string; name?: string };
@@ -38,6 +38,31 @@ const parseForwardedStreamLink = (raw: string) => {
     host: parsed.hostname
   };
 };
+
+type BotEpisode = { season?: number | string; episode?: number | string; title?: string; name?: string };
+const miniAppRouteUrl = (base: string, route: string) => {
+  try { const url = new URL(base); url.hash = route.replace(/^#/, ""); return url.toString(); }
+  catch { return base; }
+};
+const buildEpisodePageMarkup = (titleId: string, episodes: BotEpisode[], page: number, miniAppUrl: string) => {
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(episodes.length / pageSize));
+  const currentPage = Math.max(0, Math.min(page, totalPages - 1));
+  const visible = episodes.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  const rows: Array<Array<Record<string, unknown>>> = visible.map(ep => {
+    const season = Number(ep.season) || 1;
+    const number = Number(ep.episode) || 1;
+    const label = String(ep.title || ep.name || ("Episode " + number)).replace(/\s+/g, " ").slice(0, 34);
+    return [{ text: "S" + String(season).padStart(2, "0") + " E" + String(number).padStart(2, "0") + " · " + label, web_app: { url: miniAppRouteUrl(miniAppUrl, "#/episode/" + encodeURIComponent(titleId) + "/" + season + "/" + number) } }];
+  });
+  const navigation: Array<Record<string, unknown>> = [];
+  if (currentPage > 0) navigation.push({ text: "⬅️ Previous", callback_data: "epg:" + titleId + ":" + (currentPage - 1) });
+  if (currentPage + 1 < totalPages) navigation.push({ text: "Next ➡️", callback_data: "epg:" + titleId + ":" + (currentPage + 1) });
+  if (navigation.length) rows.push(navigation);
+  rows.push([{ text: "↩️ Back to title", web_app: { url: miniAppRouteUrl(miniAppUrl, "#/title/" + encodeURIComponent(titleId)) } }]);
+  return { inline_keyboard: rows };
+};
+
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
   new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(label + " timed out after " + ms + "ms")), ms);
@@ -150,6 +175,48 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       "https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/" + method,
       { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload) }
     );
+    const episodePageMatch = String(cb.data || "").match(/^epg:([A-Za-z0-9_-]{1,40}):([0-9]{1,3})$/);
+    if (episodePageMatch) {
+      await api("answerCallbackQuery",{callback_query_id:cb.id,text:"Loading episodes…"}).catch(()=>undefined);
+      try {
+        const selected = await env.DB.prepare("SELECT id,name,kind FROM titles WHERE id=?").bind(episodePageMatch[1]).first<{id:string;name:string;kind:string}>();
+        if (!selected || String(selected.kind).toLowerCase() !== "drama") {
+          if (cb.message?.chat?.id && cb.message.message_id) await api("editMessageText",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,text:"This drama could not be found in the MaseNet catalogue. Search the title again from the Mini App."}).catch(()=>undefined);
+          return json({ok:true,episodePage:"not_found"});
+        }
+        const rows = await env.DB.prepare("SELECT name,metadata_json FROM titles WHERE kind=?").bind(selected.kind).all<{name:string;metadata_json:string}>();
+        const normalizeTitle = (value:unknown) => String(value||"").normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim();
+        const episodesByKey = new Map<string,BotEpisode>();
+        for (const row of rows.results || []) {
+          if (normalizeTitle(row.name) !== normalizeTitle(selected.name)) continue;
+          let metadata:Record<string,unknown> = {};
+          try { metadata = JSON.parse(row.metadata_json || "{}") as Record<string,unknown>; } catch {}
+          for (const ep of (Array.isArray(metadata.episodes) ? metadata.episodes : []) as BotEpisode[]) {
+            const season = Number(ep.season) || 1;
+            const number = Number(ep.episode) || 1;
+            if (number > 0) episodesByKey.set(season + "|" + number, {...ep,season,episode:number});
+          }
+        }
+        const episodes = [...episodesByKey.values()].sort((a,b)=>(Number(a.season)||1)-(Number(b.season)||1)||(Number(a.episode)||1)-(Number(b.episode)||1));
+        if (!episodes.length) {
+          if (cb.message?.chat?.id && cb.message.message_id) await api("editMessageText",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,text:"No episodes are listed for " + selected.name + " yet. Open the title in MaseNet to check its catalogue page."}).catch(()=>undefined);
+          return json({ok:true,episodePage:"empty"});
+        }
+        const pageSize = 10;
+        const totalPages = Math.max(1,Math.ceil(episodes.length/pageSize));
+        const currentPage = Math.max(0,Math.min(Number(episodePageMatch[2])||0,totalPages-1));
+        const shown = episodes.slice(currentPage*pageSize,(currentPage+1)*pageSize);
+        const lines = shown.map(ep=>"• S"+String(Number(ep.season)||1).padStart(2,"0")+" E"+String(Number(ep.episode)||1).padStart(2,"0")+(ep.title||ep.name?" — "+String(ep.title||ep.name).slice(0,100):""));
+        const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
+        if (cb.message?.chat?.id && cb.message.message_id) {
+          await api("editMessageText",{chat_id:cb.message.chat.id,message_id:cb.message.message_id,text:"🎬 Full episodes — "+selected.name+"\n\n"+lines.join("\n")+"\n\nPage "+(currentPage+1)+" of "+totalPages+". Select an episode to open it directly in MaseNet.",disable_web_page_preview:true,reply_markup:buildEpisodePageMarkup(selected.id,episodes,currentPage,miniAppUrl)});
+        }
+        return json({ok:true,episodePage:currentPage,episodeCount:episodes.length});
+      } catch(error) {
+        console.error("MaseNet episode pagination failed:",error instanceof Error?error.message:String(error));
+        return json({ok:true,episodePage:"failed"});
+      }
+    }
     if (!adminId || actorId !== adminId || !match) {
       await api("answerCallbackQuery",{callback_query_id:cb.id,text:"Approval not authorized. Check the configured admin Telegram ID.",show_alert:true}).catch(()=>undefined);
       console.error("MaseNet approval callback rejected:",JSON.stringify({adminConfigured:!!adminId,actorMatches:!!adminId&&actorId===adminId,hasData:!!cb.data}));
@@ -692,77 +759,55 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
   if (query) {
     const needle = normalize(query).slice(0, 100);
     const sql = await env.DB.prepare(
-      "SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC"
-    ).all<{ name: string; kind: string; year: number | null; description: string | null; metadata_json: string }>();
-    const titleMatches: string[] = [];
-    const episodeMatches: string[] = [];
+      "SELECT id,name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC"
+    ).all<{id:string;name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
+    type BotTitleResult = {id:string;name:string;kind:string;year:number|null;description:string;episodes:BotEpisode[]};
+    const matchedTitles = new Map<string,BotTitleResult>();
     for (const row of sql.results || []) {
-      const item: CatalogItem = { name: row.name, kind: row.kind, year: row.year ?? undefined, description: row.description ?? undefined };
-      try { Object.assign(item, JSON.parse(row.metadata_json)); } catch { /* Keep database columns as fallback. */ }
-      const name = item.name || row.name || "Untitled";
-      if (normalize(name).includes(needle) || normalize(item.description || row.description).includes(needle)) {
-        titleMatches.push("• " + name + (item.year ? " (" + item.year + ")" : "") + " — " + (item.type || item.kind || row.kind || "Title"));
-      }
-      const queryEpisode = needle.match(/\b(?:episode|ep|e)\s*(\d+)\b/)?.[1];
-      const querySeason = needle.match(/\b(?:season|s)\s*(\d+)\b/)?.[1];
-      const titleQuery = needle.replace(/\b(?:season|episode|ep|s|e)\s*\d+\b/g, " ").replace(/\b\d+\b/g, " ").trim();
-      for (const ep of (Array.isArray(item.episodes) ? item.episodes : [])) {
-        const epName = ep.title || ep.name || "";
-        const seasonNumber = String(ep.season ?? "").match(/\d+/)?.[0] || "";
-        const episodeNumber = String(ep.episode ?? "").match(/\d+/)?.[0] || "";
-        const label = (seasonNumber ? "S" + seasonNumber : "") + (episodeNumber ? "E" + episodeNumber : "");
-        const searchable = normalize([name, epName, label, "season " + seasonNumber, "episode " + episodeNumber].join(" "));
-        const titleAndNumberMatch = !!titleQuery && normalize(name).includes(titleQuery)
-          && (!queryEpisode || queryEpisode === episodeNumber)
-          && (!querySeason || querySeason === seasonNumber);
-        if (searchable.includes(needle) || normalize(epName).includes(needle) || titleAndNumberMatch) {
-          episodeMatches.push("• " + name + (item.year ? " (" + item.year + ")" : "") + (label ? " — " + label : "") + (epName ? " " + epName : ""));
+      let item:Record<string,unknown> = {};
+      try { item = JSON.parse(row.metadata_json || "{}") as Record<string,unknown>; } catch {}
+      const name = String(item.name || row.name || "Untitled");
+      const kind = String(item.type || row.kind || "movie").toLowerCase();
+      const isDrama = ["drama","series","tv series","tv show","show"].includes(kind);
+      const episodes = (Array.isArray(item.episodes) ? item.episodes : []) as BotEpisode[];
+      const titleMatch = normalize(name).includes(needle) || normalize(item.description || row.description).includes(needle);
+      const episodeMatch = episodes.some(ep => normalize(name + " " + (ep.title || ep.name || "") + " season " + (ep.season || 1) + " episode " + (ep.episode || "")).includes(needle));
+      if (!titleMatch && !episodeMatch) continue;
+      const key = normalize(name) + "|" + (isDrama ? "drama" : "movie");
+      const existing = matchedTitles.get(key);
+      const result = existing || {id:row.id,name,kind:isDrama?"drama":"movie",year:row.year,description:String(item.description || row.description || ""),episodes:[]};
+      if (!existing) matchedTitles.set(key,result);
+      if (isDrama) {
+        for (const ep of episodes) {
+          const season = Number(ep.season) || 1;
+          const number = Number(ep.episode) || 1;
+          if (number > 0 && !result.episodes.some(x=>(Number(x.season)||1)===season&&(Number(x.episode)||1)===number)) result.episodes.push({...ep,season,episode:number});
         }
+        result.episodes.sort((a,b)=>(Number(a.season)||1)-(Number(b.season)||1)||(Number(a.episode)||1)-(Number(b.episode)||1));
       }
     }
-    const combined = [...new Set([...episodeMatches, ...titleMatches])].slice(0, 5);
-    let channelMatches: TelegramChannelPost[] = [];
-    try { channelMatches = await withTimeout(searchPublicTelegramChannel(query, 5, env.DB), 25000, "Telegram channel search"); }
-    catch (error) { console.error("Telegram command channel search failed:", error instanceof Error ? error.message : String(error)); }
-    let ownerMatches: Array<{title:string;content:string;urls:string[];source:string}> = [];
-    try {
-      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_owner_library (
-        id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL DEFAULT '',
-        urls_json TEXT NOT NULL DEFAULT '[]', source TEXT NOT NULL DEFAULT 'Owner-saved',
-        saved_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`).run();
-      const terms = normalize(query).split(/\s+/).filter(term=>term.length>2 && !new Set(["the","and","for","with","from","that","this","where","when","what","movie","movies","drama","dramas","episode","episodes","season"]).has(term)).slice(0,6);
-      if (terms.length) {
-        const clauses = terms.map(()=>"(lower(title) LIKE ? OR lower(content) LIKE ?)").join(" OR ");
-        const values = terms.flatMap(term=>["%"+term+"%","%"+term+"%"]);
-        const rows = await env.DB.prepare("SELECT title,content,urls_json,source FROM telegram_owner_library WHERE "+clauses+" ORDER BY saved_at DESC LIMIT 8")
-          .bind(...values).all<{title:string;content:string;urls_json:string;source:string}>();
-        ownerMatches = (rows.results||[]).map(row=>({title:row.title,content:row.content,source:row.source,urls:(()=>{try{return JSON.parse(row.urls_json||"[]")}catch{return []}})()}));
+    const results = [...matchedTitles.values()].slice(0,5);
+    const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
+    const inlineRows:Array<Array<Record<string,unknown>>> = [];
+    for (const item of results) {
+      const titleUrl = miniAppRouteUrl(miniAppUrl,"#/title/"+encodeURIComponent(item.id));
+      inlineRows.push([{text:"🎬 Open "+item.name.slice(0,42),web_app:{url:titleUrl}}]);
+      if (item.kind === "drama") {
+        const count = item.episodes.length;
+        const firstLabel = Math.min(10,count);
+        inlineRows.push([{text:"📺 Full Episodes (1–"+firstLabel+(count>10?" · Next 10":"")+")",callback_data:"epg:"+item.id+":0"}]);
       }
-    } catch(error) { console.error("MaseNet owner reference search failed:",error instanceof Error?error.message:String(error)); }
-    const uniquePosts = [...new Map(channelMatches.map(post=>[post.url,post])).values()].slice(0,5);
-    const channelReply = uniquePosts.length ? "\n\nI found matching posts in our official Telegram channels. Open the original post or launch the Mini App:" : "";
-    const appButton = miniAppUrl.startsWith("https://") ? [{text:"🎬 Open MaseNet Mini App",web_app:{url:miniAppUrl}}] : [];
-    const postButtons = uniquePosts.map(post => [{ text: "🔗 " + (post.title || post.channel + " post").replace(/\s+/g," ").slice(0,48), url: post.url }]);
-    const ownerButtons = ownerMatches.flatMap(item=>item.urls.slice(0,2).map(url=>[{text:"📎 "+item.title.slice(0,42),url}]));
-    searchReplyMarkup = {inline_keyboard:[...appButton.map(row=>[row]),...postButtons,...ownerButtons].slice(0,8)};
-    const ownerSummary = ownerMatches.length ? "\n\n📌 Saved by MaseNet admin:\n" + ownerMatches.slice(0,3).map(item=>"• "+item.title+(item.urls.length?" — "+item.urls.length+" saved link(s)":"")).join("\n") : "";
-    if (combined.length || channelMatches.length || ownerMatches.length) {
-      const baseReply = combined.length
-        ? "MaseNet catalogue results for “" + query.slice(0, 80) + "”:\n" + combined.join("\n")
-        : channelMatches.length
-          ? "Not in the catalogue, but I found these official channel posts:"
-          : "I found this in the references saved by the MaseNet admin:";
-      reply = baseReply + ownerSummary + channelReply;
+    }
+    searchReplyMarkup = inlineRows.length ? {inline_keyboard:inlineRows.slice(0,10)} : (miniAppUrl.startsWith("https://")?{inline_keyboard:[[{text:"🎬 Browse MaseNet Mini App",web_app:{url:miniAppUrl}}]]}:undefined);
+    if (results.length) {
+      reply = "MaseNet catalogue results for “"+query.slice(0,80)+"”:\n"+results.map(item=>"• "+item.name+(item.year?" ("+item.year+")":"")+" — "+(item.kind==="drama"?"Drama · "+item.episodes.length+" episode(s)":"Movie")).join("\n")+"\n\nOpen a title to view it in the Mini App. For dramas, tap Full Episodes to browse 10 episodes at a time.";
     } else {
-      // Keep a private, date-stamped record so the admin can see demand for missing titles.
       try {
-        await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_missing_searches (id INTEGER PRIMARY KEY AUTOINCREMENT, query TEXT NOT NULL, chat_type TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
-        await env.DB.prepare("INSERT INTO telegram_missing_searches (query, chat_type) VALUES (?, ?)").bind(query.slice(0, 300), String((msg as { chat?: { type?: string } }).chat?.type || "unknown")).run();
-      } catch { /* Search still replies even if logging is unavailable. */ }
-      reply = "I couldn't confirm an exact match for “" + query.slice(0, 100) + "” in the catalogue or the channel messages I could access during this search. This is not proof that the drama is absent from our channels—older or pinned posts may not yet be indexed. I have recorded the request for admin review. You can also open either official channel using the buttons below.";
-      // Keep title-search results deterministic. Never let a conversational model
-      // overwrite a verified search result or a transparent no-match explanation.
+        await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_missing_searches (id INTEGER PRIMARY KEY AUTOINCREMENT, query TEXT NOT NULL, chat_type TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))" ).run();
+        await env.DB.prepare("INSERT INTO telegram_missing_searches (query, chat_type) VALUES (?, ?)" ).bind(query.slice(0,300),String((msg as {chat?:{type?:string}}).chat?.type||"unknown")).run();
+      } catch { /* Search still replies if request logging is unavailable. */ }
+      reply = "I couldn't find “"+query.slice(0,100)+"” in the MaseNet catalogue. Open the Mini App to browse the available movies and dramas.";
+      if (!searchReplyMarkup && miniAppUrl.startsWith("https://")) searchReplyMarkup={inline_keyboard:[[{text:"🎬 Browse MaseNet Mini App",web_app:{url:miniAppUrl}}]]};
     }
   }
 
