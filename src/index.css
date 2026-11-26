@@ -4971,3 +4971,32 @@ body:has(.app.theme-light),
 @media(min-width:761px){
  .app .side.settingsIslandSide:has(.maseCustomizeSettings){width:300px!important;max-width:300px!important;max-height:78vh!important}
 }
+
+
+/* AI assistant dock: persistent, touch-draggable, and never hidden by suggestion hints. */
+.app .aiDock,
+.app .aiDock.isUserPositioned,
+.app .aiDock.aiDockSuggestionOpen{
+  position:fixed!important;
+  z-index:999!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:none!important;
+  animation:none!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  display:grid!important;
+  touch-action:none!important;
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+  cursor:grab!important;
+  will-change:left,top;
+}
+.app .aiDock:active{cursor:grabbing!important;transform:none!important}
+.app .aiDock .aiCartoon{pointer-events:none!important}
+.app .aiDynamicIsland{z-index:998!important;pointer-events:auto!important}
+@media(max-width:760px){
+ .app .aiDock{width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important}
+}
