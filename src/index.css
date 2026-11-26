@@ -4809,3 +4809,17 @@ body:has(.app.theme-light),
 @media(prefers-reduced-motion:reduce){.app .maseMenuMorphIcon svg,.app .maseSidebarMobileTrigger,.app .settingsIslandSide,.app .maseSidebarScrim{animation:none!important;transition:none!important}}
 
 .app .aiDock.isUserPositioned{right:auto!important;bottom:auto!important}
+
+.app .maseGlassSidebar{
+  transform:translate3d(-112%,0,0) scale(.88,.92)!important;
+  transform-origin:top left!important;
+  transition:transform .48s cubic-bezier(.2,.9,.2,1.18),opacity .28s ease,filter .28s ease!important;
+  opacity:.7;
+  filter:blur(3px);
+}
+.app .maseGlassSidebar.isDrawerOpen{
+  opacity:1!important;
+  filter:blur(0)!important;
+  transition:none!important;
+}
+.app .settingsIslandSide.closing{animation-duration:.3s!important}
