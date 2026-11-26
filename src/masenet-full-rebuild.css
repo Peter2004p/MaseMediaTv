@@ -73,7 +73,7 @@ button{touch-action:manipulation}
   display:flex!important;
   align-items:center!important;
   gap:14px!important;
-  width:min(100% - 42px,1480px)!important;
+  width:min(calc(100% - 42px),1480px)!important;
   max-width:1480px!important;
   min-height:66px!important;
   margin:12px auto 0!important;
@@ -424,13 +424,12 @@ button{touch-action:manipulation}
 .maseGlassSidebar.isExpanded .maseSidebarProfileText,.maseGlassSidebar.isDrawerOpen .maseSidebarProfileText{display:flex!important}
 .maseSidebarProfileText b{font-size:10px!important}.maseSidebarProfileText small{color:#82948a!important;font-size:9px!important}
 .maseSidebarEdgeToggle{
-  position:fixed!important;z-index:94!important;left:66px!important;top:50%!important;
+  position:fixed!important;z-index:94!important;left:calc(var(--mase-sidebar-width,64px) + 2px)!important;top:50%!important;
   display:grid!important;place-items:center!important;width:26px!important;height:42px!important;
   padding:0!important;border:1px solid rgba(232,245,237,.16)!important;border-radius:0 12px 12px 0!important;
   background:rgba(18,26,21,.94)!important;color:#c4d3ca!important;
   box-shadow:7px 0 20px rgba(0,0,0,.2)!important;transform:translateY(-50%)!important;
 }
-.maseGlassSidebar.isExpanded~.maseSidebarEdgeToggle{left:258px!important}
 .maseSidebarMobileTrigger{display:none!important}
 .maseSidebarScrim{display:none!important}
 
@@ -447,8 +446,8 @@ button{touch-action:manipulation}
 }
 .app .masenetLiquidDock .dockFilterDefs{position:absolute!important;width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}
 .app .masenetLiquidDock .dockGooeyIndicator{
-  position:absolute!important;z-index:0!important;top:7px!important;bottom:7px!important;left:7px!important;
-  width:calc((100% - 48px)/5)!important;pointer-events:none!important;
+  position:absolute!important;z-index:0!important;top:7px!important;bottom:7px!important;left:7px;
+  width:calc((100% - 48px)/5);pointer-events:none!important;
   border:1px solid rgba(255,255,255,.24)!important;border-radius:20px!important;
   background:transparent!important;box-shadow:none!important;filter:none!important;
   transition:left .42s var(--mn-spring),width .2s ease!important;
@@ -484,7 +483,7 @@ button{touch-action:manipulation}
 .app .masenetLiquidDock .dockItem.active .dockIconShell{color:#fff!important}
 .app .masenetLiquidDock .dockLabel{display:block!important;max-width:100%!important;overflow:hidden!important;color:inherit!important;font-size:9px!important;font-weight:750!important;line-height:1!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 .app .masenetLiquidDock .dockNotificationBadge{position:absolute!important;top:-5px!important;right:-7px!important;display:grid!important;place-items:center!important;min-width:16px!important;height:16px!important;padding:0 3px!important;border-radius:99px!important;background:#ed5e79!important;color:#fff!important;font-size:8px!important;font-style:normal!important;font-weight:900!important}
-.app .nav-auto-hidden .masenetLiquidDock{transform:translate(-50%,calc(130% + 30px))!important}
+ .app.nav-auto-hidden .masenetLiquidDock{transform:translate(-50%,calc(130% + 30px))!important}
 
 /* Floating assistant and notification surfaces stay clear of poster artwork */
 .app .aiDock{z-index:85!important;border:1px solid rgba(130,238,182,.36)!important;box-shadow:0 12px 30px rgba(0,0,0,.34)!important}
