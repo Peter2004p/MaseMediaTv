@@ -1,11 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 100" width="512" height="465">
- <defs>
-  <filter id="magenta-key" color-interpolation-filters="sRGB" x="-5%" y="-5%" width="110%" height="110%">
-   <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -.5 1 -.5 0 1"/>
-   <feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 1 1 1 1 1"/></feComponentTransfer>
-  </filter>
- </defs>
- <svg x="0" y="0" width="110" height="100" viewBox="25 27 110 100" overflow="hidden">
-  <image href="/masemediatv-original.svg" x="0" y="0" width="160" height="160" filter="url(#magenta-key)"/>
- </svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="512" height="512">
+ <defs><filter id="remove-magenta" color-interpolation-filters="sRGB">
+  <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -.75 1.5 -.75 0 1"/>
+ </filter></defs>
+ <image href="/masemediatv-original.svg" x="0" y="0" width="160" height="160" filter="url(#remove-magenta)"/>
 </svg>
