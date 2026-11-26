@@ -289,3 +289,23 @@
   -webkit-backdrop-filter:none!important;
   backdrop-filter:none!important;
 }
+
+/* MaseNet voice-note recording and hands-free voice-chat states. */
+.ai .aiVoiceNote.recording{
+  color:#fff!important;
+  background:rgba(214,70,94,.22)!important;
+  border:1px solid rgba(255,125,145,.7)!important;
+  box-shadow:0 0 0 3px rgba(255,92,120,.12),0 0 18px rgba(255,92,120,.28)!important;
+  animation:masenetVoiceRecordPulse 1.15s ease-in-out infinite!important;
+}
+.ai .aiVoice.listening{
+  color:#fff!important;
+  background:rgba(105,146,255,.22)!important;
+  border:1px solid rgba(154,181,255,.7)!important;
+  box-shadow:0 0 0 3px rgba(105,146,255,.12),0 0 18px rgba(105,146,255,.25)!important;
+}
+@keyframes masenetVoiceRecordPulse{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 2px rgba(255,92,120,.1),0 0 12px rgba(255,92,120,.2)!important}
+  50%{transform:scale(1.06);box-shadow:0 0 0 5px rgba(255,92,120,.08),0 0 22px rgba(255,92,120,.35)!important}
+}
+@media(prefers-reduced-motion:reduce){.ai .aiVoiceNote.recording{animation:none!important}}
