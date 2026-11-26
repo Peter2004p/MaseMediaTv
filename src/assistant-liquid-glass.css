@@ -1,0 +1,197 @@
+/* MaseNet Assistant — iOS Liquid Glass experience */
+.ai{
+  --assistant-ice: 174,205,255;
+  --assistant-violet: 153,126,255;
+  position:relative!important;
+  isolation:isolate;
+  overflow:hidden;
+  background:
+    radial-gradient(ellipse at 50% -12%,rgba(112,145,255,.18),transparent 44%),
+    radial-gradient(ellipse at 100% 72%,rgba(143,104,255,.11),transparent 42%),
+    linear-gradient(155deg,#090d18 0%,#0b1020 48%,#080b14 100%)!important;
+  border:1px solid rgba(210,225,255,.16)!important;
+  border-radius:30px!important;
+  box-shadow:0 28px 90px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.13),0 0 55px rgba(120,148,255,.08)!important;
+  color:#f5f7ff;
+}
+.ai::before{
+  content:"";position:absolute;z-index:-1;pointer-events:none;
+  width:min(78vw,620px);height:min(78vw,620px);border-radius:50%;
+  left:50%;top:-35%;transform:translateX(-50%) scale(.72);
+  background:radial-gradient(circle,rgba(129,160,255,.28) 0%,rgba(114,134,255,.16) 27%,rgba(155,113,255,.08) 48%,transparent 70%);
+  filter:blur(30px);opacity:.78;
+  animation:masenetAssistantDawn 8s ease-in-out infinite alternate;
+}
+.ai::after{
+  content:"";position:absolute;z-index:-1;pointer-events:none;inset:0;
+  background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.035) 48%,transparent 68%);
+  background-size:220% 100%;animation:masenetGlassSweep 12s ease-in-out infinite;
+}
+.aiHeader{
+  position:relative;z-index:2;
+  background:linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.035))!important;
+  border-bottom:1px solid rgba(222,233,255,.12)!important;
+  box-shadow:0 8px 28px rgba(0,0,0,.13),inset 0 1px 0 rgba(255,255,255,.12);
+  backdrop-filter:blur(28px) saturate(170%);-webkit-backdrop-filter:blur(28px) saturate(170%);
+}
+.aiHeaderIdentity b{letter-spacing:-.025em;font-weight:720}
+.aiHeaderIdentity small{color:rgba(224,232,255,.72)!important}
+.aiHeaderIdentity small i{box-shadow:0 0 10px rgba(108,255,190,.8)}
+.aiBack,.aiCustomize{
+  border:1px solid rgba(230,238,255,.17)!important;
+  background:rgba(255,255,255,.075)!important;color:#f4f6ff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 5px 18px rgba(0,0,0,.14);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  transition:transform .28s cubic-bezier(.2,.8,.2,1),background .28s ease,box-shadow .28s ease;
+}
+.aiBack:active,.aiCustomize:active{transform:scale(.92)}
+.aiAvatarLiquid{
+  position:relative;display:grid;place-items:center;overflow:visible!important;
+  width:46px!important;height:46px!important;flex:0 0 46px;
+  border:1px solid rgba(224,235,255,.46)!important;border-radius:50%!important;
+  background:radial-gradient(circle at 32% 23%,#eaf4ff 0%,#a8c9ff 10%,#718cff 34%,#5949b7 68%,#171c3e 100%)!important;
+  box-shadow:0 0 0 4px rgba(143,166,255,.09),0 0 24px rgba(128,155,255,.48),inset 0 2px 9px rgba(255,255,255,.7),inset 0 -9px 18px rgba(25,26,80,.55)!important;
+  animation:masenetAvatarFloat 4s ease-in-out infinite;
+}
+.aiAvatarLiquid>i{position:absolute;pointer-events:none;border-radius:50%}
+.aiAvatarLiquid .aiAvatarOrbit{inset:-5px;border:1px solid rgba(188,206,255,.55);border-left-color:transparent;border-bottom-color:transparent;animation:masenetOrbit 7s linear infinite}
+.aiAvatarLiquid .aiAvatarHalo{inset:-10px;background:radial-gradient(circle,rgba(132,160,255,.24),transparent 68%);filter:blur(5px);animation:masenetHaloPulse 3s ease-in-out infinite}
+.aiFaceCore{position:relative;z-index:1;width:26px;height:23px;border-radius:45% 45% 42% 42%;background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(196,216,255,.78));box-shadow:0 2px 9px rgba(15,25,78,.34),inset 0 1px 2px white;display:flex;align-items:center;justify-content:center;gap:5px}
+.aiFaceCore i{display:block;width:4px;height:6px;border-radius:50%;background:#35417f;box-shadow:0 0 5px rgba(83,102,255,.55);animation:masenetEyeBlink 5.4s infinite}
+.aiFaceCore i:nth-child(2){animation-delay:.08s}
+.aiFaceCore b{position:absolute;bottom:4px;width:7px;height:3px;border-bottom:1.5px solid #5967a8;border-radius:0 0 8px 8px}
+.aiMessages{
+  position:relative;z-index:1;
+  background:radial-gradient(ellipse at 50% 0%,rgba(128,151,255,.055),transparent 58%);
+  scrollbar-color:rgba(180,199,255,.28) transparent;
+}
+.aiQuickStart{
+  position:relative;overflow:hidden;
+  border:1px solid rgba(207,220,255,.14)!important;border-radius:24px!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(255,255,255,.035))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 18px 40px rgba(0,0,0,.17)!important;
+  backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);
+  animation:masenetPanelArrive .65s cubic-bezier(.2,.8,.2,1) both;
+}
+.aiQuickStart::before{content:"";position:absolute;pointer-events:none;width:210px;height:210px;right:-95px;top:-120px;border-radius:50%;background:rgba(139,155,255,.23);filter:blur(45px)}
+.aiQuickEyebrow{color:#c5d1ff!important;letter-spacing:.14em!important}
+.aiQuickStart h3{letter-spacing:-.035em}
+.aiQuickPrompts button{
+  position:relative;overflow:hidden;
+  border:1px solid rgba(218,229,255,.13)!important;border-radius:15px!important;
+  background:rgba(255,255,255,.055)!important;color:#edf1ff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform .28s cubic-bezier(.2,.8,.2,1),background .28s ease,border-color .28s ease;
+}
+.aiQuickPrompts button:active{transform:scale(.975);background:rgba(151,171,255,.15)!important}
+.aiBubble{
+  position:relative;max-width:min(84%,560px);
+  border:1px solid rgba(221,231,255,.12)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  animation:masenetMessageArrive .48s cubic-bezier(.16,1,.3,1) both;
+  transform-origin:bottom left;
+}
+.aiBubble.assistant{
+  background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(255,255,255,.045))!important;
+  backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+}
+.aiBubble.user{
+  background:linear-gradient(135deg,rgba(105,131,255,.9),rgba(126,100,225,.86))!important;
+  border-color:rgba(211,220,255,.28)!important;color:#fff!important;
+  box-shadow:0 8px 28px rgba(90,105,230,.24),inset 0 1px 0 rgba(255,255,255,.22)!important;
+  transform-origin:bottom right;
+}
+.aiBubble time{color:rgba(230,236,255,.55)!important}
+.aiBubble.user time{color:rgba(255,255,255,.68)!important}
+.aiSpeak{border-radius:999px!important;background:rgba(255,255,255,.075)!important;border:1px solid rgba(255,255,255,.1)!important}
+.aiTyping{
+  width:max-content;padding:13px 16px!important;border:1px solid rgba(214,225,255,.16)!important;
+  border-radius:18px!important;background:rgba(255,255,255,.075)!important;
+  box-shadow:0 0 25px rgba(132,151,255,.1),inset 0 1px 0 rgba(255,255,255,.12);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+.aiTyping i{background:#b9c8ff!important;box-shadow:0 0 9px rgba(150,172,255,.85)!important;animation:masenetTyping 1s ease-in-out infinite}
+.aiTyping i:nth-child(2){animation-delay:.14s}.aiTyping i:nth-child(3){animation-delay:.28s}
+.aiComposer{
+  position:relative;z-index:3;isolation:isolate;
+  border:1px solid rgba(221,231,255,.2)!important;border-radius:24px!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.065))!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.2),0 0 0 1px rgba(150,171,255,.035)!important;
+  backdrop-filter:blur(28px) saturate(175%);-webkit-backdrop-filter:blur(28px) saturate(175%);
+  transition:border-color .35s ease,box-shadow .35s ease,transform .35s cubic-bezier(.2,.8,.2,1);
+}
+.aiComposer::before{
+  content:"";position:absolute;z-index:-1;pointer-events:none;inset:-2px;border-radius:inherit;
+  background:radial-gradient(ellipse at 50% 100%,rgba(126,156,255,.42),rgba(157,119,255,.2) 36%,transparent 72%);
+  filter:blur(17px);opacity:.42;transform:scale(.92);
+  transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1);
+  animation:masenetComposerBreath 5s ease-in-out infinite;
+}
+.aiComposer:focus-within{
+  border-color:rgba(183,199,255,.55)!important;
+  box-shadow:0 12px 38px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.24),0 0 0 3px rgba(130,153,255,.1),0 0 32px rgba(122,146,255,.2)!important;
+  transform:translateY(-1px);
+}
+.aiComposer:focus-within::before{opacity:.95;transform:scale(1.04)}
+.aiComposer input{
+  color:#f8f9ff!important;background:transparent!important;
+  caret-color:#b9caff!important;
+}
+.aiComposer input::placeholder{color:rgba(226,233,255,.52)!important}
+.aiAttach,.aiVoice{
+  color:rgba(235,240,255,.8)!important;
+  transition:transform .25s ease,color .25s ease,background .25s ease;
+}
+.aiAttach:active,.aiVoice:active{transform:scale(.88)}
+.aiVoice.listening{color:#fff!important;background:rgba(255,92,130,.22)!important;box-shadow:0 0 0 5px rgba(255,92,130,.08),0 0 20px rgba(255,92,130,.3)}
+.aiSend{
+  position:relative;overflow:hidden;
+  border:1px solid rgba(235,240,255,.35)!important;border-radius:17px!important;
+  background:linear-gradient(140deg,#dce8ff,#9bb6ff 48%,#8b7cff)!important;
+  color:#1b2855!important;
+  box-shadow:0 5px 18px rgba(122,145,255,.32),inset 0 1px 0 rgba(255,255,255,.9)!important;
+  transition:transform .28s cubic-bezier(.2,.8,.2,1),filter .28s ease,box-shadow .28s ease!important;
+}
+.aiSend:not(:disabled):active{transform:scale(.88) rotate(-5deg)!important;filter:brightness(1.12)}
+.aiSend:disabled{opacity:.55!important}
+.ai-busy .aiComposer::before{opacity:1;animation:masenetComposerSend 1.35s ease-in-out infinite}
+.ai-busy .aiSend{animation:masenetSendPulse 1.2s ease-in-out infinite}
+.aiAttachment{
+  border:1px solid rgba(213,225,255,.16)!important;border-radius:14px!important;
+  background:rgba(255,255,255,.075)!important;color:#eef2ff!important;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+.aiHint{color:rgba(218,228,255,.52)!important}
+.aiStyleMenu{
+  border:1px solid rgba(220,231,255,.18)!important;border-radius:20px!important;
+  background:rgba(20,26,47,.88)!important;color:#f3f5ff!important;
+  box-shadow:0 20px 55px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.13)!important;
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+}
+.aiStyleMenu button{border-radius:13px!important}
+@keyframes masenetAssistantDawn{0%{transform:translateX(-50%) scale(.72);opacity:.48}100%{transform:translateX(-43%) scale(1.16);opacity:.95}}
+@keyframes masenetGlassSweep{0%,35%{background-position:130% 0}70%,100%{background-position:-130% 0}}
+@keyframes masenetAvatarFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes masenetOrbit{to{transform:rotate(360deg)}}
+@keyframes masenetHaloPulse{0%,100%{opacity:.45;transform:scale(.9)}50%{opacity:1;transform:scale(1.16)}}
+@keyframes masenetEyeBlink{0%,46%,50%,100%{transform:scaleY(1)}48%{transform:scaleY(.12)}}
+@keyframes masenetPanelArrive{from{opacity:0;transform:translateY(14px) scale(.985);filter:blur(5px)}to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
+@keyframes masenetMessageArrive{from{opacity:0;transform:translateY(12px) scale(.97);filter:blur(4px)}to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
+@keyframes masenetTyping{0%,60%,100%{transform:translateY(0);opacity:.55}30%{transform:translateY(-5px);opacity:1}}
+@keyframes masenetComposerBreath{0%,100%{opacity:.38;transform:scale(.92)}50%{opacity:.7;transform:scale(1.02)}}
+@keyframes masenetComposerSend{0%,100%{opacity:.7;transform:scale(.96)}50%{opacity:1;transform:scale(1.08)}}
+@keyframes masenetSendPulse{0%,100%{box-shadow:0 5px 18px rgba(122,145,255,.28),0 0 0 0 rgba(152,174,255,0)}50%{box-shadow:0 5px 22px rgba(122,145,255,.48),0 0 0 6px rgba(152,174,255,.08)}}
+@media(max-width:640px){
+ .ai{border-radius:24px!important}
+ .aiHeader{padding-top:max(10px,env(safe-area-inset-top,0px))}
+ .aiAvatarLiquid{width:42px!important;height:42px!important;flex-basis:42px}
+ .aiBubble{max-width:90%}
+ .aiComposer{border-radius:21px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .ai::before,.ai::after,.aiAvatarLiquid,.aiAvatarLiquid .aiAvatarOrbit,.aiAvatarLiquid .aiAvatarHalo,
+ .aiFaceCore i,.aiQuickStart,.aiBubble,.aiTyping i,.aiComposer::before,.ai-busy .aiSend{animation:none!important}
+ .aiBack,.aiCustomize,.aiQuickPrompts button,.aiComposer,.aiAttach,.aiVoice,.aiSend{transition:none!important}
+}
+html.masenet-low-performance .ai::after{animation:none}
+html.masenet-low-performance .ai::before{filter:blur(18px);animation-duration:14s}
