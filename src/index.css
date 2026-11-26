@@ -4892,3 +4892,82 @@ body:has(.app.theme-light),
  .app .iqHome .iqCard{flex-basis:124px!important;max-width:124px!important}
  .app .iqHome .iqPoster{aspect-ratio:2/2.72!important}
 }
+
+
+/* Real Customize sheet: compress its content, not just its outer shell. */
+.app .backdrop:has(.maseCustomizeSettings){
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  padding:calc(72px + env(safe-area-inset-top,0px)) 10px 10px!important;
+}
+.app .side.settingsIslandSide:has(.maseCustomizeSettings){
+  width:min(268px,calc(100vw - 28px))!important;
+  max-width:min(268px,calc(100vw - 28px))!important;
+  max-height:calc(100dvh - 96px - env(safe-area-inset-top,0px))!important;
+  height:auto!important;min-height:0!important;
+  padding:10px!important;border-radius:18px!important;
+  overflow-x:hidden!important;overflow-y:auto!important;
+  gap:6px!important;
+}
+.app .maseCustomizeSettings{
+  display:flex!important;flex-direction:column!important;
+  gap:7px!important;padding:0 1px 8px!important;
+}
+.app .maseCustomizeSettings .settingsHeading{padding:1px 2px 6px!important}
+.app .maseCustomizeSettings .settingsHeading>b{font-size:13px!important}
+.app .maseCustomizeSettings .settingsHeading small{font-size:9px!important;line-height:1.25!important;margin-top:2px!important}
+.app .maseCustomizeSettings .customizePreview{
+  min-height:48px!important;height:auto!important;padding:7px 9px!important;
+  border-radius:12px!important;gap:7px!important;box-shadow:none!important;
+}
+.app .maseCustomizeSettings .customizePreviewOrb{width:28px!important;height:28px!important;min-width:28px!important}
+.app .maseCustomizeSettings .customizePreviewOrb svg{width:15px!important;height:15px!important}
+.app .maseCustomizeSettings .customizePreview b{font-size:10px!important}
+.app .maseCustomizeSettings .customizePreview small{font-size:8px!important;line-height:1.2!important}
+.app .maseCustomizeSettings>label{font-size:10px!important;margin:2px 2px -3px!important}
+.app .maseCustomizeSettings .experienceChoices,
+.app .maseCustomizeSettings .themeGrid{gap:5px!important}
+.app .maseCustomizeSettings .experienceChoices button{
+  min-height:40px!important;height:auto!important;padding:5px 8px!important;
+  border-radius:10px!important;gap:5px!important;
+}
+.app .maseCustomizeSettings .experienceChoices button b,
+.app .maseCustomizeSettings .themeGrid button b{font-size:10px!important;line-height:1.15!important}
+.app .maseCustomizeSettings .experienceChoices button small,
+.app .maseCustomizeSettings .themeGrid button small{font-size:8px!important;line-height:1.15!important;margin-top:2px!important}
+.app .maseCustomizeSettings .appearanceThemeHeading{gap:4px!important;margin:0 1px 3px!important}
+.app .maseCustomizeSettings .appearanceThemeHeading b{font-size:10px!important}
+.app .maseCustomizeSettings .appearanceThemeHeading small{font-size:8px!important;line-height:1.2!important}
+.app .maseCustomizeSettings .appearanceThemeCurrent{font-size:7px!important}
+.app .maseCustomizeSettings .appearanceThemeChoices{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important}
+.app .maseCustomizeSettings .appearanceThemeChoice{
+  min-width:0!important;min-height:48px!important;padding:5px!important;
+  display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+  gap:3px!important;border-radius:9px!important;
+}
+.app .maseCustomizeSettings .appearanceThemePreview{width:100%!important;height:14px!important;min-height:14px!important}
+.app .maseCustomizeSettings .appearanceThemeChoiceCopy b{font-size:8px!important}
+.app .maseCustomizeSettings .appearanceThemeChoiceCopy small{display:none!important}
+.app .maseCustomizeSettings .appearanceThemeCheck{position:absolute!important;right:4px!important;top:4px!important}
+.app .maseCustomizeSettings .customizeThree,
+.app .maseCustomizeSettings .customizeTwo{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.app .maseCustomizeSettings .customizeTwo{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.app .maseCustomizeSettings .themeGrid button{
+  min-height:38px!important;height:auto!important;padding:5px 4px!important;
+  border-radius:9px!important;gap:2px!important;
+}
+.app .maseCustomizeSettings .settingsMotionCompact{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.app .maseCustomizeSettings .customizeToggleRow{
+  min-height:38px!important;padding:6px 8px!important;border-radius:10px!important;
+}
+.app .maseCustomizeSettings .customizeToggleRow span b{font-size:9px!important}
+.app .maseCustomizeSettings .customizeToggleRow span small{font-size:8px!important;margin-top:1px!important;line-height:1.2!important}
+.app .maseCustomizeSettings .customizeSwitch{width:30px!important;height:17px!important;min-width:30px!important}
+.app .maseCustomizeSettings .customizeWeather{min-height:32px!important;height:32px!important;padding:5px 8px!important;font-size:9px!important;border-radius:9px!important}
+.app .maseCustomizeSettings .customizeStatus{font-size:9px!important;margin:0 2px!important}
+.app .maseCustomizeSettings .customizeFooterActions{grid-template-columns:1fr 1fr!important;gap:5px!important;padding-top:1px!important}
+.app .maseCustomizeSettings .customizeFooterActions button{min-height:32px!important;padding:5px!important;font-size:9px!important;border-radius:9px!important}
+.app .maseCustomizeSettings .settingsAdminLink{min-height:32px!important;padding:5px 8px!important;font-size:9px!important;border-radius:9px!important}
+@media(min-width:761px){
+ .app .side.settingsIslandSide:has(.maseCustomizeSettings){width:300px!important;max-width:300px!important;max-height:78vh!important}
+}
