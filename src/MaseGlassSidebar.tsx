@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { House, Search, Film, Bookmark, Bell, UserRound, ChevronLeft, ChevronRight, Clapperboard, HardDrive, SlidersHorizontal } from 'lucide-react';
 
 type Item = { label: string; icon: typeof House; action: () => void; tone?: string };
@@ -66,7 +66,7 @@ export default function MaseGlassSidebar() {
     { label: 'Alerts', icon: Bell, action: () => { (document.querySelector('.dockNotifications') as HTMLButtonElement | null)?.click(); }, tone: 'alerts' },
     { label: 'Profile', icon: UserRound, action: () => { (document.querySelector('.maseProfileButton') as HTMLButtonElement | null)?.click(); }, tone: 'profile' }
   ];
-  const sidebarStyle = { '--mase-sidebar-width': `${sidebarWidth}px` } as React.CSSProperties;
+  const sidebarStyle = { '--mase-sidebar-width': `${sidebarWidth}px` } as CSSProperties;
 
   return <>
     <button type="button" className="maseSidebarMobileTrigger" aria-label="Open MaseNet navigation" onClick={() => setDrawerOpen(true)}><SlidersHorizontal size={19}/></button>
