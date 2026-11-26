@@ -486,18 +486,18 @@ function DownloadAppPage({go}:{go:(r:string)=>void}){
  const apkUrl='https://github.com/Peter2004p/MaseMediaTv/releases/download/masenet-android-latest/app-debug.apk';
  const releaseUrl='https://github.com/Peter2004p/MaseMediaTv/releases/tag/masenet-android-latest';
  return <main className="page maseUtilityPage maseAppDownloadPage">
-  <header className="maseUtilityHead"><div><span className="iqKicker">MASENET · ANDROID APP</span><h1>Take MaseNet with you.</h1><p>Install the Android app for a more convenient MaseNet experience, including the native VLC-powered player.</p></div><span className="maseUtilityCount">Android</span></header>
+  <header className="maseUtilityHead"><div><span className="iqKicker">MASEMEDIA TV · ANDROID APP</span><h1>Get the latest MaseNet.</h1><p>The previous installer is retired. Use this official download link for the current MaseNet Android app.</p></div><span className="maseUtilityCount">Latest version</span></header>
   <section className="maseAppDownloadHero">
-   <div className="maseAppDownloadBrand"><img src="/masemediatv-logo.png" alt="MaseNet logo"/><div><b>MaseNet</b><small>MASEMEDIA TV · ANDROID</small></div></div>
-   <h2>Your entertainment, one tap away.</h2>
-   <p>Browse MaseNet and use the Android player with supported video formats, playback controls and available embedded subtitle and audio tracks.</p>
-   <a className="maseAppDownloadButton" href={apkUrl} target="_blank" rel="noopener noreferrer"><Download size={19}/> Download MaseNet APK <ChevronRight size={18}/></a>
-   <div className="maseAppDownloadMeta"><span>Android phones</span><i/> <span>ARM 32-bit & 64-bit</span><i/> <span>About 103 MB</span></div>
-   <a className="maseAppReleaseLink" href={releaseUrl} target="_blank" rel="noopener noreferrer">View release details and file verification ↗</a>
+   <div className="maseAppDownloadBrand"><img src="/masemediatv-logo.png" alt="MaseMediaTv logo"/><div><b>MaseNet</b><small>MASEMEDIA TV · OFFICIAL ANDROID APP</small></div></div>
+   <h2>Update MaseNet — keep your app and data.</h2>
+   <p>Download the latest official Android installer. If MaseNet is already installed, Android will update it in place: you do not need to uninstall or delete the old version first.</p>
+   <a className="maseAppDownloadButton" href={apkUrl} rel="noopener noreferrer"><Download size={19}/> Download latest MaseNet update <ChevronRight size={18}/></a>
+   <div className="maseAppDownloadMeta"><span>Android phones</span><i/> <span>ARM 32-bit & 64-bit</span><i/> <span>About 107 MB</span></div>
+   <a className="maseAppReleaseLink" href={releaseUrl} target="_blank" rel="noopener noreferrer">Official release details ↗</a>
   </section>
-  <section className="maseAppInstallGuide"><span className="iqKicker">INSTALLATION GUIDE</span><h2>How to install</h2><ol><li><b>Download the APK.</b><span>Tap the download button above and wait for the file to finish downloading.</span></li><li><b>Open the downloaded file.</b><span>Choose your browser's download notification or open the APK from your Downloads folder.</span></li><li><b>Allow this installation if Android asks.</b><span>Only allow your browser to install this file if you trust that you downloaded it from the official MaseNet release link. You can switch this permission off again after installation.</span></li><li><b>Install and open MaseNet.</b><span>Sign in if needed and enjoy the Android experience.</span></li></ol></section>
-  <aside className="maseAppSafetyNote"><b>Future app updates</b><p>MaseNet will check for newer app versions and show an update notice inside the app. Download the update and tap Android’s installation notification to install it over your existing app. You will not need to uninstall MaseNet first; Android will ask you to confirm the installation.</p></aside>
-  <aside className="maseAppSafetyNote"><b>Important installation note</b><p>This is a direct-download early-access APK, not a Google Play Store release. Android may show an unfamiliar-app warning. Only install it if the file came from the official MaseNet GitHub release. Do not disable Android security protections to force an installation.</p></aside>
+  <section className="maseAppInstallGuide"><span className="iqKicker">UPDATE GUIDE</span><h2>Update without uninstalling</h2><ol><li><b>Tap Download latest MaseNet update.</b><span>The current APK downloads from the official MaseNet release link.</span></li><li><b>Open the downloaded APK.</b><span>Use the download notification or your device's Downloads list to open it.</span></li><li><b>Confirm Android's update prompt.</b><span>Android installs the new version over the existing MaseNet app when the package and signing certificate match. Your existing app stays installed; you do not need to remove it first.</span></li><li><b>Tap Open.</b><span>When installation finishes, choose Open to launch the updated MaseNet app.</span></li></ol></section>
+  <aside className="maseAppSafetyNote"><b>Old version retired</b><p>Please stop using older MaseNet installer files and use the latest download link above for new installations and updates. The existing app does not need to be deleted before updating.</p></aside>
+  <aside className="maseAppSafetyNote"><b>Android installation notice</b><p>This is an official direct-download APK, not a Google Play Store release. Android may ask you to confirm installation or allow your browser to install apps. Only proceed with the APK downloaded from this official MaseNet release link. The download opens Android's package installer; Android controls the final install and Open step.</p></aside>
   <button className="secondary maseBackButton" onClick={()=>go('#/home')}><ArrowLeft size={15}/> Back to MaseNet</button>
  </main>;
 }
