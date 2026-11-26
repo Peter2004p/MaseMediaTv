@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type TouchEvent, type 
 import { ArrowLeft, ArrowRight, BellRing, Bot, Check, Clapperboard, Chrome, Download, Film, Languages, LoaderCircle, Mail, Moon, RotateCcw, Sparkles, Sun, Tv2 } from 'lucide-react';
 import './onboarding-liquid-glass.css';
 
-type Props = { open: boolean; onClose: () => void; onReopen: () => void; onGoogleLogin: () => Promise<boolean>; onTelegramLogin: () => Promise<boolean>; onEmailVerified: (user: {userId:string;name?:string;email?:string;picture?:string}) => void };
+type Props = { open: boolean; onClose: () => void; onReopen: () => void; onGoogleLogin: () => Promise<boolean>; onTelegramLogin: () => Promise<boolean>; onEmailVerified: (user: {userId:string;name?:string;email?:string;picture?:string}) => void; authError?: string; telegramUrl?: string; inTelegramMiniApp: boolean };
 type ThemeChoice = 'light' | 'dark' | 'system';
 
 const genres = ['C-Drama & K-Drama', 'Action & Thriller', 'Romance', 'Historical & Wuxia', 'Mystery & Horror', 'Anime & Cartoons'];
@@ -12,7 +12,7 @@ const featureCards = [
   { icon: <Download size={19}/>, title: 'Fast Direct Downloads', copy: 'Choose a convenient quality when a download is available.', detail: 'Available source qualities can include 480p, 576p, 720p, 1080p and 4K. The choices shown depend on the title and its uploaded files.' }
 ];
 
-export default function OnboardingTour({ open, onClose, onReopen, onGoogleLogin, onTelegramLogin, onEmailVerified }: Props) {
+export default function OnboardingTour({ open, onClose, onReopen, onGoogleLogin, onTelegramLogin, onEmailVerified, authError, telegramUrl, inTelegramMiniApp }: Props) {
   const [step, setStep] = useState(0);
   const [themeChoice, setThemeChoice] = useState<ThemeChoice>(() => {
     try { return (localStorage.getItem('masenet-onboarding-theme') as ThemeChoice) || 'system'; } catch { return 'system'; }
@@ -165,10 +165,10 @@ export default function OnboardingTour({ open, onClose, onReopen, onGoogleLogin,
             <div className="mnTourAuth">
               <div className="mnTourAuthTitle"><b>Sign in to MaseNet</b><small>Choose how you want to access your account.</small></div>
               <button type="button" className="mnTourAuthProvider mnTourGoogle" onClick={()=>void handleGoogle()} disabled={!!authBusy}><Chrome size={18}/><span>{authBusy==='google'?'Connecting…':'Continue with Google'}</span>{authBusy==='google'?<LoaderCircle size={16} className="mnTourSpin"/>:<ArrowRight size={16}/>}</button>
-              <button type="button" className="mnTourAuthProvider mnTourTelegram" onClick={()=>void handleTelegram()} disabled={!!authBusy}><Bot size={18}/><span>{authBusy==='telegram'?'Connecting…':'Continue with Telegram'}</span>{authBusy==='telegram'?<LoaderCircle size={16} className="mnTourSpin"/>:<ArrowRight size={16}/>}</button>
+              {!inTelegramMiniApp&&telegramUrl?<a className="mnTourAuthProvider mnTourTelegram" href={telegramUrl} target="_blank" rel="noreferrer"><Bot size={18}/><span>Continue with Telegram</span><ArrowRight size={16}/></a>:<button type="button" className="mnTourAuthProvider mnTourTelegram" onClick={()=>void handleTelegram()} disabled={!!authBusy}><Bot size={18}/><span>{authBusy==='telegram'?'Connecting…':'Continue with Telegram'}</span>{authBusy==='telegram'?<LoaderCircle size={16} className="mnTourSpin"/>:<ArrowRight size={16}/>}</button>}
               <div className="mnTourAuthDivider"><i/> <span>OR USE EMAIL</span> <i/></div>
               {emailStage==='email'?<form className="mnTourEmailForm" onSubmit={event=>{event.preventDefault();void sendEmailCode()}}><label htmlFor="mn-tour-email">Email address</label><div><Mail size={17}/><input id="mn-tour-email" type="email" autoComplete="email" required maxLength={254} placeholder="you@example.com" value={email} onChange={event=>setEmail(event.target.value)}/></div><button type="submit" disabled={emailBusy||!email.trim()}>{emailBusy?<><LoaderCircle size={16} className="mnTourSpin"/> Sending code…</>:<>Send email code <ArrowRight size={16}/></>}</button></form>:<form className="mnTourEmailForm" onSubmit={event=>{event.preventDefault();void verifyEmailCode()}}><label htmlFor="mn-tour-code">Six-digit verification code</label><div><Mail size={17}/><input id="mn-tour-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" value={otp} onChange={event=>setOtp(event.target.value.replace(/\D/g,'').slice(0,6))}/></div><button type="submit" disabled={emailBusy||otp.length!==6}>{emailBusy?<><LoaderCircle size={16} className="mnTourSpin"/> Verifying…</>:<>Verify & sign in <ArrowRight size={16}/></>}</button><button type="button" className="mnTourEmailBack" onClick={()=>{setEmailStage('email');setOtp('');setEmailMessage('')}}>Use a different email</button></form>}
-              {emailMessage&&<p className="mnTourAuthMessage" role="status">{emailMessage}</p>}
+              {emailMessage&&<p className="mnTourAuthMessage" role="status">{emailMessage}</p>}{authError&&<p className="mnTourAuthMessage" role="alert">{authError}</p>}
               <button type="button" className="mnTourReplay" onClick={replay}><RotateCcw size={15}/> Replay tour</button>
             </div>
           </div>}
