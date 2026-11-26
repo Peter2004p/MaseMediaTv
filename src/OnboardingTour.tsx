@@ -119,7 +119,7 @@ export default function OnboardingTour({ open, onClose, onReopen, onGoogleLogin,
       <section className="mnTourCard" role="dialog" aria-modal="true" aria-label="Welcome to MaseNet" data-theme={themeChoice} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <div className="mnTourGlow" aria-hidden="true"/>
         <header className="mnTourTopbar">
-          <div className="mnTourBrand"><span className="mnTourBrandMark"><Clapperboard size={17}/></span><span><b>MaseNet</b><small>YOUR ENTERTAINMENT SPACE</small></span></div>
+          <div className="mnTourBrand"><span className="mnTourBrandMark"><img src="/masemediatv-logo.png" alt="MaseMediaTv"/></span><span><b>MaseNet</b><small>YOUR ENTERTAINMENT SPACE</small></span></div>
           <div className="mnTourTopActions">
             <div className="mnTourTheme" role="group" aria-label="Onboarding appearance">
               <button type="button" className={themeChoice === 'light' ? 'active' : ''} onClick={() => setThemeChoice('light')} aria-label="Light theme"><Sun size={14}/><span>Light</span></button>

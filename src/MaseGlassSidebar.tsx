@@ -82,7 +82,7 @@ export default function MaseGlassSidebar() {
       {drawerOpen || expanded ? <ChevronLeft size={18}/> : <ChevronRight size={18}/>}
     </button>
     <aside className={`maseGlassSidebar ${expanded ? 'isExpanded' : ''} ${drawerOpen ? 'isDrawerOpen' : ''}`} style={sidebarStyle} aria-label="MaseNet navigation">
-      <div className="maseSidebarBrand"><img src="/masemediatv-logo.svg" alt=""/><span><b>MaseMediaTv</b><small>STREAMING LIBRARY</small></span></div>
+      <div className="maseSidebarBrand"><img src="/masemediatv-logo.png" alt=""/><span><b>MaseMediaTv</b><small>STREAMING LIBRARY</small></span></div>
       <div className="maseSidebarSectionLabel">DISCOVER</div>
       <nav className="maseSidebarItems">
         {items.map(({ label, icon: Icon, action, tone }) => <button type="button" key={label} className={`maseSidebarItem tone-${tone} ${label === 'Home' && route === '#/home' ? 'isActive' : ''}`} onClick={() => invoke(action)} title={expanded || drawerOpen ? undefined : label}>

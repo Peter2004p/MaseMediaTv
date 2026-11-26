@@ -91,7 +91,7 @@ export default function PWAInstallPrompt() {
       fontFamily: 'system-ui, sans-serif'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <img src="/masenet-app-icon.svg" alt="" width="38" height="38" style={{ borderRadius: 11, flexShrink: 0 }} />
+        <img src="/masemediatv-logo.png" alt="" width="38" height="38" style={{ borderRadius: 11, flexShrink: 0 }} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <strong style={{ display: 'block', fontSize: 13 }}>Get the MaseNet app</strong>
           <span style={{ display: 'block', color: '#a9adbb', fontSize: 11, marginTop: 2 }}>Install it on your phone for quick access.</span>
