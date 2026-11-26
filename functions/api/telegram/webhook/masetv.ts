@@ -85,7 +85,7 @@ async function deliverVaultDownload(env: Env, chatId: string | number, rawToken:
     const units = ["B","KB","MB","GB","TB"];
     const unitIndex = bytes > 0 ? Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1) : -1;
     const fileSize = unitIndex >= 0
-      ? ((bytes / Math.pow(1024, unitIndex)).toFixed(unitIndex === 0 ? 0 : 2).replace(/\.?0+$/, "") + " " + units[unitIndex])
+      ? (String(Number((bytes / Math.pow(1024, unitIndex)).toFixed(unitIndex === 0 ? 0 : 2))) + " " + units[unitIndex])
       : "Not available";
     const isDrama = String(asset.media_kind || "").toLowerCase() === "drama";
     const details = [
