@@ -213,3 +213,51 @@ html.maseJellyEnabled button.maseJellyRebound:not([data-no-jelly]){animation:mas
  46%{transform:translateX(calc(var(--dock-index,0)*(100% + 5px))) scaleX(.96) scaleY(1.04)}
  100%{transform:translateX(calc(var(--dock-index,0)*(100% + 5px))) scale(1)}
 }
+
+
+/* Performance and interaction corrections — 26 Nov 2026 */
+.app :where(.iqHero,.maseGlassSidebar,.masenetLiquidDock,.iqCard,.maseHeroEditorial){will-change:auto}
+.app .iqHome .iqHero.maseCinematicHero .iqHeroPoster .posterImage,
+.app .iqHome .iqHero.maseCinematicHero .iqHeroPoster .heroCustomImage{will-change:auto}
+.app .masenetLiquidDock.maseGooeyDock{-webkit-backdrop-filter:blur(14px) saturate(150%)!important;backdrop-filter:blur(14px) saturate(150%)!important}
+.app .masenetLiquidDock.maseGooeyDock .dockGooeyIndicator{
+ left:9px;
+ width:calc((100% - 46px)/5);
+ transform:translate3d(0,0,0);
+ transition:left .36s cubic-bezier(.2,.85,.25,1),width .2s ease,background .35s ease,border-color .35s ease,box-shadow .35s ease!important;
+ will-change:auto;
+ animation:maseGooeyStretchSnap .52s cubic-bezier(.2,.85,.25,1) both;
+}
+.app .masenetLiquidDock.maseGooeyDock .dockGooeyIndicator:after{will-change:auto}
+@keyframes maseGooeyStretchSnap{
+ 0%{transform:translate3d(0,0,0) scaleX(1.18) scaleY(.9)}
+ 48%{transform:translate3d(0,0,0) scaleX(.96) scaleY(1.04)}
+ 100%{transform:translate3d(0,0,0) scale(1)}
+}
+.app .masenetLiquidDock.maseGooeyDock>.dockItem{touch-action:manipulation}
+.app .masenetLiquidDock.maseGooeyDock>.dockItem:active{transform:scale(.94)!important}
+.maseGlassSidebar{-webkit-backdrop-filter:blur(12px) saturate(145%)!important;backdrop-filter:blur(12px) saturate(145%)!important}
+.maseSidebarScrim{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.maseAppPromo{
+ position:relative!important;inset:auto!important;z-index:1!important;
+ display:flex!important;align-items:center!important;gap:12px!important;
+ width:100%!important;max-width:100%!important;box-sizing:border-box!important;
+ margin:18px 0!important;padding:13px 15px!important;
+ border:1px solid rgba(117,224,174,.22)!important;border-radius:18px!important;
+ background:linear-gradient(110deg,rgba(25,58,43,.92),rgba(16,31,25,.9))!important;
+ box-shadow:0 8px 24px rgba(0,0,0,.16)!important;
+ text-decoration:none!important;transform:none!important;
+}
+.maseAppPromoCopy{display:flex!important;flex:1!important;min-width:0!important;flex-direction:column!important;gap:4px!important}
+.maseAppPromoCopy b{font-size:13px!important}
+.maseAppPromoCopy small{font-size:11px!important;line-height:1.4!important;opacity:.78!important}
+.maseAppPromoAction{display:inline-flex!important;align-items:center!important;gap:3px!important;white-space:nowrap!important}
+.maseAppFloat{display:none!important;visibility:hidden!important;pointer-events:none!important}
+@media(max-width:760px){
+ .app .masenetLiquidDock.maseGooeyDock{-webkit-backdrop-filter:blur(12px) saturate(145%)!important;backdrop-filter:blur(12px) saturate(145%)!important}
+ .maseAppPromo{margin:14px 0!important;padding:12px!important;gap:9px!important}
+ .maseAppPromoIcon{flex:0 0 34px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .masenetLiquidDock.maseGooeyDock .dockGooeyIndicator{animation:none!important;transition:none!important}
+}
