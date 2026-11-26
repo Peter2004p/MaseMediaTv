@@ -1,0 +1,650 @@
+/* MaseMediaTv / MaseNet — Full Experience UI Rebuild
+   Replaces the legacy homepage, navigation, sidebar and poster-shelf visual system.
+   Existing React data, routing, API, player and Telegram integrations remain the source of truth. */
+
+:root{
+  color-scheme:dark;
+  --mn-bg:#080a09;
+  --mn-bg-raised:#0d110f;
+  --mn-panel:rgba(17,23,20,.84);
+  --mn-panel-solid:#111814;
+  --mn-line:rgba(232,245,237,.105);
+  --mn-line-strong:rgba(232,245,237,.18);
+  --mn-text:#f3f7f4;
+  --mn-muted:#9aa89f;
+  --mn-soft:#c5d0c9;
+  --mn-accent:#38e6a0;
+  --mn-accent-strong:#18c982;
+  --mn-gold:#e7c47e;
+  --mn-spring:cubic-bezier(.34,1.56,.64,1);
+  --mn-ease:cubic-bezier(.2,.8,.2,1);
+  font-synthesis:none;
+}
+html{background:var(--mn-bg);scroll-behavior:smooth;scroll-padding-top:92px}
+body{margin:0;min-width:320px;background:var(--mn-bg);color:var(--mn-text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-feature-settings:"ss01" on,"cv11" on}
+button,a,input,select,textarea{font:inherit}
+button{touch-action:manipulation}
+::selection{background:rgba(56,230,160,.28);color:#fff}
+:focus-visible{outline:2px solid var(--mn-accent)!important;outline-offset:3px!important}
+#root{min-height:100dvh}
+.app{
+  min-height:100dvh;
+  width:100%;
+  overflow-x:clip;
+  padding:0 0 0 78px;
+  box-sizing:border-box;
+  color:var(--mn-text);
+  background:
+    radial-gradient(ellipse 70% 38% at 52% -14%,rgba(39,108,77,.17),transparent 70%),
+    radial-gradient(ellipse 38% 28% at 100% 38%,rgba(43,94,70,.055),transparent 75%),
+    var(--mn-bg);
+  isolation:isolate;
+}
+.app :where(h1,h2,h3,h4,p){overflow-wrap:anywhere}
+.app .muted,.app .mutedText{color:var(--mn-muted)}
+.app :where(button,a){-webkit-tap-highlight-color:transparent}
+.app button:not(.dockItem):not(.maseSidebarItem){transition:background-color .2s ease,color .2s ease,border-color .2s ease,transform .32s var(--mn-spring),opacity .2s ease}
+.app button:active:not(.dockItem){transform:scale(.975)}
+.app .primary{
+  border:1px solid rgba(110,255,190,.34)!important;
+  background:linear-gradient(135deg,#65f0b3,#25ca87)!important;
+  color:#052015!important;
+  box-shadow:0 8px 24px rgba(28,207,133,.17)!important;
+  font-weight:800;
+}
+.app .secondary{
+  border:1px solid rgba(255,255,255,.17)!important;
+  background:rgba(255,255,255,.065)!important;
+  color:#f0f7f2!important;
+}
+.app :where(input,textarea,select){
+  color:var(--mn-text);
+  border-color:rgba(230,244,235,.15);
+}
+.app :where(input,textarea,select):focus{
+  outline:0;
+  border-color:rgba(56,230,160,.62);
+  box-shadow:0 0 0 3px rgba(56,230,160,.1);
+}
+.app .nav{
+  position:sticky!important;
+  top:max(10px,env(safe-area-inset-top))!important;
+  z-index:70!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:14px!important;
+  width:min(100% - 42px,1480px)!important;
+  max-width:1480px!important;
+  min-height:66px!important;
+  margin:12px auto 0!important;
+  padding:9px 14px!important;
+  border:1px solid var(--mn-line-strong)!important;
+  border-radius:22px!important;
+  background:rgba(13,19,16,.84)!important;
+  box-shadow:0 12px 42px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.075)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(145%)!important;
+  backdrop-filter:blur(20px) saturate(145%)!important;
+}
+.app .nav .brand{
+  display:flex!important;
+  flex:0 0 auto!important;
+  align-items:center!important;
+  gap:10px!important;
+  min-width:0!important;
+  padding:0!important;
+  color:var(--mn-text)!important;
+  background:transparent!important;
+  border:0!important;
+}
+.app .brandLogo{width:38px!important;height:38px!important;object-fit:contain!important;border-radius:12px!important}
+.app .brandName{font-size:16px!important;font-weight:850!important;letter-spacing:-.045em!important;white-space:nowrap}
+.app .nav>.icon{
+  width:42px!important;height:42px!important;min-width:42px!important;
+  display:grid!important;place-items:center!important;
+  margin-left:auto!important;padding:0!important;
+  border:1px solid var(--mn-line)!important;border-radius:15px!important;
+  color:#e8f3ec!important;background:rgba(255,255,255,.045)!important;
+}
+.app .nav .navActions{display:flex!important;align-items:center!important;gap:7px!important;margin-left:auto!important}
+.app .nav .navActions .icon{
+  width:42px!important;height:42px!important;min-width:42px!important;
+  display:grid!important;place-items:center!important;padding:0!important;
+  border:1px solid var(--mn-line)!important;border-radius:15px!important;
+  color:#e8f3ec!important;background:rgba(255,255,255,.045)!important;
+}
+.app .nav .navActions .icon:hover,.app .nav>.icon:hover{background:rgba(56,230,160,.1)!important;border-color:rgba(56,230,160,.25)!important;color:#fff!important}
+.app .maseHeaderSearch{
+  display:flex!important;align-items:center!important;gap:10px!important;
+  flex:1 1 auto!important;min-width:0!important;max-width:760px!important;
+  height:44px!important;padding:0 12px!important;
+  border:1px solid var(--mn-line)!important;border-radius:15px!important;
+  background:rgba(255,255,255,.045)!important;color:var(--mn-soft)!important;
+}
+.app .maseHeaderSearch input{flex:1 1 auto!important;min-width:0!important;height:100%!important;border:0!important;outline:0!important;background:transparent!important;box-shadow:none!important;color:var(--mn-text)!important;font-size:13px!important}
+.app .maseHeaderSearch button{display:grid!important;place-items:center!important;width:30px!important;height:30px!important;padding:0!important;border:0!important;border-radius:10px!important;background:rgba(255,255,255,.07)!important;color:var(--mn-soft)!important}
+.app .page{max-width:1480px;margin:0 auto}
+.app .ios27PageTransition{animation:mnPageEnter .36s var(--mn-ease) both}
+@keyframes mnPageEnter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* iQIYI-inspired hero showcase */
+.app .iqHome{
+  max-width:1480px!important;
+  width:100%!important;
+  margin:0 auto!important;
+  padding:22px clamp(18px,2.4vw,38px) calc(132px + env(safe-area-inset-bottom))!important;
+  overflow:visible!important;
+  color:var(--mn-text)!important;
+}
+.app .iqHome .iqHero{
+  position:relative!important;
+  isolation:isolate!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  min-height:clamp(470px,49vw,650px)!important;
+  width:100%!important;
+  box-sizing:border-box!important;
+  margin:4px 0 30px!important;
+  padding:clamp(26px,4vw,62px)!important;
+  overflow:hidden!important;
+  border:1px solid rgba(235,248,240,.14)!important;
+  border-radius:28px!important;
+  background:#101713!important;
+  box-shadow:0 30px 85px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.12)!important;
+}
+.app .iqHome .iqHero:before,.app .iqHome .iqHero:after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+}
+.app .iqHome .iqHero:before{
+  background:linear-gradient(to top,#080a09 12%,rgba(8,10,9,.75) 45%,transparent 100%),
+    linear-gradient(90deg,rgba(8,10,9,.82) 0%,rgba(8,10,9,.46) 42%,rgba(8,10,9,.06) 100%);
+}
+.app .iqHome .iqHero:after{
+  opacity:.34;
+  background-image:radial-gradient(circle at 14% 24%,rgba(255,255,255,.7) 0 1px,transparent 1.8px),radial-gradient(circle at 73% 16%,rgba(255,255,255,.5) 0 1px,transparent 1.8px),radial-gradient(circle at 55% 64%,rgba(255,255,255,.42) 0 1px,transparent 1.8px);
+  background-size:170px 170px,230px 230px,290px 290px;
+  animation:mnAmbientDrift 24s linear infinite;
+}
+@keyframes mnAmbientDrift{from{background-position:0 0,0 0,0 0}to{background-position:170px -170px,-230px 230px,290px -290px}}
+.app .iqHome .iqHeroShade{position:absolute!important;inset:0!important;z-index:1!important;background:transparent!important;pointer-events:none!important}
+.app .iqHome .iqHeroPoster{
+  position:absolute!important;inset:0!important;z-index:0!important;
+  width:100%!important;height:100%!important;opacity:1!important;
+  overflow:hidden!important;filter:none!important;
+}
+.app .iqHome .iqHeroPoster>.poster{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;border:0!important;border-radius:0!important;background:#101713!important}
+.app .iqHome .iqHeroPoster .posterImage,.app .iqHome .iqHeroPoster .heroCustomImage{
+  position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;
+  object-fit:cover!important;object-position:center 35%!important;
+  mask-image:none!important;-webkit-mask-image:none!important;
+  animation:mnHeroKenBurns 18s ease-in-out infinite alternate!important;
+}
+@keyframes mnHeroKenBurns{0%{transform:scale(1.015) translate3d(0,0,0)}100%{transform:scale(1.12) translate3d(-1.2%,-1.2%,0)}}
+.app .iqHome .iqHeroPoster .posterAura,.app .iqHome .iqHeroPoster .poster b,.app .iqHome .iqHeroPoster .poster small,.app .iqHome .iqHeroPoster .poster i,.app .iqHome .iqHeroPoster .poster span{display:none!important}
+.app .iqHome .maseHeroAtmosphere{
+  position:absolute!important;inset:-12%!important;z-index:1!important;
+  pointer-events:none!important;opacity:.48!important;
+  background:radial-gradient(ellipse at 75% 24%,var(--hero-aura,rgba(56,230,160,.22)),transparent 48%)!important;
+  filter:blur(32px)!important;
+  transition:opacity .7s ease,background .9s ease!important;
+}
+.app .iqHome .iqHeroCopy{
+  position:relative!important;z-index:3!important;
+  display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+  align-self:flex-end!important;max-width:min(760px,76%)!important;width:100%!important;
+  margin:0!important;padding:0!important;
+  animation:mnHeroReveal .72s var(--mn-ease) both!important;
+}
+@keyframes mnHeroReveal{from{opacity:0;transform:translateY(18px);filter:blur(4px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+.app .iqHome .maseHeroBrandline{display:flex!important;align-items:center!important;gap:9px!important;margin:0 0 16px!important;color:rgba(241,249,244,.82)!important;font-size:10px!important;font-weight:850!important;letter-spacing:.16em!important;text-transform:uppercase!important}
+.app .iqHome .maseLiveDot{width:7px!important;height:7px!important;flex:0 0 7px!important;border-radius:50%!important;background:var(--mn-accent)!important;box-shadow:0 0 14px rgba(56,230,160,.7)!important}
+.app .iqHome .maseHeroDivider{width:22px!important;height:1px!important;background:rgba(255,255,255,.42)!important}
+.app .iqHome .iqTags{display:flex!important;flex-wrap:wrap!important;gap:7px!important;margin:0 0 18px!important}
+.app .iqHome .iqTags span{
+  padding:7px 10px!important;border:1px solid rgba(255,255,255,.18)!important;border-radius:999px!important;
+  background:rgba(7,12,9,.42)!important;color:rgba(244,250,246,.9)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(130%)!important;backdrop-filter:blur(10px) saturate(130%)!important;
+  font-size:9px!important;font-weight:800!important;letter-spacing:.09em!important;
+}
+.app .iqHome .iqHero h1{
+  max-width:780px!important;margin:0 0 14px!important;
+  color:#fff!important;font-size:clamp(38px,6.2vw,76px)!important;
+  font-weight:850!important;line-height:.99!important;letter-spacing:-.065em!important;
+  text-wrap:balance!important;text-shadow:0 5px 32px rgba(0,0,0,.46)!important;
+  animation:mnHeroReveal .72s .06s var(--mn-ease) both!important;
+}
+.app .iqHome .iqHeroCopy p{
+  display:-webkit-box!important;max-width:600px!important;margin:0!important;
+  overflow:hidden!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important;
+  color:rgba(239,246,241,.82)!important;font-size:clamp(13px,1.35vw,16px)!important;
+  line-height:1.72!important;text-shadow:0 2px 12px rgba(0,0,0,.38)!important;
+  animation:mnHeroReveal .72s .12s var(--mn-ease) both!important;
+}
+.app .iqHome .maseHeroFacts{display:flex!important;flex-wrap:wrap!important;gap:9px 18px!important;margin:18px 0 0!important;color:rgba(240,249,243,.76)!important;font-size:9px!important;font-weight:850!important;letter-spacing:.11em!important}
+.app .iqHome .maseHeroFacts span+span:before{content:"·";margin-right:18px;color:var(--mn-accent)!important}
+.app .iqHome .iqHeroActions{display:flex!important;flex-wrap:wrap!important;gap:10px!important;margin:24px 0 0!important;animation:mnHeroReveal .72s .18s var(--mn-ease) both!important}
+.app .iqHome .iqHeroActions button{
+  position:relative!important;isolation:isolate!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;
+  min-height:50px!important;padding:0 22px!important;border-radius:999px!important;
+  font-size:13px!important;font-weight:850!important;letter-spacing:-.01em!important;overflow:hidden!important;
+  transition:transform .38s var(--mn-spring),background .2s ease,border-color .2s ease!important;
+}
+.app .iqHome .iqHeroActions .primary{background:linear-gradient(115deg,#71f3ba,#26cf8b)!important;color:#062117!important;border:1px solid rgba(159,255,210,.48)!important;box-shadow:0 10px 30px rgba(31,211,137,.2)!important}
+.app .iqHome .iqHeroActions .primary:after{
+  content:"";position:absolute;inset:-50% auto -50% -40%;z-index:-1;width:32%;
+  transform:skewX(-22deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);
+  animation:mnButtonShimmer 4.8s ease-in-out infinite;
+}
+@keyframes mnButtonShimmer{0%,60%{left:-45%}85%,100%{left:130%}}
+.app .iqHome .iqHeroActions .secondary{
+  background:rgba(14,21,17,.48)!important;border:1px solid rgba(244,250,246,.24)!important;color:#f6fbf8!important;
+  -webkit-backdrop-filter:blur(18px) saturate(160%)!important;backdrop-filter:blur(18px) saturate(160%)!important;
+}
+.app .iqHome .iqHeroActions .maseHeroMyList.isAdded{background:rgba(28,119,80,.55)!important;border-color:rgba(99,235,169,.48)!important;color:#c5ffdf!important}
+.app .iqHome .maseHeroPosterCard{display:none!important}
+.app .iqHome .iqHeroDots{position:absolute!important;z-index:4!important;right:clamp(22px,4vw,54px)!important;bottom:26px!important;display:flex!important;align-items:center!important;gap:6px!important}
+.app .iqHome .iqHeroDots button{
+  position:relative!important;width:24px!important;height:4px!important;min-width:24px!important;
+  padding:0!important;overflow:hidden!important;border:0!important;border-radius:999px!important;
+  background:rgba(255,255,255,.38)!important;
+}
+.app .iqHome .iqHeroDots button.active{width:76px!important;background:rgba(255,255,255,.24)!important}
+.app .iqHome .iqHeroDots button.active:after{
+  content:"";position:absolute;inset:0 auto 0 0;width:0;border-radius:inherit;background:#f4fff8;
+  animation:mnHeroProgress 18s linear forwards;
+}
+@keyframes mnHeroProgress{to{width:100%}}
+.app .iqHome .iqHeroEmpty .iqHeroCopy{max-width:740px!important}
+.app .iqHome .iqHeroEmpty .iqHeroPoster{opacity:.45!important}
+
+/* Homepage discovery controls and shelves */
+.app .iqHome .iqCategories{
+  position:sticky!important;top:88px!important;z-index:25!important;
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:7px!important;width:100%!important;box-sizing:border-box!important;
+  margin:0 0 32px!important;padding:9px!important;
+  border:1px solid var(--mn-line)!important;border-radius:18px!important;
+  background:rgba(14,20,16,.91)!important;
+  -webkit-backdrop-filter:blur(16px) saturate(145%)!important;backdrop-filter:blur(16px) saturate(145%)!important;
+  box-shadow:0 10px 30px rgba(0,0,0,.19)!important;
+}
+.app .iqHome .iqCategoryPills{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:7px!important;width:100%!important}
+.app .iqHome .iqCategories button{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:39px!important;padding:0 16px!important;border:1px solid transparent!important;
+  border-radius:12px!important;background:transparent!important;color:#b4c1b8!important;
+  font-size:12px!important;font-weight:750!important;white-space:nowrap!important;
+}
+.app .iqHome .iqCategories button.active,.app .iqHome .iqCategories button:hover{
+  border-color:rgba(56,230,160,.23)!important;background:rgba(56,230,160,.11)!important;color:#baffdc!important;
+}
+.app .iqHome .iqRow{margin:0 0 38px!important;min-width:0!important}
+.app .iqHome .iqRowHead{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:14px!important;margin:0 0 15px!important}
+.app .iqHome .iqKicker{display:block!important;margin:0 0 7px!important;color:#5de9a9!important;font-size:9px!important;font-weight:850!important;letter-spacing:.17em!important;text-transform:uppercase!important}
+.app .iqHome .iqRowHead h2,.app .iqHome .maseFeatureHeading h2{
+  margin:0!important;color:#f2f7f3!important;font-size:clamp(20px,2.5vw,29px)!important;
+  font-weight:800!important;letter-spacing:-.045em!important;line-height:1.12!important;
+}
+.app .iqHome .rowMore{
+  display:inline-flex!important;align-items:center!important;gap:6px!important;min-height:36px!important;
+  padding:0 12px!important;border:1px solid var(--mn-line)!important;border-radius:12px!important;
+  background:rgba(255,255,255,.035)!important;color:#c3d0c8!important;font-size:11px!important;font-weight:750!important;
+}
+.app .iqHome .iqGrid{
+  display:grid!important;grid-template-columns:repeat(auto-fill,minmax(142px,1fr))!important;
+  align-items:start!important;gap:17px 13px!important;width:100%!important;min-width:0!important;
+}
+.app .iqHome .iqRow .iqGrid{
+  grid-auto-flow:column!important;grid-auto-columns:clamp(142px,15vw,205px)!important;
+  grid-template-columns:none!important;overflow-x:auto!important;overflow-y:hidden!important;
+  padding:2px 2px 13px!important;scroll-snap-type:x mandatory!important;overscroll-behavior-inline:contain!important;
+  scrollbar-width:thin!important;scrollbar-color:rgba(255,255,255,.16) transparent!important;
+}
+.app .iqHome .iqCard{
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:7px!important;
+  min-width:0!important;padding:0!important;overflow:visible!important;
+  border:0!important;border-radius:15px!important;background:transparent!important;
+  color:var(--mn-text)!important;text-align:left!important;box-shadow:none!important;
+  scroll-snap-align:start!important;
+}
+.app .iqHome .iqCard:hover{background:transparent!important;transform:translateY(-3px)!important}
+.app .iqHome .iqPoster{
+  position:relative!important;isolation:isolate!important;display:block!important;
+  width:100%!important;aspect-ratio:2/3!important;overflow:hidden!important;
+  border:1px solid rgba(245,255,248,.1)!important;border-radius:13px!important;
+  background:linear-gradient(145deg,#1c2921,#101612)!important;
+  box-shadow:0 9px 25px rgba(0,0,0,.26)!important;
+  transition:transform .45s var(--mn-spring),border-color .25s ease,box-shadow .25s ease!important;
+}
+.app .iqHome .iqCard:hover .iqPoster,.app .iqHome .iqCard:focus-visible .iqPoster{transform:scale(1.035)!important;border-color:rgba(116,244,181,.4)!important;box-shadow:0 15px 32px rgba(0,0,0,.38)!important}
+.app .iqHome .iqPoster>.poster{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;aspect-ratio:2/3!important;border:0!important;border-radius:0!important;background:transparent!important}
+.app .iqHome .iqPoster .posterImage{display:block!important;width:100%!important;height:100%!important;object-fit:cover!important;transition:transform .55s var(--mn-ease)!important}
+.app .iqHome .iqCard:hover .posterImage{transform:scale(1.045)!important}
+.app .iqHome .iqPoster .posterAura{background:radial-gradient(circle,rgba(56,230,160,.2),transparent 70%)!important}
+.app .iqHome .iqStatusBadge{
+  position:absolute!important;top:8px!important;left:8px!important;z-index:2!important;
+  max-width:calc(100% - 16px)!important;padding:5px 7px!important;
+  border:1px solid rgba(255,255,255,.18)!important;border-radius:7px!important;
+  background:rgba(8,13,10,.72)!important;color:#eafff2!important;
+  font-size:8px!important;font-weight:900!important;letter-spacing:.08em!important;
+  -webkit-backdrop-filter:blur(9px)!important;backdrop-filter:blur(9px)!important;
+}
+.app .iqHome .iqMeta{
+  position:absolute!important;right:7px!important;bottom:7px!important;z-index:2!important;
+  padding:5px 7px!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:7px!important;
+  background:rgba(5,9,7,.78)!important;color:#f3faf5!important;font-size:8px!important;font-weight:850!important;
+}
+.app .iqHome .iqPlay{
+  position:absolute!important;inset:0!important;z-index:3!important;
+  display:grid!important;place-items:center!important;opacity:0!important;
+  background:linear-gradient(0deg,rgba(0,0,0,.3),transparent 60%)!important;
+  transition:opacity .22s ease!important;pointer-events:none!important;
+}
+.app .iqHome .iqPlay svg{width:42px!important;height:42px!important;padding:12px!important;border-radius:50%!important;background:rgba(8,14,10,.75)!important;color:#fff!important;box-shadow:0 5px 18px rgba(0,0,0,.3)!important}
+.app .iqHome .iqCard:hover .iqPlay,.app .iqHome .iqCard:focus-visible .iqPlay{opacity:1!important}
+.app .iqHome .iqCard>b{
+  display:-webkit-box!important;overflow:hidden!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;
+  margin:1px 0 0!important;color:#edf4ef!important;font-size:12px!important;font-weight:750!important;line-height:1.4!important;
+}
+.app .iqHome .iqCard>small{display:block!important;overflow:hidden!important;color:#91a198!important;font-size:10px!important;line-height:1.4!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.app .iqHome .iqViewAll .iqGrid,.app .iqHome>.iqGrid{grid-auto-flow:initial!important;grid-template-columns:repeat(auto-fill,minmax(142px,1fr))!important;overflow:visible!important}
+.app .iqHome .masePremiereCard{border:1px solid var(--mn-line)!important;border-radius:18px!important;background:linear-gradient(145deg,#151e18,#0e1410)!important;box-shadow:0 12px 30px rgba(0,0,0,.18)!important}
+.app .iqHome .masePremiereCard h3{color:#f3f8f4!important}
+.app .iqHome .masePremiereCard p,.app .iqHome .masePremiereCard time,.app .iqHome .masePremiereCard small{color:#aab8af!important}
+.app .iqHome .maseMagicDiscovery{margin:26px 0 38px!important;padding:clamp(17px,2.4vw,26px)!important;border:1px solid var(--mn-line)!important;border-radius:22px!important;background:linear-gradient(135deg,rgba(19,30,23,.9),rgba(12,17,14,.94))!important;box-shadow:0 14px 36px rgba(0,0,0,.18)!important}
+.app .iqHome .maseFeatureHeading{display:flex!important;justify-content:space-between!important;gap:16px!important}
+.app .iqHome .maseFeatureHeading p{margin:8px 0 0!important;color:var(--mn-muted)!important;font-size:12px!important}
+.app .iqHome .maseFeatureGlyph{color:var(--mn-accent)!important;font-size:32px!important}
+.app .iqHome .maseMagicForm{display:flex!important;gap:8px!important;margin:18px 0 12px!important}
+.app .iqHome .maseMagicForm input{flex:1 1 auto!important;min-width:0!important;min-height:46px!important;padding:0 14px!important;border:1px solid var(--mn-line)!important;border-radius:13px!important;background:rgba(0,0,0,.2)!important;color:#fff!important}
+.app .iqHome .maseMagicForm button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;min-height:46px!important;padding:0 16px!important;border:0!important;border-radius:13px!important;background:var(--mn-accent)!important;color:#052015!important;font-size:12px!important;font-weight:850!important}
+.app .iqHome .maseMagicChips{display:flex!important;flex-wrap:wrap!important;gap:7px!important}
+.app .iqHome .maseMagicChips button{min-height:32px!important;padding:0 11px!important;border:1px solid var(--mn-line)!important;border-radius:999px!important;background:rgba(255,255,255,.04)!important;color:#b8c6bd!important;font-size:10px!important}
+.app .iqHome .maseAppPromo{
+  position:relative!important;inset:auto!important;z-index:1!important;display:flex!important;align-items:center!important;gap:12px!important;
+  width:100%!important;max-width:100%!important;box-sizing:border-box!important;margin:14px 0 22px!important;padding:14px 16px!important;
+  border:1px solid rgba(85,220,157,.2)!important;border-radius:18px!important;
+  background:linear-gradient(110deg,rgba(19,51,36,.95),rgba(14,25,19,.96))!important;
+  box-shadow:0 10px 25px rgba(0,0,0,.16)!important;text-decoration:none!important;transform:none!important;
+}
+.app .maseAppPromoIcon{display:grid!important;place-items:center!important;width:40px!important;height:40px!important;flex:0 0 40px!important;border-radius:13px!important;background:rgba(56,230,160,.13)!important;color:#8df4bf!important}
+.app .maseAppPromoCopy{display:flex!important;flex:1 1 auto!important;min-width:0!important;flex-direction:column!important;gap:4px!important}
+.app .maseAppPromoCopy b{color:#f0faf4!important;font-size:12px!important}
+.app .maseAppPromoCopy small{color:#a7b8ae!important;font-size:10px!important;line-height:1.45!important}
+.app .maseAppPromoAction{display:inline-flex!important;align-items:center!important;gap:4px!important;color:#8cf1ba!important;font-size:11px!important;font-weight:850!important;white-space:nowrap!important}
+.app .maseAppFloat,.app .homeFloat{display:none!important;visibility:hidden!important;pointer-events:none!important}
+
+/* Glass sidebar / drawer */
+.maseGlassSidebar{
+  position:fixed!important;z-index:90!important;left:12px!important;top:50%!important;bottom:auto!important;
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:12px!important;
+  width:64px!important;height:min(690px,calc(100dvh - 150px))!important;max-height:calc(100dvh - 120px)!important;
+  padding:13px 8px!important;box-sizing:border-box!important;overflow:hidden!important;
+  transform:translateY(-50%)!important;
+  border:1px solid rgba(232,245,237,.15)!important;border-radius:23px!important;
+  background:rgba(14,21,17,.9)!important;
+  box-shadow:0 18px 55px rgba(0,0,0,.36),inset 0 1px rgba(255,255,255,.08)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(145%)!important;backdrop-filter:blur(18px) saturate(145%)!important;
+  transition:width .38s var(--mn-spring),transform .32s var(--mn-ease),opacity .2s ease!important;
+}
+.maseGlassSidebar.isExpanded{width:256px!important}
+.maseSidebarBrand{display:flex!important;align-items:center!important;gap:10px!important;min-height:45px!important;padding:2px 4px!important;overflow:hidden!important}
+.maseSidebarBrand img{width:40px!important;height:40px!important;flex:0 0 40px!important;object-fit:contain!important;border-radius:12px!important}
+.maseSidebarBrand>span{display:none!important;min-width:0!important;flex-direction:column!important;gap:3px!important;white-space:nowrap!important}
+.maseGlassSidebar.isExpanded .maseSidebarBrand>span,.maseGlassSidebar.isDrawerOpen .maseSidebarBrand>span{display:flex!important}
+.maseSidebarBrand b{color:#f1f7f3!important;font-size:13px!important;letter-spacing:-.03em!important}
+.maseSidebarBrand small{color:#7f9387!important;font-size:8px!important;font-weight:850!important;letter-spacing:.14em!important}
+.maseSidebarSectionLabel{display:none!important;padding:5px 9px!important;color:#74877c!important;font-size:9px!important;font-weight:850!important;letter-spacing:.15em!important}
+.maseGlassSidebar.isExpanded .maseSidebarSectionLabel,.maseGlassSidebar.isDrawerOpen .maseSidebarSectionLabel{display:block!important}
+.maseSidebarItems{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;gap:5px!important;min-height:0!important;overflow:auto!important;scrollbar-width:none!important}
+.maseSidebarItems::-webkit-scrollbar{display:none}
+.maseSidebarItem{
+  position:relative!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:12px!important;
+  width:100%!important;min-width:0!important;min-height:46px!important;padding:0 12px!important;
+  border:1px solid transparent!important;border-radius:14px!important;background:transparent!important;
+  color:#a9b7ae!important;text-align:left!important;white-space:nowrap!important;
+}
+.maseSidebarItem:hover,.maseSidebarItem.isActive{border-color:rgba(56,230,160,.18)!important;background:rgba(56,230,160,.095)!important;color:#eafff2!important}
+.maseSidebarIcon{display:grid!important;place-items:center!important;width:24px!important;height:24px!important;flex:0 0 24px!important;color:inherit!important}
+.maseSidebarLabel{display:none!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:12px!important;font-weight:700!important}
+.maseGlassSidebar.isExpanded .maseSidebarLabel,.maseGlassSidebar.isDrawerOpen .maseSidebarLabel{display:block!important}
+.maseSidebarCount{margin-left:auto!important;display:grid!important;place-items:center!important;min-width:20px!important;height:20px!important;padding:0 5px!important;border-radius:999px!important;background:#dc5b78!important;color:#fff!important;font-size:9px!important;font-style:normal!important;font-weight:900!important}
+.maseSidebarCollectionDot{display:none!important;width:6px!important;height:6px!important;flex:0 0 6px!important;margin-left:auto!important;border-radius:50%!important}
+.maseGlassSidebar.isExpanded .maseSidebarCollectionDot,.maseGlassSidebar.isDrawerOpen .maseSidebarCollectionDot{display:block!important}
+.maseSidebarCollectionDot.dot-gold{background:#e9c77f!important}.maseSidebarCollectionDot.dot-emerald{background:#4ee2a0!important}
+.maseSidebarOffline{display:none!important;padding:11px!important;border:1px solid var(--mn-line)!important;border-radius:14px!important;background:rgba(255,255,255,.025)!important}
+.maseGlassSidebar.isExpanded .maseSidebarOffline,.maseGlassSidebar.isDrawerOpen .maseSidebarOffline{display:block!important}
+.maseSidebarOfflineHeading{display:flex!important;align-items:center!important;gap:7px!important;color:#a8b8ae!important;font-size:10px!important}
+.maseSidebarOfflineHeading b{margin-left:auto!important;color:#e4eee7!important}
+.maseSidebarStorageTrack{height:4px!important;margin:9px 0 6px!important;overflow:hidden!important;border-radius:99px!important;background:rgba(255,255,255,.1)!important}
+.maseSidebarStorageTrack i{display:block!important;height:100%!important;border-radius:inherit!important;background:linear-gradient(90deg,#34d995,#91edb8)!important}
+.maseSidebarOffline small{color:#7f9086!important;font-size:9px!important}
+.maseSidebarProfileFooter{display:flex!important;align-items:center!important;gap:9px!important;min-height:48px!important;padding:5px!important;border:1px solid transparent!important;border-radius:14px!important;background:transparent!important;color:#e9f2ec!important;text-align:left!important}
+.maseSidebarAvatar{display:grid!important;place-items:center!important;width:34px!important;height:34px!important;flex:0 0 34px!important;border-radius:12px!important;background:rgba(56,230,160,.13)!important;color:#91f0bb!important}
+.maseSidebarProfileText{display:none!important;flex:1 1 auto!important;min-width:0!important;flex-direction:column!important;gap:3px!important}
+.maseGlassSidebar.isExpanded .maseSidebarProfileText,.maseGlassSidebar.isDrawerOpen .maseSidebarProfileText{display:flex!important}
+.maseSidebarProfileText b{font-size:10px!important}.maseSidebarProfileText small{color:#82948a!important;font-size:9px!important}
+.maseSidebarEdgeToggle{
+  position:fixed!important;z-index:94!important;left:66px!important;top:50%!important;
+  display:grid!important;place-items:center!important;width:26px!important;height:42px!important;
+  padding:0!important;border:1px solid rgba(232,245,237,.16)!important;border-radius:0 12px 12px 0!important;
+  background:rgba(18,26,21,.94)!important;color:#c4d3ca!important;
+  box-shadow:7px 0 20px rgba(0,0,0,.2)!important;transform:translateY(-50%)!important;
+}
+.maseGlassSidebar.isExpanded~.maseSidebarEdgeToggle{left:258px!important}
+.maseSidebarMobileTrigger{display:none!important}
+.maseSidebarScrim{display:none!important}
+
+/* Gooey five-action dock — only the blob is processed by the SVG filter */
+.app .masenetLiquidDock.maseGooeyDock{
+  position:fixed!important;z-index:110!important;left:50%!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;align-items:center!important;gap:4px!important;
+  width:min(440px,calc(100vw - 30px))!important;height:76px!important;box-sizing:border-box!important;
+  padding:7px!important;overflow:visible!important;transform:translateX(-50%)!important;
+  border:1px solid rgba(232,245,237,.18)!important;border-radius:26px!important;
+  background:rgba(15,22,18,.86)!important;color:#edf6ef!important;
+  box-shadow:0 15px 48px rgba(0,0,0,.4),inset 0 1px rgba(255,255,255,.09)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(150%)!important;backdrop-filter:blur(18px) saturate(150%)!important;
+}
+.app .masenetLiquidDock .dockFilterDefs{position:absolute!important;width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}
+.app .masenetLiquidDock .dockGooeyIndicator{
+  position:absolute!important;z-index:0!important;top:7px!important;bottom:7px!important;left:7px!important;
+  width:calc((100% - 48px)/5)!important;pointer-events:none!important;
+  border:1px solid rgba(255,255,255,.24)!important;border-radius:20px!important;
+  background:transparent!important;box-shadow:none!important;filter:none!important;
+  transition:left .42s var(--mn-spring),width .2s ease!important;
+  animation:none!important;will-change:auto!important;
+}
+.app .masenetLiquidDock .dockGooeyBlob{
+  position:absolute!important;inset:0!important;display:block!important;border-radius:inherit!important;
+  background:linear-gradient(145deg,rgba(85,242,177,.28),rgba(31,176,116,.17))!important;
+  filter:url(#liquid-gooey-filter)!important;
+  transition:background .3s ease!important;
+}
+.app .masenetLiquidDock .dockGooeyIndicator[style*="#ff477e"] .dockGooeyBlob{background:linear-gradient(145deg,rgba(255,100,145,.29),rgba(199,43,97,.16))!important}
+.app .masenetLiquidDock .dockGooeyIndicator[style*="#3b9eff"] .dockGooeyBlob{background:linear-gradient(145deg,rgba(86,172,255,.3),rgba(39,104,210,.16))!important}
+.app .masenetLiquidDock .dockGooeyIndicator[style*="#a855f7"] .dockGooeyBlob{background:linear-gradient(145deg,rgba(184,121,255,.3),rgba(116,55,202,.16))!important}
+.app .masenetLiquidDock .dockGooeyIndicator[style*="#fbbf24"] .dockGooeyBlob{background:linear-gradient(145deg,rgba(255,215,110,.3),rgba(190,137,37,.16))!important}
+.app .masenetLiquidDock .dockGooeyDroplet{
+  position:absolute!important;right:-3px!important;top:18%!important;width:12px!important;height:64%!important;
+  display:block!important;border-radius:999px!important;background:rgba(222,255,236,.46)!important;
+  filter:blur(3px)!important;opacity:.72!important;
+}
+.app .masenetLiquidDock>.dockItem{
+  position:relative!important;z-index:1!important;display:flex!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;gap:4px!important;
+  width:100%!important;min-width:0!important;height:60px!important;min-height:60px!important;
+  padding:3px 1px!important;border:1px solid transparent!important;border-radius:18px!important;
+  background:transparent!important;color:rgba(220,233,225,.68)!important;box-shadow:none!important;
+  transform:translateZ(0)!important;transition:color .2s ease,transform .34s var(--mn-spring)!important;
+  touch-action:manipulation!important;
+}
+.app .masenetLiquidDock>.dockItem.active{color:#f5fff8!important;transform:translateY(-2px) scale(1.035)!important}
+.app .masenetLiquidDock>.dockItem:active{transform:scale(.93)!important}
+.app .masenetLiquidDock .dockIconShell{position:relative!important;display:grid!important;place-items:center!important;width:34px!important;height:32px!important;border:0!important;border-radius:12px!important;background:transparent!important;box-shadow:none!important}
+.app .masenetLiquidDock .dockItem.active .dockIconShell{color:#fff!important}
+.app .masenetLiquidDock .dockLabel{display:block!important;max-width:100%!important;overflow:hidden!important;color:inherit!important;font-size:9px!important;font-weight:750!important;line-height:1!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.app .masenetLiquidDock .dockNotificationBadge{position:absolute!important;top:-5px!important;right:-7px!important;display:grid!important;place-items:center!important;min-width:16px!important;height:16px!important;padding:0 3px!important;border-radius:99px!important;background:#ed5e79!important;color:#fff!important;font-size:8px!important;font-style:normal!important;font-weight:900!important}
+.app .nav-auto-hidden .masenetLiquidDock{transform:translate(-50%,calc(130% + 30px))!important}
+
+/* Floating assistant and notification surfaces stay clear of poster artwork */
+.app .aiDock{z-index:85!important;border:1px solid rgba(130,238,182,.36)!important;box-shadow:0 12px 30px rgba(0,0,0,.34)!important}
+.app .aiDynamicIsland{z-index:84!important}
+.app .backdrop{z-index:150!important}
+.app .backdrop .aiSide{z-index:151!important}
+.app .searchDock{z-index:75!important;border:1px solid var(--mn-line)!important;border-radius:18px!important;background:rgba(13,20,16,.96)!important;box-shadow:0 18px 45px rgba(0,0,0,.4)!important;-webkit-backdrop-filter:blur(18px)!important;backdrop-filter:blur(18px)!important}
+
+/* Shared liquid-jelly interaction language */
+html.maseJellyEnabled .app button{position:relative;isolation:isolate;overflow:hidden}
+html.maseJellyEnabled .app button .maseJellySpotlight{
+  position:absolute;inset:-1px;z-index:-1;pointer-events:none;border-radius:inherit;
+  opacity:0;background:radial-gradient(150px circle at var(--spot-x,50%) var(--spot-y,50%),rgba(255,255,255,.18),transparent 70%);
+  transition:opacity .22s ease;
+}
+html.maseJellyEnabled .app button.maseJellyTarget .maseJellySpotlight{opacity:1}
+html.maseJellyEnabled .app button.maseJellyPressed{transform:scaleX(1.09) scaleY(.89)!important;transition:transform .12s ease-out!important}
+html.maseJellyEnabled .app button.maseJellyRebound{animation:mnJellyRebound .34s var(--mn-spring) both!important}
+@keyframes mnJellyRebound{0%{transform:scaleX(1.09) scaleY(.89)}52%{transform:scaleX(.96) scaleY(1.04)}100%{transform:scale(1)}}
+html.maseJellyEnabled .app .maseJellyRipple{
+  position:absolute;z-index:4;width:12px;height:12px;border-radius:50%;pointer-events:none;
+  background:rgba(255,255,255,.35);transform:translate(-50%,-50%) scale(0);opacity:.7;
+  animation:mnRipple .65s ease-out forwards;
+}
+@keyframes mnRipple{to{transform:translate(-50%,-50%) scale(18);opacity:0}}
+
+/* Utility panels, page headings and admin content inherit the new premium system */
+.app .adminHead,.app .adminCard,.app .maseUtilityHead,.app .maseUtilityCard,.app .detailHero{
+  border-color:var(--mn-line)!important;background:linear-gradient(145deg,rgba(18,27,21,.95),rgba(11,16,13,.96))!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.2)!important;
+}
+.app .detail{max-width:1380px!important;margin:0 auto!important;padding:26px clamp(16px,2.4vw,34px) calc(135px + env(safe-area-inset-bottom))!important}
+.app .detail h1,.app .adminHead h1{color:#f3f8f4!important;letter-spacing:-.05em!important}
+.app .episode{border-color:var(--mn-line)!important;background:rgba(255,255,255,.035)!important}
+.app .episode.selected{border-color:rgba(56,230,160,.35)!important;background:rgba(56,230,160,.08)!important}
+.app .tabbar .tabActive{background:rgba(56,230,160,.12)!important;color:#91f4bd!important}
+.app .maseCatalogWarning{margin:12px 0;padding:12px 15px;border:1px solid rgba(231,196,126,.28);border-radius:14px;background:rgba(91,66,26,.18);color:#f0d9a9}
+.app .maseCatalogWarning button{margin-left:12px}
+
+/* Existing player surface is preserved; only its surrounding page canvas is themed */
+.app :is(.maseNetPlayerV3,.masePlayer,.player,.video-player,.playerShell,.maseVideoPlayer){isolation:isolate}
+.app :is(.maseNetPlayerV3,.masePlayer,.player,.video-player,.playerShell,.maseVideoPlayer) :is(button,[role=button]){transform:none!important;animation:none!important}
+.app .maseTrailerPlayer .maseTrailerFrame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:18px;background:#000}
+.app .maseTrailerPlayer .maseTrailerFrame iframe,.app .maseTrailerPlayer .maseTrailerFrame video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border:0}
+
+/* Light theme and system preference retain accessible contrast */
+html[data-mase-theme="light"]{
+  color-scheme:light;
+  --mn-bg:#f2f6f3;--mn-bg-raised:#fff;--mn-panel:rgba(255,255,255,.9);--mn-panel-solid:#fff;
+  --mn-line:rgba(23,52,36,.12);--mn-line-strong:rgba(23,52,36,.18);
+  --mn-text:#17231c;--mn-muted:#607168;--mn-soft:#34483c;
+}
+html[data-mase-theme="light"] body{background:#f2f6f3!important;color:#17231c!important}
+html[data-mase-theme="light"] .app{background:radial-gradient(ellipse 70% 38% at 52% -14%,rgba(39,145,91,.1),transparent 70%),#f2f6f3!important;color:#17231c!important}
+html[data-mase-theme="light"] .app .nav,html[data-mase-theme="light"] .app .iqCategories{background:rgba(255,255,255,.88)!important}
+html[data-mase-theme="light"] .app .nav .brand,html[data-mase-theme="light"] .app .brandName,html[data-mase-theme="light"] .app .nav .navActions .icon,html[data-mase-theme="light"] .app .nav>.icon{color:#1a2b20!important}
+html[data-mase-theme="light"] .app .iqRowHead h2,html[data-mase-theme="light"] .app .iqCard>b{color:#1a2b20!important}
+html[data-mase-theme="light"] .app .iqCard>small{color:#64766b!important}
+html[data-mase-theme="light"] .maseGlassSidebar{background:rgba(255,255,255,.93)!important}
+html[data-mase-theme="light"] .maseSidebarBrand b,html[data-mase-theme="light"] .maseSidebarProfileFooter{color:#1a2b20!important}
+html[data-mase-theme="light"] .app .masenetLiquidDock{background:rgba(255,255,255,.9)!important;color:#1a2b20!important}
+@media(prefers-color-scheme:light){
+  html:not([data-mase-theme]){color-scheme:light;--mn-bg:#f2f6f3;--mn-text:#17231c;--mn-muted:#607168}
+  html:not([data-mase-theme]) body{background:#f2f6f3;color:#17231c}
+}
+
+/* Mobile and Telegram WebView */
+@media(max-width:760px){
+  .app{padding-left:0!important}
+  .app .nav{
+    top:max(7px,env(safe-area-inset-top))!important;width:calc(100% - 16px)!important;
+    min-height:56px!important;margin:7px 8px 0!important;padding:7px 9px 7px 54px!important;
+    gap:7px!important;border-radius:18px!important;
+  }
+  .app .brandLogo{width:34px!important;height:34px!important}
+  .app .brandName{font-size:14px!important}
+  .app .nav>.icon,.app .nav .navActions .icon{width:39px!important;height:39px!important;min-width:39px!important}
+  .app .maseHeaderSearch{height:40px!important;padding:0 8px!important;gap:6px!important}
+  .app .maseHeaderSearch input{font-size:12px!important}
+  .app .iqHome{padding:12px 10px calc(112px + env(safe-area-inset-bottom))!important}
+  .app .iqHome .iqHero{
+    min-height:min(610px,calc(78svh - 30px))!important;height:auto!important;
+    min-height:510px!important;margin:10px 0 22px!important;padding:24px 19px 68px!important;
+    border-radius:24px!important;
+  }
+  .app .iqHome .iqHeroCopy{max-width:100%!important}
+  .app .iqHome .iqHero h1{font-size:clamp(34px,10vw,53px)!important;max-width:100%!important}
+  .app .iqHome .iqHeroCopy p{max-width:100%!important;font-size:13px!important;-webkit-line-clamp:3!important}
+  .app .iqHome .maseHeroBrandline{font-size:8px!important;letter-spacing:.12em!important}
+  .app .iqHome .iqTags{gap:5px!important;margin-bottom:12px!important}
+  .app .iqHome .iqTags span{padding:6px 8px!important;font-size:8px!important}
+  .app .iqHome .maseHeroFacts{gap:7px 12px!important;font-size:8px!important}
+  .app .iqHome .iqHeroActions{gap:8px!important;margin-top:18px!important}
+  .app .iqHome .iqHeroActions button{min-height:46px!important;padding:0 16px!important;font-size:12px!important}
+  .app .iqHome .iqHeroDots{right:18px!important;bottom:20px!important;left:18px!important;justify-content:flex-end!important}
+  .app .iqHome .iqCategories{top:70px!important;margin-bottom:23px!important;padding:7px!important;border-radius:16px!important}
+  .app .iqHome .iqCategoryPills{flex-wrap:nowrap!important;overflow-x:auto!important;scrollbar-width:none!important}
+  .app .iqHome .iqCategoryPills::-webkit-scrollbar{display:none}
+  .app .iqHome .iqCategories button{flex:0 0 auto!important;min-height:36px!important;padding:0 12px!important;font-size:10px!important}
+  .app .iqHome .iqRow{margin-bottom:27px!important}
+  .app .iqHome .iqRowHead{margin-bottom:12px!important}
+  .app .iqHome .iqRowHead h2{font-size:20px!important}
+  .app .iqHome .iqRow .iqGrid{grid-auto-columns:clamp(126px,37vw,166px)!important;gap:10px!important}
+  .app .iqHome .iqGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px 10px!important}
+  .app .iqHome .iqCard>b{font-size:11px!important}
+  .app .iqHome .iqCard>small{font-size:9px!important}
+  .app .iqHome .maseMagicDiscovery{padding:16px!important;border-radius:18px!important}
+  .app .iqHome .maseMagicForm{flex-direction:column!important}
+  .app .iqHome .maseMagicForm button{width:100%!important}
+  .app .maseAppPromo{padding:11px!important;gap:8px!important}
+  .app .maseAppPromoIcon{width:34px!important;height:34px!important;flex-basis:34px!important}
+  .app .maseAppPromoAction{font-size:10px!important}
+  .maseGlassSidebar{
+    left:10px!important;top:10px!important;bottom:10px!important;
+    width:min(300px,calc(100vw - 38px))!important;height:auto!important;max-height:none!important;
+    padding:16px 12px!important;border-radius:25px!important;
+    transform:translate3d(calc(-100% - 24px),0,0)!important;opacity:0!important;pointer-events:none!important;
+  }
+  .maseGlassSidebar.isDrawerOpen{
+    transform:translate3d(0,0,0)!important;opacity:1!important;pointer-events:auto!important;
+  }
+  .maseGlassSidebar.isDrawerOpen .maseSidebarBrand>span,.maseGlassSidebar.isDrawerOpen .maseSidebarSectionLabel,.maseGlassSidebar.isDrawerOpen .maseSidebarLabel,.maseGlassSidebar.isDrawerOpen .maseSidebarOffline,.maseGlassSidebar.isDrawerOpen .maseSidebarProfileText{display:flex!important}
+  .maseGlassSidebar.isDrawerOpen .maseSidebarSectionLabel{display:block!important}
+  .maseGlassSidebar.isDrawerOpen .maseSidebarItem{min-height:48px!important}
+  .maseSidebarMobileTrigger{
+    position:fixed!important;z-index:115!important;left:14px!important;top:calc(15px + env(safe-area-inset-top))!important;
+    display:grid!important;place-items:center!important;width:38px!important;height:38px!important;
+    padding:0!important;border:1px solid rgba(232,245,237,.13)!important;border-radius:13px!important;
+    background:rgba(255,255,255,.055)!important;color:#f2f8f4!important;
+    -webkit-backdrop-filter:blur(12px)!important;backdrop-filter:blur(12px)!important;
+  }
+  .maseSidebarScrim{
+    position:fixed!important;inset:0!important;z-index:89!important;display:block!important;
+    border:0!important;border-radius:0!important;background:rgba(0,0,0,.56)!important;
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  }
+  .maseSidebarEdgeToggle{display:none!important}
+  .app .masenetLiquidDock.maseGooeyDock{height:70px!important;width:min(420px,calc(100vw - 22px))!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;border-radius:23px!important;padding:5px!important}
+  .app .masenetLiquidDock .dockGooeyIndicator{top:5px!important;bottom:5px!important;left:5px!important}
+  .app .masenetLiquidDock>.dockItem{height:58px!important;min-height:58px!important;gap:3px!important}
+  .app .masenetLiquidDock .dockIconShell{height:30px!important}
+  .app .masenetLiquidDock .dockLabel{font-size:8px!important}
+  .app .detail{padding:18px 12px calc(120px + env(safe-area-inset-bottom))!important}
+}
+@media(max-width:380px){
+  .app .iqHome .iqHero{min-height:490px!important;padding:20px 15px 62px!important}
+  .app .iqHome .iqHero h1{font-size:33px!important}
+  .app .iqHome .iqHeroActions button{padding:0 13px!important}
+  .app .iqHome .iqRow .iqGrid{grid-auto-columns:126px!important}
+  .app .brandName{font-size:12px!important}
+  .app .nav .navActions{gap:3px!important}
+}
+@media(min-width:761px){
+  .maseSidebarMobileTrigger{display:none!important}
+  .maseSidebarScrim{display:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto!important}
+  .app *, .maseGlassSidebar *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+@supports(padding:max(0px)){
+  .app .masenetLiquidDock{padding-bottom:max(7px,env(safe-area-inset-bottom))!important}
+}
