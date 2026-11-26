@@ -4739,3 +4739,71 @@ body:has(.app.theme-light),
     gap:12px!important;
   }
 }
+
+
+/* MaseNet mobile interaction refinements — movable AI, compact timed hint, Dynamic Island panels. */
+.app .aiDock {
+  right:auto!important;
+  bottom:auto!important;
+  touch-action:none!important;
+  cursor:grab!important;
+  user-select:none!important;
+  -webkit-user-select:none!important;
+  z-index:160!important;
+}
+.app .aiDock:active{cursor:grabbing!important}
+.app .aiDock.aiDockSuggestionOpen{visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+.app .aiDynamicIsland{
+  max-width:min(220px,calc(100vw - 84px))!important;
+  min-height:30px!important;
+  padding:7px 11px!important;
+  font-size:11px!important;
+  line-height:1.2!important;
+  white-space:normal!important;
+  overflow:hidden!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:2!important;
+  -webkit-box-orient:vertical!important;
+  text-overflow:ellipsis!important;
+  border-radius:18px!important;
+}
+.app .maseSidebarMobileTrigger{
+  overflow:hidden!important;
+  isolation:isolate!important;
+  transition:width .48s cubic-bezier(.2,.9,.2,1.25),height .48s cubic-bezier(.2,.9,.2,1.25),border-radius .48s cubic-bezier(.2,.9,.2,1.25),background .3s ease,box-shadow .3s ease!important;
+}
+.app .maseMenuMorphIcon{display:grid;place-items:center;position:relative;width:20px;height:20px}
+.app .maseMenuMorphIcon svg{grid-area:1/1;transition:opacity .28s ease,transform .5s cubic-bezier(.2,.9,.2,1.3)}
+.app .maseMenuMorphIcon svg:last-child{opacity:0;transform:rotate(-90deg) scale(.45)}
+.app .maseSidebarMobileTrigger.isOpen{width:48px!important;height:48px!important;border-radius:17px!important;box-shadow:0 8px 28px rgba(30,180,140,.22),inset 0 1px rgba(255,255,255,.8)!important}
+.app .maseSidebarMobileTrigger.isOpen .maseMenuMorphIcon svg:first-child{opacity:0;transform:rotate(90deg) scale(.45)}
+.app .maseSidebarMobileTrigger.isOpen .maseMenuMorphIcon svg:last-child{opacity:1;transform:rotate(0) scale(1)}
+.app .maseSidebarScrim{backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;animation:maseIslandScrimIn .35s ease both!important}
+.app .maseGlassSidebar.isDrawerOpen{transform:translate3d(0,0,0) scale(1)!important;transform-origin:top left!important;animation:maseIslandOpen .55s cubic-bezier(.2,.9,.2,1.18) both!important}
+.app .settingsIslandSide{
+  transform-origin:top left!important;
+  animation:maseIslandOpen .56s cubic-bezier(.2,.9,.2,1.18) both!important;
+}
+.app .settingsIslandSide.closing{animation:maseIslandClose .28s cubic-bezier(.4,0,.8,.2) both!important}
+.app .backdrop:has(.settingsIslandSide){
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  padding:calc(78px + env(safe-area-inset-top,0px)) 12px 18px!important;
+  background:rgba(5,12,16,.28)!important;
+  backdrop-filter:blur(14px)!important;
+}
+.app .settingsIslandSide{
+  align-self:flex-start!important;
+  margin:0!important;
+  width:min(390px,calc(100vw - 24px))!important;
+  max-height:calc(100dvh - 104px - env(safe-area-inset-top,0px))!important;
+  overflow:auto!important;
+  border-radius:26px!important;
+  box-shadow:0 24px 80px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.72)!important;
+}
+@keyframes maseIslandOpen{0%{opacity:0;transform:translate3d(-18px,-22px,0) scale(.82,.72);filter:blur(9px);border-radius:36px}58%{opacity:1;transform:translate3d(3px,2px,0) scale(1.025,1.015);filter:blur(0)}100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}}
+@keyframes maseIslandClose{0%{opacity:1;transform:translate3d(0,0,0) scale(1)}100%{opacity:0;transform:translate3d(-14px,-18px,0) scale(.84,.78);filter:blur(7px)}}
+@keyframes maseIslandScrimIn{from{opacity:0}to{opacity:1}}
+.app .maseSidebarLive .maseLiveDot{display:block;width:9px;height:9px;border-radius:50%;background:#20c98b;box-shadow:0 0 0 4px rgba(32,201,139,.13),0 0 14px rgba(32,201,139,.65);animation:maseLivePulse 1.8s ease-in-out infinite}
+@keyframes maseLivePulse{50%{box-shadow:0 0 0 7px rgba(32,201,139,.04),0 0 18px rgba(32,201,139,.85)}}
+@media(prefers-reduced-motion:reduce){.app .maseMenuMorphIcon svg,.app .maseSidebarMobileTrigger,.app .settingsIslandSide,.app .maseSidebarScrim{animation:none!important;transition:none!important}}
