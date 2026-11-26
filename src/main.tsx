@@ -41,6 +41,12 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
 }
 
 if (Capacitor.isNativePlatform()) document.documentElement.dataset.masenetNative = 'true';
+if (Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
+  // The native shell loads the live Cloudflare app; remove legacy PWA workers/caches
+  // that can otherwise keep an installed app on an older interface.
+  void navigator.serviceWorker.getRegistrations().then(registrations => Promise.all(registrations.map(registration => registration.unregister()))).catch(() => {});
+  if ('caches' in window) void caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('masenet-shell-')).map(key => caches.delete(key)))).catch(() => {});
+}
 
 const root = document.getElementById('root');
 if (root) {
