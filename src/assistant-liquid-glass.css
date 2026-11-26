@@ -175,3 +175,72 @@
  .app .backdrop.aiBackdrop>.aiSide{width:min(360px,calc(100vw - 16px))!important;height:min(440px,58dvh)!important;max-height:calc(100dvh - 88px - env(safe-area-inset-bottom,0px))!important;margin:0!important;padding:6px!important;border-radius:21px!important}
  .app .backdrop.aiBackdrop>.aiSide .aiQuickPrompts button{font-size:9px!important;min-height:32px!important}
 }
+
+
+/* iOS compact composer: true capsule, smaller controls and animated edge light */
+.app .backdrop.aiBackdrop>.aiSide .aiComposer{
+  min-height:38px!important;height:38px!important;max-height:38px!important;
+  padding:3px 5px 3px 9px!important;gap:4px!important;
+  border-radius:999px!important;border:1px solid rgba(204,219,255,.25)!important;
+  background:linear-gradient(155deg,rgba(255,255,255,.14),rgba(255,255,255,.055))!important;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.18),0 5px 18px rgba(0,0,0,.2)!important;
+  transition:height .24s ease,border-color .25s ease,box-shadow .25s ease,transform .25s ease!important;
+}
+.app .backdrop.aiBackdrop>.aiSide .aiComposer:before{
+  inset:-5px!important;border-radius:999px!important;filter:blur(13px)!important;
+  background:conic-gradient(from 0deg,rgba(113,157,255,.0),rgba(123,158,255,.68),rgba(194,132,255,.5),rgba(104,218,255,.62),rgba(113,157,255,0))!important;
+  opacity:.38!important;animation:mnEdgeOrbit 5s linear infinite,mnEdgeBreath 2.8s ease-in-out infinite!important;
+}
+.app .backdrop.aiBackdrop>.aiSide .aiComposer:after{
+  content:""!important;position:absolute!important;inset:0!important;border-radius:inherit!important;
+  pointer-events:none!important;border:1px solid rgba(230,239,255,.12)!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.13)!important;
+}
+.app .backdrop.aiBackdrop>.aiSide .aiComposer:focus-within{
+  transform:translateY(-1px) scale(1.008)!important;
+  border-color:rgba(171,198,255,.75)!important;
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.2),0 0 0 2px rgba(132,160,255,.12),0 0 22px rgba(111,145,255,.28)!important;
+}
+.app .backdrop.aiBackdrop>.aiSide .aiComposer:focus-within:before{opacity:.95!important;animation:mnEdgeOrbit 2.6s linear infinite,mnEdgeBreath 1.2s ease-in-out infinite!important}
+.app .backdrop.aiBackdrop>.aiSide .aiComposer>input{
+  flex:1 1 auto!important;width:0!important;min-width:0!important;height:30px!important;
+  padding:0 5px!important;font-size:12px!important;line-height:1.2!important;
+}
+.app .backdrop.aiBackdrop>.aiSide .aiAttach,
+.app .backdrop.aiBackdrop>.aiSide .aiVoice{
+  width:26px!important;height:27px!important;min-width:26px!important;flex:0 0 26px!important;
+  border-radius:50%!important;display:grid!important;place-items:center!important;
+}
+.app .backdrop.aiBackdrop>.aiSide .aiSend{
+  width:29px!important;height:29px!important;min-width:29px!important;flex:0 0 29px!important;
+  border-radius:50%!important;display:grid!important;place-items:center!important;
+  transition:transform .28s cubic-bezier(.2,.9,.25,1.35),box-shadow .25s ease!important;
+}
+.app .backdrop.aiBackdrop>.aiSide .aiComposer:focus-within .aiSend:not(:disabled){animation:mnSendReady 1.5s ease-in-out infinite!important}
+.app .backdrop.aiBackdrop>.aiSide .ai-busy .aiComposer{
+  border-color:rgba(174,194,255,.78)!important;
+  box-shadow:0 0 0 2px rgba(133,159,255,.12),0 0 26px rgba(111,145,255,.3),inset 0 1px rgba(255,255,255,.2)!important;
+}
+.app .backdrop.aiBackdrop>.aiSide .ai-busy .aiComposer:before{opacity:1!important;animation:mnEdgeOrbit 1.8s linear infinite,mnEdgeBreath .9s ease-in-out infinite!important}
+.app .backdrop.aiBackdrop>.aiSide .ai-busy .aiSend{animation:mnSendLaunch .72s cubic-bezier(.2,.8,.2,1) infinite alternate!important}
+.app .backdrop.aiBackdrop>.aiSide .ai-busy .aiComposer>input{opacity:.72!important}
+.app .backdrop.aiBackdrop>.aiSide .ai-busy .aiMessages{scroll-behavior:smooth!important}
+.app .backdrop.aiBackdrop>.aiSide .aiBubble.user{animation:mnUserSend .48s cubic-bezier(.16,1,.3,1) both!important}
+.app .backdrop.aiBackdrop>.aiSide .aiBubble.assistant{animation:mnAssistantArrive .5s cubic-bezier(.16,1,.3,1) both!important}
+@keyframes mnEdgeOrbit{to{transform:rotate(360deg)}}
+@keyframes mnEdgeBreath{0%,100%{filter:blur(11px);opacity:.32}50%{filter:blur(16px);opacity:.82}}
+@keyframes mnSendReady{0%,100%{box-shadow:0 3px 12px rgba(120,149,255,.22)}50%{box-shadow:0 3px 17px rgba(120,149,255,.5),0 0 0 4px rgba(150,174,255,.1)}}
+@keyframes mnSendLaunch{from{transform:scale(.91) rotate(-8deg)}to{transform:scale(1.08) rotate(8deg)}}
+@keyframes mnUserSend{from{opacity:0;transform:translate(12px,10px) scale(.91);filter:blur(3px)}to{opacity:1;transform:translate(0) scale(1);filter:blur(0)}}
+@keyframes mnAssistantArrive{from{opacity:0;transform:translate(-9px,9px) scale(.96);filter:blur(3px)}to{opacity:1;transform:translate(0) scale(1);filter:blur(0)}}
+@media(max-width:560px){
+ .app .backdrop.aiBackdrop>.aiSide .aiComposer{height:36px!important;min-height:36px!important;max-height:36px!important;padding:2px 4px 2px 8px!important}
+ .app .backdrop.aiBackdrop>.aiSide .aiAttach,.app .backdrop.aiBackdrop>.aiSide .aiVoice{width:24px!important;height:25px!important;min-width:24px!important;flex-basis:24px!important}
+ .app .backdrop.aiBackdrop>.aiSide .aiSend{width:27px!important;height:27px!important;min-width:27px!important;flex-basis:27px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .app .backdrop.aiBackdrop>.aiSide .aiComposer:before,
+ .app .backdrop.aiBackdrop>.aiSide .aiComposer:focus-within .aiSend,
+ .app .backdrop.aiBackdrop>.aiSide .ai-busy .aiSend,
+ .app .backdrop.aiBackdrop>.aiSide .aiBubble{animation:none!important}
+}
