@@ -47,6 +47,57 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
     );
   });
 
+
+async function deliverVaultDownload(env: Env, chatId: string | number, rawToken: string): Promise<"delivered"|"invalid"|"failed"> {
+  const token = rawToken.toLowerCase();
+  if (!/^[a-f0-9]{48}$/.test(token)) return "invalid";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  const tokenHash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_media_delivery_tokens (
+    token_hash TEXT PRIMARY KEY,
+    media_asset_id TEXT NOT NULL REFERENCES telegram_media_assets(id) ON DELETE CASCADE,
+    expires_at TEXT NOT NULL,
+    used_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_media_delivery_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    media_asset_id TEXT NOT NULL REFERENCES telegram_media_assets(id),
+    chat_id TEXT NOT NULL,
+    delivered_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  const claim = await env.DB.prepare(`
+    UPDATE telegram_media_delivery_tokens SET used_at=datetime('now')
+    WHERE token_hash=? AND used_at IS NULL AND expires_at>datetime('now')
+      AND media_asset_id IN (SELECT id FROM telegram_media_assets WHERE status='published' AND rights_confirmed=1)
+    RETURNING media_asset_id
+  `).bind(tokenHash).first<{media_asset_id:string}>();
+  if (!claim?.media_asset_id) return "invalid";
+  const asset = await env.DB.prepare(
+    "SELECT vault_chat_id,vault_message_id FROM telegram_media_assets WHERE id=? AND status='published' AND rights_confirmed=1"
+  ).bind(claim.media_asset_id).first<{vault_chat_id:string;vault_message_id:number}>();
+  if (!asset?.vault_chat_id || !asset.vault_message_id) {
+    await env.DB.prepare("UPDATE telegram_media_delivery_tokens SET used_at=NULL WHERE token_hash=?").bind(tokenHash).run();
+    return "failed";
+  }
+  try {
+    const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/copyMessage", {
+      method:"POST", headers:{"content-type":"application/json"},
+      body:JSON.stringify({chat_id:chatId,from_chat_id:asset.vault_chat_id,message_id:asset.vault_message_id})
+    });
+    const result = await response.json().catch(() => ({})) as {ok?:boolean;description?:string};
+    if (!response.ok || !result.ok) throw new Error(result.description || "Telegram could not copy the vault file.");
+    await env.DB.prepare("INSERT INTO telegram_media_delivery_logs(media_asset_id,chat_id) VALUES (?,?)")
+      .bind(claim.media_asset_id,String(chatId)).run();
+    return "delivered";
+  } catch (error) {
+    // A Telegram copy failure must not burn the user's one-time token.
+    await env.DB.prepare("UPDATE telegram_media_delivery_tokens SET used_at=NULL WHERE token_hash=?").bind(tokenHash).run().catch(()=>undefined);
+    console.error("MaseNet vault delivery failed:", error instanceof Error ? error.message : String(error));
+    return "failed";
+  }
+}
+
 const handleTelegramUpdate = async ({ request, env }: { request: Request; env: Env }) => {
   if (!env.TELEGRAM_BOT_TOKEN) return json({ ok: false, error: "Bot token not configured" }, 503);
   if (!env.TELEGRAM_WEBHOOK_SECRET) return json({ ok: false, error: "Webhook secret is not configured" }, 503);
@@ -281,6 +332,19 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
       .bind(String(chatId), result.masemedia ? 1 : 0, result.moondramac ? 1 : 0).run();
     return result;
   };
+  if (chatType === "private" && command === "/start" && /^dl_[a-f0-9]{48}$/i.test(commandText)) {
+    const delivery = await deliverVaultDownload(env, chatId, commandText.slice(3));
+    const message = delivery === "delivered"
+      ? "✅ Your MaseNet episode file is ready. The file has been delivered above."
+      : delivery === "invalid"
+        ? "This download link is invalid, expired, or already used. Return to MaseNet and request a fresh download link."
+        : "I couldn't send the episode file just now. Your download link has been kept available; please try it again shortly.";
+    const sent = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+      method:"POST", headers:{"content-type":"application/json"},
+      body:JSON.stringify({chat_id:chatId,text:message})
+    });
+    return sent.ok ? json({ok:true,vaultDelivery:delivery}) : json({ok:false,error:"Telegram could not send the download status."},502);
+  }
   if (chatType === "private" && command === "/start") {
     try {
       await ensureSubscribers();
