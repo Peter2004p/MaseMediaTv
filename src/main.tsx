@@ -7,6 +7,7 @@ import PWAInstallPrompt from './PWAInstallPrompt';
 import './index.css';
 import './title-page.css';
 import './masenet-full-rebuild.css';
+import './assistant-liquid-glass.css';
 import MaseGlassSidebar from './MaseGlassSidebar';
 
 type ErrorBoundaryState = { hasError: boolean; message: string };
