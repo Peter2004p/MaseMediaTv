@@ -1,4 +1,4 @@
-const CACHE_NAME = 'masenet-shell-v1';
+const CACHE_NAME = 'masenet-shell-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/masenet-app-icon.svg', '/masemediatv-logo.svg'];
 const NEVER_CACHE = /(^|\/)(api|media)(\/|$)|\.(m3u8|m3u|ts|m4s|mp4|mkv|mov|webm|mpd|vtt|srt|key)(\?|$)/i;
 
@@ -38,7 +38,7 @@ self.addEventListener('fetch', event => {
       } catch {
         const cached = await caches.match('/');
         return cached || new Response(
-          '<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#070910"><title>MaseNet offline</title><body style="margin:0;background:#070910;color:#f5f1e8;font:16px system-ui;display:grid;min-height:100vh;place-items:center;text-align:center"><main style="padding:28px"><h1>MaseNet</h1><p>You are offline. Reconnect to continue browsing and streaming.</p><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:12px;background:#d2ad60;color:#17120b;font-weight:700">Try again</button></main></body></html>',
+          '<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080a09"><title>MaseNet offline</title><body style="margin:0;background:#080a09;color:#f3f7f4;font:16px system-ui;display:grid;min-height:100vh;place-items:center;text-align:center"><main style="padding:28px"><h1>MaseNet</h1><p>You are offline. Reconnect to continue browsing and streaming.</p><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:12px;background:#38e6a0;color:#052015;font-weight:700">Try again</button></main></body></html>',
           { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
         );
       }

@@ -82,12 +82,12 @@ export default function PWAInstallPrompt() {
   if (!visible) return null;
 
   return (
-    <aside aria-label="Install MaseNet app" style={{
-      position: 'fixed', zIndex: 90, right: 16, bottom: 'calc(env(safe-area-inset-bottom, 0px) + 78px)',
-      width: 'min(340px, calc(100vw - 32px))', padding: '13px 14px',
-      border: '1px solid rgba(210,173,96,.34)', borderRadius: 18,
-      background: 'rgba(12,15,25,.94)', color: '#f5f1e8',
-      boxShadow: '0 14px 40px rgba(0,0,0,.38)', backdropFilter: 'blur(18px)',
+    <aside className="masePwaInstallBanner" aria-label="Install MaseNet app" style={{
+      position: 'relative', zIndex: 1, right: 'auto', bottom: 'auto', left: 'auto', top: 'auto',
+      width: 'min(480px, calc(100vw - 32px))', margin: '14px auto 24px', padding: '13px 14px',
+      border: '1px solid rgba(56,230,160,.24)', borderRadius: 18,
+      background: 'linear-gradient(125deg,rgba(19,43,30,.97),rgba(13,22,17,.97))', color: '#f1f8f4',
+      boxShadow: '0 12px 32px rgba(0,0,0,.22)', backdropFilter: 'blur(14px)',
       fontFamily: 'system-ui, sans-serif'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
