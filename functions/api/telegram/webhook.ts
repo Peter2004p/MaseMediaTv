@@ -42,6 +42,33 @@ async function sendTyping(env: Env, chatId: string | number) {
   try { await telegramCall(env, "sendChatAction", { chat_id: chatId, action: "typing" }); } catch { /* Typing is optional. */ }
 }
 
+async function transcribeTelegramVoice(env: Env, fileId: string, mimeType = "audio/ogg"): Promise<string> {
+  if (!env.OPENAI_API_KEY) throw new Error("Voice transcription is not configured.");
+  const fileInfo = await telegramCall(env, "getFile", { file_id: fileId }) as unknown as { result?: { file_path?: string } };
+  const filePath = fileInfo.result?.file_path;
+  if (!filePath || filePath.includes("..")) throw new Error("Telegram did not return a valid voice-file path.");
+  const fileResponse = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`, { signal: AbortSignal.timeout(20000) });
+  if (!fileResponse.ok) throw new Error("Telegram voice file could not be downloaded.");
+  const audioBytes = await fileResponse.arrayBuffer();
+  if (!audioBytes.byteLength || audioBytes.byteLength > 20 * 1024 * 1024) throw new Error("Voice notes must be 20 MB or smaller.");
+  const extension = mimeType.includes("mpeg") ? "mp3" : mimeType.includes("mp4") ? "m4a" : mimeType.includes("wav") ? "wav" : "ogg";
+  const form = new FormData();
+  form.append("file", new Blob([audioBytes], { type: mimeType }), "telegram-voice." + extension);
+  form.append("model", "whisper-1");
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY },
+    body: form,
+    signal: AbortSignal.timeout(25000)
+  });
+  const result = await response.json().catch(() => ({})) as { text?: string; error?: { message?: string } };
+  if (!response.ok || !result.text?.trim()) {
+    console.error("MaseNet Telegram voice transcription failed:", response.status, result.error?.message || "Empty transcription");
+    throw new Error("Voice transcription failed.");
+  }
+  return result.text.trim().slice(0, 4000);
+}
+
 
 async function deliverVaultDownload(env: Env, chatId: string, rawToken: string): Promise<"delivered"|"invalid"|"failed"> {
   const token = rawToken.toLowerCase();
@@ -375,10 +402,30 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!chat?.id || !chat?.type) return json({ ok: true });
   const chatId = String(chat.id);
   const chatType = String(chat.type);
-  const text = typeof message?.text === "string" ? message.text.trim() : "";
+  let text = typeof message?.text === "string" ? message.text.trim() : "";
+  let voiceRateLimitReserved = false;
+  let voiceTranscript = "";
   const title = chatTitle(chat);
   const appUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
   const keyboard = { inline_keyboard: [[{ text: "🚀 Open MaseNet", web_app: { url: appUrl } }]] };
+  const voiceAttachment = message?.voice || message?.audio;
+  if (chatType === "private" && voiceAttachment?.file_id) {
+    const allowedVoiceRequest = await reserveTelegramAIRequest(env, chatId, 10).catch(() => false);
+    if (!allowedVoiceRequest) {
+      await sendMessage(env, chatId, "You’re sending messages a little too quickly. Please wait about a minute, then try again.", keyboard);
+      return json({ ok: true, rateLimited: true });
+    }
+    voiceRateLimitReserved = true;
+    await sendTyping(env, chatId);
+    try {
+      voiceTranscript = await transcribeTelegramVoice(env, String(voiceAttachment.file_id), String(voiceAttachment.mime_type || (message?.voice ? "audio/ogg" : "audio/mpeg")));
+      text = [String(message?.caption || "").trim(), voiceTranscript].filter(Boolean).join("\n\n");
+    } catch (error) {
+      console.error("MaseNet Telegram voice note could not be processed:", error instanceof Error ? error.message : "unknown error");
+      await sendMessage(env, chatId, "I received your voice note, but couldn't transcribe it. Please try a clearer or shorter recording, or type your message instead.", keyboard);
+      return json({ ok: true, voiceTranscriptionFailed: true });
+    }
+  }
 
   if (chatType === "private") {
     const startMatch = text.match(/^\/start(?:@\w+)?(?:\s+([\w-]+))?$/i);
@@ -436,7 +483,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         await sendMessage(env, chatId, resultText, keyboard, "HTML");
         return json({ ok: true, searchMatches: matches.length });
       }
-      const allowedAIRequest = await reserveTelegramAIRequest(env, String(chatId), 10).catch((error) => {
+      const allowedAIRequest = voiceRateLimitReserved || await reserveTelegramAIRequest(env, String(chatId), 10).catch((error) => {
         console.error("Telegram AI rate-limit check failed:", error instanceof Error ? error.message : String(error));
         return false;
       });
@@ -451,7 +498,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       } catch {
         answer = "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open the MaseNet Mini App using the button below.";
       }
-      await sendMessage(env, chatId, answer, keyboard);
+      await sendMessage(env, chatId, voiceTranscript ? '🎙️ Voice note understood.\n\n' + answer : answer, keyboard);
     } else if (text.startsWith("/")) {
       await sendMessage(env, chatId, "I don’t recognize that command yet. Send /help to see what I can do, or just chat with me normally.", keyboard);
     }
