@@ -405,6 +405,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   let text = typeof message?.text === "string" ? message.text.trim() : "";
   let voiceRateLimitReserved = false;
   let voiceTranscript = "";
+  const title = chatTitle(chat);
+  const appUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
+  const keyboard = { inline_keyboard: [[{ text: "🚀 Open MaseNet", web_app: { url: appUrl } }]] };
   const voiceAttachment = message?.voice || message?.audio;
   if (chatType === "private" && voiceAttachment?.file_id) {
     const allowedVoiceRequest = await reserveTelegramAIRequest(env, chatId, 10).catch(() => false);
@@ -423,9 +426,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       return json({ ok: true, voiceTranscriptionFailed: true });
     }
   }
-  const title = chatTitle(chat);
-  const appUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
-  const keyboard = { inline_keyboard: [[{ text: "🚀 Open MaseNet", web_app: { url: appUrl } }]] };
 
   if (chatType === "private") {
     const startMatch = text.match(/^\/start(?:@\w+)?(?:\s+([\w-]+))?$/i);
