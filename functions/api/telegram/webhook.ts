@@ -38,6 +38,24 @@ async function telegramCall(env: Env, method: string, payload: unknown) {
 async function sendMessage(env: Env, chatId: string | number, text: string, replyMarkup?: unknown, parseMode?: "HTML") {
   await telegramCall(env, "sendMessage", { chat_id: chatId, text: text.slice(0, 4000), disable_web_page_preview: false, ...(parseMode ? { parse_mode: parseMode } : {}), ...(replyMarkup ? { reply_markup: replyMarkup } : {}) });
 }
+async function ensureMediaDeliveryTables(env: Env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_media_delivery_tokens (
+    token_hash TEXT PRIMARY KEY,
+    media_asset_id TEXT NOT NULL REFERENCES telegram_media_assets(id) ON DELETE CASCADE,
+    expires_at TEXT NOT NULL,
+    used_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_telegram_media_delivery_expiry ON telegram_media_delivery_tokens(expires_at)").run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_media_delivery_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    media_asset_id TEXT NOT NULL REFERENCES telegram_media_assets(id),
+    chat_id TEXT NOT NULL,
+    delivered_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_telegram_media_delivery_asset ON telegram_media_delivery_logs(media_asset_id, delivered_at)").run();
+}
+
 async function sendTyping(env: Env, chatId: string | number) {
   try { await telegramCall(env, "sendChatAction", { chat_id: chatId, action: "typing" }); } catch { /* Typing is optional. */ }
 }
@@ -351,6 +369,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,?,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title,active=excluded.active,updated_at=datetime('now'),chat_type='private'").bind(chatId,title,active).run();
       const alertNote = startPayload === "alerts_on" ? "\n\n🔔 New-title alerts are enabled." : disablesAlerts ? "\n\n🔕 New-title alerts are paused." : "";
       const deliveryStart = startPayload.match(/^dl_([a-f0-9]{48})$/i);
+      if (deliveryStart) {
+        await ensureMediaDeliveryTables(env);
       if (deliveryStart) {
         const rawToken = deliveryStart[1].toLowerCase();
         const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawToken));
