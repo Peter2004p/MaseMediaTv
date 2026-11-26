@@ -172,12 +172,12 @@ body:has(.maseGlassSidebar.isExpanded) .maseSidebarEdgeToggle{left:calc(var(--ma
 .app .masenetLiquidDock.maseGooeyDock{--dock-glass:rgba(8,13,11,.82);background:linear-gradient(135deg,rgba(22,29,25,.9),rgba(8,12,10,.78))!important;backdrop-filter:blur(26px) saturate(185%)!important;-webkit-backdrop-filter:blur(26px) saturate(185%)!important;border-color:rgba(255,255,255,.18)!important;overflow:visible}
 .app .masenetLiquidDock.maseGooeyDock .dockFilterDefs{position:absolute!important;width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}
 .app .masenetLiquidDock.maseGooeyDock .dockGooeyIndicator{z-index:0;filter:url(#liquid-gooey-filter);background:radial-gradient(ellipse at 40% 30%,rgba(255,255,255,.44),color-mix(in srgb,var(--dock-color,#38f2c2) 42%,transparent) 54%,rgba(255,255,255,.08))!important;border:1px solid color-mix(in srgb,var(--dock-color,#38f2c2) 48%,transparent)!important;box-shadow:0 0 22px color-mix(in srgb,var(--dock-color,#38f2c2) 35%,transparent),inset 0 1px rgba(255,255,255,.35)!important;transition:transform .66s var(--mase-spring),background .52s ease,border-color .52s ease,box-shadow .52s ease!important;will-change:transform,opacity}
-.app .masenetLiquidDock.maseGooeyDock .dockGooeyIndicator:after{content:"";position:absolute;right:-8px;top:25%;width:19px;height:50%;border-radius:50%;background:var(--dock-color,#38f2c2);filter:blur(5px);opacity:.76;transform:translateX(0) scaleX(1.32) scaleY(.84);transition:background .52s ease,transform .66s var(--mase-spring),opacity .3s}
+.app .masenetLiquidDock.maseGooeyDock .dockGooeyIndicator:after{content:"";position:absolute;right:-8px;top:25%;width:19px;height:50%;border-radius:50%;background:var(--dock-color,#38f2c2);filter:blur(5px);opacity:.76;transform:translateX(0) scaleX(1.32) scaleY(0.84);transition:background .52s ease,transform .66s var(--mase-spring),opacity .3s}
 .app .masenetLiquidDock.maseGooeyDock .dockGooeyDroplet{position:absolute;left:-9px;top:32%;width:18px;height:36%;border-radius:50%;background:var(--dock-color,#38f2c2);filter:blur(5px);opacity:.72;transform:scaleX(.82);transition:background .52s ease,transform .66s var(--mase-spring)}
 .app .masenetLiquidDock.maseGooeyDock>.dockItem{z-index:2}
 .app .masenetLiquidDock.maseGooeyDock>.dockItem.active{color:var(--dock-color,#38f2c2)!important;text-shadow:0 0 16px color-mix(in srgb,var(--dock-color,#38f2c2) 55%,transparent)}
-.app .masenetLiquidDock.maseGooeyDock>.dockItem:active{transform:scaleX(1.32) scaleY(.84)!important}
-.app .masenetLiquidDock.maseGooeyDock .dockGooeyIndicator:active{transform:translateX(calc(var(--dock-index,0)*(100% + 5px))) scaleX(1.32) scaleY(.84)}
+.app .masenetLiquidDock.maseGooeyDock>.dockItem:active{transform:scaleX(1.32) scaleY(0.84)!important}
+.app .masenetLiquidDock.maseGooeyDock .dockGooeyIndicator:active{transform:translateX(calc(var(--dock-index,0)*(100% + 5px))) scaleX(1.32) scaleY(0.84)}
 .app .masenetLiquidDock.maseGooeyDock .dockHomeOnly.active{--dock-color:#38f2c2}
 .app .masenetLiquidDock.maseGooeyDock .dockSearch.active{--dock-color:#ff477e}
 .app .masenetLiquidDock.maseGooeyDock .dockWatchlist.active{--dock-color:#3b9eff}
@@ -205,3 +205,11 @@ html.maseJellyEnabled button.maseJellyTarget>*:not(.maseJellySpotlight):not(.mas
 html.maseJellyEnabled button.maseJellyPressed:not([data-no-jelly]){transform:scaleX(1.09) scaleY(.89)!important;filter:saturate(1.18);box-shadow:0 0 0 1px rgba(255,255,255,.16),0 9px 26px rgba(0,0,0,.2)}
 html.maseJellyEnabled button.maseJellyRebound:not([data-no-jelly]){animation:maseJellyRebound .34s var(--mase-spring) both}
 @media(prefers-reduced-motion:reduce){html.maseJellyEnabled button.maseJellyTarget{transition:none!important;animation:none!important}}
+
+/* Re-keyed active blob runs the full stretch, rebound and snap on every tab change. */
+.app .masenetLiquidDock.maseGooeyDock .dockGooeyIndicator{animation:maseGooeyStretchSnap .64s var(--mase-spring) both}
+@keyframes maseGooeyStretchSnap{
+ 0%{transform:translateX(calc(var(--dock-index,0)*(100% + 5px))) scaleX(1.32) scaleY(0.84)}
+ 46%{transform:translateX(calc(var(--dock-index,0)*(100% + 5px))) scaleX(.96) scaleY(1.04)}
+ 100%{transform:translateX(calc(var(--dock-index,0)*(100% + 5px))) scale(1)}
+}
