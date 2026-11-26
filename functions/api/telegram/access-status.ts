@@ -29,12 +29,17 @@ export const onRequestPost=async({request,env}:{request:Request;env:Env})=>{
  const checkedAt=saved?.membership_checked_at?Date.parse(saved.membership_checked_at.replace(" ","T")+"Z"):0;
  const membershipFresh=Number.isFinite(checkedAt)&&Date.now()-checkedAt<30000;
  if(!membershipFresh){
-  for(const [channel,key] of [["@MaseMediaTv","masemedia"],["@MoonDramaC","moondramac"]] as const){
-   const r=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/getChatMember?chat_id="+encodeURIComponent(channel)+"&user_id="+encodeURIComponent(chatId));
-   const d=await r.json().catch(()=>({})) as {ok?:boolean;result?:{status?:string};description?:string};
-   membership[key]=!!r.ok&&!!d.ok&&["member","administrator","creator"].includes(String(d.result?.status||""));
+  let allMembershipChecksSuccessful=true;
+  for(const [channel,key,savedField] of [["@MaseMediaTv","masemedia","masemedia_ok"],["@MoonDramaC","moondramac","moondramac_ok"]] as const){
+   try{
+    const r=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/getChatMember?chat_id="+encodeURIComponent(channel)+"&user_id="+encodeURIComponent(chatId));
+    const d=await r.json().catch(()=>({})) as {ok?:boolean;result?:{status?:string};description?:string};
+    if(r.ok&&d.ok)membership[key]=["member","administrator","creator"].includes(String(d.result?.status||""));
+    else{allMembershipChecksSuccessful=false;membership[key]=!!saved?.[savedField];}
+   }catch{allMembershipChecksSuccessful=false;membership[key]=!!saved?.[savedField];}
   }
-  await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,membership_checked_at,updated_at) VALUES (?,?,?,datetime('now'),datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,membership_checked_at=datetime('now'),updated_at=datetime('now')").bind(chatId,membership.masemedia?1:0,membership.moondramac?1:0).run();
+  // Temporary Telegram API failures must not erase previously confirmed channel membership.
+  await env.DB.prepare("INSERT INTO telegram_access_verification (chat_id,masemedia_ok,moondramac_ok,membership_checked_at,updated_at) VALUES (?,?,?,CASE WHEN ?=1 THEN datetime('now') ELSE NULL END,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET masemedia_ok=excluded.masemedia_ok,moondramac_ok=excluded.moondramac_ok,membership_checked_at=CASE WHEN ?=1 THEN datetime('now') ELSE telegram_access_verification.membership_checked_at END,updated_at=datetime('now')").bind(chatId,membership.masemedia?1:0,membership.moondramac?1:0,allMembershipChecksSuccessful?1:0,allMembershipChecksSuccessful?1:0).run();
  }
  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_access_reviews(chat_id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'clear',reason TEXT NOT NULL DEFAULT '',flagged_at TEXT,deadline_at TEXT,updated_at TEXT NOT NULL DEFAULT (datetime('now')))`).run();
  let review=await env.DB.prepare("SELECT status,reason,deadline_at FROM telegram_access_reviews WHERE chat_id=?").bind(chatId).first<{status:string;reason:string;deadline_at:string|null}>();
