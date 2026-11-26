@@ -92,6 +92,19 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const fileName = String(incoming.file_name || (msg.video ? "video.mp4" : "document.bin")).slice(0, 255);
   const caption = String(msg.caption || "").slice(0, 1500);
   const meta = parseMetadata(fileName, caption);
+  // Telegram file_unique_id is stable across bots. Use it with the parsed
+  // identity fields to avoid copying the same upload into the private vault twice.
+  const fileUniqueId = String(incoming.file_unique_id || "").trim();
+  if (fileUniqueId) {
+    const duplicate = await env.DB.prepare(
+      "SELECT id FROM telegram_media_assets WHERE vault_chat_id=? AND file_unique_id=? AND title=? AND season=? AND episode=? AND quality=? AND codec=? LIMIT 1"
+    ).bind(vaultChatId, fileUniqueId, meta.title, meta.season, meta.episode, meta.quality, meta.codec).first<{id:string}>();
+    if (duplicate) {
+      await reply(runtimeEnv, adminId,
+        "ℹ️ This exact media file is already in the private vault. I did not create another copy.\nVault ID: " + duplicate.id);
+      return json({ ok:true, duplicate:true, mediaId:duplicate.id });
+    }
+  }
   const copied = await telegram(runtimeEnv, "copyMessage", {
     chat_id: vaultChatId, from_chat_id: adminId, message_id: msg.message_id,
     disable_notification: true
