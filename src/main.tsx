@@ -52,6 +52,7 @@ if (root) {
   createRoot(root).render(
     <StrictMode>
       <AppErrorBoundary><App /></AppErrorBoundary>
+      <MaseGlassSidebar />
       {!Capacitor.isNativePlatform() && <PWAInstallPrompt />}
     </StrictMode>
   );
@@ -81,3 +82,5 @@ if ('serviceWorker' in navigator && !Capacitor.isNativePlatform() && !telegramAp
 }
 import './liquid-navbar-redesign.css';
 import './masenet-daylight-ios-dock.css';
+import './masenet-ios27-liquid-upgrade.css';
+import MaseGlassSidebar from './MaseGlassSidebar';
