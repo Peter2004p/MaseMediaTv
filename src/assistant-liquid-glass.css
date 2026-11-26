@@ -279,3 +279,13 @@
 @media(prefers-reduced-motion:reduce){
   .app .aiDock .aiDockFace,.app .aiDock .aiDockFace *{animation:none!important}
 }
+
+
+/* Remove the backing tile/orb behind the floating assistant face; keep the animated face itself. */
+.app .aiDock .aiDockFace{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
