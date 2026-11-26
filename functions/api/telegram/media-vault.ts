@@ -92,7 +92,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const fileName = String(incoming.file_name || (msg.video ? "video.mp4" : "document.bin")).slice(0, 255);
   const caption = String(msg.caption || "").slice(0, 1500);
   const meta = parseMetadata(fileName, caption);
-  const copied = await telegram(env, "copyMessage", {
+  const copied = await telegram(runtimeEnv, "copyMessage", {
     chat_id: vaultChatId, from_chat_id: adminId, message_id: msg.message_id,
     disable_notification: true
   }) as { message_id?: number };
