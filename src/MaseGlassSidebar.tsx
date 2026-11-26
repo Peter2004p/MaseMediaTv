@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { House, Search, Film, Bookmark, Bell, UserRound, ChevronLeft, ChevronRight, Clapperboard, HardDrive, Menu, Settings2 } from 'lucide-react';
+import { House, Search, Film, Bookmark, Bell, UserRound, ChevronLeft, ChevronRight, Clapperboard, Menu, Settings2, X } from 'lucide-react';
 
 type Item = { label: string; icon: typeof House; action: () => void; tone?: string };
 
@@ -15,24 +15,14 @@ export default function MaseGlassSidebar() {
   const [sidebarWidth, setSidebarWidth] = useState(64);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unread, setUnread] = useState('');
-  const [storageUsed, setStorageUsed] = useState(0);
-  const [storageCapacity, setStorageCapacity] = useState('Checking browser storage…');
+  const [liveVisitors, setLiveVisitors] = useState<number | null>(null);
   const drag = useRef<{ x: number; width: number } | null>(null);
   const dragged = useRef(false);
 
   useEffect(() => {
     const syncRoute = () => setRoute(window.location.hash || '#/home');
     const syncUnread = () => setUnread(document.querySelector('.dockNotificationBadge')?.textContent?.trim() || '');
-    const syncStorage = async () => {
-      try {
-        const estimate = await navigator.storage?.estimate?.();
-        if (estimate?.quota && estimate.usage !== undefined) {
-          const formatBytes = (bytes: number) => bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : bytes >= 1024 ** 2 ? `${(bytes / 1024 ** 2).toFixed(0)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
-          setStorageUsed(Math.min(100, Math.round(estimate.usage / estimate.quota * 100)));
-          setStorageCapacity(`${formatBytes(estimate.usage)} used · ${formatBytes(estimate.quota)} capacity`);
-        } else setStorageCapacity('Capacity unavailable on this device');
-      } catch { /* Storage estimates are optional in embedded browsers. */ }
-    };
+    const syncLiveVisitors = async () => { try { const response = await fetch('/api/presence', { cache: 'no-store', credentials: 'same-origin' }); if (response.ok) { const data = await response.json() as { online?: number }; if (Number.isFinite(data.online)) setLiveVisitors(Math.max(0, Number(data.online))); } } catch { /* Live count stays unavailable rather than showing a made-up number. */ } };
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== '[' || event.altKey || event.ctrlKey || event.metaKey || /INPUT|TEXTAREA|SELECT/.test((event.target as HTMLElement | null)?.tagName || '')) return;
       if (window.matchMedia('(max-width: 760px)').matches) return;
@@ -44,12 +34,12 @@ export default function MaseGlassSidebar() {
     const observer = new MutationObserver(syncUnread);
     if (document.body) observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
     syncUnread();
-    void syncStorage();
-    const storageTimer = window.setInterval(() => void syncStorage(), 60000);
+    void syncLiveVisitors();
+    const liveTimer = window.setInterval(() => void syncLiveVisitors(), 30000);
     return () => {
       window.removeEventListener('hashchange', syncRoute);
       window.removeEventListener('keydown', onKey);
-      window.clearInterval(storageTimer);
+      window.clearInterval(liveTimer);
       observer.disconnect();
     };
   }, []);
@@ -75,7 +65,7 @@ export default function MaseGlassSidebar() {
   const sidebarStyle = { '--mase-sidebar-width': `${sidebarWidth}px` } as CSSProperties;
 
   return <>
-    <button type="button" className="maseSidebarMobileTrigger" aria-label={drawerOpen ? "Close MaseNet navigation" : "Open MaseNet navigation"} aria-expanded={drawerOpen} onClick={() => setDrawerOpen(value => !value)}><Menu size={19}/></button>
+    <button type="button" className={`maseSidebarMobileTrigger ${drawerOpen ? 'isOpen' : ''}`} aria-label={drawerOpen ? "Close MaseNet navigation" : "Open MaseNet navigation"} aria-expanded={drawerOpen} onClick={() => setDrawerOpen(value => !value)}><span className="maseMenuMorphIcon"><Menu size={19}/><X size={19}/></span></button>
     {drawerOpen && <button type="button" className="maseSidebarScrim" aria-label="Close navigation drawer" onClick={() => setDrawerOpen(false)} />}
     <button
       type="button"
@@ -102,14 +92,9 @@ export default function MaseGlassSidebar() {
           {label === 'Chinese Drama' && <i className="maseSidebarCollectionDot dot-emerald"/>}
         </button>)}
       </nav>
-      <section className="maseSidebarOffline" aria-label="Offline storage estimate">
-        <div className="maseSidebarOfflineHeading"><HardDrive size={14}/><span>Offline Cache</span><b>{storageUsed}%</b></div>
-        <div className="maseSidebarStorageTrack"><i style={{ width: `${storageUsed}%` }}/></div>
-        <small>{storageCapacity}</small>
-      </section>
-      <section className="maseSidebarVip" aria-label="MaseNet VIP membership status">
-        <span className="maseSidebarVipMark">✦</span>
-        <span className="maseSidebarVipCopy"><b>VIP <i>2.4k members</i></b><small>MASENET COMMUNITY</small></span>
+      <section className="maseSidebarVip maseSidebarLive" aria-label="People currently using MaseNet">
+        <span className="maseSidebarVipMark"><i className="maseLiveDot"/></span>
+        <span className="maseSidebarVipCopy"><b>LIVE NOW <i>{liveVisitors === null ? '—' : liveVisitors.toLocaleString()}</i></b><small>USING MASENET</small></span>
       </section>
       <button type="button" className="maseSidebarProfileFooter" onClick={() => invoke(items[6].action)}>
         <span className="maseSidebarAvatar"><UserRound size={17}/></span><span className="maseSidebarProfileText"><b>Your profile</b><small>Personalise MaseNet</small></span><ChevronRight size={15}/>
