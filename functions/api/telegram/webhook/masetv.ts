@@ -41,7 +41,7 @@ const parseForwardedStreamLink = (raw: string) => {
 
 type BotEpisode = { season?: number | string; episode?: number | string; title?: string; name?: string };
 const miniAppRouteUrl = (base: string, route: string) => {
-  try { const url = new URL(base); url.hash = route.replace(/^#/, ""); return url.toString(); }
+  try { const url = new URL(base); url.searchParams.set("maseRoute", route.startsWith("#") ? route : "#" + route); return url.toString(); }
   catch { return base; }
 };
 const buildEpisodePageMarkup = (titleId: string, episodes: BotEpisode[], page: number, miniAppUrl: string) => {
