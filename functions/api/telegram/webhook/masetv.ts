@@ -89,7 +89,7 @@ async function deliverVaultDownload(env: Env, chatId: string | number, rawToken:
       : "Not available";
     const isDrama = String(asset.media_kind || "").toLowerCase() === "drama";
     // Remove the uploader handle when it has been prepended to the catalogue title.
-    const displayTitle = String(asset.title || "Untitled").replace(/^\\s*@KLandd\\s*[-–—_:|]*\\s*/i, "").trim() || "Untitled";
+    const displayTitle = String(asset.title || "Untitled").replace(/^\s*@KLandd\s*[-–—_:|]*\s*/i, "").trim() || "Untitled";
     const details = [
       "🎬 Title: " + displayTitle,
       ...(isDrama ? [
