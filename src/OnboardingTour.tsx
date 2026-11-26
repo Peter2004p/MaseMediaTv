@@ -20,7 +20,13 @@ export default function OnboardingTour({ open, onClose, onReopen, onGoogleLogin,
   const [selectedGenres, setSelectedGenres] = useState<string[]>(() => {
     try { const saved = JSON.parse(localStorage.getItem('masenet-onboarding-genres') || '[]'); return Array.isArray(saved) ? saved.filter((x): x is string => genres.includes(x)) : []; } catch { return []; }
   });
-  const [expandedFeature, setExpandedFeature] = useState<number | null>(0);\n  const [email,setEmail]=useState('');\n  const [otp,setOtp]=useState('');\n  const [emailStage,setEmailStage]=useState<'email'|'code'>('email');\n  const [emailBusy,setEmailBusy]=useState(false);\n  const [emailMessage,setEmailMessage]=useState('');\n  const [authBusy,setAuthBusy]=useState<'google'|'telegram'|null>(null);
+  const [expandedFeature, setExpandedFeature] = useState<number | null>(0);
+  const [email,setEmail]=useState('');
+  const [otp,setOtp]=useState('');
+  const [emailStage,setEmailStage]=useState<'email'|'code'>('email');
+  const [emailBusy,setEmailBusy]=useState(false);
+  const [emailMessage,setEmailMessage]=useState('');
+  const [authBusy,setAuthBusy]=useState<'google'|'telegram'|null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchStart = useRef<{x:number;y:number}|null>(null);
