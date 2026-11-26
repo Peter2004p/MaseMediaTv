@@ -105,11 +105,35 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       return json({ ok:true, duplicate:true, mediaId:duplicate.id });
     }
   }
-  const copied = await telegram(runtimeEnv, "copyMessage", {
-    chat_id: vaultChatId, from_chat_id: adminId, message_id: msg.message_id,
-    disable_notification: true
-  }) as { message_id?: number };
-  if (!copied?.message_id) throw new Error("Telegram did not return a vault message reference.");
+  // Claim each Telegram update before calling copyMessage. Telegram retries
+  // webhook updates, and concurrent retries must not create multiple vault copies.
+  if (updateId !== null) {
+    await env.DB.prepare(
+      "DELETE FROM telegram_media_updates WHERE created_at < datetime('now','-10 minutes') AND NOT EXISTS (SELECT 1 FROM telegram_media_assets WHERE source_update_id=telegram_media_updates.update_id)"
+    ).run();
+    const claim = await env.DB.prepare(
+      "INSERT OR IGNORE INTO telegram_media_updates(update_id) VALUES (?)"
+    ).bind(updateId).run();
+    if (!Number(claim.meta?.changes || 0)) {
+      const completed = await env.DB.prepare(
+        "SELECT id FROM telegram_media_assets WHERE source_update_id=?"
+      ).bind(updateId).first<{id:string}>();
+      return json({ ok:true, duplicate:true, processing:!completed, ...(completed ? {mediaId:completed.id} : {}) });
+    }
+  }
+  let copied: { message_id?: number };
+  try {
+    copied = await telegram(runtimeEnv, "copyMessage", {
+      chat_id: vaultChatId, from_chat_id: adminId, message_id: msg.message_id,
+      disable_notification: true
+    }) as { message_id?: number };
+    if (!copied?.message_id) throw new Error("Telegram did not return a vault message reference.");
+  } catch (error) {
+    if (updateId !== null) {
+      await env.DB.prepare("DELETE FROM telegram_media_updates WHERE update_id=?").bind(updateId).run().catch(()=>{});
+    }
+    throw error;
+  }
   const id = crypto.randomUUID();
   const format = fileName.split(".").pop()?.toLowerCase() || "unknown";
   await env.DB.prepare(`INSERT INTO telegram_media_assets
@@ -118,9 +142,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     .bind(id, meta.kind, meta.title, meta.year, meta.season, meta.episode, meta.quality, meta.codec,
       meta.language, format, fileName, Number(incoming.file_size || 0) || null, String(incoming.mime_type || ""), vaultChatId,
       copied.message_id, String(incoming.file_unique_id || ""), updateId).run();
-  if (updateId !== null) {
-    await env.DB.prepare("INSERT OR IGNORE INTO telegram_media_updates(update_id) VALUES (?)").bind(updateId).run();
-  }
   const category = meta.kind === "movie" ? "🎞 MOVIE" : "📺 DRAMA EPISODE";
   const episode = meta.kind === "drama" ? "\nEpisode: S" + String(meta.season).padStart(2,"0") + "E" + String(meta.episode).padStart(2,"0") : "";
   await reply(runtimeEnv, adminId,
