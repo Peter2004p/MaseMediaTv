@@ -40,11 +40,13 @@ export async function sendTelegramTitleNotifications(
   if (!isNewTitle && newEpisodes.length) {
     const metadata = title;
     const normalizedTitle = String(title.name || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    const knownSeriesChannel = normalizedTitle === "blossoms in darkness"
-      ? "C_M_Eng_sub"
-      : normalizedTitle === "river of no return"
-        ? "ChineseDrama_MaseMediaTv"
-        : "";
+    const knownSeriesChannel = normalizedTitle === "taming the husband"
+      ? "blooms_Cdrama"
+      : normalizedTitle === "blossoms in darkness"
+        ? "C_M_Eng_sub"
+        : normalizedTitle === "river of no return"
+          ? "ChineseDrama_MaseMediaTv"
+          : "";
     const rawChannel = String(metadata.telegramEpisodeChannelChatId || metadata.telegramEpisodeChannelLink || knownSeriesChannel).trim();
     if (!rawChannel) {
       console.info("Episode announcement skipped: no individual Telegram channel link is configured for", title.id || title.name);
