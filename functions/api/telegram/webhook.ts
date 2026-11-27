@@ -346,7 +346,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   let voiceRateLimitReserved = false;
   let voiceTranscript = "";
   const title = chatTitle(chat);
-  const appUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
+  const appUrl = "https://masetv-cloudflare-migration.pages.dev"; // Always open the current production Mini App, never an old preview URL.
   const keyboard = { inline_keyboard: [[{ text: "🚀 Open MaseNet", web_app: { url: appUrl } }]] };
   const voiceAttachment = message?.voice || message?.audio;
   if (chatType === "private" && voiceAttachment?.file_id) {
