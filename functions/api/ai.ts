@@ -67,6 +67,16 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   if (!message && !imageInputs.length) return json({ text: "Tell me what you would like help with, or attach an image or screenshot." });
 
+  // The website and Telegram owner chat share the same bounded AI guidance store.
+  // This is an explicit, authenticated instruction-saving action, not arbitrary code execution.
+  if (authenticatedAdmin?.role === "owner" && /^(?:remember this instruction|set shared ai instruction)\s*:/i.test(message)) {
+    const instruction = message.replace(/^(?:remember this instruction|set shared ai instruction)\s*:/i, "").trim().slice(0, 7000);
+    if (instruction.length < 5) return json({ text: "Please include the complete guidance after the colon." }, 400);
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY, value_json TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
+    await env.DB.prepare("INSERT INTO site_settings (key,value_json,updated_at) VALUES ('ai_instructions',?,datetime('now')) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=datetime('now')").bind(JSON.stringify({ instructions: instruction })).run();
+    return json({ text: "✅ Saved to shared MaseNet AI guidance. The Telegram and website assistants will use it on their next request, subject to security, privacy, and accuracy rules.", instructionsUpdated: true });
+  }
+
   // Handle deletion intent before any language model or catalogue-search response.
   // Only the authenticated owner may delete, and an exact title/episode is required.
   if (!imageInputs.length && /\b(?:delete|remove|erase)\b/i.test(message)) {

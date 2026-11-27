@@ -1,5 +1,6 @@
 import { Env, json, requireAdmin } from "../auth/_shared";
 import { sendTelegramTitleNotifications } from "../_telegram-notifications";
+import { notifyMatchingMissingTitleRequests } from "../../_telegram-missing-requests";
 const validateExternalEpisodeLinks = (episodes: unknown, requestUrl: string): string | null => {
   if (!Array.isArray(episodes)) return null;
   const ownOrigin = new URL(requestUrl).origin;
@@ -153,7 +154,8 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
     false,
     newEpisodes as { season?: number | string; episode?: number | string; title?: string }[]
   );
-  return json({ title, telegramNotifications });
+  const missingTitleNotifications = await notifyMatchingMissingTitleRequests(env, String(title.name));
+  return json({ title, telegramNotifications, missingTitleNotifications });
 };
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
   const gate = await requireAdmin(request, env); if (gate.response) return gate.response;
