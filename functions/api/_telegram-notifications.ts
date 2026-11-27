@@ -89,7 +89,7 @@ export async function sendTelegramTitleNotifications(
         .bind(String(title.id || title.name || "unknown"), season, episode).run();
       if (!Number(claimed.meta?.changes || 0)) continue;
       try {
-        const individualText = "🍿 NEW EPISODE OUT!\n\n" + titleLine + "\n\n▶️ Watch in MaseNet: " + miniAppUrl;
+        const individualText = "🍿 NEW EPISODE OUT!\n\n" + titleLine + "\n\n▶️ Watch in MaseNet: " + episodeMiniAppLink;
         let individualMessage: { message_id?: number; chat?: { username?: string } } = {};
         if (/^https:\/\//i.test(poster)) {
           try {
@@ -100,7 +100,7 @@ export async function sendTelegramTitleNotifications(
           } catch {
             individualMessage = await api("sendMessage", {
               chat_id: individualChatId, text: individualText,
-              reply_markup: { inline_keyboard: [[{ text: "▶️ Watch in MaseNet", url: miniAppUrl }]] }
+              reply_markup: { inline_keyboard: [[{ text: "▶️ Watch in MaseNet", url: episodeMiniAppLink }]] }
             });
           }
         } else {
@@ -132,9 +132,9 @@ export async function sendTelegramTitleNotifications(
           list.push(label);
           groupedEpisodes.set(entrySeason, list);
         }
-        const indexText = "📚 <b>" + escapeHtml(titleName) + " — EPISODE GUIDE</b>\\n\\n" +
-          [...groupedEpisodes.entries()].sort((x,y)=>x[0]-y[0]).map(([s,items]) => "<b>Season " + s + "</b>\\n" + items.join("  ·  ")).join("\\n\\n") +
-          "\\n\\nTap any episode to open its own page in MaseNet.";
+        const indexText = "📚 <b>" + escapeHtml(titleName) + " — EPISODE GUIDE</b>\n\n" +
+          [...groupedEpisodes.entries()].sort((x,y)=>x[0]-y[0]).map(([s,items]) => "<b>Season " + s + "</b>\n" + items.join("  ·  ")).join("\n\n") +
+          "\n\nTap any episode to open its own page in MaseNet.";
         const indexRow = await env.DB.prepare("SELECT message_id FROM telegram_episode_channel_index WHERE title_id=?").bind(String(title.id || title.name || "unknown")).first<{ message_id: number }>();
         if (indexRow?.message_id) {
           try {
@@ -153,7 +153,7 @@ export async function sendTelegramTitleNotifications(
             await api("pinChatMessage", { chat_id: individualChatId, message_id: Number(indexMessage.message_id), disable_notification: true }).catch(() => ({}));
           }
         }
-        const mainText = "🔔 NEW EPISODE OUT!\\n\\n" + titleLine + "\\n\\nOpen this exact episode directly in MaseNet.";
+        const mainText = "🔔 NEW EPISODE OUT!\n\n" + titleLine + "\n\nOpen this exact episode directly in MaseNet.";
         try {
           await api("sendMessage", {
             chat_id: mainChannel, text: mainText,
