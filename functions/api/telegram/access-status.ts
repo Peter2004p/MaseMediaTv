@@ -45,7 +45,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     "SELECT masemedia_ok,moondramac_ok,membership_checked_at FROM telegram_access_verification WHERE chat_id=?"
   ).bind(chatId).first<{ masemedia_ok: number; moondramac_ok: number; membership_checked_at: string | null }>();
   const checkedAt = saved?.membership_checked_at ? Date.parse(saved.membership_checked_at.replace(" ", "T") + "Z") : 0;
-  const membershipFresh = Number.isFinite(checkedAt) && Date.now() - checkedAt < 30000;
+  const membershipFresh = false; // Always re-check Telegram on entry so a new join is recognized immediately.
   let membership = {
     masemedia: membershipFresh && !!saved?.masemedia_ok,
     moondramac: membershipFresh && !!saved?.moondramac_ok
