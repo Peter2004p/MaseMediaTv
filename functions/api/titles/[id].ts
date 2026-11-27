@@ -120,17 +120,10 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
   }
   if (typeof body.name !== "string" || !body.name.trim()) return json({ error: "A title name is required." }, 400);
   const kind = normalizeKind(body.type);
-  // The Library can retain a stale card ID after records have been consolidated.
-  // Resolve a missing ID by exact normalized title + type, but never guess when
-  // more than one movie record has the same visible title.
-  let targetId = old?.id || "";
-  if (!targetId) {
-    const rows = await env.DB.prepare("SELECT id,name FROM titles WHERE kind=?").bind(kind).all<{id:string;name:string}>();
-    const matches = (rows.results || []).filter(row => normalizeName(row.name) === normalizeName(body.name));
-    if (matches.length === 1) targetId = matches[0].id;
-    else if (matches.length > 1) return json({ error: "More than one matching title exists. Refresh the Admin Library and select the exact record." }, 409);
-  }
-  if (!targetId) return json({ error: "Title not found. Refresh the Admin Library and reopen this movie." }, 404);
+  // Updates are ID-only. A stale or unknown ID must fail rather than
+  // resolving a different title by matching its display name.
+  const targetId = old?.id || "";
+  if (!targetId) return json({ error: "Title ID not found. Refresh the Admin Library and reopen the exact title before editing." }, 404);
   const title: Record<string, unknown> = { ...body, id: targetId };
   title.type = kind === "drama" ? "Drama" : "Movie";
 
