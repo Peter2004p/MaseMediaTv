@@ -6,6 +6,7 @@ type DeviceNavigator = Navigator & { deviceMemory?: number; connection?: Connect
 const root = document.documentElement;
 let started = false;
 let rafId = 0;
+let monitorTimer = 0;
 let frameTimes: number[] = [];
 let goodWindows = 0;
 let lowPerformance = false;
@@ -78,6 +79,12 @@ function onFrame(now: number) {
     }
     frameTimes = [];
     lastEvaluation = now;
+    // Sample short windows periodically instead of running an endless animation-frame loop.
+    monitorTimer = window.setTimeout(() => {
+      monitorTimer = 0;
+      if (started && document.visibilityState !== 'hidden' && !rafId) rafId = window.requestAnimationFrame(onFrame);
+    }, 8000);
+    return;
   }
   rafId = window.requestAnimationFrame(onFrame);
 }
@@ -85,11 +92,15 @@ function onFrame(now: number) {
 function handleVisibility() {
   if (document.visibilityState === 'hidden') {
     if (rafId) window.cancelAnimationFrame(rafId);
+    if (monitorTimer) window.clearTimeout(monitorTimer);
+    monitorTimer = 0;
     rafId = 0;
     lastFrame = 0;
     frameTimes = [];
     lastEvaluation = 0;
   } else if (started && !rafId) {
+    if (monitorTimer) window.clearTimeout(monitorTimer);
+    monitorTimer = 0;
     lastFrame = 0;
     lastEvaluation = 0;
     rafId = window.requestAnimationFrame(onFrame);
