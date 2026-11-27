@@ -7,6 +7,9 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
   if (!admin) return json({ error: "Admin access required" }, 401);
   try {
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_missing_searches (id INTEGER PRIMARY KEY AUTOINCREMENT, query TEXT NOT NULL, chat_type TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
+    for (const [name, definition] of [["requester_chat_id","TEXT"],["requester_name","TEXT"],["requester_username","TEXT"],["status","TEXT NOT NULL DEFAULT 'pending'"],["feedback","TEXT"],["admin_notified_at","TEXT"]] as const) {
+      try { await env.DB.prepare("ALTER TABLE telegram_missing_searches ADD COLUMN " + name + " " + definition).run(); } catch {}
+    }
     const [summary, rows, requestRecords] = await Promise.all([
       env.DB.prepare("SELECT COUNT(*) AS total, COUNT(DISTINCT lower(trim(query))) AS unique_queries FROM telegram_missing_searches WHERE date(created_at) = date('now')").first<{ total: number; unique_queries: number }>(),
       env.DB.prepare("SELECT query, COUNT(*) AS requests, MAX(created_at) AS last_requested FROM telegram_missing_searches WHERE date(created_at) = date('now') GROUP BY lower(trim(query)) ORDER BY requests DESC, last_requested DESC LIMIT 100").all<{ query: string; requests: number; last_requested: string }>(),
