@@ -7,6 +7,32 @@ type CatalogItem = { id?: string; name?: string; type?: string; kind?: string; y
 
 const normalize = (value: unknown) => String(value ?? "").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
+const ensureRequestTables = async (env: Env) => {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_missing_searches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, query TEXT NOT NULL, chat_type TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')), requester_chat_id TEXT,
+    requester_name TEXT, requester_username TEXT, status TEXT NOT NULL DEFAULT 'pending',
+    feedback TEXT, admin_notified_at TEXT
+  )`).run();
+  for (const [name, definition] of [["requester_chat_id","TEXT"],["requester_name","TEXT"],["requester_username","TEXT"],["status","TEXT NOT NULL DEFAULT 'pending'"],["feedback","TEXT"],["admin_notified_at","TEXT"]] as const) {
+    try { await env.DB.prepare("ALTER TABLE telegram_missing_searches ADD COLUMN " + name + " " + definition).run(); } catch {}
+  }
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_support_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id TEXT NOT NULL, requester_name TEXT,
+    requester_username TEXT, issue TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open',
+    feedback TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+};
+const telegramSend = async (env: Env, chatId: string | number, text: string) => {
+  const response = await fetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+    method:"POST", headers:{"content-type":"application/json"},
+    body:JSON.stringify({chat_id:chatId,text,disable_web_page_preview:true})
+  });
+  if (!response.ok) throw new Error("Telegram message delivery failed");
+  const data = await response.json().catch(()=>({})) as {ok?:boolean};
+  if (!data.ok) throw new Error("Telegram rejected the message");
+};
+
 // Parse metadata from a forwarded, short-lived external Streamlink. The URL is
 // retained for admin reference only; it is not treated as a permanent catalogue URL.
 const parseForwardedStreamLink = (raw: string) => {
@@ -370,6 +396,47 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
 
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
+  const isOwner = !!env.ADMIN_TELEGRAM_CHAT_ID && senderId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim() && chatType === "private";
+  if (command === "/myid") {
+    await telegramSend(env, chatId, "Your Telegram numeric ID is: " + senderId + "\n\nShare this privately with the MaseNet owner for administrator verification.");
+    return json({ok:true,telegramIdShown:true});
+  }
+  if (isOwner && command === "/request_available") {
+    const id = Number(commandText.split(/\s+/,1)[0]);
+    if (!Number.isSafeInteger(id) || id < 1) { await telegramSend(env,chatId,"Usage: /request_available REQUEST_ID"); return json({ok:true}); }
+    await ensureRequestTables(env);
+    const request = await env.DB.prepare("SELECT id,query,requester_chat_id FROM telegram_missing_searches WHERE id=? AND status='pending'").bind(id).first<{id:number;query:string;requester_chat_id:string}>();
+    if (!request?.requester_chat_id) { await telegramSend(env,chatId,"That request was not found or has already been answered."); return json({ok:true}); }
+    const rows = await env.DB.prepare("SELECT name FROM titles").all<{name:string}>();
+    const target = normalize(request.query);
+    if (!(rows.results||[]).some(row=>normalize(row.name)===target)) { await telegramSend(env,chatId,"I cannot confirm this title in the MaseNet library yet. Publish it first, then retry /request_available "+id+"."); return json({ok:true,available:false}); }
+    await env.DB.prepare("UPDATE telegram_missing_searches SET status='available',feedback='The requested title is now listed in the MaseNet catalogue.' WHERE id=? AND status='pending'").bind(id).run();
+    await telegramSend(env,request.requester_chat_id,"🎉 Good news! “"+request.query+"” is now listed in the MaseNet library. Open MaseNet to check its available content.");
+    await telegramSend(env,chatId,"Availability update sent to the requester.");
+    return json({ok:true,available:true});
+  }
+  if (isOwner && command === "/request_reply") {
+    const match = commandText.match(/^(\d+)\s+([\s\S]+)$/);
+    if (!match) { await telegramSend(env,chatId,"Usage: /request_reply REQUEST_ID your feedback"); return json({ok:true}); }
+    await ensureRequestTables(env);
+    const request = await env.DB.prepare("SELECT id,requester_chat_id,query FROM telegram_missing_searches WHERE id=? AND status='pending'").bind(Number(match[1])).first<{id:number;requester_chat_id:string;query:string}>();
+    if (!request?.requester_chat_id) { await telegramSend(env,chatId,"That request was not found or has already been answered."); return json({ok:true}); }
+    await env.DB.prepare("UPDATE telegram_missing_searches SET status='answered',feedback=? WHERE id=?").bind(match[2].trim().slice(0,1500),request.id).run();
+    await telegramSend(env,request.requester_chat_id,"📩 Update from the MaseNet team about “"+request.query+"”:\n\n"+match[2].trim().slice(0,1500));
+    await telegramSend(env,chatId,"Your feedback has been sent to the requester.");
+    return json({ok:true,feedbackSent:true});
+  }
+  if (isOwner && command === "/support_reply") {
+    const match = commandText.match(/^(\d+)\s+([\s\S]+)$/);
+    if (!match) { await telegramSend(env,chatId,"Usage: /support_reply SUPPORT_ID your response"); return json({ok:true}); }
+    await ensureRequestTables(env);
+    const request = await env.DB.prepare("SELECT id,chat_id FROM telegram_support_requests WHERE id=? AND status='open'").bind(Number(match[1])).first<{id:number;chat_id:string}>();
+    if (!request) { await telegramSend(env,chatId,"That support request was not found or is already closed."); return json({ok:true}); }
+    await env.DB.prepare("UPDATE telegram_support_requests SET status='answered',feedback=?,updated_at=datetime('now') WHERE id=?").bind(match[2].trim().slice(0,1500),request.id).run();
+    await telegramSend(env,request.chat_id,"📩 MaseNet support has replied:\n\n"+match[2].trim().slice(0,1500));
+    await telegramSend(env,chatId,"Your support reply has been sent.");
+    return json({ok:true,feedbackSent:true});
+  }
   const miniAppUrl = (env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
   const verificationKeyboard = (youtubeOk: boolean, membership: {masemedia:boolean;moondramac:boolean}) => {
     const rows: Array<Array<Record<string, unknown>>> = [];
