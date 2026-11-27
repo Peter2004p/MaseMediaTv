@@ -1,0 +1,32 @@
+/* Device-adaptive performance safeguards. Scoped to the low-performance tier only. */
+html.masenet-low-performance {
+  scroll-behavior: auto !important;
+  -webkit-text-size-adjust: 100%;
+}
+html.masenet-low-performance .maseJellySpotlight,
+html.masenet-low-performance .maseJellyRipple,
+html.masenet-low-performance .maseJellyTarget::before,
+html.masenet-low-performance .maseJellyTarget::after {
+  display: none !important;
+}
+html.masenet-low-performance .glass,
+html.masenet-low-performance .nav,
+html.masenet-low-performance .side,
+html.masenet-low-performance .aiDock,
+html.masenet-low-performance .telegram,
+html.masenet-low-performance .searchDock {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.masenet-low-performance img[loading="lazy"] {
+  content-visibility: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.masenet-low-performance *,
+  html.masenet-low-performance *::before,
+  html.masenet-low-performance *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
