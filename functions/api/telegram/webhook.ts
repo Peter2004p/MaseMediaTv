@@ -408,6 +408,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       await sendMessage(env, chatId, "Movie and episode alerts are now on.");
     } else if (/^\/(?:help|menu)(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "MaseNet Bot menu 🎬\n\n• Chat normally: ask a question or say “hey AI”\n• /app — open the Mini App\n• /notifications_off — pause new-title alerts\n• /notifications_on — enable new-title alerts\n• /privacy — learn what the bot stores\n• /help — show this menu", keyboard);
+    } else if (/^\\/verify(?:@\\w+)?$/i.test(text)) {
+      // Membership in both official Telegram channels is the only access requirement.
+      const current = await getRequiredChannelMemberships(env, chatId);
+      if (current.allowed) {
+        await sendMessage(env, chatId, "✅ Both Telegram channel memberships are confirmed. No screenshot or admin approval is required. You can now open MaseNet.", keyboard);
+      } else {
+        await sendChannelGate(env, chatId, current.membership, current.errors);
+      }
     } else if (/^\/privacy(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "MaseNet privacy 🔐\n\nThe bot stores your Telegram chat ID and display name to manage optional new-title alerts. Turning alerts off pauses those messages. Do not send passwords, payment details, or private account credentials in chat.", keyboard);
     } else if (/^\/app(?:@\w+)?$/i.test(text)) {
