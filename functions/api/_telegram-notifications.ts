@@ -197,7 +197,7 @@ export async function sendTelegramTitleNotifications(
     const titleType = String(title.type || "").toLowerCase();
     // Catalogue descriptions often carry Country/Language metadata even when type is only "Drama".
     const classificationText = (titleType + " " + String(title.description || "")).toLowerCase();
-    const isKoreanDrama = /korean|k-drama|k drama|south korea|country\\s*:\\s*(?:south\\s+)?korea|language\\s*:\\s*korean/.test(classificationText);
+    const isKoreanDrama = /korean|k-drama|k drama|south korea|country\s*:\s*(?:south\s+)?korea|language\s*:\s*korean/.test(classificationText);
     const categoryChannel = isKoreanDrama
       ? "@k_drama_net"
       : isNewTitle && /movie|film/.test(titleType)
