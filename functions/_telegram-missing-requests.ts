@@ -28,7 +28,7 @@ export async function notifyMatchingMissingTitleRequests(env: Env, titleName: st
         });
         const data = await response.json().catch(() => ({})) as {ok?:boolean};
         if (!response.ok || !data.ok) { result.failed++; continue; }
-        await env.DB.prepare("UPDATE telegram_missing_searches SET status='available',feedback=?,updated_at=COALESCE(updated_at,datetime('now')) WHERE id=? AND status='pending'".replace(",updated_at=COALESCE(updated_at,datetime('now'))","")).bind("Automatically notified after the exact title was published in the MaseNet library.", row.id).run();
+        await env.DB.prepare("UPDATE telegram_missing_searches SET status='available',feedback=? WHERE id=? AND status='pending'").bind("Automatically notified after the exact title was published in the MaseNet library.", row.id).run();
         result.notified++;
       } catch { result.failed++; }
     }
