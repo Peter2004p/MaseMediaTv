@@ -35,7 +35,7 @@ function getFrameHealth(samples: number[]): { droppedRatio: number; estimatedFps
   if (baselineSamples.length < 20) return null;
   const baseline = baselineSamples[Math.floor(baselineSamples.length * 0.2)];
   if (!Number.isFinite(baseline) || baseline <= 0) return null;
-  const dropped = samples.filter(value => value > Math.max(baseline * 1.8, baseline + 8)).length;
+  const dropped = samples.filter(value => value > Math.max(baseline * 1.7, 27)).length;
   return { droppedRatio: dropped / samples.length, estimatedFps: Math.round(1000 / baseline) };
 }
 
