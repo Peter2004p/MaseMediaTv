@@ -57,20 +57,46 @@ function groupLegacyTitles(items:Title[]):Title[]{
 function Poster({title,small=false}:{title:Title;small?:boolean}){const [src,setSrc]=useState(title.posterUrl||'');const [failed,setFailed]=useState(false);const [retried,setRetried]=useState(false);const initials=title.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('');const refresh=()=>{if(!title.posterPath||retried)return;setRetried(true);api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(r.data?.url){setFailed(false);setSrc(String(r.data.url))}}).catch(()=>{})};useEffect(()=>{let alive=true;setFailed(false);setRetried(false);setSrc(title.posterUrl||'');if(title.posterPath)api.get('/api/media/url',{path:title.posterPath}).then(r=>{if(alive&&r.data?.url)setSrc(String(r.data.url))}).catch(()=>{});return()=>{alive=false}},[title.posterUrl,title.posterPath]);return <div className={`poster ${small?'smallPoster':''}`}>{src&&!failed?<img className="posterImage" src={src} alt={`${title.name} poster`} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>{setFailed(true);refresh()}}/>:<><div className="posterAura"/><b>{initials}</b><small>{title.type}</small></>}<i/><span>{title.quality}</span></div>;}
 
 export default function App(){
- // Adaptive rendering: preserve the full design on capable devices and reduce expensive effects on low-end phones.
+ // Adaptive device profile: use browser-exposed hardware hints plus a short real-world frame-pacing sample.
+ // Browsers do not expose a reliable CPU model or guaranteed panel refresh rate, so these are capability estimates.
  useEffect(()=>{
   const nav=navigator as Navigator & {deviceMemory?:number;connection?:{saveData?:boolean;effectiveType?:string}};
-  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;
+  const root=document.documentElement;
+  const motionQuery=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  const reduced=()=>motionQuery?.matches===true;
   const lowMemory=typeof nav.deviceMemory==='number'&&nav.deviceMemory<=4;
   const fewCores=typeof nav.hardwareConcurrency==='number'&&nav.hardwareConcurrency<=4;
   const dataSaver=nav.connection?.saveData===true;
   const slowNetwork=nav.connection?.effectiveType==='slow-2g'||nav.connection?.effectiveType==='2g';
-  document.documentElement.classList.toggle('masenet-low-performance',lowMemory||fewCores||dataSaver||slowNetwork||reduced);
-  document.documentElement.classList.toggle('masenet-reduced-motion',reduced);
-  const onMotion=()=>document.documentElement.classList.toggle('masenet-reduced-motion',window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const mq=window.matchMedia?.('(prefers-reduced-motion: reduce)');
-  mq?.addEventListener?.('change',onMotion);
-  return()=>mq?.removeEventListener?.('change',onMotion);
+  let frame=0, samples=0, previous=0, total=0, active=true;
+  const apply=(measuredFps?:number)=>{
+   const low=lowMemory||fewCores||dataSaver||slowNetwork||reduced()||(measuredFps!==undefined&&measuredFps<48);
+   root.classList.toggle('masenet-low-performance',low);
+   root.classList.toggle('masenet-reduced-motion',reduced());
+   const tier=low?'economy':(measuredFps!==undefined&&measuredFps>=55&&!lowMemory&&!fewCores?'high':'balanced');
+   root.dataset.masenetPerformance=tier;
+   if(measuredFps!==undefined)root.dataset.masenetMeasuredFps=String(Math.round(measuredFps));
+   if(measuredFps!==undefined){
+    const refresh=measuredFps>=110?120:measuredFps>=82?90:measuredFps>=52?60:30;
+    root.dataset.masenetRefreshEstimate=String(refresh);
+   }
+  };
+  apply();
+  const sample=(now:number)=>{
+   if(!active||document.visibilityState==='hidden')return;
+   if(previous){total+=now-previous;samples++;}
+   previous=now;
+   if(samples<36){frame=requestAnimationFrame(sample);return;}
+   const fps=total>0?samples*1000/total:0;
+   apply(fps);
+  };
+  const start=()=>{if(!active||document.visibilityState==='hidden')return;samples=0;total=0;previous=0;cancelAnimationFrame(frame);frame=requestAnimationFrame(sample);};
+  const onMotion=()=>apply();
+  const onVisibility=()=>{if(document.visibilityState==='visible')start();else cancelAnimationFrame(frame);};
+  motionQuery?.addEventListener?.('change',onMotion);
+  document.addEventListener('visibilitychange',onVisibility);
+  const warmup=window.setTimeout(start,1200);
+  return()=>{active=false;window.clearTimeout(warmup);cancelAnimationFrame(frame);motionQuery?.removeEventListener?.('change',onMotion);document.removeEventListener('visibilitychange',onVisibility);delete root.dataset.masenetPerformance;delete root.dataset.masenetMeasuredFps;delete root.dataset.masenetRefreshEstimate;};
  },[]);
 
  // Global pointer-following jelly physics for interface actions; media-player transport controls remain untouched.
