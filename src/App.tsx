@@ -241,11 +241,25 @@ export default function App(){
  const featured=selectedFeatured||defaultFeatured;
 
  const normalizeSeriesName=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[’']/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+ async function refreshTitlesAfterWrite(expected:Title){
+  const response=await api.get('/api/titles');
+  if(!Array.isArray(response.data?.titles))throw new Error('The title was submitted, but the catalogue returned an invalid response. Refresh the Admin Library before trying again.');
+  const refreshed=groupLegacyTitles(response.data.titles as Title[]);
+  setTitles(refreshed);
+  const expectedName=normalizeSeriesName(expected.name);
+  const found=refreshed.some(item=>String(item.id)===String(expected.id)||(item.type===expected.type&&normalizeSeriesName(item.name)===expectedName));
+  if(!found)throw new Error('The save request completed, but the title is not yet visible in the catalogue. Your existing titles are safe; refresh the Admin Library and check before submitting it again.');
+ }
  async function createTitle(t:Title){
   const normalizedName=normalizeSeriesName(t.name);
-  // Only exact normalized title + type matches are grouped; similar titles remain separate.
   const existing=normalizedName?titles.find(item=>item.type===t.type&&normalizeSeriesName(item.name)===normalizedName):undefined;
-  if(!existing){const r=await api.post('/api/titles',t);const saved=(r.data?.title||t) as Title;setTitles(p=>[saved,...p.filter(x=>x.id!==saved.id)]);return;}
+  if(!existing){
+   const response=await api.post('/api/titles',t);
+   const saved=(response.data?.title||t) as Title;
+   if(!saved.id)throw new Error('The server did not confirm a title ID. The catalogue was not marked as published.');
+   await refreshTitlesAfterWrite(saved);
+   return;
+  }
   const merged=[...existing.episodes];
   for(const incoming of t.episodes){
    const index=merged.findIndex(ep=>Number(ep.season||1)===Number(incoming.season||1)&&Number(ep.episode)===Number(incoming.episode));
@@ -263,11 +277,18 @@ export default function App(){
   merged.sort((a,b)=>(Number(a.season)||1)-(Number(b.season)||1)||Number(a.episode)-Number(b.episode));
   const updated:Title={...existing,episodes:merged,description:existing.description||t.description,year:existing.year||t.year,posterUrl:existing.posterUrl||t.posterUrl,posterPath:existing.posterPath||t.posterPath,trailerUrl:existing.trailerUrl||t.trailerUrl};
   await api.put('/api/titles/'+encodeURIComponent(existing.id),updated);
-  setTitles(p=>p.map(item=>item.id===existing.id?updated:item));
+  await refreshTitlesAfterWrite(updated);
  }
  async function deleteTitle(id:string){const target=titles.find(x=>String(x.id)===String(id));if(!window.confirm('Delete '+(target?.name||'this movie/drama')+' and all its episodes? This cannot be undone.'))return;try{const fallback=target?'?name='+encodeURIComponent(target.name)+'&type='+encodeURIComponent(target.type):'';await api.delete('/api/titles/'+encodeURIComponent(id)+fallback);setTitles(p=>p.filter(x=>x.id!==id));if(route.includes(id))go('#/home')}catch(e){window.alert(e instanceof Error?e.message:'MaseTv could not delete this title. Please retry or check admin access.')}}
- async function updateTitle(t:Title){if(t.status==='active'||t.status==='ended'){await api.put('/api/titles/'+encodeURIComponent(t.id),{action:'updateStatus',name:t.name,type:t.type,status:t.status});setTitles(p=>p.map(x=>x.id===t.id?{...x,status:t.status,isEnded:t.status==='ended',ended:t.status==='ended'}:x));return;}await api.put('/api/titles/'+t.id,t);setTitles(p=>p.map(x=>x.id===t.id?t:x))}
- async function updateEpisode(t:Title,e:Episode){await api.put('/api/titles/'+encodeURIComponent(t.id),{action:'updateEpisode',episodeId:e.id,episode:e,name:t.name,type:t.type});const r=await api.get('/api/titles');setTitles(Array.isArray(r.data?.titles)?r.data.titles:[])}
+ async function updateTitle(t:Title){
+  if(t.status==='active'||t.status==='ended'){
+   await api.put('/api/titles/'+encodeURIComponent(t.id),{action:'updateStatus',name:t.name,type:t.type,status:t.status});
+   await refreshTitlesAfterWrite(t);
+   return;
+  }
+  await api.put('/api/titles/'+encodeURIComponent(t.id),t);
+  await refreshTitlesAfterWrite(t);
+ } async function updateEpisode(t:Title,e:Episode){await api.put('/api/titles/'+encodeURIComponent(t.id),{action:'updateEpisode',episodeId:e.id,episode:e,name:t.name,type:t.type});const r=await api.get('/api/titles');setTitles(Array.isArray(r.data?.titles)?r.data.titles:[])}
  async function deleteEpisode(t:Title,e:Episode){const query='?action=deleteEpisode&episodeId='+encodeURIComponent(e.id)+'&name='+encodeURIComponent(t.name)+'&type='+encodeURIComponent(t.type);await api.delete('/api/titles/'+encodeURIComponent(t.id)+query);const r=await api.get('/api/titles');setTitles(Array.isArray(r.data?.titles)?r.data.titles:[])}
  async function saveRows(){await api.post('/api/homepage-settings',{rows:homepageRows});}
  async function googleLogin():Promise<boolean>{if(authBusy)return false;setAuthBusy(true);setAuthError('');try{const r=await auth.signIn();setViewer({...r.user,provider:'google'});return true}catch(e){const code=(e as {code?:string})?.code;if(code==='popup_blocked')setAuthError('Your browser blocked the Google sign-in window. Allow popups for MaseTv, then try again.');else if(code==='popup_closed')setAuthError('Google sign-in was cancelled. Tap Continue with Google to try again.');else if(code==='auth_error')setAuthError('Google authentication could not be completed. Please retry once or check that Google sign-in is allowed in your browser.');else setAuthError('MaseTv could not reach the Google sign-in service. Check your connection, then try again.');return false}finally{setAuthBusy(false)}}
