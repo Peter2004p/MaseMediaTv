@@ -1,0 +1,48 @@
+/* MaseNet homepage catalogue refinements — scoped to discovery and hero only. */
+.iqHeroShade{display:none!important;opacity:0!important;background:none!important;box-shadow:none!important;filter:none!important}
+.iqHome .maseViewAllList{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:14px!important;
+}
+.iqHome .maseViewAllList>.iqCard{
+  display:grid!important;
+  grid-template-columns:88px minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;
+  align-items:center!important;
+  justify-items:start!important;
+  gap:5px 14px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:112px!important;
+  padding:9px!important;
+  text-align:left!important;
+  border-radius:14px!important;
+}
+.iqHome .maseViewAllList>.iqCard .iqPoster{
+  grid-column:1!important;
+  grid-row:1 / span 2!important;
+  width:88px!important;
+  min-width:88px!important;
+  aspect-ratio:2 / 3!important;
+  margin:0!important;
+}
+.iqHome .maseViewAllList>.iqCard>b{
+  grid-column:2!important;
+  grid-row:1!important;
+  align-self:end!important;
+  min-width:0!important;
+  white-space:normal!important;
+  text-align:left!important;
+}
+.iqHome .maseViewAllList>.iqCard>small{
+  grid-column:2!important;
+  grid-row:2!important;
+  align-self:start!important;
+  text-align:left!important;
+}
+@media(max-width:520px){
+  .iqHome .maseViewAllList>.iqCard{grid-template-columns:76px minmax(0,1fr)!important;min-height:100px!important;gap:4px 11px!important}
+  .iqHome .maseViewAllList>.iqCard .iqPoster{width:76px!important;min-width:76px!important}
+}
