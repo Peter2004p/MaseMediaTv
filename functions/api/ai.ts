@@ -205,7 +205,8 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: env.OPENAI_MODEL || "gpt-6-luna",
-          instructions,
+          tools: [{ type: "web_search" }],
+          instructions: instructions + "\n\nLIVE WEB RESEARCH: For current or time-sensitive questions (drama release dates, casting, schedules, platform announcements, current events, prices, policies, or recent news), use web_search before answering. Prefer official production-company, broadcaster/streaming-platform, and verified creator sources; cross-check with reputable reporting. Give exact dates and years when available, name sources, and include direct source links where available. Clearly label rumours, estimates, and unconfirmed reports. If sources disagree, explain the disagreement. Never invent a source or date. If search fails or evidence is weak, say you could not verify it; do not guess. Do not use web search for private MaseNet account status or internal catalogue data; use supplied live app data.
           input: [...history, {
             role: "user",
             content: imageInputs.length
