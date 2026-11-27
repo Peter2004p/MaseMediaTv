@@ -408,7 +408,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       await sendMessage(env, chatId, "Movie and episode alerts are now on.");
     } else if (/^\/(?:help|menu)(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "MaseNet Bot menu 🎬\n\n• Chat normally: ask a question or say “hey AI”\n• /app — open the Mini App\n• /notifications_off — pause new-title alerts\n• /notifications_on — enable new-title alerts\n• /privacy — learn what the bot stores\n• /help — show this menu", keyboard);
-    } else if (/^\\/verify(?:@\\w+)?$/i.test(text)) {
+    } else if (/^\/verify(?:@\w+)?$/i.test(text)) {
       // Membership in both official Telegram channels is the only access requirement.
       const current = await getRequiredChannelMemberships(env, chatId);
       if (current.allowed) {
