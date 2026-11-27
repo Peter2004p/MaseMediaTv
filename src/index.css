@@ -5021,3 +5021,38 @@ body:has(.app.theme-light),
     bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
   }
 }
+
+/* Device-aware performance fallback: preserve layout and controls while removing costly decoration on slower phones. */
+html.masenet-low-performance *,
+html.masenet-low-performance *::before,
+html.masenet-low-performance *::after{
+ animation-duration:.01ms!important;
+ animation-iteration-count:1!important;
+ scroll-behavior:auto!important;
+}
+html.masenet-low-performance .maseJellySpotlight,
+html.masenet-low-performance .maseJellyRipple{display:none!important}
+html.masenet-low-performance .app .iqHome .iqHero,
+html.masenet-low-performance .app .iqHome .iqPoster,
+html.masenet-low-performance .app .iqHome .iqCard,
+html.masenet-low-performance .app .masenetLiquidDock,
+html.masenet-low-performance .app .nav,
+html.masenet-low-performance .app .side,
+html.masenet-low-performance .app .aiDock,
+html.masenet-low-performance .app .homepageBroadcast,
+html.masenet-low-performance .app .broadcastDynamicIsland{
+ filter:none!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+ box-shadow:0 3px 12px rgba(0,0,0,.24)!important;
+}
+html.masenet-low-performance .app .iqHome .iqHero{background-image:linear-gradient(120deg,#111b17,#0a100d)!important}
+html.masenet-low-performance .app .iqHome .iqPoster{transform:none!important}
+html.masenet-low-performance .app .iqHome .iqCard:hover,
+html.masenet-low-performance .app button:hover{transform:none!important}
+html.masenet-low-performance .app .posterAura,
+html.masenet-low-performance .app .maseJellySpotlight{display:none!important}
+html[data-masenet-performance="balanced"] .app .maseJellySpotlight{opacity:.65}
+@media(prefers-reduced-motion:reduce){
+ html .maseJellySpotlight,html .maseJellyRipple{display:none!important}
+}
