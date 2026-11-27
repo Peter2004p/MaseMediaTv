@@ -63,20 +63,28 @@ export async function sendTelegramTitleNotifications(
     if (!individualChatId) throw new Error("Telegram did not return the individual channel ID.");
     const poster = String(title.posterUrl || "").trim();
     const titleName = String(title.name || "Untitled").trim().slice(0, 180);
-    const miniAppUrl = "https://t.me/MaseTv_Bot?startapp=" + encodeURIComponent("title_" + String(title.id || ""));
+    const episodeMiniAppUrl = (season: number, episode: number) => "https://t.me/MaseTv_Bot?startapp=" + encodeURIComponent("episode_" + String(title.id || "") + "_" + season + "_" + episode);
     const mainChannel = "@MaseMediaTv";
-    const ensureLog = await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_episode_notification_log (
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_episode_notification_log (
       title_id TEXT NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (title_id, season, episode)
     )`).run();
-    void ensureLog;
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_episode_channel_entries (
+      title_id TEXT NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL,
+      channel_id TEXT NOT NULL, channel_username TEXT NOT NULL DEFAULT '', message_id INTEGER NOT NULL,
+      PRIMARY KEY (title_id, season, episode)
+    )`).run();
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_episode_channel_index (
+      title_id TEXT PRIMARY KEY, channel_id TEXT NOT NULL, message_id INTEGER NOT NULL
+    )`).run();
     stats.attempted = true;
     for (const ep of newEpisodes) {
       const season = Math.max(1, Number(ep.season) || 1);
       const episode = Math.max(1, Number(ep.episode) || 1);
       const titleLine = "🎬 " + titleName + "\n" + (season > 1 ? "Season " + season + " · " : "") + "Episode " + episode +
         (ep.title && !/^episode\s+\d+$/i.test(String(ep.title)) ? " — " + String(ep.title).slice(0, 100) : "");
+      const episodeMiniAppLink = episodeMiniAppUrl(season, episode);
       const claimed = await env.DB.prepare("INSERT OR IGNORE INTO telegram_episode_notification_log (title_id,season,episode) VALUES (?,?,?)")
         .bind(String(title.id || title.name || "unknown"), season, episode).run();
       if (!Number(claimed.meta?.changes || 0)) continue;
@@ -87,7 +95,7 @@ export async function sendTelegramTitleNotifications(
           try {
             individualMessage = await api("sendPhoto", {
               chat_id: individualChatId, photo: poster, caption: individualText.slice(0, 1024),
-              reply_markup: { inline_keyboard: [[{ text: "▶️ Watch in MaseNet", url: miniAppUrl }]] }
+              reply_markup: { inline_keyboard: [[{ text: "▶️ Watch in MaseNet", url: episodeMiniAppLink }]] }
             });
           } catch {
             individualMessage = await api("sendMessage", {
@@ -108,11 +116,48 @@ export async function sendTelegramTitleNotifications(
           : individualChatId.startsWith("-100") && messageId
             ? "https://t.me/c/" + individualChatId.slice(4) + "/" + messageId
             : "https://t.me/" + channelUsername;
-        const mainText = "🔔 NEW EPISODE OUT!\n\n" + titleLine + "\n\nThe latest episode is now available in its dedicated channel.";
+        await env.DB.prepare("INSERT OR REPLACE INTO telegram_episode_channel_entries (title_id,season,episode,channel_id,channel_username,message_id) VALUES (?,?,?,?,?,?)")
+          .bind(String(title.id || title.name || "unknown"), season, episode, individualChatId, channelUsername, messageId).run();
+        const episodeEntries = await env.DB.prepare("SELECT season,episode,channel_username,message_id FROM telegram_episode_channel_entries WHERE title_id=? ORDER BY season ASC,episode ASC LIMIT 100")
+          .bind(String(title.id || title.name || "unknown"))
+          .all<{ season: number; episode: number; channel_username: string; message_id: number }>();
+        const escapeHtml = (value: unknown) => String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");
+        const groupedEpisodes = new Map<number, string[]>();
+        for (const entry of episodeEntries.results || []) {
+          const entrySeason = Number(entry.season) || 1;
+          const entryEpisode = Number(entry.episode) || 1;
+          const link = episodeMiniAppUrl(entrySeason, entryEpisode);
+          const label = "<a href=\"" + link + "\">Episode " + entryEpisode + "</a>";
+          const list = groupedEpisodes.get(entrySeason) || [];
+          list.push(label);
+          groupedEpisodes.set(entrySeason, list);
+        }
+        const indexText = "📚 <b>" + escapeHtml(titleName) + " — EPISODE GUIDE</b>\\n\\n" +
+          [...groupedEpisodes.entries()].sort((x,y)=>x[0]-y[0]).map(([s,items]) => "<b>Season " + s + "</b>\\n" + items.join("  ·  ")).join("\\n\\n") +
+          "\\n\\nTap any episode to open its own page in MaseNet.";
+        const indexRow = await env.DB.prepare("SELECT message_id FROM telegram_episode_channel_index WHERE title_id=?").bind(String(title.id || title.name || "unknown")).first<{ message_id: number }>();
+        if (indexRow?.message_id) {
+          try {
+            await api("editMessageText", { chat_id: individualChatId, message_id: indexRow.message_id, text: indexText.slice(0, 4000), parse_mode: "HTML", disable_web_page_preview: true });
+          } catch {
+            const indexMessage = await api("sendMessage", { chat_id: individualChatId, text: indexText.slice(0, 4000), parse_mode: "HTML", disable_web_page_preview: true });
+            if (indexMessage.message_id) {
+              await env.DB.prepare("INSERT OR REPLACE INTO telegram_episode_channel_index (title_id,channel_id,message_id) VALUES (?,?,?)").bind(String(title.id || title.name || "unknown"), individualChatId, Number(indexMessage.message_id)).run();
+              await api("pinChatMessage", { chat_id: individualChatId, message_id: Number(indexMessage.message_id), disable_notification: true }).catch(() => ({}));
+            }
+          }
+        } else {
+          const indexMessage = await api("sendMessage", { chat_id: individualChatId, text: indexText.slice(0, 4000), parse_mode: "HTML", disable_web_page_preview: true });
+          if (indexMessage.message_id) {
+            await env.DB.prepare("INSERT OR REPLACE INTO telegram_episode_channel_index (title_id,channel_id,message_id) VALUES (?,?,?)").bind(String(title.id || title.name || "unknown"), individualChatId, Number(indexMessage.message_id)).run();
+            await api("pinChatMessage", { chat_id: individualChatId, message_id: Number(indexMessage.message_id), disable_notification: true }).catch(() => ({}));
+          }
+        }
+        const mainText = "🔔 NEW EPISODE OUT!\\n\\n" + titleLine + "\\n\\nOpen this exact episode directly in MaseNet.";
         try {
           await api("sendMessage", {
             chat_id: mainChannel, text: mainText,
-            reply_markup: { inline_keyboard: [[{ text: "📺 Go to " + titleName.slice(0, 45) + " Episode", url: channelPostUrl }]] }
+            reply_markup: { inline_keyboard: [[{ text: "▶️ Watch Episode " + episode + " in MaseNet", url: episodeMiniAppLink }, { text: "📢 Channel Post", url: channelPostUrl }]] }
           });
         } catch (mainError) {
           console.error("Main MaseMediaTv episode announcement failed:", mainError instanceof Error ? mainError.message : String(mainError));
