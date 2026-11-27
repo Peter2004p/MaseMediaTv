@@ -5021,3 +5021,62 @@ body:has(.app.theme-light),
     bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
   }
 }
+
+
+/* MaseNet View All: force a true full-width vertical catalogue.
+   Higher specificity overrides the compact horizontal carousel card rules above. */
+.app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList{
+  display:flex!important;
+  flex-direction:column!important;
+  flex-wrap:nowrap!important;
+  align-items:stretch!important;
+  justify-content:flex-start!important;
+  width:100%!important;
+  max-width:100%!important;
+  gap:12px!important;
+  overflow:visible!important;
+}
+.app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList > .iqCard{
+  display:grid!important;
+  flex:0 0 auto!important;
+  flex-shrink:0!important;
+  grid-template-columns:84px minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;
+  align-items:center!important;
+  justify-items:start!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  min-height:112px!important;
+  margin:0!important;
+  padding:9px!important;
+  gap:5px 14px!important;
+  text-align:left!important;
+}
+.app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList > .iqCard > .iqPoster{
+  grid-column:1!important;
+  grid-row:1 / span 2!important;
+  width:84px!important;
+  min-width:84px!important;
+  max-width:84px!important;
+  aspect-ratio:2 / 3!important;
+  margin:0!important;
+}
+.app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList > .iqCard > b{
+  grid-column:2!important;grid-row:1!important;
+  align-self:end!important;min-width:0!important;
+  white-space:normal!important;text-align:left!important;
+}
+.app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList > .iqCard > small{
+  grid-column:2!important;grid-row:2!important;
+  align-self:start!important;text-align:left!important;
+}
+@media(max-width:560px){
+  .app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList > .iqCard{
+    grid-template-columns:72px minmax(0,1fr)!important;
+    min-height:100px!important;gap:4px 11px!important;
+  }
+  .app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList > .iqCard > .iqPoster{
+    width:72px!important;min-width:72px!important;max-width:72px!important;
+  }
+}
