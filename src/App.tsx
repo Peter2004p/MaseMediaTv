@@ -103,6 +103,7 @@ export default function App(){
  useEffect(()=>{
   let pressedButton:HTMLButtonElement|null=null;
   const eligible=(target:EventTarget|null):HTMLButtonElement|null=>{
+   if(document.documentElement.classList.contains('masenet-low-performance'))return null;
    const node=target instanceof Element?target.closest('button:not([data-no-jelly])'):null;
    if(!(node instanceof HTMLButtonElement)||node.closest('.maseNetPlayerV3,.masePlayer,.player,.video-player,.playerShell,.maseVideoPlayer'))return null;
    return node;
