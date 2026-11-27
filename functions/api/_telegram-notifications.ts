@@ -39,7 +39,13 @@ export async function sendTelegramTitleNotifications(
 
   if (!isNewTitle && newEpisodes.length) {
     const metadata = title;
-    const rawChannel = String(metadata.telegramEpisodeChannelChatId || metadata.telegramEpisodeChannelLink || "").trim();
+    const normalizedTitle = String(title.name || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const knownSeriesChannel = normalizedTitle === "blossoms in darkness"
+      ? "C_M_Eng_sub"
+      : normalizedTitle === "river of no return"
+        ? "ChineseDrama_MaseMediaTv"
+        : "";
+    const rawChannel = String(metadata.telegramEpisodeChannelChatId || metadata.telegramEpisodeChannelLink || knownSeriesChannel).trim();
     if (!rawChannel) {
       console.info("Episode announcement skipped: no individual Telegram channel link is configured for", title.id || title.name);
       return stats;
@@ -185,6 +191,15 @@ export async function sendTelegramTitleNotifications(
       "SELECT chat_id FROM telegram_subscribers WHERE active=1 AND chat_type IN ('private','channel','supergroup')"
     ).all<{ chat_id: string }>();
     const targets = [...new Set((subscribers.results || []).map(row => String(row.chat_id)).filter(Boolean))];
+    // Category broadcast destinations. The title's type/language metadata determines its channel.
+    const titleType = String(title.type || "").toLowerCase();
+    const isKoreanDrama = /korean|k-drama|k drama|south korea/.test(titleType);
+    const categoryChannel = isKoreanDrama
+      ? "@k_drama_net"
+      : isNewTitle && /movie|film/.test(titleType)
+        ? "@movieszoon10"
+        : "";
+    if (categoryChannel) targets.push(categoryChannel);
     const botUsername = "MaseTv_Bot";
     const appLink = "https://t.me/" + botUsername + "?startapp=" + encodeURIComponent("title_" + String(title.id || ""));
     const name = String(title.name || "Untitled").trim().slice(0, 180);
