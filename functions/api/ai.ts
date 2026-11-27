@@ -23,6 +23,20 @@ const episodeSearchText = (metadataJson: string): string => {
   }
 };
 
+function requiresLiveWebResearch(message: string): boolean {
+  return /\\b(when|release|premiere|air(?:s|ing)?|coming out|date|latest|recent|today|this week|cast|casting|confirmed|official|announcement|renewed|season \\d+|schedule|trailer|news|current)\\b/i.test(message);
+}
+function extractWebSources(output: Array<{type?:string;action?:{sources?:Array<{url?:string}>};content?:Array<{annotations?:Array<{type?:string;url?:string;title?:string}>}>}>): string[] {
+  const found = new Map<string,string>();
+  for (const item of output || []) {
+    for (const source of item.action?.sources || []) if (source.url) found.set(source.url, source.url);
+    for (const part of item.content || []) for (const annotation of part.annotations || []) {
+      if (annotation.type === "url_citation" && annotation.url) found.set(annotation.url, annotation.title || annotation.url);
+    }
+  }
+  return [...found.entries()].slice(0,6).map(([url,title]) => title === url ? url : title + ": " + url);
+}
+
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
   const body = await request.json().catch(() => ({})) as { message?: unknown; images?: Array<{data?:unknown;mimeType?:unknown}>; audios?: Array<{data?:unknown;mimeType?:unknown}>; adminMode?: boolean; viewerName?: string; history?: Array<{role?:unknown;content?:unknown}> };
   // Verify admin identity from the secure session cookie; ignore client claims for permissions.
@@ -204,8 +218,10 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         method: "POST",
         headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: env.OPENAI_MODEL || "gpt-6-luna",
-          tools: [{ type: "web_search" }],
+          model: env.OPENAI_MODEL || "gpt-6.2-astra",
+          tools: [{ type: "web_search", search_context_size: "high", external_web_access: true }],
+          tool_choice: requiresLiveWebResearch(message) ? { type: "web_search" } : "auto",
+          include: ["web_search_call.action.sources"],
           instructions: instructions + "\n\n" + "LIVE WEB RESEARCH: For current or time-sensitive questions (drama release dates, casting, schedules, platform announcements, current events, prices, policies, or recent news), use the web_search tool before answering. Prefer official production-company, broadcaster/streaming-platform, and verified creator sources; cross-check with reputable reporting. Give exact dates and years when available, name sources, and include direct source links where available. Clearly label rumours, estimates, and unconfirmed reports. If sources disagree, explain the disagreement. Never invent sources or dates. If search fails or evidence is weak, say you could not verify it; do not guess. Do not use web search for private MaseNet account status or internal catalogue data; use supplied live app data.",
           input: [...history, {
             role: "user",
@@ -223,15 +239,20 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         })
       });
       if (response.ok) {
-        const data = await response.json() as { output_text?: string; output?: Array<{content?:Array<{type?:string;text?:string}>}> };
+        const data = await response.json() as { output_text?: string; output?: Array<{type?:string;action?:{sources?:Array<{url?:string}>};content?:Array<{type?:string;text?:string;annotations?:Array<{type?:string;url?:string;title?:string}>}>}> };
         const answer = data.output_text || (data.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\n");
-        if (answer.trim()) return json({ text: answer.trim().slice(0, 5000) });
+        const sources = extractWebSources(data.output || []);
+        if (answer.trim()) return json({ text: answer.trim().slice(0, 4500) + (sources.length ? "\n\nSources:\n" + sources.join("\n") : ""), searchedWeb: sources.length > 0, sources });
       } else {
         console.error("OpenAI response API returned status", response.status);
       }
     } catch (error) {
       console.error("OpenAI request failed", error instanceof Error ? error.message : "unknown error");
     }
+  }
+
+  if (requiresLiveWebResearch(message)) {
+    return json({ text: "I can’t verify this with live web sources right now. Please try again shortly; I won’t guess or give you an unverified release date.", searchedWeb: false }, 503);
   }
 
   if (env.AI && !imageInputs.length) {
