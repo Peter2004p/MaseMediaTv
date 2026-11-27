@@ -394,6 +394,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     }
   }
 
+  const chatType = String(msg?.chat?.type || "private");
   const command = incoming.split(/\s+/, 1)[0].toLowerCase().replace(/@[^@]+$/, "");
   const commandText = incoming.includes(" ") ? incoming.slice(incoming.indexOf(" ") + 1).trim() : "";
   const isOwner = !!env.ADMIN_TELEGRAM_CHAT_ID && senderId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim() && chatType === "private";
@@ -451,7 +452,6 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     return {inline_keyboard:rows};
   };
   const replyMarkup = miniAppUrl.startsWith("https://") ? { inline_keyboard: [[{ text: "Open MaseNet", web_app: { url: miniAppUrl } }]] } : undefined;
-  const chatType = String(msg?.chat?.type || "private");
   const ensureSubscribers = async () => env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
     chat_id TEXT PRIMARY KEY, chat_type TEXT NOT NULL, title TEXT,
     active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')),
