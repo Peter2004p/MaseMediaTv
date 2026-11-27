@@ -78,16 +78,27 @@ export default function App(){
  // Global pointer-following jelly physics for interface actions; media-player transport controls remain untouched.
  useEffect(()=>{
   let pressedButton:HTMLButtonElement|null=null;
+  let pendingMove:PointerEvent|null=null;
+  let moveFrame=0;
   const eligible=(target:EventTarget|null):HTMLButtonElement|null=>{
    const node=target instanceof Element?target.closest('button:not([data-no-jelly])'):null;
    if(!(node instanceof HTMLButtonElement)||node.closest('.maseNetPlayerV3,.masePlayer,.player,.video-player,.playerShell,.maseVideoPlayer'))return null;
    return node;
   };
+  // Coalesce pointer updates to one visual write per animation frame.
   const move=(event:PointerEvent)=>{
-   const button=eligible(event.target);if(!button)return;
-   const rect=button.getBoundingClientRect();button.style.setProperty('--spot-x',Math.max(0,Math.min(100,(event.clientX-rect.left)/Math.max(1,rect.width)*100))+'%');button.style.setProperty('--spot-y',Math.max(0,Math.min(100,(event.clientY-rect.top)/Math.max(1,rect.height)*100))+'%');
-   button.classList.add('maseJellyTarget');
-   if(!button.querySelector('.maseJellySpotlight')){const glow=document.createElement('span');glow.className='maseJellySpotlight';glow.setAttribute('aria-hidden','true');button.prepend(glow);}
+   pendingMove=event;
+   if(moveFrame)return;
+   moveFrame=window.requestAnimationFrame(()=>{
+    moveFrame=0;
+    const latest=pendingMove;pendingMove=null;if(!latest)return;
+    const button=eligible(latest.target);if(!button)return;
+    const rect=button.getBoundingClientRect();
+    button.style.setProperty('--spot-x',Math.max(0,Math.min(100,(latest.clientX-rect.left)/Math.max(1,rect.width)*100))+'%');
+    button.style.setProperty('--spot-y',Math.max(0,Math.min(100,(latest.clientY-rect.top)/Math.max(1,rect.height)*100))+'%');
+    button.classList.add('maseJellyTarget');
+    if(!button.querySelector('.maseJellySpotlight')){const glow=document.createElement('span');glow.className='maseJellySpotlight';glow.setAttribute('aria-hidden','true');button.prepend(glow);}
+   });
   };
   const down=(event:PointerEvent)=>{
    const button=eligible(event.target);if(!button)return;
@@ -99,7 +110,7 @@ export default function App(){
   const up=(event:PointerEvent)=>{const button=pressedButton||eligible(event.target);pressedButton=null;if(button){button.classList.remove('maseJellyPressed');button.classList.add('maseJellyRebound');window.setTimeout(()=>button.classList.remove('maseJellyRebound'),360);}};
   document.addEventListener('pointermove',move,{passive:true});document.addEventListener('pointerdown',down,{passive:true});document.addEventListener('pointerup',up,{passive:true});document.addEventListener('pointercancel',up,{passive:true});
   document.documentElement.classList.add('maseJellyEnabled');
-  return()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerdown',down);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);document.documentElement.classList.remove('maseJellyEnabled');};
+  return()=>{if(moveFrame)window.cancelAnimationFrame(moveFrame);pendingMove=null;document.removeEventListener('pointermove',move);document.removeEventListener('pointerdown',down);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);document.documentElement.classList.remove('maseJellyEnabled');};
  },[]);
 
  const [titles,setTitles]=useState<Title[]>(demo);
