@@ -79,7 +79,7 @@ export async function sendTelegramTitleNotifications(
       title_id TEXT PRIMARY KEY, channel_id TEXT NOT NULL, message_id INTEGER NOT NULL
     )`).run();
     stats.attempted = true;
-    for (const ep of newEpisodes) {
+    for (const ep of [...newEpisodes].sort((a,b)=>(Number(a.season)||1)-(Number(b.season)||1)||(Number(a.episode)||1)-(Number(b.episode)||1))) {
       const season = Math.max(1, Number(ep.season) || 1);
       const episode = Math.max(1, Number(ep.episode) || 1);
       const titleLine = "🎬 " + titleName + "\n" + (season > 1 ? "Season " + season + " · " : "") + "Episode " + episode +
@@ -106,7 +106,7 @@ export async function sendTelegramTitleNotifications(
         } else {
           individualMessage = await api("sendMessage", {
             chat_id: individualChatId, text: individualText,
-            reply_markup: { inline_keyboard: [[{ text: "▶️ Watch in MaseNet", url: miniAppUrl }]] }
+            reply_markup: { inline_keyboard: [[{ text: "▶️ Watch in MaseNet", url: episodeMiniAppLink }]] }
           });
         }
         const channelUsername = String(individualChat.username || channelInput.replace(/^@/, ""));
