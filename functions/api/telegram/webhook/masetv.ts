@@ -645,6 +645,23 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     return sent.ok ? json({ ok: true, latestCatalogue: true, count: rows.length }) : json({ ok: false, error: "Telegram could not deliver the latest catalogue list." }, 502);
   }
 
+  // Escalate explicit unresolved support issues to the configured owner.
+  if (chatType === "private" && !isOwner && !incoming.startsWith("/") &&
+      /\\b(still (?:doesn['’]?t|does not|isn['’]?t|is not) work|not fixed|not solved|cannot solve|can['’]?t solve|tried everything|same problem|problem persists|still having (?:the )?problem)\\b/i.test(incoming)) {
+    try {
+      await ensureRequestTables(env);
+      const saved = await env.DB.prepare("INSERT INTO telegram_support_requests (chat_id,requester_name,requester_username,issue) VALUES (?,?,?,?) RETURNING id")
+        .bind(String(chatId),String((msg as any)?.from?.first_name||"Telegram user").slice(0,120),String((msg as any)?.from?.username||"").slice(0,80),incoming.slice(0,1800)).first<{id:number}>();
+      if (saved?.id && env.ADMIN_TELEGRAM_CHAT_ID) {
+        await telegramSend(env,env.ADMIN_TELEGRAM_CHAT_ID,"🆘 MaseNet support escalation #"+saved.id+"\\n\\nFrom: "+String((msg as any)?.from?.first_name||"Telegram user")+"\\nTelegram chat ID: "+String(chatId)+"\\nIssue: "+incoming.slice(0,1200)+"\\n\\nReply with: /support_reply "+saved.id+" your response");
+      }
+      await telegramSend(env,chatId,"I’m sorry the problem is still happening. I’ve forwarded your issue to the MaseNet support team. Someone will reply to you here when there’s an update.");
+      return json({ok:true,supportEscalated:true});
+    } catch(error) {
+      console.error("MaseNet support escalation failed:",error instanceof Error?error.message:String(error));
+    }
+  }
+
   // Treat ordinary greetings and natural-language questions as chat without requiring /ai.
   // Keep likely title/episode searches in the catalog-search flow below.
   const explicitTitleSearch = /^(?:(?:hey|please)\s+)?(?:(?:i(?:'m|\s+am)|we(?:'re|\s+are))\s+)?(?:search(?:ing)?\s+for|look(?:ing)?\s+for|find(?:\s+me)?|do\s+you\s+have|have\s+you\s+got)\s+.+$/i.test(incoming.trim())
@@ -873,11 +890,26 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     if (results.length) {
       reply = "MaseNet catalogue results for “"+query.slice(0,80)+"”:\n"+results.map(item=>"• "+item.name+(item.year?" ("+item.year+")":"")+" — "+(item.kind==="drama"?"Drama · "+item.episodes.length+" episode(s)":"Movie")).join("\n")+"\n\nOpen a title to view it in the Mini App. For dramas, tap Full Episodes to browse 10 episodes at a time.";
     } else {
+      let requestId: number | null = null;
       try {
-        await env.DB.prepare("CREATE TABLE IF NOT EXISTS telegram_missing_searches (id INTEGER PRIMARY KEY AUTOINCREMENT, query TEXT NOT NULL, chat_type TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))" ).run();
-        await env.DB.prepare("INSERT INTO telegram_missing_searches (query, chat_type) VALUES (?, ?)" ).bind(query.slice(0,300),String((msg as {chat?:{type?:string}}).chat?.type||"unknown")).run();
-      } catch { /* Search still replies if request logging is unavailable. */ }
-      reply = "I couldn't find “"+query.slice(0,100)+"” in the MaseNet catalogue. Open the Mini App to browse the available movies and dramas.";
+        await ensureRequestTables(env);
+        const saved = await env.DB.prepare("INSERT INTO telegram_missing_searches (query,chat_type,requester_chat_id,requester_name,requester_username,status) VALUES (?,?,?,?,?,'pending') RETURNING id")
+          .bind(query.slice(0,300),chatType,String(chatId),String((msg as any)?.from?.first_name||"Telegram user").slice(0,120),String((msg as any)?.from?.username||"").slice(0,80)).first<{id:number}>();
+        requestId = saved?.id || null;
+        if (requestId && env.ADMIN_TELEGRAM_CHAT_ID) {
+          await telegramSend(env,env.ADMIN_TELEGRAM_CHAT_ID,
+            "🔎 MaseNet missing-title request #"+requestId+"\\n\\nTitle: "+query.slice(0,250)+
+            "\\nRequested by: "+String((msg as any)?.from?.first_name||"Telegram user")+
+            (String((msg as any)?.from?.username||"") ? " (@"+String((msg as any)?.from?.username)+")" : "")+
+            "\\nTelegram chat ID: "+String(chatId)+
+            "\\n\\nAfter publishing the exact title, reply: /request_available "+requestId+
+            "\\nOr send a decision: /request_reply "+requestId+" your feedback");
+          await env.DB.prepare("UPDATE telegram_missing_searches SET admin_notified_at=datetime('now') WHERE id=?").bind(requestId).run();
+        }
+      } catch (error) { console.error("MaseNet missing-title request escalation failed:",error instanceof Error?error.message:String(error)); }
+      reply = requestId
+        ? "I couldn't find “"+query.slice(0,100)+"” in the MaseNet catalogue yet. I’ve sent your request to the MaseNet team. Please give us a little time; we’ll message you here when there is an update."
+        : "I couldn't find “"+query.slice(0,100)+"” in the MaseNet catalogue. I couldn't submit the request just now, so please try again later or contact MaseNet support.";
       if (!searchReplyMarkup && miniAppUrl.startsWith("https://")) searchReplyMarkup={inline_keyboard:[[{text:"🎬 Browse MaseNet Mini App",web_app:{url:miniAppUrl}}]]};
     }
   }
