@@ -5118,3 +5118,16 @@ body:has(.app.theme-light),
   .app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList{gap:14px 8px!important}
   .app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList > .iqCard > b{font-size:10px!important}
 }
+
+
+/* Clean live-trailer hero: keep the footage unobstructed on mobile and desktop. */
+html body #root .app .iqHome .maseCinematicHero.masePreviewLive .maseHeroPreviewBadge{display:none!important}
+html body #root .app .iqHome .maseCinematicHero.masePreviewLive .maseHeroEditorial .maseHeroBrandline,
+html body #root .app .iqHome .maseCinematicHero.masePreviewLive .maseHeroEditorial .iqTags,
+html body #root .app .iqHome .maseCinematicHero.masePreviewLive .maseHeroEditorial h1,
+html body #root .app .iqHome .maseCinematicHero.masePreviewLive .maseHeroEditorial>p,
+html body #root .app .iqHome .maseCinematicHero.masePreviewLive .maseHeroEditorial .maseHeroFacts,
+html body #root .app .iqHome .maseCinematicHero.masePreviewLive .maseHeroEditorial .iqHeroDots{display:none!important}
+html body #root .app .iqHome .maseCinematicHero .maseHeroPreviewVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;border:0!important;pointer-events:none!important}
+html body #root .app .iqHome .maseCinematicHero .maseHeroPreviewFrame{transform:scale(1.015)!important}
+@media(max-width:680px){html body #root .app .iqHome .maseCinematicHero.masePreviewLive{min-height:390px!important}}
