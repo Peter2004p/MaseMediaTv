@@ -1,4 +1,5 @@
 import { json, requireOwner, type Env as AuthEnv } from "../auth/_shared";
+import { sendTelegramTitleNotifications } from "../_telegram-notifications";
 interface Env extends AuthEnv {}
 
 export const onRequestGet: PagesFunction<Env> = async ({request,env}) => {
@@ -35,6 +36,7 @@ export const onRequestPost: PagesFunction<Env> = async ({request,env}) => {
   try{metadata=JSON.parse(title.metadata_json||"{}") as Record<string,unknown>;}catch{}
   const existingEpisodes=Array.isArray(metadata.episodes)?metadata.episodes as Record<string,unknown>[]:[];
   const nextEpisodes=[...existingEpisodes];
+  const newlyAddedEpisodes: {season:number;episode:number;title:string}[]=[];
   for(const asset of assets){
     const season=expectedKind==="movie"?1:Number(asset.season)||1;
     const episode=expectedKind==="movie"?1:Number(asset.episode)||1;
@@ -48,7 +50,12 @@ export const onRequestPost: PagesFunction<Env> = async ({request,env}) => {
       vaultAssetId:asset.id,fileName:asset.file_name
     };
     if(index>=0) nextEpisodes[index]={...nextEpisodes[index],...entry};
-    else nextEpisodes.push(entry);
+    else {
+      nextEpisodes.push(entry);
+      if(expectedKind==="drama"&&!existingEpisodes.some(ep=>(Number(ep.season)||1)===season&&(Number(ep.episode)||1)===episode)) {
+        newlyAddedEpisodes.push({season,episode,title:String(entry.title||("Episode "+episode))});
+      }
+    }
   }
   nextEpisodes.sort((a,b)=>Number(a.season||1)-Number(b.season||1)||Number(a.episode||1)-Number(b.episode||1)||String(a.quality||"").localeCompare(String(b.quality||"")));
   metadata={...metadata,id:title.id,name:title.name,type:expectedKind==="drama"?"Drama":"Movie",episodes:nextEpisodes};
@@ -57,5 +64,14 @@ export const onRequestPost: PagesFunction<Env> = async ({request,env}) => {
     ...assets.map(asset=>env.DB.prepare("UPDATE telegram_media_assets SET title_id=?,status='published',rights_confirmed=1,updated_at=datetime('now') WHERE id=? AND status IN ('staged','published')").bind(title.id,asset.id))
   ];
   await env.DB.batch(statements);
-  return json({ok:true,published:true,publishedCount:assets.length,assetIds:ids,titleId,titleName:title.name});
+  let episodeNotifications={attempted:false,delivered:0,failed:0};
+  if(newlyAddedEpisodes.length) {
+    episodeNotifications=await sendTelegramTitleNotifications(
+      env,
+      {id:title.id,name:title.name,type:"Drama",posterUrl:String(metadata.posterUrl||""),telegramEpisodeChannelLink:String(metadata.telegramEpisodeChannelLink||""),telegramEpisodeChannelChatId:String(metadata.telegramEpisodeChannelChatId||"")} as any,
+      false,
+      newlyAddedEpisodes
+    );
+  }
+  return json({ok:true,published:true,publishedCount:assets.length,assetIds:ids,titleId,titleName:title.name,episodeNotifications});
 };
