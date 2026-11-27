@@ -1,6 +1,6 @@
 import type { Env } from "./api/auth/_shared";
 
-const normalize = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+const normalize = (value: unknown) => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
 export async function notifyMatchingMissingTitleRequests(env: Env, titleName: string): Promise<{ matched: number; notified: number; failed: number }> {
   const result = { matched: 0, notified: 0, failed: 0 };
