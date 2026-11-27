@@ -5208,3 +5208,53 @@ body:has(.app.theme-light),
   position:relative!important;
   z-index:4!important;
 }
+
+
+/* Final hero preview clarity fix: eliminate all non-content veils and let the trailer fill the hero. */
+.app .iqHome .maseCinematicHero,
+.app .iqHome .maseCinematicHero .iqHeroPoster,
+.app .iqHome .maseCinematicHero .maseHeroPosterArtwork,
+.app .iqHome .maseCinematicHero .iqHeroCopy,
+.app .iqHome .maseCinematicHero .maseHeroEditorial{
+  background:transparent!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+.app .iqHome .maseCinematicHero .maseHeroPosterArtwork{opacity:1!important}
+.app .iqHome .maseCinematicHero .iqHeroCopy:before,
+.app .iqHome .maseCinematicHero .iqHeroCopy:after,
+.app .iqHome .maseCinematicHero .maseHeroEditorial:before,
+.app .iqHome .maseCinematicHero .maseHeroEditorial:after,
+.app .iqHome .maseCinematicHero .iqHeroPoster:before,
+.app .iqHome .maseCinematicHero .iqHeroPoster:after,
+.app .iqHome .maseCinematicHero .maseHeroPosterArtwork:before,
+.app .iqHome .maseCinematicHero .maseHeroPosterArtwork:after{
+  content:none!important;
+  display:none!important;
+  opacity:0!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+.app .iqHome .maseCinematicHero .maseHeroPreviewFrame{
+  width:180%!important;
+  min-width:180%!important;
+  max-width:none!important;
+  height:100%!important;
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%)!important;
+  object-fit:fill!important;
+  background:transparent!important;
+}
+.app .iqHome .maseCinematicHero.masePreviewLive .maseHeroPosterArtwork{opacity:1!important}
+.app .iqHome .maseCinematicHero .iqHeroCopy{
+  background:transparent!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+@media(max-width:760px){
+  .app .iqHome .maseCinematicHero .maseHeroPreviewFrame{
+    width:190%!important;
+    min-width:190%!important;
+  }
+}
