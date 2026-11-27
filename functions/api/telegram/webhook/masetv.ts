@@ -1,3 +1,4 @@
+/* Cloudflare Pages preview branch: feature/* — MaseNet Telegram support upgrade. */
 import { json } from "../../auth/_shared";
 import { indexTelegramChannelPost } from "../../_telegram-channel";
 
