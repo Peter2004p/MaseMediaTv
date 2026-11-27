@@ -654,7 +654,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         .bind(String(chatId),String((msg as any)?.from?.first_name||"Telegram user").slice(0,120),String((msg as any)?.from?.username||"").slice(0,80),incoming.slice(0,1800)).first<{id:number}>();
       let supportAdminNotified = false;
       if (saved?.id && env.ADMIN_TELEGRAM_CHAT_ID) {
-        await telegramSend(env,env.ADMIN_TELEGRAM_CHAT_ID,"🆘 MaseNet support escalation #"+saved.id+"\\n\\nFrom: "+String((msg as any)?.from?.first_name||"Telegram user")+"\\nTelegram chat ID: "+String(chatId)+"\\nIssue: "+incoming.slice(0,1200)+"\\n\\nReply with: /support_reply "+saved.id+" your response");
+        await telegramSend(env,env.ADMIN_TELEGRAM_CHAT_ID,"🆘 MaseNet support escalation #"+saved.id+"\n\nFrom: "+String((msg as any)?.from?.first_name||"Telegram user")+"\nTelegram chat ID: "+String(chatId)+"\nIssue: "+incoming.slice(0,1200)+"\n\nReply with: /support_reply "+saved.id+" your response");
         supportAdminNotified = true;
       }
       await telegramSend(env,chatId,supportAdminNotified ? "I’m sorry the problem is still happening. I’ve forwarded your issue to the MaseNet support team. Someone will reply to you here when there’s an update." : "I’m sorry the problem is still happening. I saved the support report, but could not notify the team just now. Please try again later.");
@@ -901,12 +901,12 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
         requestId = saved?.id || null;
         if (requestId && env.ADMIN_TELEGRAM_CHAT_ID) {
           await telegramSend(env,env.ADMIN_TELEGRAM_CHAT_ID,
-            "🔎 MaseNet missing-title request #"+requestId+"\\n\\nTitle: "+query.slice(0,250)+
-            "\\nRequested by: "+String((msg as any)?.from?.first_name||"Telegram user")+
+            "🔎 MaseNet missing-title request #"+requestId+"\n\nTitle: "+query.slice(0,250)+
+            "\nRequested by: "+String((msg as any)?.from?.first_name||"Telegram user")+
             (String((msg as any)?.from?.username||"") ? " (@"+String((msg as any)?.from?.username)+")" : "")+
-            "\\nTelegram chat ID: "+String(chatId)+
-            "\\n\\nAfter publishing the exact title, reply: /request_available "+requestId+
-            "\\nOr send a decision: /request_reply "+requestId+" your feedback");
+            "\nTelegram chat ID: "+String(chatId)+
+            "\n\nAfter publishing the exact title, reply: /request_available "+requestId+
+            "\nOr send a decision: /request_reply "+requestId+" your feedback");
           adminNotified = true;
           await env.DB.prepare("UPDATE telegram_missing_searches SET admin_notified_at=datetime('now') WHERE id=?").bind(requestId).run();
         }
