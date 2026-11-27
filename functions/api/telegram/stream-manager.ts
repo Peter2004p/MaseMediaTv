@@ -203,7 +203,9 @@ const applyPending = async (env: Env, pendingId: string) => {
         id: row.id, name: pending.title, type,
         year: String(metadata.year || pending.year || ""),
         description: String(metadata.description || ""),
-        posterUrl: String(metadata.posterUrl || "")
+        posterUrl: String(metadata.posterUrl || ""),
+        telegramEpisodeChannelLink: String(metadata.telegramEpisodeChannelLink || ""),
+        telegramEpisodeChannelChatId: String(metadata.telegramEpisodeChannelChatId || "")
       }, false, [{ season: pending.season, episode: pending.episode, title: "Episode " + pending.episode }])
         .catch(error => console.error("Stream Manager episode notification failed:", error));
     }
