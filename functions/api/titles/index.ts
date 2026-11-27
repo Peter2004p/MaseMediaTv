@@ -1,4 +1,5 @@
 import { Env, json, requireAdmin } from "../auth/_shared";
+import { notifyMatchingMissingTitleRequests } from "../../_telegram-missing-requests";
 const validateExternalEpisodeLinks = (episodes: unknown, requestUrl: string): string | null => {
   if (!Array.isArray(episodes)) return null;
   const ownOrigin = new URL(requestUrl).origin;
@@ -99,6 +100,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const title: Record<string, unknown> = { ...body, id };
   await env.DB.prepare("INSERT INTO titles (id,name,kind,metadata_json) VALUES (?,?,?,?)")
     .bind(id, String(title.name), kind, JSON.stringify(title)).run();
+  const missingTitleNotifications = await notifyMatchingMissingTitleRequests(env, String(title.name));
 
   // Notify opted-in private chats and explicitly registered channels. Existing episodes
   // are compared by season/episode number so edits do not resend old announcements.
@@ -163,5 +165,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       }
     } catch { telegramNotifications.failed++; }
   }
-  return json({ title, telegramNotifications }, 201);
+  return json({ title, telegramNotifications, missingTitleNotifications }, 201);
 };
