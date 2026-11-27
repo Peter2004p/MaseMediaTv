@@ -42,7 +42,7 @@ export async function sendTelegramTitleNotifications(
     const normalizedTitle = String(title.name || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     const knownSeriesChannel = normalizedTitle === "taming the husband"
       ? "blooms_Cdrama"
-      : normalizedTitle === "blossoms in darkness"
+      : (normalizedTitle === "blossoms in darkness" || normalizedTitle === "blossom in darkness")
         ? "C_M_Eng_sub"
         : normalizedTitle === "river of no return"
           ? "ChineseDrama_MaseMediaTv"
@@ -195,7 +195,9 @@ export async function sendTelegramTitleNotifications(
     const targets = [...new Set((subscribers.results || []).map(row => String(row.chat_id)).filter(Boolean))];
     // Category broadcast destinations. The title's type/language metadata determines its channel.
     const titleType = String(title.type || "").toLowerCase();
-    const isKoreanDrama = /korean|k-drama|k drama|south korea/.test(titleType);
+    // Catalogue descriptions often carry Country/Language metadata even when type is only "Drama".
+    const classificationText = (titleType + " " + String(title.description || "")).toLowerCase();
+    const isKoreanDrama = /korean|k-drama|k drama|south korea|country\s*:\s*(?:south\s+)?korea|language\s*:\s*korean/.test(classificationText);
     const categoryChannel = isKoreanDrama
       ? "@k_drama_net"
       : isNewTitle && /movie|film/.test(titleType)
