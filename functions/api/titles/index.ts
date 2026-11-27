@@ -91,37 +91,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (sourceError) return json({ error: sourceError }, 400);
   if (typeof body.name !== "string" || !body.name.trim()) return json({ error: "A title name is required." }, 400);
   const kind = normalizeTitleType(body.type) === "Drama" ? "drama" : "movie";
-  const normalizedName = body.name.trim().normalize("NFKC").toLowerCase().replace(/[’\']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-  const existingRows = await env.DB.prepare("SELECT id,name,kind,metadata_json FROM titles WHERE kind=?").bind(kind).all<{id:string;name:string;kind:string;metadata_json:string}>();
-  const existing = (existingRows.results || []).find(row => row.name.trim().normalize("NFKC").toLowerCase().replace(/[’\']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim() === normalizedName);
-  let id: string;
-  let title: Record<string, unknown>;
-  if (existing) {
-    let previous: Record<string, unknown> = {};
-    try { previous = JSON.parse(existing.metadata_json) as Record<string, unknown>; } catch {}
-    const oldEpisodes = Array.isArray(previous.episodes) ? previous.episodes as Record<string, unknown>[] : [];
-    const newEpisodes = Array.isArray(body.episodes) ? body.episodes as Record<string, unknown>[] : [];
-    const episodeMap = new Map<string, Record<string, unknown>>();
-    for (const episode of [...oldEpisodes, ...newEpisodes]) {
-      const key = String(episode.season || 1) + "|" + String(episode.episode || 1) + "|" + String(episode.quality || body.quality || "");
-      const prior = episodeMap.get(key);
-      episodeMap.set(key, prior ? { ...prior, ...episode, subtitleTracks: episode.subtitleTracks || prior.subtitleTracks, qualities: episode.qualities || prior.qualities } : episode);
-    }
-    id = existing.id;
-    title = {
-      ...previous, ...body, id, name: existing.name,
-      description: String(body.description || previous.description || ""),
-      posterUrl: String(body.posterUrl || previous.posterUrl || ""),
-      posterPath: body.posterPath || previous.posterPath,
-      year: String(body.year || previous.year || ""),
-      episodes: [...episodeMap.values()].sort((a,b) => Number(a.season||1)-Number(b.season||1) || Number(a.episode||1)-Number(b.episode||1)),
-    };
-    await env.DB.prepare("UPDATE titles SET name=?,kind=?,metadata_json=?,updated_at=datetime('now') WHERE id=?").bind(existing.name, kind, JSON.stringify(title), id).run();
-  } else {
-    id = typeof body.id === "string" && body.id ? body.id : crypto.randomUUID();
-    title = { ...body, id };
-    await env.DB.prepare("INSERT INTO titles (id,name,kind,metadata_json) VALUES (?,?,?,?)").bind(id, String(title.name), kind, JSON.stringify(title)).run();
-  }
+  // POST is create-only. Updates must use PUT with the explicit title ID.
+  // Matching records by name here can silently overwrite another title's poster/trailer
+  // when names normalize to the same value. The admin UI handles intentional same-title
+  // episode merges before calling this endpoint.
+  const id = typeof body.id === "string" && body.id ? body.id : crypto.randomUUID();
+  const title: Record<string, unknown> = { ...body, id };
+  await env.DB.prepare("INSERT INTO titles (id,name,kind,metadata_json) VALUES (?,?,?,?)")
+    .bind(id, String(title.name), kind, JSON.stringify(title)).run();
 
   // Notify opted-in private chats and explicitly registered channels. Existing episodes
   // are compared by season/episode number so edits do not resend old announcements.
@@ -129,32 +106,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const token = config.TELEGRAM_BOT_TOKEN;
   const telegramNotifications = { attempted: false, delivered: 0, failed: 0 };
   const previousEpisodeKeys = new Set<string>();
-  if (existing) {
-    let previous: Record<string, unknown> = {};
-    try { previous = JSON.parse(existing.metadata_json) as Record<string, unknown>; } catch {}
-    for (const ep of (Array.isArray(previous.episodes) ? previous.episodes : []) as Record<string, unknown>[]) {
-      previousEpisodeKeys.add(String(ep.season || 1) + "|" + String(ep.episode || 1));
-    }
-  }
   const allEpisodes = (Array.isArray(title.episodes) ? title.episodes : []) as Record<string, unknown>[];
   const newEpisodes = allEpisodes.filter(ep => !previousEpisodeKeys.has(String(ep.season || 1) + "|" + String(ep.episode || 1)));
-  const isNewTitle = !existing;
+  const isNewTitle = true;
   const followedTelegramChats:string[]=[];
-  if(existing&&newEpisodes.length){
-    try{
-      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS user_notifications(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,title_id TEXT,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',kind TEXT NOT NULL DEFAULT 'episode',target TEXT,created_at TEXT NOT NULL DEFAULT(datetime('now')),read_at TEXT)`).run();
-      for(const ep of newEpisodes){
-        const episodeLabel="Season "+String(ep.season||1)+" · Episode "+String(ep.episode||"?")+(ep.title?" — "+String(ep.title).slice(0,100):"");
-        const followers=await env.DB.prepare("SELECT su.id,su.email FROM user_library_state l JOIN site_users su ON su.id=l.user_id WHERE json_valid(l.payload) AND EXISTS (SELECT 1 FROM json_each(l.payload,'$.followed') WHERE value=?)").bind(id).all<{id:string;email:string}>();
-        for(const follower of followers.results||[]){
-          const notificationId=crypto.randomUUID();
-          await env.DB.prepare("INSERT INTO user_notifications(id,user_id,title_id,title,description,kind,target) VALUES(?,?,?,?,?,'episode',?)").bind(notificationId,follower.id,id,"New episode: "+String(title.name).slice(0,170),episodeLabel,"#/title/"+encodeURIComponent(id)).run();
-          const match=follower.email.match(/^telegram-(\d+)@telegram\.local$/i);
-          if(match)followedTelegramChats.push(match[1]);
-        }
-      }
-    }catch(error){console.error("MaseNet followed-episode notification creation failed:",error instanceof Error?error.message:String(error));}
-  }
+
   if (token && (isNewTitle || newEpisodes.length)) {
     try {
       await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_subscribers (
