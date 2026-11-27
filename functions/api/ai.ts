@@ -242,7 +242,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         const data = await response.json() as { output_text?: string; output?: Array<{type?:string;action?:{sources?:Array<{url?:string}>};content?:Array<{type?:string;text?:string;annotations?:Array<{type?:string;url?:string;title?:string}>}>}> };
         const answer = data.output_text || (data.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\n");
         const sources = extractWebSources(data.output || []);
-        if (answer.trim()) return json({ text: answer.trim().slice(0, 4500) + (sources.length ? "\n\nSources:\n" + sources.join("\n") : ""), searchedWeb: sources.length > 0, sources });
+        if (answer.trim() && (!requiresLiveWebResearch(message) || sources.length > 0)) return json({ text: answer.trim().slice(0, 4500) + (sources.length ? "\n\nSources:\n" + sources.join("\n") : ""), searchedWeb: sources.length > 0, sources });
       } else {
         console.error("OpenAI response API returned status", response.status);
       }
