@@ -1,3 +1,5 @@
+import './device-performance.css';
+
 type ConnectionHints = { saveData?: boolean; effectiveType?: string };
 type DeviceNavigator = Navigator & { deviceMemory?: number; connection?: ConnectionHints };
 
