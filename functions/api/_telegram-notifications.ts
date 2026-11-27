@@ -11,6 +11,8 @@ type NotificationTitle = {
   year?: string | number;
   description?: string;
   posterUrl?: string;
+  telegramEpisodeChannelLink?: string;
+  telegramEpisodeChannelChatId?: string;
 };
 
 type TelegramNotificationEnv = {
@@ -36,7 +38,7 @@ export async function sendTelegramTitleNotifications(
   if (!token || (!isNewTitle && newEpisodes.length === 0)) return stats;
 
   if (!isNewTitle && newEpisodes.length) {
-    const metadata = (title as NotificationTitle & { telegramEpisodeChannelLink?: string; telegramEpisodeChannelChatId?: string }) ;
+    const metadata = title;
     const rawChannel = String(metadata.telegramEpisodeChannelChatId || metadata.telegramEpisodeChannelLink || "").trim();
     if (!rawChannel) {
       console.info("Episode announcement skipped: no individual Telegram channel link is configured for", title.id || title.name);
