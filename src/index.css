@@ -5118,3 +5118,93 @@ body:has(.app.theme-light),
   .app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList{gap:14px 8px!important}
   .app .page.iqHome .iqSearchResults .iqGrid.maseViewAllList > .iqCard > b{font-size:10px!important}
 }
+
+
+/* Hero live-preview repair: make the trailer itself cover the complete hero,
+   remove the dark rectangular veil, and keep the original editorial content above it. */
+.app .iqHome .maseCinematicHero{
+  position:relative!important;
+  isolation:isolate!important;
+  overflow:hidden!important;
+  background:#080a0d!important;
+}
+.app .iqHome .maseCinematicHero .iqHeroPoster{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  z-index:0!important;
+  overflow:hidden!important;
+  opacity:1!important;
+  transform:none!important;
+  filter:none!important;
+}
+.app .iqHome .maseCinematicHero .maseHeroPosterArtwork{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  z-index:0!important;
+  overflow:hidden!important;
+}
+.app .iqHome .maseCinematicHero .maseHeroPosterArtwork .poster,
+.app .iqHome .maseCinematicHero .maseHeroPosterArtwork img,
+.app .iqHome .maseCinematicHero .maseHeroPosterArtwork .heroCustomImage{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  object-fit:cover!important;
+  object-position:center 24%!important;
+  border-radius:0!important;
+}
+.app .iqHome .maseCinematicHero.masePreviewLive .maseHeroPosterArtwork{opacity:.14!important}
+.app .iqHome .maseCinematicHero .maseHeroPreviewVideo{
+  position:absolute!important;
+  inset:0!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:100%!important;
+  min-height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  background:transparent!important;
+  z-index:2!important;
+  pointer-events:none!important;
+}
+.app .iqHome .maseCinematicHero .maseHeroPreviewFrame{aspect-ratio:auto!important}
+.app .iqHome .maseCinematicHero .iqHeroShade,
+.app .iqHome .maseCinematicHero:before,
+.app .iqHome .maseCinematicHero:after,
+.app .iqHome .maseCinematicHero .maseHeroAtmosphere{
+  display:none!important;
+  content:none!important;
+  opacity:0!important;
+  background:none!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+.app .iqHome .maseCinematicHero .iqHeroCopy{
+  position:relative!important;
+  z-index:4!important;
+  text-shadow:0 2px 14px rgba(0,0,0,.52)!important;
+}
+.app .iqHome .maseCinematicHero .maseHeroPreviewBadge{z-index:8!important}
+.app .iqHome .maseCinematicHero .maseHeroBrandline,
+.app .iqHome .maseCinematicHero .iqTags,
+.app .iqHome .maseCinematicHero h1,
+.app .iqHome .maseCinematicHero .iqHeroCopy>p,
+.app .iqHome .maseCinematicHero .maseHeroFacts,
+.app .iqHome .maseCinematicHero .iqHeroActions,
+.app .iqHome .maseCinematicHero .iqHeroDots{
+  position:relative!important;
+  z-index:4!important;
+}
