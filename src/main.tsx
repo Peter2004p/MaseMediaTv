@@ -5,6 +5,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import App from './App';
 import PWAInstallPrompt from './PWAInstallPrompt';
 import './index.css';
+import { startAdaptiveDevicePerformance } from './device-performance';
 import './title-page.css';
 import './masenet-full-rebuild.css';
 import './assistant-liquid-glass.css';
@@ -47,6 +48,9 @@ if (Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
   void navigator.serviceWorker.getRegistrations().then(registrations => Promise.all(registrations.map(registration => registration.unregister()))).catch(() => {});
   if ('caches' in window) void caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('masenet-shell-')).map(key => caches.delete(key)))).catch(() => {});
 }
+
+// Start lightweight, privacy-preserving device adaptation before the UI mounts.
+startAdaptiveDevicePerformance();
 
 const root = document.getElementById('root');
 if (root) {
