@@ -408,7 +408,7 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     const rows = await env.DB.prepare("SELECT id,query,requester_name,status,created_at FROM telegram_missing_searches WHERE status='pending' ORDER BY created_at DESC LIMIT 15").all<{id:number;query:string;requester_name:string|null;status:string;created_at:string}>();
     const items = rows.results || [];
     await telegramSend(env,chatId,items.length
-      ? "📥 Pending MaseNet title requests:\\n\\n" + items.map(row => "#" + row.id + " · " + row.query + " — " + (row.requester_name || "Subscriber") + "\\nReply: /request_reply " + row.id + " your feedback").join("\\n\\n") + "\\n\\nAfter publishing a title, matching requesters are now notified automatically."
+      ? "📥 Pending MaseNet title requests:\n\n" + items.map(row => "#" + row.id + " · " + row.query + " — " + (row.requester_name || "Subscriber") + "\nReply: /request_reply " + row.id + " your feedback").join("\n\n") + "\n\nAfter publishing a title, matching requesters are now notified automatically."
       : "There are no pending title requests. New missing-title requests will appear here.");
     return json({ok:true,pendingRequests:items.length});
   }
@@ -420,8 +420,8 @@ const handleTelegramUpdate = async ({ request, env }: { request: Request; env: E
     await telegramSend(env,chatId,"✅ Shared AI guidance updated. The Telegram and website assistants will read this guidance on their next request. It cannot override security or owner-permission rules.");
     return json({ok:true,instructionsUpdated:true});
   }
-  if (isOwner && /^(?:remember this instruction|set shared ai instruction)\\s*:/i.test(incoming)) {
-    const instruction = incoming.replace(/^(?:remember this instruction|set shared ai instruction)\\s*:/i,"").trim().slice(0,7000);
+  if (isOwner && /^(?:remember this instruction|set shared ai instruction)\s*:/i.test(incoming)) {
+    const instruction = incoming.replace(/^(?:remember this instruction|set shared ai instruction)\s*:/i,"").trim().slice(0,7000);
     if (instruction.length < 5) { await telegramSend(env,chatId,"Please include the full instruction after the colon."); return json({ok:true}); }
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY, value_json TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT (datetime('now')))").run();
     await env.DB.prepare("INSERT INTO site_settings (key,value_json,updated_at) VALUES ('ai_instructions',?,datetime('now')) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=datetime('now')").bind(JSON.stringify({instructions:instruction})).run();
