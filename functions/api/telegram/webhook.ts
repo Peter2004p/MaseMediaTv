@@ -252,15 +252,33 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
     const rows=await env.DB.prepare("SELECT id,name,kind,year,metadata_json FROM titles ORDER BY created_at DESC").all<{id:string;name:string;kind:string;year:number|null;metadata_json:string}>();
     const ranked=(rows.results||[]).map(row=>{
       const name=String(row.name||"");
-      const normalizedName=name.normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim();
-      const matchedTerms=terms.filter(term=>normalizedName.split(" ").includes(term)).length;
+      const metadataJson=String(row.metadata_json||"{}");
+      let metadata:Record<string,unknown>={};
+      let episodeText="";
+      const episodeLabels:string[]=[];
+      try {
+        metadata=JSON.parse(metadataJson) as Record<string,unknown>;
+        const metadataEpisodes=(metadata as {episodes?:Array<{title?:unknown;name?:unknown;season?:unknown;episode?:unknown}>}).episodes;
+        for(const ep of Array.isArray(metadataEpisodes)?metadataEpisodes:[]) {
+          const epName=String(ep.title||ep.name||"").trim();
+          const season=Number(ep.season)||1;
+          const number=Number(ep.episode)||0;
+          const label=[epName,number?"S"+season+"E"+number:""].filter(Boolean).join(" · ");
+          if(label)episodeLabels.push(label);
+          episodeText+=" "+label;
+        }
+      } catch { /* A malformed legacy metadata row should not break search. */ }
+      const normalizedName=name.normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\\p{L}\\p{N}]+/gu," ").trim();
+      const haystack=(normalizedName+" "+episodeText).normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\\p{L}\\p{N}]+/gu," ").trim();
+      const matchedTerms=terms.filter(term=>haystack.split(" ").includes(term)).length;
       let score=0;
       if(normalizedName===query)score=100;
       else if(normalizedName.includes(query)&&query.length>=4)score=90;
       else if(terms.length>=2&&matchedTerms>=Math.max(2,Math.ceil(terms.length*0.7)))score=Math.round(matchedTerms/terms.length*75);
       else if(terms.length===1&&normalizedName.split(" ").includes(terms[0]))score=65;
-      return {id:String(row.id),name,kind:String(row.kind||"Title"),year:row.year==null?null:Number(row.year),metadata_json:row.metadata_json||"{}",score};
-    }).filter(item=>item.score>=65);
+      const ended=isEndedMetadata(metadata);
+      return {id:String(row.id),name,kind:String(row.kind||"Title"),year:row.year==null?null:Number(row.year),metadata_json:metadataJson,episodeLabels,score,ended};
+    }).filter(item=>item.score>=65&&!item.ended);
     ranked.sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
     return await Promise.all(ranked.slice(0,5).map(async item=>{
       const episodes=await getTitleEpisodeLinks(env,item.id,item.kind,item.metadata_json);
