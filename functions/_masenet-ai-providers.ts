@@ -77,57 +77,61 @@ export async function generateMaseNetFallback(
       console.error("MaseNet Gemini Interactions fallback error",error instanceof Error ? error.message : "unknown error");
     }
   }
-  // Independent current-research backup: Groq GPT-OSS browser_search.
+  // Independent current-research backup: Groq Responses API browser_search.
+  // Responses exposes a structured output array, so inspect the complete response
+  // (including tool output and annotations) rather than only Chat Completions text.
   if (requireLiveWebResearch && env.GROQ_API_KEY) {
     try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method:"POST", signal:AbortSignal.timeout(25000),
+      const response = await fetch("https://api.groq.com/openai/v1/responses", {
+        method:"POST", signal:AbortSignal.timeout(30000),
         headers:{"Content-Type":"application/json","Authorization":"Bearer "+env.GROQ_API_KEY},
         body:JSON.stringify({
           model:"openai/gpt-oss-120b",
-          messages:[
-            {role:"system",content:researchInstructions + "\n\nCITATION FORMAT: After the answer, add a Sources heading. For every factual claim, include the source title and its complete direct https URL as plain text. Do not use only numbered citation markers such as 〖1†L2-L5〗 because the Telegram user needs clickable source links."},
-            {role:"user",content:researchMessage.slice(0,5000) + "\n\nReturn at least two direct source URLs when reliable sources are available. Never invent URLs."}
-          ],
-          max_completion_tokens:2048,
-          reasoning_effort:"low",
+          instructions:researchInstructions + "\n\nCITATION FORMAT: Include a Sources section with the complete direct https URL for every source used. The links must be copied from pages actually opened or returned by browser search. Do not invent URLs or infer them from titles. If the search tool does not expose direct source URLs, say that the sources could not be verified.",
+          input:researchMessage.slice(0,5000) + "\n\nReturn at least two direct source URLs when reliable sources are available. Never invent URLs.",
+          reasoning:{effort:"low"},
           tool_choice:"required",
           tools:[{type:"browser_search"}]
         })
       });
       const data = await response.json().catch(()=>({})) as any;
-      const message = data?.choices?.[0]?.message || {};
-      const text = typeof message.content === "string" ? message.content : Array.isArray(message.content)
-        ? message.content.map((part:any)=>typeof part==="string"?part:String(part?.text||part?.content||"")).join("\n") : "";
+      const output = Array.isArray(data?.output) ? data.output : [];
+      const textParts: string[] = [];
+      for (const item of output) {
+        if (item?.type !== "message" || !Array.isArray(item?.content)) continue;
+        for (const part of item.content) {
+          if ((part?.type === "output_text" || part?.type === "text") && typeof part?.text === "string") {
+            textParts.push(part.text);
+          }
+        }
+      }
+      const text = String(data?.output_text || textParts.join("\n")).trim();
       const foundUrls: string[] = [];
       const collectUrls = (value: any, depth = 0): void => {
-        if (depth > 5 || value == null) return;
+        if (depth > 8 || value == null) return;
         if (typeof value === "string") {
-          const matches = value.match(/https?:\/\/[^\s<>"'\])}]+/g) || [];
+          const matches = value.match(/https?:\\/\\/[^\\s<>"'\\])}]+/g) || [];
           for (const match of matches) foundUrls.push(match.replace(/[),.;]+$/,""));
           return;
         }
         if (Array.isArray(value)) { for (const item of value) collectUrls(item, depth + 1); return; }
         if (typeof value === "object") {
-          for (const [key, item] of Object.entries(value)) {
-            if (/url|uri|citation|source|search|result|content/i.test(key)) collectUrls(item, depth + 1);
-          }
+          for (const item of Object.values(value)) collectUrls(item, depth + 1);
         }
       };
       collectUrls(data);
-      const sources = [...new Set(foundUrls)].filter((url)=>/^https?:\/\//i.test(url)).slice(0,6);
-      if (response.ok && text.trim() && sources.length) return {text:text.trim(),provider:"groq",sources};
-      const hasInlineSearchCitations = /〖\d+†L\d+(?:-L?\d+)?〗/.test(text);
-      const detail = String(data?.error?.message || message?.refusal ||
-        (hasInlineSearchCitations ? "Groq searched and returned inline citation markers, but no direct source URLs were exposed in its API response." :
-          "Groq returned no answer with extractable source URLs.") +
-        " Response fields: " + Object.keys(data || {}).join(", ") +
-        "; answer preview: " + text.slice(0,100)).slice(0,320);
-      researchFailure = "Groq browser-search HTTP " + response.status + ": " + detail;
-      console.error("MaseNet Groq browser-search fallback failed",response.status,detail);
+      const sources = [...new Set(foundUrls)].filter((url)=>/^https?:\\/\\//i.test(url)).slice(0,8);
+      if (response.ok && text && sources.length) return {text,provider:"groq",sources};
+      const outputTypes = output.map((item:any)=>String(item?.type || "unknown"));
+      const detail = String(data?.error?.message ||
+        "Groq Responses API returned no verifiable direct source URLs. output types=" + outputTypes.join(",") +
+        "; response fields=" + Object.keys(data || {}).join(",") +
+        "; answer preview=" + text.slice(0,100)).slice(0,320);
+      researchFailure = "Groq Responses browser-search HTTP " + response.status + ": " + detail;
+      console.error("MaseNet Groq Responses browser-search fallback failed",response.status,detail);
     } catch (error) {
-      researchFailure = "Groq browser-search request error: " + (error instanceof Error ? error.message : "unknown error");
-      console.error("MaseNet Groq browser-search fallback error",error instanceof Error ? error.message : "unknown error");
+      researchFailure = "Groq Responses browser-search request error: " + (error instanceof Error ? error.message : "unknown error");
+      console.error("MaseNet Groq Responses browser-search fallback error",error instanceof Error ? error.message : "unknown error");
     }
   }
   // Cloudflare AI is retained as a final text-only backup for ordinary chat.
