@@ -542,7 +542,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
           (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
           (item.episodeLabels.length ? "\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "")
-        ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles.");
+        ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles.";
         const updated = await updateProgressMessage(env, chatId, progressMessageId, resultText, keyboard);
         if (!updated) await sendMessage(env, chatId, resultText, keyboard, "HTML");
         stopTyping();
