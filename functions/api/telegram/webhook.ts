@@ -198,8 +198,8 @@ function buildTitleEpisodeKeyboard(env: Env, titleId: string, kind: string, epis
   const isDrama = String(kind).toLowerCase().includes("drama");
   const rows: unknown[][] = [[{ text: isDrama ? "🎬 Open Drama Page" : "🎬 Open Movie Page", web_app: { url: miniAppRouteUrl(env, "#/title/" + encodeURIComponent(titleId)) } }]];
   if (!isDrama) {
-    const movie = episodes[0] || {season:1,episode:1};
-    rows.push([{ text: "▶ Full Movie", web_app: { url: miniAppRouteUrl(env, "#/episode/" + encodeURIComponent(titleId) + "/" + movie.season + "/" + movie.episode) } }]);
+    const movie = episodes[0];
+    if (movie) rows.push([{ text: "▶ Full Movie", web_app: { url: miniAppRouteUrl(env, "#/episode/" + encodeURIComponent(titleId) + "/" + movie.season + "/" + movie.episode) } }]);
     return { inline_keyboard: rows };
   }
   if (!episodes.length) return { inline_keyboard: rows };
@@ -220,7 +220,7 @@ function buildTitleEpisodeKeyboard(env: Env, titleId: string, kind: string, epis
 function titleEpisodePageText(title:{name:string;kind:string;year:number|null},episodes:TelegramEpisodeLink[],page=0):string {
   const isDrama=String(title.kind).toLowerCase().includes("drama");
   const heading="🎬 <b>"+escapeTelegramHTML(title.name)+"</b>"+(title.year?" ("+title.year+")":"");
-  if(!isDrama) return heading+"\n\nTap <b>Full Movie</b> to open the movie directly in the MaseNet Mini App.";
+  if(!isDrama) return heading+(episodes.length?"\n\nTap <b>Full Movie</b> to open the movie directly in the MaseNet Mini App.":"\n\nNo published movie link is available yet. Open the movie page to view its information.");
   if(!episodes.length) return heading+"\n\nNo published episodes are linked to this title yet. Open the drama page to view its available information.";
   const pageSize=10,current=Math.min(Math.max(0,Math.floor(page)),Math.max(0,Math.ceil(episodes.length/pageSize)-1));
   const visible=episodes.slice(current*pageSize,(current+1)*pageSize);
@@ -268,8 +268,8 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
           episodeText+=" "+label;
         }
       } catch { /* A malformed legacy metadata row should not break search. */ }
-      const normalizedName=name.normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\\p{L}\\p{N}]+/gu," ").trim();
-      const haystack=(normalizedName+" "+episodeText).normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\\p{L}\\p{N}]+/gu," ").trim();
+      const normalizedName=name.normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim();
+      const haystack=(normalizedName+" "+episodeText).normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim();
       const matchedTerms=terms.filter(term=>haystack.split(" ").includes(term)).length;
       let score=0;
       if(normalizedName===query)score=100;
@@ -278,7 +278,7 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
       else if(terms.length===1&&normalizedName.split(" ").includes(terms[0]))score=65;
       const ended=isEndedMetadata(metadata);
       return {id:String(row.id),name,kind:String(row.kind||"Title"),year:row.year==null?null:Number(row.year),metadata_json:metadataJson,episodeLabels,score,ended};
-    }).filter(item=>item.score>=65&&!item.ended);
+    }).filter(item=>item.score>=65);
     ranked.sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
     return await Promise.all(ranked.slice(0,5).map(async item=>{
       const episodes=await getTitleEpisodeLinks(env,item.id,item.kind,item.metadata_json);
