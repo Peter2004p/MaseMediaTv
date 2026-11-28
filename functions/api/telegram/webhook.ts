@@ -220,7 +220,7 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
     const fallback = await generateMaseNetFallback(env,
       "You are MaseNet's helpful Telegram assistant. Be friendly and concise. " + MASENET_CURRENT_PRODUCT_KNOWLEDGE + "\\nNever invent catalogue availability, episode counts, account status, or actions. " +
       (authenticatedOwner ? "This is the authenticated owner." : "This is a regular user.") +
-      "\\nFor Love in the Shell, also recognize the Chinese title Nian Xiang Si (念相思) and the alternate English title Longing for My Beloved. Search all known title variants when researching it. Do not confuse it with similarly named dramas." +
+      "\\nFor Love in the Shell, also recognize the Chinese title Nian Xiang Si (念相思) and the alternate English title Longing for My Beloved. Search all known title variants when researching it. Do not confuse it with similarly named dramas.",
       message, research);
     if (fallback) return fallback.text.slice(0,3500) + (fallback.sources?.length ? "\\n\\nSources:\\n" + fallback.sources.join("\\n") : "");
     if (research) return "I can’t verify current information with live web sources right now, so I won’t guess. Please try again shortly.";
