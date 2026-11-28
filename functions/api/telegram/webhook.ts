@@ -282,6 +282,9 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
     signal: AbortSignal.timeout(45000),
     headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
     body: JSON.stringify(buildAIRequest(requestModel))
+  }).catch((error) => {
+    console.error("Telegram OpenAI request transport failed", error instanceof Error ? error.message : "unknown error");
+    return new Response("", {status:503});
   });
   // A stale OPENAI_MODEL setting must not disable the Telegram assistant.
   // Retry once with the documented default model before reporting a failure.
@@ -293,6 +296,9 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
       signal: AbortSignal.timeout(45000),
       headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
       body: JSON.stringify(buildAIRequest("gpt-6.2-astra"))
+    }).catch((error) => {
+      console.error("Telegram OpenAI fallback transport failed", error instanceof Error ? error.message : "unknown error");
+      return new Response("", {status:503});
     });
   }
   if (!response.ok) {
