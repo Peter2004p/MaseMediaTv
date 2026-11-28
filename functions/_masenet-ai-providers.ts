@@ -39,43 +39,66 @@ export async function generateMaseNetFallback(
 
   let researchFailure = env.GEMINI_API_KEY ? "Gemini returned no grounded answer." : "GEMINI_API_KEY is not configured.";
   if (env.GEMINI_API_KEY) {
-    const configuredModel = String(env.GEMINI_MODEL || "").trim();
-    // Gemini 2.5 Flash supports Google Search grounding on the free tier.
-    // The newer Flash models may not offer grounding on free-tier projects.
-    const supportedModels = ["gemini-2.5-flash"];
-    const models = supportedModels;
-    for (const model of models) {
-      try {
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" +
-          encodeURIComponent(model) + ":generateContent", {
-          method:"POST", signal:AbortSignal.timeout(18000),
-          headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY},
-          body:JSON.stringify({
-            systemInstruction:{parts:[{text:researchInstructions}]},
-            contents:[{role:"user",parts:[{text:researchMessage.slice(0,5000)}]}],
-            generationConfig:{maxOutputTokens:900,temperature:1},
-            ...(requireLiveWebResearch ? {tools:[{google_search:{}}]} : {})
-          })
-        });
-        const data = await response.json().catch(()=>({}));
-        const text = responseText(data);
-        const groundingChunks = (data as any)?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-        const sources = groundingChunks.map((chunk: any) => chunk?.web?.uri ? (chunk.web.title ? chunk.web.title + ": " : "") + chunk.web.uri : "").filter(Boolean).slice(0,6);
-        if (response.ok && text.trim() && (!requireLiveWebResearch || sources.length > 0)) {
-          return {text:text.trim(),provider:"gemini",sources};
-        }
-        const detail = String((data as any)?.error?.message || (data as any)?.error?.status || ("No grounded text or source links returned; finish=" + String((data as any)?.candidates?.[0]?.finishReason || "unknown") + "; chunks=" + String(groundingChunks.length))).slice(0,320);
-        researchFailure = "Gemini HTTP " + response.status + " (" + model + "): " + detail;
-        console.error("MaseNet Gemini fallback failed", response.status, "model:", model, "detail:", detail);
-      } catch (error) {
-        researchFailure = "Gemini request error (" + model + "): " + (error instanceof Error ? error.message : "unknown error");
-        console.error("MaseNet Gemini fallback error", error instanceof Error ? error.message : "unknown error", "model:", model);
-      }
+    const model = "gemini-3.8-flash";
+    try {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+        method:"POST", signal:AbortSignal.timeout(25000),
+        headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY,"Api-Revision":"2026-05-20"},
+        body:JSON.stringify({
+          model,
+          input:(requireLiveWebResearch ? researchMessage : userMessage).slice(0,5000),
+          system_instruction:requireLiveWebResearch ? researchInstructions : systemInstructions,
+          ...(requireLiveWebResearch ? {tools:[{type:"google_search"}]} : {}),
+          store:false
+        })
+      });
+      const data = await response.json().catch(() => ({})) as any;
+      const steps = Array.isArray(data.steps) ? data.steps : [];
+      const text = String(data.output_text || steps.filter((step:any)=>step?.type==="model_output").flatMap((step:any)=>Array.isArray(step.content)?step.content.map((part:any)=>part.text||""):[step.text||""]).join("\\n") || "");
+      const urlMatches = text.match(/https?:\\/\\/[^\\s)\\]}>"]+/g) || [];
+      const stepUrls = steps.flatMap((step:any)=>[step.url,step.uri,step.web?.uri,step.source?.uri,...(Array.isArray(step.sources)?step.sources.map((item:any)=>item.url||item.uri):[])].filter((value:any)=>typeof value==="string" && /^https?:\\/\\//i.test(value)));
+      const sources = [...new Set([...stepUrls,...urlMatches])].slice(0,6);
+      if (response.ok && text.trim() && (!requireLiveWebResearch || sources.length)) return {text:text.trim(),provider:"gemini",...(sources.length?{sources}:{})};
+      const detail = String(data?.error?.message || data?.error?.status || ("No grounded text or source links returned; steps=" + steps.length)).slice(0,320);
+      researchFailure = "Gemini Interactions HTTP " + response.status + " (" + model + "): " + detail;
+      console.error("MaseNet Gemini Interactions fallback failed",response.status,"detail:",detail);
+    } catch (error) {
+      researchFailure = "Gemini Interactions request error: " + (error instanceof Error ? error.message : "unknown error");
+      console.error("MaseNet Gemini Interactions fallback error",error instanceof Error ? error.message : "unknown error");
     }
   }
-  // Groq is a reliable text fallback. Its browser-search tool is available only on
-  // supported GPT-OSS models; live research remains Gemini-grounded above so that
-  // we never present an ungrounded Groq answer as verified current information.
+  // Independent current-research backup: Groq GPT-OSS browser_search.
+  if (requireLiveWebResearch && env.GROQ_API_KEY) {
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method:"POST", signal:AbortSignal.timeout(25000),
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+env.GROQ_API_KEY},
+        body:JSON.stringify({
+          model:"openai/gpt-oss-120b",
+          messages:[{role:"system",content:researchInstructions},{role:"user",content:researchMessage.slice(0,5000)}],
+          max_completion_tokens:1400,
+          reasoning_effort:"low",
+          tool_choice:"required",
+          tools:[{type:"browser_search"}]
+        })
+      });
+      const data = await response.json().catch(()=>({})) as any;
+      const message = data?.choices?.[0]?.message || {};
+      const text = String(message.content || "");
+      const urls = text.match(/https?:\\/\\/[^\\s)\\]}>"]+/g) || [];
+      const citations = Array.isArray(message.citations) ? message.citations.map((item:any)=>typeof item==="string"?item:item.url).filter((url:any)=>typeof url==="string" && /^https?:\\/\\//i.test(url)) : [];
+      const sources = [...new Set([...citations,...urls])].slice(0,6);
+      if (response.ok && text.trim() && sources.length) return {text:text.trim(),provider:"groq",sources};
+      const detail = String(data?.error?.message || message?.refusal || "No answer with source URLs returned").slice(0,280);
+      researchFailure = "Groq browser-search HTTP " + response.status + ": " + detail;
+      console.error("MaseNet Groq browser-search fallback failed",response.status,detail);
+    } catch (error) {
+      researchFailure = "Groq browser-search request error: " + (error instanceof Error ? error.message : "unknown error");
+      console.error("MaseNet Groq browser-search fallback error",error instanceof Error ? error.message : "unknown error");
+    }
+  }
+  // Cloudflare AI is retained as a final text-only backup for ordinary chat.
+  // It is not allowed to fabricate current research when no verified sources exist.
   if (!requireLiveWebResearch && env.GROQ_API_KEY) {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
