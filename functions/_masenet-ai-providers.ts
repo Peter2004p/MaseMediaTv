@@ -86,8 +86,8 @@ export async function generateMaseNetFallback(
         body:JSON.stringify({
           model:"openai/gpt-oss-120b",
           messages:[
-            {role:"system",content:researchInstructions + "\\n\\nCITATION FORMAT: After the answer, add a Sources heading. For every factual claim, include the source title and its complete direct https URL as plain text. Do not use only numbered citation markers such as 〖1†L2-L5〗 because the Telegram user needs clickable source links."},
-            {role:"user",content:researchMessage.slice(0,5000) + "\\n\\nReturn at least two direct source URLs when reliable sources are available. Never invent URLs."}
+            {role:"system",content:researchInstructions + "\n\nCITATION FORMAT: After the answer, add a Sources heading. For every factual claim, include the source title and its complete direct https URL as plain text. Do not use only numbered citation markers such as 〖1†L2-L5〗 because the Telegram user needs clickable source links."},
+            {role:"user",content:researchMessage.slice(0,5000) + "\n\nReturn at least two direct source URLs when reliable sources are available. Never invent URLs."}
           ],
           max_completion_tokens:2048,
           reasoning_effort:"low",
@@ -99,12 +99,12 @@ export async function generateMaseNetFallback(
       const data = await response.json().catch(()=>({})) as any;
       const message = data?.choices?.[0]?.message || {};
       const text = typeof message.content === "string" ? message.content : Array.isArray(message.content)
-        ? message.content.map((part:any)=>typeof part==="string"?part:String(part?.text||part?.content||"")).join("\\n") : "";
+        ? message.content.map((part:any)=>typeof part==="string"?part:String(part?.text||part?.content||"")).join("\n") : "";
       const foundUrls: string[] = [];
       const collectUrls = (value: any, depth = 0): void => {
         if (depth > 5 || value == null) return;
         if (typeof value === "string") {
-          const matches = value.match(/https?:\\/\\/[^\\s<>"'\\])}]+/g) || [];
+          const matches = value.match(/https?:\/\/[^\s<>"'\])}]+/g) || [];
           for (const match of matches) foundUrls.push(match.replace(/[),.;]+$/,""));
           return;
         }
@@ -116,9 +116,9 @@ export async function generateMaseNetFallback(
         }
       };
       collectUrls(data);
-      const sources = [...new Set(foundUrls)].filter((url)=>/^https?:\\/\\//i.test(url)).slice(0,6);
+      const sources = [...new Set(foundUrls)].filter((url)=>/^https?:\/\//i.test(url)).slice(0,6);
       if (response.ok && text.trim() && sources.length) return {text:text.trim(),provider:"groq",sources};
-      const hasInlineSearchCitations = /〖\\d+†L\\d+(?:-L?\\d+)?〗/.test(text);
+      const hasInlineSearchCitations = /〖\d+†L\d+(?:-L?\d+)?〗/.test(text);
       const detail = String(data?.error?.message || message?.refusal ||
         (hasInlineSearchCitations ? "Groq searched and returned inline citation markers, but no direct source URLs were exposed in its API response." :
           "Groq returned no answer with extractable source URLs.") +
