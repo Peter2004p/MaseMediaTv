@@ -29,12 +29,12 @@ export async function generateMaseNetFallback(
         "LIVE RESEARCH RULES: Answer the exact question asked. If the user asks for a release date, answer only about that title and its confirmed release status; do not replace the answer with unrelated catalogue recommendations.",
         "Search the exact title and relevant alternate-language titles. For Love in the Shell, search all of: Love in the Shell, Nian Xiang Si, 念相思, and Longing for My Beloved. Treat these as possible aliases for the same requested drama, but verify that search results refer to the same production before combining them.",
         "Prioritize official iQIYI, production-company, broadcaster, and verified creator announcements. Use reputable entertainment reporting as secondary corroboration. State 'not officially announced' when no official date is confirmed. Clearly label rumours and estimated dates. Include grounded source links and never invent a date or source."
-      ].join("\\n\\n")
+      ].join("\n\n")
     : systemInstructions;
   const researchMessage = requireLiveWebResearch
     ? userMessage + (isLoveInTheShell
-      ? "\\n\\nResearch aliases to check: Love in the Shell; Nian Xiang Si; 念相思; Longing for My Beloved. Confirm identity against the same drama/production."
-      : "\\n\\nUse live web research for this current-information question. Return direct source URLs.")
+      ? "\n\nResearch aliases to check: Love in the Shell; Nian Xiang Si; 念相思; Longing for My Beloved. Confirm identity against the same drama/production."
+      : "\n\nUse live web research for this current-information question. Return direct source URLs.")
     : userMessage;
 
   let researchFailure = env.GEMINI_API_KEY ? "Gemini returned no grounded answer." : "GEMINI_API_KEY is not configured.";
@@ -55,7 +55,19 @@ export async function generateMaseNetFallback(
       const data = await response.json().catch(() => ({})) as any;
       const steps = Array.isArray(data.steps) ? data.steps : [];
       const text = String(data.output_text || steps.filter((step:any)=>step?.type==="model_output").flatMap((step:any)=>Array.isArray(step.content)?step.content.map((part:any)=>part.text||""):[step.text||""]).join("\n") || "");
-      const sources = [...new Set(steps.flatMap((step:any)=>Array.isArray(step.content)?step.content.flatMap((part:any)=>Array.isArray(part.annotations)?part.annotations.filter((annotation:any)=>annotation.type==="url_citation" && typeof annotation.url==="string").map((annotation:any)=>((annotation.title||annotation.url)+": "+annotation.url)):[]):[]))].slice(0,6);
+      const sourceItems: string[] = [];
+      for (const step of steps) {
+        if (!Array.isArray(step?.content)) continue;
+        for (const part of step.content) {
+          if (!Array.isArray(part?.annotations)) continue;
+          for (const annotation of part.annotations) {
+            if (annotation?.type === "url_citation" && typeof annotation.url === "string") {
+              sourceItems.push(String(annotation.title || annotation.url) + ": " + annotation.url);
+            }
+          }
+        }
+      }
+      const sources: string[] = [...new Set(sourceItems)].slice(0,6);
       if (response.ok && text.trim() && (!requireLiveWebResearch || sources.length)) return {text:text.trim(),provider:"gemini",...(sources.length?{sources}:{})};
       const detail = String(data?.error?.message || data?.error?.status || ("No grounded text or source links returned; steps=" + steps.length)).slice(0,320);
       researchFailure = "Gemini Interactions HTTP " + response.status + " (" + model + "): " + detail;
