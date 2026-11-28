@@ -100,7 +100,8 @@ export async function searchPublicTelegramChannel(query: string, limit = 5, db?:
   const stopWords = new Set(["the","and","for","with","from","that","this","what","where","when","how","can","you","please","find","search","movie","movies","drama","dramas","episode","episodes","season","channel","links","link","posted","post","list","any","all"]);
   const terms = q.split(/\s+/).filter(term => term.length > 2 && !stopWords.has(term));
   if (!terms.length) return [];
-  const results: TelegramChannelPost[] = db ? await searchIndexedTelegramChannel(db, query, limit * 2).catch(() => []) : [];
+  const indexedResults: TelegramChannelPost[] = db ? await searchIndexedTelegramChannel(db, query, limit * 2).catch(() => []) : [];
+  const results: TelegramChannelPost[] = allowedChannels?.length ? indexedResults.filter(post => allowedChannels.some(name => name.toLowerCase() === post.channel.toLowerCase())) : indexedResults;
   // Crawl up to 12 public-preview pages per channel (about 240 recent posts each).
   // Telegram Bot API cannot retrieve arbitrary historical channel messages; older posts
   // must have been indexed when published or imported by an authorized archive process.
