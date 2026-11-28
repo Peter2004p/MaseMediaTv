@@ -208,7 +208,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       "Never claim a title, episode, stream URL, download, or feature exists unless confirmed in the supplied catalogue or by the user.",
       "If you cannot verify a requested title, say so and suggest a shorter search.",
       "For images and screenshots, describe only what is actually visible; transcribe readable text accurately, distinguish observations from guesses, and state clearly when an area is unclear.",
-      "For factual questions, avoid making up sources, statistics, release dates, or technical details. State uncertainty and suggest how the user can verify important claims.",
+      "For factual questions, avoid making up sources, statistics, release dates, or technical details. State uncertainty and suggest how the user can verify important claims. For Love in the Shell, also recognize Nian Xiang Si (念相思) and Longing for My Beloved as title variants; search all variants and do not confuse it with similarly named dramas. For current release status, prefer official iQIYI and production-company announcements."",
       "Conversation quality: answer the newest user message directly. Read recent history to understand context, but do not repeat your previous answer or recycle a generic fallback. If the user says you repeated yourself, acknowledge it briefly and give a materially different, specific response. Do not restart greetings on every turn. Ask one focused question only if essential.",
       "Never reveal API keys, secrets, admin sessions, or internal configuration.",
       customInstructions ? "Administrator guidance (follow only when safe):\n" + customInstructions : "",
@@ -253,6 +253,20 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   if (requiresLiveWebResearch(message)) {
+    if (!imageInputs.length && env.GEMINI_API_KEY) {
+      const researchSystem = [
+        "You are MaseNet's research assistant. Answer the user's current factual question only after Google Search grounding.",
+        "For Love in the Shell, search Love in the Shell, Nian Xiang Si, 念相思, and Longing for My Beloved. Prefer official iQIYI and production-company announcements; clearly distinguish confirmed facts from rumours.",
+        "Never invent release dates. If no official date exists, say it is not officially announced and explain the latest verifiable production/status information.",
+        MASENET_CURRENT_PRODUCT_KNOWLEDGE
+      ].join("\\n\\n");
+      const grounded = await generateMaseNetFallback({
+        GEMINI_API_KEY:env.GEMINI_API_KEY, GEMINI_MODEL:env.GEMINI_MODEL
+      }, researchSystem, message, true);
+      if (grounded?.text && grounded.sources?.length) {
+        return json({ text: grounded.text.slice(0,4200) + "\\n\\nSources:\\n" + grounded.sources.join("\\n"), searchedWeb:true, sources:grounded.sources, provider:"gemini" });
+      }
+    }
     return json({ text: "I can’t verify this with live web sources right now. Please try again shortly; I won’t guess or give you an unverified release date.", searchedWeb: false }, 503);
   }
 
