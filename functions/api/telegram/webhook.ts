@@ -680,7 +680,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         });
         const officialPost = officialPosts.find(post => post.score >= 65);
         if (officialPost) {
-          const postId = Number(officialPost.url.match(/\\/(\\d+)(?:$|[?#])/i)?.[1] || 0);
+          const postId = Number(officialPost.url.match(/\/(\d+)(?:$|[?#])/i)?.[1] || 0);
           const note = "📢 I found a matching announcement in our official MaseMediaTv channel. I’m sharing the original post below so you can see its wording and image.";
           const updatedNote = await updateProgressMessage(env, chatId, progressMessageId, note, keyboard);
           if (!updatedNote) await sendMessage(env, chatId, note, keyboard);
