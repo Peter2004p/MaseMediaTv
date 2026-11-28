@@ -25,7 +25,7 @@ const episodeSearchText = (metadataJson: string): string => {
 };
 
 function requiresLiveWebResearch(message: string): boolean {
-  return /\b(when|release|premiere|air(?:s|ing)?|coming out|date|latest|recent|today|this week|cast|casting|confirmed|official|announcement|renewed|season \d+|schedule|trailer|news|current)\b/i.test(message);
+  return /\b(when|release|premiere|air(?:s|ing)?|coming out|date|latest|recent|today|this week|cast|casting|confirmed|official|announcement|renewed|season \d+|schedule|trailer|news|current|where to watch|streaming platform|available on|has it aired|is it out|premiere date)\b/i.test(message);
 }
 function extractWebSources(output: Array<{type?:string;action?:{sources?:Array<{url?:string}>};content?:Array<{annotations?:Array<{type?:string;url?:string;title?:string}>}>}>): string[] {
   const found = new Map<string,string>();
