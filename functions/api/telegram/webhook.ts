@@ -304,7 +304,11 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
   }
   const data = await response.json() as { output_text?: string; output?: Array<{content?:Array<{type?:string;text?:string}>}> };
   const answer = data.output_text || (data.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text || "").join("\n");
-  if (!answer.trim()) throw new Error("AI returned an empty reply");
+  if (!answer.trim()) {
+    const fallback = await generateMaseNetFallback(env, String(buildAIRequest(requestModel).instructions), message);
+    if (fallback) return fallback.text.replace(/https?:\\/\\/(?:www\\.)?masetv-cloudflare-migration\\.pages\\.dev[^\\s<>]*/gi, "").trim().slice(0,3500);
+    throw new Error("All configured AI providers returned an empty reply");
+  }
   return answer.trim().replace(/https?:\/\/(?:www\.)?masetv-cloudflare-migration\.pages\.dev[^\s<>]*/gi, "").replace(/https?:\/\/masenet\.floot\.app[^\s<>]*/gi, "").trim().slice(0, 3500);
 }
 function chatTitle(chat: any) { return String(chat?.title || [chat?.first_name, chat?.last_name].filter(Boolean).join(" ") || chat?.username || "Telegram user").slice(0, 160); }
