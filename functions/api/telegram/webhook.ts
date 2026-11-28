@@ -403,7 +403,7 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
     console.error("Telegram AI request failed", response.status, errorBody.slice(0, 500));
-    const fallback = await generateMaseNetFallback(env, String(buildAIRequest(requestModel).instructions), message);
+    const fallback = await generateMaseNetFallback(env, String(buildAIRequest(requestModel).instructions), message, requiresLiveWebResearch(message));
     if (fallback) return fallback.text.replace(/https?:\/\/(?:www\.)?masetv-cloudflare-migration\.pages\.dev[^\s<>]*/gi, "").trim().slice(0,3500);
     throw new Error("All configured AI providers failed");
   }
