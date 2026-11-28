@@ -39,19 +39,23 @@ export async function generateMaseNetFallback(
 
   if (env.GEMINI_API_KEY) {
     const configuredModel = String(env.GEMINI_MODEL || "").trim();
-    // Retry with a second current Flash model if the configured/default model is
-    // unavailable or its Search grounding request is rejected.
-    const models = [...new Set([configuredModel, "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"].filter(Boolean))];
+    // Prefer currently supported Search-grounded Flash models. Ignore stale model
+    // overrides rather than spending the webhook time budget on retired IDs.
+    const supportedModels = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
+    const models = [...new Set([
+      ...(supportedModels.includes(configuredModel) ? [configuredModel] : []),
+      ...supportedModels
+    ])];
     for (const model of models) {
       try {
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) + ":generateContent", {
-          method:"POST", signal:AbortSignal.timeout(18000),
+          method:"POST", signal:AbortSignal.timeout(10000),
           headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY},
           body:JSON.stringify({
             systemInstruction:{parts:[{text:researchInstructions}]},
             contents:[{role:"user",parts:[{text:researchMessage.slice(0,5000)}]}],
-            generationConfig:{maxOutputTokens:1200,temperature:1},
+            generationConfig:{maxOutputTokens:900,temperature:1},
             ...(requireLiveWebResearch ? {tools:[{google_search:{}}]} : {})
           })
         });
