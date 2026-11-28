@@ -41,7 +41,7 @@ export async function generateMaseNetFallback(
     const configuredModel = String(env.GEMINI_MODEL || "").trim();
     // Retry with a second current Flash model if the configured/default model is
     // unavailable or its Search grounding request is rejected.
-    const models = [...new Set([configuredModel, "gemini-3.8-flash", "gemini-3.5-flash-lite"].filter(Boolean))];
+    const models = [...new Set([configuredModel, "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"].filter(Boolean))];
     for (const model of models) {
       try {
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" +
@@ -51,7 +51,7 @@ export async function generateMaseNetFallback(
           body:JSON.stringify({
             systemInstruction:{parts:[{text:researchInstructions}]},
             contents:[{role:"user",parts:[{text:researchMessage.slice(0,5000)}]}],
-            generationConfig:{maxOutputTokens:900},
+            generationConfig:{maxOutputTokens:1200,temperature:1},
             ...(requireLiveWebResearch ? {tools:[{google_search:{}}]} : {})
           })
         });
@@ -62,7 +62,7 @@ export async function generateMaseNetFallback(
         if (response.ok && text.trim() && (!requireLiveWebResearch || sources.length > 0)) {
           return {text:text.trim(),provider:"gemini",sources};
         }
-        const detail = String((data as any)?.error?.message || (data as any)?.error?.status || "No grounded text or source links returned").slice(0,240);
+        const detail = String((data as any)?.error?.message || (data as any)?.error?.status || ("No grounded text or source links returned; finish=" + String((data as any)?.candidates?.[0]?.finishReason || "unknown") + "; chunks=" + String(groundingChunks.length))).slice(0,320);
         console.error("MaseNet Gemini fallback failed", response.status, "model:", model, "detail:", detail);
       } catch (error) {
         console.error("MaseNet Gemini fallback error", error instanceof Error ? error.message : "unknown error", "model:", model);
