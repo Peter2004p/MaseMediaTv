@@ -160,6 +160,8 @@ function escapeTelegramHTML(value: unknown): string {
 function miniAppRouteUrl(env: Env, route: string): string {
   const configured = String(env.TELEGRAM_MINI_APP_URL || env.TELEGRAM_WEBAPP_URL || "https://masetv-cloudflare-migration.pages.dev").trim();
   const url = new URL(configured);
+  // The Mini App router reads maseRoute before the normal hash, including in Telegram WebView.
+  url.searchParams.set("maseRoute", route);
   url.hash = route;
   return url.toString();
 }
