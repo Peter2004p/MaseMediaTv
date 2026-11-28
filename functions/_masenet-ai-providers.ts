@@ -91,7 +91,6 @@ export async function generateMaseNetFallback(
           ],
           max_completion_tokens:2048,
           reasoning_effort:"low",
-          citation_options:"enabled",
           tool_choice:"required",
           tools:[{type:"browser_search"}]
         })
