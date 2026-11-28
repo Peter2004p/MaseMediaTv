@@ -222,12 +222,10 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
   } catch (error) {
     console.error("Telegram AI catalogue context failed", error instanceof Error ? error.message : "unknown error");
   }
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    signal: AbortSignal.timeout(45000),
-    headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: env.OPENAI_MODEL || "gpt-6.2-astra",
+  const configuredModel = String(env.OPENAI_MODEL || "").trim();
+  const requestModel = configuredModel || "gpt-6.2-astra";
+  const buildAIRequest = (model: string) => ({
+    model,
       tools: [{ type: "web_search", search_context_size: "high", external_web_access: true }],
       tool_choice: requiresLiveWebResearch(message) ? { type: "web_search" } : "auto",
       include: ["web_search_call.action.sources"],
@@ -266,9 +264,27 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
       max_output_tokens: 350
     })
   });
+  let response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    signal: AbortSignal.timeout(45000),
+    headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify(buildAIRequest(requestModel))
+  });
+  // A stale OPENAI_MODEL setting must not disable the Telegram assistant.
+  // Retry once with the documented default model before reporting a failure.
+  if (!response.ok && requestModel !== "gpt-6.2-astra") {
+    const firstError = await response.text().catch(() => "");
+    console.error("Telegram AI configured-model request failed", response.status, firstError.slice(0, 500));
+    response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      signal: AbortSignal.timeout(45000),
+      headers: { "Authorization": "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(buildAIRequest("gpt-6.2-astra"))
+    });
+  }
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
-    console.error("Telegram AI request failed", response.status, errorBody.slice(0, 300));
+    console.error("Telegram AI request failed", response.status, errorBody.slice(0, 500));
     throw new Error("AI service request failed");
   }
   const data = await response.json() as { output_text?: string; output?: Array<{content?:Array<{type?:string;text?:string}>}> };
