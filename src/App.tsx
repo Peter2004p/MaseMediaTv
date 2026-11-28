@@ -347,6 +347,12 @@ function Home(input:{titles:Title[];all:Title[];featured?:Title;heroSettings:Her
  const p={...input,titles:Array.isArray(input.titles)?input.titles:[],all:Array.isArray(input.all)?input.all:[],movies:Array.isArray(input.movies)?input.movies:[],dramas:Array.isArray(input.dramas)?input.dramas:[],continueWatching:Array.isArray(input.continueWatching)?input.continueWatching:[],myList:Array.isArray(input.myList)?input.myList:[],rows:Array.isArray(input.rows)?input.rows:[],broadcasts:Array.isArray(input.broadcasts)?input.broadcasts:[]};
  const [libraryFilter,setLibraryFilter]=useState<'all'|'movies'|'dramas'|'miniseries'|'anime'|'mylist'|'latest'>('all');
  const [heroIndex,setHeroIndex]=useState(0);
+ const [scheduledReleases,setScheduledReleases]=useState<any[]>([]);
+ const [releaseNow,setReleaseNow]=useState(Date.now());
+ useEffect(()=>{let live=true;api.get('/api/premieres').then(r=>{if(live)setScheduledReleases(Array.isArray(r.data?.premieres)?r.data.premieres:[])}).catch(()=>{});return()=>{live=false}},[]);
+ useEffect(()=>{const timer=window.setInterval(()=>setReleaseNow(Date.now()),1000);return()=>window.clearInterval(timer)},[]);
+ const releaseFor=(id:string)=>scheduledReleases.find(p=>String(p.titleId)===String(id)&&new Date(String(p.premiereAt).replace(' ','T')+'Z').getTime()>releaseNow);
+ const releaseCountdown=(p:any)=>{const ms=Math.max(0,new Date(String(p.premiereAt).replace(' ','T')+'Z').getTime()-releaseNow);return `${Math.floor(ms/86400000)}d ${String(Math.floor(ms%86400000/3600000)).padStart(2,'0')}h ${String(Math.floor(ms%3600000/60000)).padStart(2,'0')}m ${String(Math.floor(ms%60000/1000)).padStart(2,'0')}s`;};
  const heroTouchStart=useRef<number|null>(null);
  const heroSlides=useMemo(()=>{const eligible=p.all.filter(t=>!isTitleEnded(t)&&(p.heroSettings.heroContentType==='all'||t.type===p.heroSettings.heroContentType));const preferredNames=['Whispers of Fate','Where the Mask Ends','The Lament Of Autumn'];const preferred=preferredNames.map(name=>eligible.find(t=>normalizeSeriesKey(t.name)===normalizeSeriesKey(name))).filter((t):t is Title=>Boolean(t));const preferredIds=new Set(preferred.map(t=>t.id));return [...preferred,...eligible.filter(t=>!preferredIds.has(t.id))].slice(0,5)},[p.all,p.heroSettings.heroContentType]);
  useEffect(()=>{if(heroSlides.length<2)return;const timer=window.setInterval(()=>setHeroIndex(i=>(i+1)%heroSlides.length),18000);return()=>window.clearInterval(timer)},[heroSlides.length]);
