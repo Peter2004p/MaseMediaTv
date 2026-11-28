@@ -671,6 +671,34 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         stopTyping();
         return json({ ok: true, channelSearch: true, results: channelPosts.length });
       }
+      if (isResearchQuestion) {
+        await updateProgressMessage(env, chatId, progressMessageId, "📢 First checking official MaseMediaTv announcements…");
+        const officialPosts = await searchPublicTelegramChannel(text, 5, env.DB, ["MaseMediaTv"]).catch((error) => {
+          console.error("MaseMediaTv announcement search failed:", error instanceof Error ? error.message : String(error));
+          return [];
+        });
+        const officialPost = officialPosts.find(post => post.score >= 65);
+        if (officialPost) {
+          const postId = Number(officialPost.url.match(/\\/(\\d+)(?:$|[?#])/i)?.[1] || 0);
+          const note = "📢 I found a matching announcement in our official MaseMediaTv channel. I’m sharing the original post below so you can see its wording and image.";
+          const updatedNote = await updateProgressMessage(env, chatId, progressMessageId, note, keyboard);
+          if (!updatedNote) await sendMessage(env, chatId, note, keyboard);
+          let forwarded = false;
+          if (postId) {
+            try {
+              await telegramCall(env, "copyMessage", { chat_id: chatId, from_chat_id: "@MaseMediaTv", message_id: postId });
+              forwarded = true;
+            } catch (error) {
+              console.error("MaseMediaTv announcement forwarding failed:", error instanceof Error ? error.message : String(error));
+            }
+          }
+          if (!forwarded) {
+            await sendMessage(env, chatId, "📌 " + officialPost.title + "\n\n" + officialPost.text.slice(0, 1700) + "\n\nOfficial channel post: " + officialPost.url, keyboard);
+          }
+          stopTyping();
+          return json({ ok: true, officialChannelFirst: true, forwarded, postUrl: officialPost.url });
+        }
+      }
       const matches = await findCatalogMatches(env, text);
       if (matches.length) {
         await updateProgressMessage(env, chatId, progressMessageId, "📚 I found matching titles. I’m preparing direct Mini App episode links…");
