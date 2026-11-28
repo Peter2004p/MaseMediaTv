@@ -54,10 +54,8 @@ export async function generateMaseNetFallback(
       });
       const data = await response.json().catch(() => ({})) as any;
       const steps = Array.isArray(data.steps) ? data.steps : [];
-      const text = String(data.output_text || steps.filter((step:any)=>step?.type==="model_output").flatMap((step:any)=>Array.isArray(step.content)?step.content.map((part:any)=>part.text||""):[step.text||""]).join("\\n") || "");
-      const urlMatches = text.match(/https?:\\/\\/[^\\s)\\]}>"]+/g) || [];
-      const stepUrls = steps.flatMap((step:any)=>[step.url,step.uri,step.web?.uri,step.source?.uri,...(Array.isArray(step.sources)?step.sources.map((item:any)=>item.url||item.uri):[])].filter((value:any)=>typeof value==="string" && /^https?:\\/\\//i.test(value)));
-      const sources = [...new Set([...stepUrls,...urlMatches])].slice(0,6);
+      const text = String(data.output_text || steps.filter((step:any)=>step?.type==="model_output").flatMap((step:any)=>Array.isArray(step.content)?step.content.map((part:any)=>part.text||""):[step.text||""]).join("\n") || "");
+      const sources = [...new Set(steps.flatMap((step:any)=>Array.isArray(step.content)?step.content.flatMap((part:any)=>Array.isArray(part.annotations)?part.annotations.filter((annotation:any)=>annotation.type==="url_citation" && typeof annotation.url==="string").map((annotation:any)=>((annotation.title||annotation.url)+": "+annotation.url)):[]):[]))].slice(0,6);
       if (response.ok && text.trim() && (!requireLiveWebResearch || sources.length)) return {text:text.trim(),provider:"gemini",...(sources.length?{sources}:{})};
       const detail = String(data?.error?.message || data?.error?.status || ("No grounded text or source links returned; steps=" + steps.length)).slice(0,320);
       researchFailure = "Gemini Interactions HTTP " + response.status + " (" + model + "): " + detail;
@@ -85,8 +83,8 @@ export async function generateMaseNetFallback(
       const data = await response.json().catch(()=>({})) as any;
       const message = data?.choices?.[0]?.message || {};
       const text = String(message.content || "");
-      const urls = text.match(/https?:\\/\\/[^\\s)\\]}>"]+/g) || [];
-      const citations = Array.isArray(message.citations) ? message.citations.map((item:any)=>typeof item==="string"?item:item.url).filter((url:any)=>typeof url==="string" && /^https?:\\/\\//i.test(url)) : [];
+      const urls = text.split(/\s+/).filter((part:string)=>part.startsWith("https://")||part.startsWith("http://")).map((part:string)=>part.replace(/[),.;]+$/,""));
+      const citations = Array.isArray(message.citations) ? message.citations.map((item:any)=>typeof item==="string"?item:item.url).filter((url:any)=>typeof url==="string" && (url.startsWith("https://")||url.startsWith("http://"))) : [];
       const sources = [...new Set([...citations,...urls])].slice(0,6);
       if (response.ok && text.trim() && sources.length) return {text:text.trim(),provider:"groq",sources};
       const detail = String(data?.error?.message || message?.refusal || "No answer with source URLs returned").slice(0,280);
