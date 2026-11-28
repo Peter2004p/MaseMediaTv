@@ -262,7 +262,6 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
       ].join("\n"),
       input: message.slice(0, 2000),
       max_output_tokens: 350
-    })
   });
   let response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
