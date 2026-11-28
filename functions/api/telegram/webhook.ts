@@ -157,7 +157,7 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
   const stopWords = new Set([
     "find","search","looking","movie","movies","film","films","drama","dramas","series","episode","episodes","title","please","show","me","watch","want","get","recommend","recommendation","suggest","suggestion","best","good","popular","trending","latest","new","available","library","catalogue","catalog","have","any","some","list","all","which","what","where","when","who","why","how","can","could","would","should","do","does","did","is","are","was","were","be","been","being","i","you","we","they","he","she","it","my","your","our","their","this","that","these","those","a","an","the","of","for","to","in","on","at","with","from","and","or","but","as","by","about","please","hey","hello","hi","thanks","thank","tell","give"
   ]);
-  const terms = query.split(/\\s+/).filter((word) => word.length > 1 && !stopWords.has(word));
+  const terms = query.split(/\s+/).filter((word) => word.length > 1 && !stopWords.has(word));
   // Only run a title search when the message contains a plausible title phrase.
   // One generic word ("best", "watch", "you", "help") must never trigger random results.
   if (!terms.length || (terms.length === 1 && terms[0].length < 5)) return [];
