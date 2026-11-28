@@ -18,6 +18,8 @@ async function ensure(db:D1Database){
  const names=new Set((columns.results||[]).map(column=>column.name));
  if(!names.has("media_url"))await db.prepare("ALTER TABLE title_premieres ADD COLUMN media_url TEXT NOT NULL DEFAULT ''").run();
  if(!names.has("media_type"))await db.prepare("ALTER TABLE title_premieres ADD COLUMN media_type TEXT NOT NULL DEFAULT ''").run();
+ if(!names.has("show_on_hero"))await db.prepare("ALTER TABLE title_premieres ADD COLUMN show_on_hero INTEGER NOT NULL DEFAULT 1").run();
+ if(!names.has("shadow_enabled"))await db.prepare("ALTER TABLE title_premieres ADD COLUMN shadow_enabled INTEGER NOT NULL DEFAULT 1").run();
  await db.prepare("CREATE INDEX IF NOT EXISTS idx_title_premieres_at ON title_premieres(status,premiere_at)").run();
  await db.prepare(`CREATE TABLE IF NOT EXISTS premiere_reminders(
  premiere_id TEXT NOT NULL,user_id TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT(datetime('now')),
@@ -27,10 +29,10 @@ async function ensure(db:D1Database){
 export const onRequestGet:PagesFunction<PremiereEnv>=async({request,env})=>{
  try{
   await ensure(env.DB);const uid=await userId(request,env);
-  const rows=await env.DB.prepare("SELECT p.id,p.title_id AS titleId,p.title_name AS titleName,p.description,p.premiere_at AS premiereAt,p.media_url AS mediaUrl,p.media_type AS mediaType,p.status,COUNT(r.user_id) AS reminderCount FROM title_premieres p LEFT JOIN premiere_reminders r ON r.premiere_id=p.id WHERE p.status='scheduled' AND p.premiere_at>=datetime('now','-1 day') GROUP BY p.id ORDER BY p.premiere_at ASC LIMIT 30").all<any>();
+  const rows=await env.DB.prepare("SELECT p.id,p.title_id AS titleId,p.title_name AS titleName,p.description,p.premiere_at AS premiereAt,p.media_url AS mediaUrl,p.media_type AS mediaType,p.show_on_hero AS showOnHero,p.shadow_enabled AS shadowEnabled,p.status,COUNT(r.user_id) AS reminderCount FROM title_premieres p LEFT JOIN premiere_reminders r ON r.premiere_id=p.id WHERE p.status='scheduled' AND p.premiere_at>=datetime('now','-1 day') GROUP BY p.id ORDER BY p.premiere_at ASC LIMIT 30").all<any>();
   let reminders:string[]=[];
   if(uid){const mine=await env.DB.prepare("SELECT premiere_id FROM premiere_reminders WHERE user_id=?").bind(uid).all<{premiere_id:string}>();reminders=(mine.results||[]).map(x=>x.premiere_id);}
-  return json({premieres:rows.results||[],reminders});
+  return json({premieres:(rows.results||[]).map((row:any)=>({...row,showOnHero:!!row.showOnHero,shadowEnabled:!!row.shadowEnabled})),reminders,serverNow:Date.now()});
  }catch{return json({error:"Premiere schedule is temporarily unavailable."},503)}
 };
 export const onRequestPost:PagesFunction<PremiereEnv>=async({request,env})=>{
@@ -65,7 +67,7 @@ export const onRequestPost:PagesFunction<PremiereEnv>=async({request,env})=>{
    mediaUrl=media.toString();mediaType=body.mediaType;
   }
   const id=crypto.randomUUID();
-  await env.DB.prepare("INSERT INTO title_premieres(id,title_id,title_name,description,premiere_at,media_url,media_type) VALUES(?,?,?,?,?,?,?)").bind(id,body.titleId,body.titleName.trim().slice(0,180),typeof body.description==="string"?body.description.trim().slice(0,1000):"",date.toISOString().replace("T"," ").replace("Z",""),mediaUrl,mediaType).run();
+  await env.DB.prepare("INSERT INTO title_premieres(id,title_id,title_name,description,premiere_at,media_url,media_type,show_on_hero,shadow_enabled) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,body.titleId,body.titleName.trim().slice(0,180),typeof body.description==="string"?body.description.trim().slice(0,1000):"",date.toISOString().replace("T"," ").replace("Z",""),mediaUrl,mediaType,body.showOnHero===false?0:1,body.shadowEnabled===false?0:1).run();
   return json({ok:true,id});
  }catch{return json({error:"Premiere update failed. Please try again."},503)}
 };
