@@ -19,8 +19,9 @@ function responseText(value: unknown): string {
 export async function generateMaseNetFallback(
   env: MaseNetAIEnv,
   systemInstructions: string,
-  userMessage: string
-): Promise<{text:string;provider:"gemini"|"groq"|"cloudflare"} | null> {
+  userMessage: string,
+  requireLiveWebResearch = false
+): Promise<{text:string;provider:"gemini"|"groq"|"cloudflare";sources?:string[]} | null> {
   if (env.GEMINI_API_KEY) {
     try {
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" +
@@ -30,18 +31,21 @@ export async function generateMaseNetFallback(
         body:JSON.stringify({
           systemInstruction:{parts:[{text:systemInstructions}]},
           contents:[{role:"user",parts:[{text:userMessage.slice(0,4000)}]}],
-          generationConfig:{maxOutputTokens:700}
+          generationConfig:{maxOutputTokens:700},
+          ...(requireLiveWebResearch ? {tools:[{google_search:{}}]} : {})
         })
       });
       const data = await response.json().catch(()=>({}));
       const text = responseText(data);
-      if (response.ok && text.trim()) return {text:text.trim(),provider:"gemini"};
+      const groundingChunks = (data as any)?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const sources = groundingChunks.map((chunk: any) => chunk?.web?.uri ? (chunk.web.title ? chunk.web.title + ": " : "") + chunk.web.uri : "").filter(Boolean).slice(0,6);
+      if (response.ok && text.trim() && (!requireLiveWebResearch || sources.length > 0)) return {text:text.trim(),provider:"gemini",sources};
       console.error("MaseNet Gemini fallback failed", response.status);
     } catch (error) {
       console.error("MaseNet Gemini fallback error", error instanceof Error ? error.message : "unknown error");
     }
   }
-  if (env.GROQ_API_KEY) {
+  if (!requireLiveWebResearch && env.GROQ_API_KEY) {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method:"POST", signal:AbortSignal.timeout(18000),
@@ -60,7 +64,7 @@ export async function generateMaseNetFallback(
       console.error("MaseNet Groq fallback error", error instanceof Error ? error.message : "unknown error");
     }
   }
-  if (env.AI) {
+  if (!requireLiveWebResearch && env.AI) {
     try {
       const result = await env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
         messages:[{role:"system",content:systemInstructions},{role:"user",content:userMessage.slice(0,4000)}],
