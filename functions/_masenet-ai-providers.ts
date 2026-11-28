@@ -39,7 +39,9 @@ export async function generateMaseNetFallback(
 
   if (env.GEMINI_API_KEY) {
     const configuredModel = String(env.GEMINI_MODEL || "").trim();
-    const models = [...new Set([configuredModel || "gemini-3.8-flash", "gemini-3.8-flash"])];
+    // Retry with a second current Flash model if the configured/default model is
+    // unavailable or its Search grounding request is rejected.
+    const models = [...new Set([configuredModel, "gemini-3.8-flash", "gemini-3.5-flash-lite"].filter(Boolean))];
     for (const model of models) {
       try {
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" +
@@ -60,7 +62,8 @@ export async function generateMaseNetFallback(
         if (response.ok && text.trim() && (!requireLiveWebResearch || sources.length > 0)) {
           return {text:text.trim(),provider:"gemini",sources};
         }
-        console.error("MaseNet Gemini fallback failed", response.status, "model:", model);
+        const detail = String((data as any)?.error?.message || (data as any)?.error?.status || "No grounded text or source links returned").slice(0,240);
+        console.error("MaseNet Gemini fallback failed", response.status, "model:", model, "detail:", detail);
       } catch (error) {
         console.error("MaseNet Gemini fallback error", error instanceof Error ? error.message : "unknown error", "model:", model);
       }
