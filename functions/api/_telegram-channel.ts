@@ -94,7 +94,7 @@ const cleanHtml = (value: string) => decode(value
 const normalize = (value: string) => value.normalize("NFKC").toLocaleLowerCase()
   .replace(/[’']/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
-export async function searchPublicTelegramChannel(query: string, limit = 5, db?: D1Database): Promise<TelegramChannelPost[]> {
+export async function searchPublicTelegramChannel(query: string, limit = 5, db?: D1Database, allowedChannels?: string[]): Promise<TelegramChannelPost[]> {
   const q = normalize(query);
   if (q.length < 2) return [];
   const stopWords = new Set(["the","and","for","with","from","that","this","what","where","when","how","can","you","please","find","search","movie","movies","drama","dramas","episode","episodes","season","channel","links","link","posted","post","list","any","all"]);
@@ -104,7 +104,8 @@ export async function searchPublicTelegramChannel(query: string, limit = 5, db?:
   // Crawl up to 12 public-preview pages per channel (about 240 recent posts each).
   // Telegram Bot API cannot retrieve arbitrary historical channel messages; older posts
   // must have been indexed when published or imported by an authorized archive process.
-  await Promise.all(CHANNELS.map(async channel => {
+  const channelsToSearch = allowedChannels?.length ? CHANNELS.filter(channel => allowedChannels.some(name => name.toLowerCase() === channel.username.toLowerCase())) : CHANNELS;
+  await Promise.all(channelsToSearch.map(async channel => {
     let before = 0;
     for (let page = 0; page < 12; page++) {
       const pageUrl = "https://t.me/s/" + channel.username + (before ? "?before=" + before : "");
