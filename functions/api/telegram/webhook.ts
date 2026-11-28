@@ -336,17 +336,25 @@ function chatTitle(chat: any) { return String(chat?.title || [chat?.first_name, 
 async function getRequiredChannelMemberships(env: Env, userId: string) {
   const membership = { masemedia: false, moondramac: false };
   const errors: string[] = [];
-  for (const [channel, key] of [["@MaseMediaTv", "masemedia"], ["@MoonDramaC", "moondramac"]] as const) {
+  const checks = await Promise.all([
+    ["@MaseMediaTv", "masemedia"],
+    ["@MoonDramaC", "moondramac"]
+  ].map(async ([channel, key]) => {
     try {
       const result = await telegramCall(env, "getChatMember", { chat_id: channel, user_id: userId }) as unknown as {
         result?: { status?: string; is_member?: boolean };
       };
       const status = String(result.result?.status || "");
-      membership[key] = ["member", "administrator", "creator"].includes(status) ||
-        (status === "restricted" && result.result?.is_member === true);
+      return { key, allowed: ["member", "administrator", "creator"].includes(status) ||
+        (status === "restricted" && result.result?.is_member === true) };
     } catch (error) {
       errors.push(channel + ": " + (error instanceof Error ? error.message : "membership check unavailable"));
+      return { key, allowed: false };
     }
+  }));
+  for (const check of checks) {
+    if (check.key === "masemedia") membership.masemedia = check.allowed;
+    if (check.key === "moondramac") membership.moondramac = check.allowed;
   }
   return { membership, errors, allowed: membership.masemedia && membership.moondramac };
 }
@@ -497,6 +505,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     } else if (text && !text.startsWith("/") && /social|official links|facebook|tiktok|youtube|telegram|follow (?:you|us|masenet|masetv|masemedia)|where can i follow/i.test(text) && /link|url|social|follow|channel|account|facebook|tiktok|youtube|telegram/i.test(text)) {
       const socialReply = "🎬 <b>Stay Connected with MaseMedia TV</b>\n\nMaseNet, MaseTv and MaseMediaTv are names for the same platform. Choose where you’d like to connect with us:\n\n📺 <b>YouTube</b> — Videos and content\nhttps://youtube.com/@masemedia_tv\n\n📘 <b>Facebook</b> — News and updates\nhttps://www.facebook.com/share/1A5pSvKte9/\n\n🎵 <b>TikTok</b> — Short videos and clips\nhttps://www.tiktok.com/@masemediatv?_r=1&_t=ZN-9AvrV9ca86E\n\n📢 <b>Official Telegram Channels</b>\n• <b>MaseMediaTv</b> — Follow our main channel\nhttps://t.me/MaseMediaTv\n• <b>MoonDramaC</b> — Visit our second channel\nhttps://t.me/MoonDramaC\n\n🤖 <b>Telegram Bot</b> — Chat with MaseNet Assistant\nhttps://t.me/MaseTv_Bot\n\nThanks for being part of our community! ❤️";
       await sendMessage(env, chatId, socialReply, keyboard, "HTML");
+    } else if (text && /^(?:hi|hello|hey|good morning|good afternoon|good evening|howdy)[!.?,\s]*$/i.test(text)) {
+      await sendMessage(env, chatId, "Hi there! 👋 How can I help you with MaseNet today?", keyboard);
+      return json({ ok: true, fastGreeting: true });
     } else if (text && !text.startsWith("/")) {
       const matches = await findCatalogMatches(env, text);
       if (matches.length) {
