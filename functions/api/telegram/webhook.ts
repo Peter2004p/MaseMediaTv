@@ -659,8 +659,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       let answer: string;
       try {
         answer = await makeAIReply(env, text, String(chat?.first_name || ""), chatType === "private" && !!env.ADMIN_TELEGRAM_CHAT_ID && chatId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim());
-      } catch {
-        answer = "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open the MaseNet Mini App using the button below.";
+      } catch (error) {
+        const diagnostic = error instanceof Error ? error.message : "Unknown AI provider failure";
+        console.error("MaseNet Telegram AI reply failed:", diagnostic.slice(0, 400));
+        const ownerChatId = String(env.ADMIN_TELEGRAM_CHAT_ID || "").trim();
+        const isOwnerChat = chatType === "private" && !!ownerChatId && chatId === ownerChatId;
+        answer = isOwnerChat
+          ? "MaseNet AI research diagnostic: " + diagnostic.slice(0, 360) + "\n\nThe failure reason is shown only in the configured owner chat."
+          : "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open the MaseNet Mini App using the button below.";
       }
       const finalAnswer = voiceTranscript ? "🎙️ Voice note understood.\n\n" + answer : answer;
       const updated = await updateProgressMessage(env, chatId, progressMessageId, finalAnswer, keyboard);
