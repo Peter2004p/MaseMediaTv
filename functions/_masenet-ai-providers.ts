@@ -37,6 +37,7 @@ export async function generateMaseNetFallback(
       : "\\n\\nUse live web research for this current-information question. Return direct source URLs.")
     : userMessage;
 
+  let researchFailure = env.GEMINI_API_KEY ? "Gemini returned no grounded answer." : "GEMINI_API_KEY is not configured.";
   if (env.GEMINI_API_KEY) {
     const configuredModel = String(env.GEMINI_MODEL || "").trim();
     // Gemini 2.5 Flash supports Google Search grounding on the free tier.
@@ -64,8 +65,10 @@ export async function generateMaseNetFallback(
           return {text:text.trim(),provider:"gemini",sources};
         }
         const detail = String((data as any)?.error?.message || (data as any)?.error?.status || ("No grounded text or source links returned; finish=" + String((data as any)?.candidates?.[0]?.finishReason || "unknown") + "; chunks=" + String(groundingChunks.length))).slice(0,320);
+        researchFailure = "Gemini HTTP " + response.status + " (" + model + "): " + detail;
         console.error("MaseNet Gemini fallback failed", response.status, "model:", model, "detail:", detail);
       } catch (error) {
+        researchFailure = "Gemini request error (" + model + "): " + (error instanceof Error ? error.message : "unknown error");
         console.error("MaseNet Gemini fallback error", error instanceof Error ? error.message : "unknown error", "model:", model);
       }
     }
@@ -105,5 +108,6 @@ export async function generateMaseNetFallback(
       console.error("MaseNet Cloudflare AI fallback error", error instanceof Error ? error.message : "unknown error");
     }
   }
+  if (requireLiveWebResearch) throw new Error(researchFailure.slice(0, 360));
   return null;
 }
