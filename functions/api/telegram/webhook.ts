@@ -615,26 +615,26 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         await sendMessage(env, chatId, "You’re sending messages a little too quickly. Please wait about a minute, then try again.", keyboard);
         return json({ ok: true, rateLimited: true });
       }
-      const channelSearchIntent = /\\b(?:official\\s+)?channels?\\b|\\b(?:check|search|look\\s+(?:in|at)|find)\\b.{0,35}\\b(?:channel|telegram)\\b/i.test(text);
+      const channelSearchIntent = /\b(?:official\s+)?channels?\b|\b(?:check|search|look\s+(?:in|at)|find)\b.{0,35}\b(?:channel|telegram)\b/i.test(text);
       const isResearchQuestion = requiresLiveWebResearch(text) && !channelSearchIntent;
       const stopTyping = startTypingPulse(env, chatId);
       const progressMessageId = await sendProgressMessage(env, chatId, isResearchQuestion
         ? "🔎 MaseNet AI is searching for reliable information…\n\nI’m checking relevant sources and will prepare a clear answer for you. ✨"
         : "🧠 MaseNet AI is thinking…\n\nI’m checking your question and preparing the most helpful answer I can. 💜");
       if (channelSearchIntent) {
-        await updateProgressMessage(env, chatId, progressMessageId, "📢 Searching MaseNet’s official Telegram channels…\\n\\nChecking MaseMediaTv and MoonDramaC for matching posts. 💜");
+        await updateProgressMessage(env, chatId, progressMessageId, "📢 Searching MaseNet’s official Telegram channels…\n\nChecking MaseMediaTv and MoonDramaC for matching posts. 💜");
         const channelPosts = await searchPublicTelegramChannel(text, 6, env.DB).catch((error) => {
           console.error("Official Telegram channel search failed:", error instanceof Error ? error.message : String(error));
           return [];
         });
         const channelText = channelPosts.length
-          ? "📢 <b>Results from MaseNet’s official Telegram channels</b>\\n\\n" + channelPosts.map((post) =>
-              "• <b>" + escapeTelegramHTML(post.title) + "</b>\\n" +
-              "<i>" + escapeTelegramHTML(post.channel) + "</i>\\n" +
-              escapeTelegramHTML(post.text.slice(0, 450)) + "\\n" +
+          ? "📢 <b>Results from MaseNet’s official Telegram channels</b>\n\n" + channelPosts.map((post) =>
+              "• <b>" + escapeTelegramHTML(post.title) + "</b>\n" +
+              "<i>" + escapeTelegramHTML(post.channel) + "</i>\n" +
+              escapeTelegramHTML(post.text.slice(0, 450)) + "\n" +
               '<a href="' + escapeTelegramHTML(post.url) + '">View official channel post</a>'
-            ).join("\\n\\n")
-          : "🔎 I couldn’t find a matching post in the recent public previews or indexed posts from MaseMediaTv and MoonDramaC.\\n\\nTry the exact drama title or open the official channels directly: https://t.me/MaseMediaTv and https://t.me/MoonDramaC";
+            ).join("\n\n")
+          : "🔎 I couldn’t find a matching post in the recent public previews or indexed posts from MaseMediaTv and MoonDramaC.\n\nTry the exact drama title or open the official channels directly: https://t.me/MaseMediaTv and https://t.me/MoonDramaC";
         const updatedChannelResult = await updateProgressMessage(env, chatId, progressMessageId, channelText, keyboard, "HTML");
         if (!updatedChannelResult) await sendMessage(env, chatId, channelText, keyboard, "HTML");
         stopTyping();
