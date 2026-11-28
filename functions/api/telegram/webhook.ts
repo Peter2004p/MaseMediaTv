@@ -554,6 +554,24 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         stopTyping();
         return json({ ok: true, searchMatches: matches.length });
       }
+      const channelMatchesForSearch = await searchPublicTelegramChannel(text, 5, env.DB).catch((error) => {
+        console.error("Telegram channel search failed:", error instanceof Error ? error.message : String(error));
+        return [];
+      });
+      if (channelMatchesForSearch.length) {
+        const escapeHtml = (value: string) => value.replace(/[&<>"]/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch));
+        const channelReply = "📢 <b>I found matching posts in our official Telegram channels.</b>\n\n" +
+          channelMatchesForSearch.slice(0, 5).map(post =>
+            "• <b>" + escapeHtml(post.title) + "</b>\n" +
+            escapeHtml(post.text.slice(0, 260)) + "\n" +
+            '<a href="' + escapeHtml(post.url) + '">Open original Telegram post</a>'
+          ).join("\n\n") +
+          "\n\nℹ️ These are channel posts, not confirmation that the title is available in the MaseNet website catalogue. I’ll only provide a MaseNet playback link when the title exists in the catalogue.";
+        const updated = await updateProgressMessage(env, chatId, progressMessageId, channelReply, keyboard);
+        if (!updated) await sendMessage(env, chatId, channelReply, keyboard, "HTML");
+        stopTyping();
+        return json({ ok: true, channelSearchMatches: channelMatchesForSearch.length, catalogueMatches: 0 });
+      }
       await updateProgressMessage(env, chatId, progressMessageId, isResearchQuestion
         ? "🌐 Searching trusted sources…\n\nI’m checking what can be verified before I answer. 🔍"
         : "✍️ Putting the answer together…\n\nJust a moment — MaseNet AI is working on it. 💜");
