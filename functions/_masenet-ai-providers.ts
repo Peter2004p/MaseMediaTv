@@ -110,7 +110,7 @@ export async function generateMaseNetFallback(
       const collectUrls = (value: any, depth = 0): void => {
         if (depth > 8 || value == null) return;
         if (typeof value === "string") {
-          const matches = value.match(/https?:\\/\\/[^\\s<>"'\\])}]+/g) || [];
+          const matches = value.match(/https?:\/\/[^\s<>"'\])}]+/g) || [];
           for (const match of matches) foundUrls.push(match.replace(/[),.;]+$/,""));
           return;
         }
@@ -120,7 +120,7 @@ export async function generateMaseNetFallback(
         }
       };
       collectUrls(data);
-      const sources = [...new Set(foundUrls)].filter((url)=>/^https?:\\/\\//i.test(url)).slice(0,8);
+      const sources = [...new Set(foundUrls)].filter((url)=>/^https?:\/\//i.test(url)).slice(0,8);
       if (response.ok && text && sources.length) return {text,provider:"groq",sources};
       const outputTypes = output.map((item:any)=>String(item?.type || "unknown"));
       const detail = String(data?.error?.message ||
