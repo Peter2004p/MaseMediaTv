@@ -241,16 +241,16 @@ async function handleEpisodePageCallback(env:Env,callback:any) {
 }
 
 async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:string;name:string;kind:string;year:number|null;episodeLabels:string[];episodes:TelegramEpisodeLink[]}>> {
-  const query=message.normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\\p{L}\\p{N}]+/gu," ").trim();
+  const query=message.normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim();
   if(query.length<2)return [];
   const stopWords=new Set(["find","search","looking","movie","movies","film","films","drama","dramas","series","episode","episodes","title","please","show","me","watch","want","get","recommend","recommendation","suggest","suggestion","best","good","popular","trending","latest","new","available","library","catalogue","catalog","have","any","some","list","all","which","what","where","when","who","why","how","can","could","would","should","do","does","did","is","are","was","were","be","been","being","i","you","we","they","he","she","it","my","your","our","their","this","that","these","those","a","an","the","of","for","to","in","on","at","with","from","and","or","but","as","by","about","hey","hello","hi","thanks","thank","tell","give"]);
-  const terms=query.split(/\\s+/).filter(word=>word.length>1&&!stopWords.has(word));
+  const terms=query.split(/\s+/).filter(word=>word.length>1&&!stopWords.has(word));
   if(!terms.length||(terms.length===1&&terms[0].length<5))return [];
   try{
     const rows=await env.DB.prepare("SELECT id,name,kind,year,metadata_json FROM titles ORDER BY created_at DESC").all<{id:string;name:string;kind:string;year:number|null;metadata_json:string}>();
     const ranked=(rows.results||[]).map(row=>{
       const name=String(row.name||"");
-      const normalizedName=name.normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\\p{L}\\p{N}]+/gu," ").trim();
+      const normalizedName=name.normalize("NFKC").toLowerCase().replace(/[’']/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim();
       const matchedTerms=terms.filter(term=>normalizedName.split(" ").includes(term)).length;
       let score=0;
       if(normalizedName===query)score=100;
