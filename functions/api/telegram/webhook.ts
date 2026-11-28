@@ -47,6 +47,24 @@ async function sendMessage(env: Env, chatId: string | number, text: string, repl
 async function sendTyping(env: Env, chatId: string | number) {
   try { await telegramCall(env, "sendChatAction", { chat_id: chatId, action: "typing" }); } catch { /* Typing is optional. */ }
 }
+async function sendProgressMessage(env: Env, chatId: string | number, text: string): Promise<number | null> {
+  try {
+    const result = await telegramCall(env, "sendMessage", { chat_id: chatId, text, disable_web_page_preview: true }) as unknown as { result?: { message_id?: number } };
+    return Number(result.result?.message_id) || null;
+  } catch { return null; }
+}
+async function updateProgressMessage(env: Env, chatId: string | number, messageId: number | null, text: string, replyMarkup?: unknown): Promise<boolean> {
+  if (!messageId) return false;
+  try {
+    await telegramCall(env, "editMessageText", { chat_id: chatId, message_id: messageId, text: text.slice(0, 4000), disable_web_page_preview: false, ...(replyMarkup ? { reply_markup: replyMarkup } : {}) });
+    return true;
+  } catch { return false; }
+}
+function startTypingPulse(env: Env, chatId: string | number): () => void {
+  void sendTyping(env, chatId);
+  const timer = setInterval(() => { void sendTyping(env, chatId); }, 4000);
+  return () => clearInterval(timer);
+}
 
 async function transcribeTelegramVoice(env: Env, fileId: string, mimeType = "audio/ogg"): Promise<string> {
   if (!env.OPENAI_API_KEY) throw new Error("Voice transcription is not configured.");
@@ -509,18 +527,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       await sendMessage(env, chatId, "Hi there! 👋 How can I help you with MaseNet today?", keyboard);
       return json({ ok: true, fastGreeting: true });
     } else if (text && !text.startsWith("/")) {
-      const matches = await findCatalogMatches(env, text);
-      if (matches.length) {
-        const channelMatches = await searchPublicTelegramChannel(text, 5, env.DB).catch((error) => { console.error("Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; });
-        const resultText = "🎬 <b>Found in the MaseNet library</b>\n\n" + matches.map((item) =>
-          "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
-          (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
-          (item.episodeLabels.length ? "\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "") +
-          ""
-        ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles." + (channelMatches.length ? "\n\n📢 <b>Also found in our Telegram channel:</b>\n" + channelMatches.map(post => "• <a href=\"" + post.url + "\">" + post.title.replace(/[&<>\"]/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;", "\"":"&quot;" }[ch] || ch)) + "</a>").join("\n") : "");
-        await sendMessage(env, chatId, resultText, keyboard, "HTML");
-        return json({ ok: true, searchMatches: matches.length });
-      }
       const allowedAIRequest = voiceRateLimitReserved || await reserveTelegramAIRequest(env, String(chatId), 10).catch((error) => {
         console.error("Telegram AI rate-limit check failed:", error instanceof Error ? error.message : String(error));
         return false;
@@ -529,14 +535,38 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         await sendMessage(env, chatId, "You’re sending messages a little too quickly. Please wait about a minute, then try again.", keyboard);
         return json({ ok: true, rateLimited: true });
       }
-      await sendTyping(env, chatId);
+      const isResearchQuestion = requiresLiveWebResearch(text);
+      const stopTyping = startTypingPulse(env, chatId);
+      const progressMessageId = await sendProgressMessage(env, chatId, isResearchQuestion
+        ? "🔎 MaseNet AI is searching for reliable information…\n\nI’m checking relevant sources and will prepare a clear answer for you. ✨"
+        : "🧠 MaseNet AI is thinking…\n\nI’m checking your question and preparing the most helpful answer I can. 💜");
+      const matches = await findCatalogMatches(env, text);
+      if (matches.length) {
+        await updateProgressMessage(env, chatId, progressMessageId, "📚 I found matching titles. I’m gathering the details for you…");
+        const channelMatches = await searchPublicTelegramChannel(text, 5, env.DB).catch((error) => { console.error("Telegram channel search failed", error instanceof Error ? error.message : "unknown error"); return []; });
+        const resultText = "🎬 <b>Found in the MaseNet library</b>\n\n" + matches.map((item) =>
+          "• <b>" + item.name.replace(/[&<>"]/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</b>" +
+          (item.year ? " (" + item.year + ")" : "") + " — " + item.kind +
+          (item.episodeLabels.length ? "\n  Episodes: " + item.episodeLabels.slice(0,3).join(", ") : "")
+        ).join("\n\n") + "\n\nOpen the MaseNet Mini App to browse the catalogue and play available titles." + (channelMatches.length ? "\n\n📢 <b>Also found in our Telegram channel:</b>\n" + channelMatches.map(post => "• <a href=\"" + post.url + "\">" + post.title.replace(/[&<>"]/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;", '"':"&quot;" }[ch] || ch)) + "</a>").join("\n") : "");
+        const updated = await updateProgressMessage(env, chatId, progressMessageId, resultText, keyboard);
+        if (!updated) await sendMessage(env, chatId, resultText, keyboard, "HTML");
+        stopTyping();
+        return json({ ok: true, searchMatches: matches.length });
+      }
+      await updateProgressMessage(env, chatId, progressMessageId, isResearchQuestion
+        ? "🌐 Searching trusted sources…\n\nI’m checking what can be verified before I answer. 🔍"
+        : "✍️ Putting the answer together…\n\nJust a moment — MaseNet AI is working on it. 💜");
       let answer: string;
       try {
         answer = await makeAIReply(env, text, String(chat?.first_name || ""), chatType === "private" && !!env.ADMIN_TELEGRAM_CHAT_ID && chatId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim());
       } catch {
         answer = "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open the MaseNet Mini App using the button below.";
       }
-      await sendMessage(env, chatId, voiceTranscript ? '🎙️ Voice note understood.\n\n' + answer : answer, keyboard);
+      const finalAnswer = voiceTranscript ? "🎙️ Voice note understood.\n\n" + answer : answer;
+      const updated = await updateProgressMessage(env, chatId, progressMessageId, finalAnswer, keyboard);
+      if (!updated) await sendMessage(env, chatId, finalAnswer, keyboard);
+      stopTyping();
     } else if (text.startsWith("/")) {
       await sendMessage(env, chatId, "I don’t recognize that command yet. Send /help to see what I can do, or just chat with me normally.", keyboard);
     }
