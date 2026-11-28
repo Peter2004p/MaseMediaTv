@@ -627,7 +627,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       } else {
         await sendChannelGate(env, chatId, current.membership, current.errors);
       }
-    } else if (/^\/forget(?:@\w+)?$/i.test(text)) {\n      await clearTelegramConversationMemory(env, chatId);
+    } else if (/^\/forget(?:@\w+)?$/i.test(text)) {
+      await clearTelegramConversationMemory(env, chatId);
       await sendMessage(env, chatId, "Your saved MaseNet chat memory has been cleared. I’ll start fresh from here.", keyboard);\n    } else if (/^\/privacy(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "MaseNet privacy 🔐\n\nThe bot stores your Telegram chat ID and display name for optional alerts, plus recent chat messages so the assistant can remember context across visits. Conversation memory is kept for up to 30 days and limited to recent messages. Use /forget to clear it at any time. Do not send passwords, payment details, or private account credentials in chat.", keyboard);
     } else if (/^\/app(?:@\w+)?$/i.test(text)) {
