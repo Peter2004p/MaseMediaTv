@@ -151,6 +151,37 @@ async function reserveTelegramAIRequest(env: Env, chatId: string, limit = 10): P
   }
   return Number(row?.request_count || 0) <= limit;
 }
+
+async function ensureTelegramConversationMemory(env: Env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS telegram_ai_memory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('user','assistant')),
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_telegram_ai_memory_chat ON telegram_ai_memory(chat_id,id)").run();
+}
+async function loadTelegramConversationMemory(env: Env, chatId: string): Promise<Array<{role:"user"|"assistant";content:string}>> {
+  await ensureTelegramConversationMemory(env);
+  const rows = await env.DB.prepare("SELECT role,content FROM telegram_ai_memory WHERE chat_id=? AND created_at >= datetime('now','-30 days') ORDER BY id DESC LIMIT 16")
+    .bind(chatId).all<{role:"user"|"assistant";content:string}>();
+  return (rows.results || []).reverse().map(row => ({role:row.role,content:String(row.content || "").slice(0,1200)}));
+}
+async function saveTelegramConversationTurn(env: Env, chatId: string, userText: string, assistantText: string) {
+  await ensureTelegramConversationMemory(env);
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO telegram_ai_memory(chat_id,role,content) VALUES (?,'user',?)").bind(chatId,userText.slice(0,2000)),
+    env.DB.prepare("INSERT INTO telegram_ai_memory(chat_id,role,content) VALUES (?,'assistant',?)").bind(chatId,assistantText.slice(0,3500))
+  ]);
+  await env.DB.prepare("DELETE FROM telegram_ai_memory WHERE chat_id=? AND id NOT IN (SELECT id FROM telegram_ai_memory WHERE chat_id=? ORDER BY id DESC LIMIT 40)").bind(chatId,chatId).run();
+  await env.DB.prepare("DELETE FROM telegram_ai_memory WHERE created_at < datetime('now','-30 days')").run();
+}
+async function clearTelegramConversationMemory(env: Env, chatId: string) {
+  await ensureTelegramConversationMemory(env);
+  await env.DB.prepare("DELETE FROM telegram_ai_memory WHERE chat_id=?").bind(chatId).run();
+}
+
 type TelegramEpisodeLink = { season: number; episode: number; title: string };
 
 function escapeTelegramHTML(value: unknown): string {
@@ -300,14 +331,14 @@ function extractWebSources(output: Array<{type?:string;action?:{sources?:Array<{
   return [...found.entries()].slice(0,6).map(([url,title]) => title === url ? url : title + ": " + url);
 }
 
-async function makeAIReply(env: Env, message: string, firstName: string, authenticatedOwner = false): Promise<string> {
+async function makeAIReply(env: Env, message: string, firstName: string, authenticatedOwner = false, conversationHistory: Array<{role:'user'|'assistant';content:string}> = []): Promise<string> {
   if (!env.OPENAI_API_KEY) {
     const research = requiresLiveWebResearch(message);
     const fallback = await generateMaseNetFallback(env,
       "You are MaseNet's helpful Telegram assistant. Be friendly and concise. " + MASENET_CURRENT_PRODUCT_KNOWLEDGE + "\\nNever invent catalogue availability, episode counts, account status, or actions. " +
       (authenticatedOwner ? "This is the authenticated owner." : "This is a regular user.") +
       "\\nFor Love in the Shell, also recognize the Chinese title Nian Xiang Si (念相思) and the alternate English title Longing for My Beloved. Search all known title variants when researching it. Do not confuse it with similarly named dramas.",
-      message, research);
+      (conversationHistory.length ? "Recent conversation context:\n" + conversationHistory.map(item => item.role + ": " + item.content).join("\n") + "\nCurrent message: " : "") + message, research);
     if (fallback) return fallback.text.slice(0,3500) + (fallback.sources?.length ? "\\n\\nSources:\\n" + fallback.sources.join("\\n") : "");
     if (research) return "I can’t verify current information with live web sources right now, so I won’t guess. Please try again shortly.";
     return "I couldn’t verify that title in the current MaseNet library. Please open the MaseNet Mini App and check the catalogue. I won’t substitute an unrelated Telegram channel post for a playable title.";
@@ -373,7 +404,7 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
         "Never reveal secrets, API keys, environment variables, or private user information.",
         "The user's Telegram display name is " + (firstName || "there") + ". The Mini App launch button is attached separately; do not print any app or website URL."
       ].join("\n"),
-      input: message.slice(0, 2000),
+      input: [...conversationHistory.slice(-16), { role: "user", content: message.slice(0, 2000) }],
       max_output_tokens: 350
   });
   let response = await fetch("https://api.openai.com/v1/responses", {
@@ -587,7 +618,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       await env.DB.prepare("INSERT INTO telegram_subscribers (chat_id,chat_type,title,active,updated_at) VALUES (?,'private',?,1,datetime('now')) ON CONFLICT(chat_id) DO UPDATE SET active=1,title=excluded.title,updated_at=datetime('now')").bind(chatId,title).run();
       await sendMessage(env, chatId, "Movie and episode alerts are now on.");
     } else if (/^\/(?:help|menu)(?:@\w+)?$/i.test(text)) {
-      await sendMessage(env, chatId, "MaseNet Bot menu 🎬\n\n• Chat normally: ask a question or say “hey AI”\n• /app — open the Mini App\n• /notifications_off — pause new-title alerts\n• /notifications_on — enable new-title alerts\n• /privacy — learn what the bot stores\n• /help — show this menu", keyboard);
+      await sendMessage(env, chatId, "MaseNet Bot menu 🎬\n\n• Chat normally: ask a question or say “hey AI”\n• /app — open the Mini App\n• /notifications_off — pause new-title alerts\n• /notifications_on — enable new-title alerts\n• /privacy — learn what the bot stores\n• /forget — clear your saved chat memory\n• /help — show this menu", keyboard);
     } else if (/^\/verify(?:@\w+)?$/i.test(text)) {
       // Membership in both official Telegram channels is the only access requirement.
       const current = await getRequiredChannelMemberships(env, chatId);
@@ -596,8 +627,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       } else {
         await sendChannelGate(env, chatId, current.membership, current.errors);
       }
-    } else if (/^\/privacy(?:@\w+)?$/i.test(text)) {
-      await sendMessage(env, chatId, "MaseNet privacy 🔐\n\nThe bot stores your Telegram chat ID and display name to manage optional new-title alerts. Turning alerts off pauses those messages. Do not send passwords, payment details, or private account credentials in chat.", keyboard);
+    } else if (/^\/forget(?:@\w+)?$/i.test(text)) {\n      await clearTelegramConversationMemory(env, chatId);\n      await sendMessage(env, chatId, "Your saved MaseNet chat memory has been cleared. I’ll start fresh from here.", keyboard);\n    } else if (/^\/privacy(?:@\w+)?$/i.test(text)) {
+      await sendMessage(env, chatId, "MaseNet privacy 🔐\n\nThe bot stores your Telegram chat ID and display name for optional alerts, plus recent chat messages so the assistant can remember context across visits. Conversation memory is kept for up to 30 days and limited to recent messages. Use /forget to clear it at any time. Do not send passwords, payment details, or private account credentials in chat.", keyboard);
     } else if (/^\/app(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "Open MaseNet Mini App:", keyboard);
     } else if (text && !text.startsWith("/") && /social|official links|facebook|tiktok|youtube|telegram|follow (?:you|us|masenet|masetv|masemedia)|where can i follow/i.test(text) && /link|url|social|follow|channel|account|facebook|tiktok|youtube|telegram/i.test(text)) {
@@ -658,7 +689,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         : "✍️ Putting the answer together…\n\nJust a moment — MaseNet AI is working on it. 💜");
       let answer: string;
       try {
-        answer = await makeAIReply(env, text, String(chat?.first_name || ""), chatType === "private" && !!env.ADMIN_TELEGRAM_CHAT_ID && chatId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim());
+        const conversationHistory = await loadTelegramConversationMemory(env, chatId).catch(() => []);\n        answer = await makeAIReply(env, text, String(chat?.first_name || ""), chatType === "private" && !!env.ADMIN_TELEGRAM_CHAT_ID && chatId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim(), conversationHistory);
       } catch (error) {
         const diagnostic = error instanceof Error ? error.message : "Unknown AI provider failure";
         console.error("MaseNet Telegram AI reply failed:", diagnostic.slice(0, 400));
@@ -669,6 +700,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           : "Sorry, I couldn’t get a full answer just now. Please try again in a moment, or open the MaseNet Mini App using the button below.";
       }
       const finalAnswer = voiceTranscript ? "🎙️ Voice note understood.\n\n" + answer : answer;
+      await saveTelegramConversationTurn(env, chatId, text, finalAnswer).catch((error) => console.error("Telegram conversation memory save failed:", error instanceof Error ? error.message : String(error)));
       const updated = await updateProgressMessage(env, chatId, progressMessageId, finalAnswer, keyboard);
       if (!updated) await sendMessage(env, chatId, finalAnswer, keyboard);
       stopTyping();
