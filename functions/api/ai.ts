@@ -1,12 +1,13 @@
 import { searchPublicTelegramChannel } from "./_telegram-channel";
 import { MASENET_CURRENT_PRODUCT_KNOWLEDGE } from "../_masenet-ai-knowledge";
 import { currentAdmin, json } from "./auth/_shared";
+import { generateMaseNetFallback } from "../_masenet-ai-providers";
 
 interface AIResult { response?: unknown; output_text?: unknown; choices?: Array<{ message?: { content?: unknown } }>; }
 interface WorkersAI {
   run(model: string, input: { messages: Array<{ role: "system" | "user" | "assistant"; content: string }>; max_tokens?: number; chat_template_kwargs?: { enable_thinking?: boolean } }): Promise<AIResult | string>;
 }
-interface Env { DB: D1Database; AI?: WorkersAI; ADMIN_EMAIL?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; }
+interface Env { DB: D1Database; AI?: WorkersAI; ADMIN_EMAIL?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; GEMINI_API_KEY?: string; GEMINI_MODEL?: string; GROQ_API_KEY?: string; GROQ_MODEL?: string; }
 
 const episodeSearchText = (metadataJson: string): string => {
   try {
@@ -253,6 +254,21 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   if (requiresLiveWebResearch(message)) {
     return json({ text: "I can’t verify this with live web sources right now. Please try again shortly; I won’t guess or give you an unverified release date.", searchedWeb: false }, 503);
+  }
+
+  if (!imageInputs.length && (env.GEMINI_API_KEY || env.GROQ_API_KEY)) {
+    const fallbackCatalogue = titles.slice(0,60).map(t => "- " + t.name + (t.year ? " (" + t.year + ")" : "") + " [" + t.kind + "]").join("\n");
+    const fallbackSystem = [
+      "You are MaseNet's helpful website assistant. Be friendly, concise, and answer the newest message directly.",
+      MASENET_CURRENT_PRODUCT_KNOWLEDGE,
+      "Never invent catalogue availability, episodes, account status, release dates, or completed actions. For current facts requiring live research, say they cannot be verified here.",
+      "Current MaseNet catalogue snapshot:\n" + (fallbackCatalogue || "(No titles supplied.)")
+    ].join("\n\n");
+    const fallback = await generateMaseNetFallback({
+      GEMINI_API_KEY:env.GEMINI_API_KEY, GEMINI_MODEL:env.GEMINI_MODEL,
+      GROQ_API_KEY:env.GROQ_API_KEY, GROQ_MODEL:env.GROQ_MODEL
+    }, fallbackSystem, message);
+    if (fallback) return json({text:fallback.text.slice(0,5000), provider:fallback.provider});
   }
 
   if (env.AI && !imageInputs.length) {
