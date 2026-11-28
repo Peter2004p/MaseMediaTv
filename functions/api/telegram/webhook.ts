@@ -696,6 +696,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           if (!forwarded) {
             await sendMessage(env, chatId, "📌 " + officialPost.title + "\n\n" + officialPost.text.slice(0, 1700) + "\n\nOfficial channel post: " + officialPost.url, keyboard);
           }
+          await saveTelegramConversationTurn(env, chatId, text, note + (forwarded ? " Original official post forwarded." : " " + officialPost.text.slice(0,1200) + " " + officialPost.url)).catch(() => {});
           stopTyping();
           return json({ ok: true, officialChannelFirst: true, forwarded, postUrl: officialPost.url });
         }
