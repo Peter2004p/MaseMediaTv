@@ -39,18 +39,15 @@ export async function generateMaseNetFallback(
 
   if (env.GEMINI_API_KEY) {
     const configuredModel = String(env.GEMINI_MODEL || "").trim();
-    // Prefer currently supported Search-grounded Flash models. Ignore stale model
-    // overrides rather than spending the webhook time budget on retired IDs.
-    const supportedModels = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
-    const models = [...new Set([
-      ...(supportedModels.includes(configuredModel) ? [configuredModel] : []),
-      ...supportedModels
-    ])];
+    // Gemini 2.5 Flash supports Google Search grounding on the free tier.
+    // The newer Flash models may not offer grounding on free-tier projects.
+    const supportedModels = ["gemini-2.5-flash"];
+    const models = supportedModels;
     for (const model of models) {
       try {
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) + ":generateContent", {
-          method:"POST", signal:AbortSignal.timeout(10000),
+          method:"POST", signal:AbortSignal.timeout(18000),
           headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY},
           body:JSON.stringify({
             systemInstruction:{parts:[{text:researchInstructions}]},
