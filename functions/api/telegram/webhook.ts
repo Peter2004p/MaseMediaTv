@@ -397,7 +397,7 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
         "Use the current MaseNet catalogue context below as the source of truth ONLY for whether a title and its episodes are listed in MaseNet. A missing catalogue entry does not mean the drama does not exist or has no release date. For public information about a title, research the web instead of sending the user to the Mini App.",
         "Shared administrator AI instructions: " + (sharedInstructions || "(No additional owner instructions have been saved.)"),
         "Current MaseNet catalogue (public title metadata):\n" + (catalogueContext || "(The catalogue could not be loaded.)"),
-        "Keep catalogue availability and public research separate. Search official MaseNet Telegram channels only when the user asks about our channels or posts. Search the wider web for public drama/movie questions. Never substitute channel posts for web research or catalogue entries.",
+        "Keep catalogue availability and public research separate. For current drama/movie release dates and official announcement questions, the webhook checks the main @MaseMediaTv channel first and shares a matching original post, including its image when Telegram permits. If no strong matching announcement is found, use live web research and prioritize official production, broadcaster, and streaming-platform sources. Treat a matching main-channel announcement as MaseMedia TV published information, but never treat it as proof that a title is playable in the website catalogue.",
         "Do not claim to search a live catalogue, see account activity, send alerts, or perform an action unless the information is provided or the action has actually happened.",
         "Do not invent movie availability, streaming links, episode details, or website capabilities. If uncertain, say so. Never include a website URL or raw app URL in a reply; the Telegram Mini App launch button is attached separately.",
         "Keep replies helpful and concise, ideally under 120 words. Do not mention OpenAI or Cloudflare unless explicitly asked.",
@@ -627,7 +627,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       } else {
         await sendChannelGate(env, chatId, current.membership, current.errors);
       }
-    } else if (/^\/forget(?:@\w+)?$/i.test(text)) {\n      await clearTelegramConversationMemory(env, chatId);\n      await sendMessage(env, chatId, "Your saved MaseNet chat memory has been cleared. I’ll start fresh from here.", keyboard);\n    } else if (/^\/privacy(?:@\w+)?$/i.test(text)) {
+    } else if (/^\/forget(?:@\w+)?$/i.test(text)) {\n      await clearTelegramConversationMemory(env, chatId);
+      await sendMessage(env, chatId, "Your saved MaseNet chat memory has been cleared. I’ll start fresh from here.", keyboard);\n    } else if (/^\/privacy(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "MaseNet privacy 🔐\n\nThe bot stores your Telegram chat ID and display name for optional alerts, plus recent chat messages so the assistant can remember context across visits. Conversation memory is kept for up to 30 days and limited to recent messages. Use /forget to clear it at any time. Do not send passwords, payment details, or private account credentials in chat.", keyboard);
     } else if (/^\/app(?:@\w+)?$/i.test(text)) {
       await sendMessage(env, chatId, "Open MaseNet Mini App:", keyboard);
@@ -717,7 +718,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         : "✍️ Putting the answer together…\n\nJust a moment — MaseNet AI is working on it. 💜");
       let answer: string;
       try {
-        const conversationHistory = await loadTelegramConversationMemory(env, chatId).catch(() => []);\n        answer = await makeAIReply(env, text, String(chat?.first_name || ""), chatType === "private" && !!env.ADMIN_TELEGRAM_CHAT_ID && chatId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim(), conversationHistory);
+        const conversationHistory = await loadTelegramConversationMemory(env, chatId).catch(() => []);
+        answer = await makeAIReply(env, text, String(chat?.first_name || ""), chatType === "private" && !!env.ADMIN_TELEGRAM_CHAT_ID && chatId === String(env.ADMIN_TELEGRAM_CHAT_ID).trim(), conversationHistory);
       } catch (error) {
         const diagnostic = error instanceof Error ? error.message : "Unknown AI provider failure";
         console.error("MaseNet Telegram AI reply failed:", diagnostic.slice(0, 400));
