@@ -192,7 +192,7 @@ async function findCatalogMatches(env: Env, message: string): Promise<Array<{id:
       else if (terms.length >= 2 && matchedTerms >= Math.max(2, Math.ceil(terms.length * 0.7))) score = Math.round((matchedTerms / terms.length) * 75);
       else if (terms.length === 1 && normalizedName.split(" ").includes(terms[0])) score = 65;
       return {id:String(row.id),name,kind:String(row.kind || "Title"),year:row.year == null ? null : Number(row.year),episodeLabels,score,ended};
-    }).filter((item) => !item.ended && item.score >= 65);
+    }).filter((item) => item.score >= 65);
     ranked.sort((a,b)=>b.score-a.score || a.name.localeCompare(b.name));
     return ranked.slice(0,5).map(({score,...item})=>item);
   } catch (error) {
@@ -234,11 +234,7 @@ async function makeAIReply(env: Env, message: string, firstName: string, authent
   } catch { /* Optional shared AI instructions. */ }
   try {
     const rows = await env.DB.prepare("SELECT name,kind,year,description,metadata_json FROM titles ORDER BY created_at DESC LIMIT 80").all<{name:string;kind:string;year:number|null;description:string|null;metadata_json:string}>();
-    catalogueContext = (rows.results || []).filter(title => {
-      let metadata: Record<string, unknown> = {};
-      try { metadata = JSON.parse(title.metadata_json || "{}") as Record<string, unknown>; } catch {}
-      return !isEndedMetadata(metadata);
-    }).map((title) => {
+    catalogueContext = (rows.results || []).map((title) => {
       let episodes = "";
       try {
         const metadata = JSON.parse(title.metadata_json || "{}") as {episodes?:Array<{title?:unknown;name?:unknown;season?:unknown;episode?:unknown}>};
